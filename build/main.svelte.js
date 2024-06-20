@@ -714,6 +714,50 @@ function invert(out, a) {
   return out;
 }
 /**
+ * Rotates a matrix by the given angle around the Y axis
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the matrix to rotate
+ * @param {Number} rad the angle to rotate the matrix by
+ * @returns {mat4} out
+ */
+
+function rotateY(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a00 = a[0];
+  var a01 = a[1];
+  var a02 = a[2];
+  var a03 = a[3];
+  var a20 = a[8];
+  var a21 = a[9];
+  var a22 = a[10];
+  var a23 = a[11];
+
+  if (a !== out) {
+    // If the source and destination differ, copy the unchanged rows
+    out[4] = a[4];
+    out[5] = a[5];
+    out[6] = a[6];
+    out[7] = a[7];
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+  } // Perform axis-specific matrix multiplication
+
+
+  out[0] = a00 * c - a20 * s;
+  out[1] = a01 * c - a21 * s;
+  out[2] = a02 * c - a22 * s;
+  out[3] = a03 * c - a23 * s;
+  out[8] = a00 * s + a20 * c;
+  out[9] = a01 * s + a21 * c;
+  out[10] = a02 * s + a22 * c;
+  out[11] = a03 * s + a23 * c;
+  return out;
+}
+/**
  * Generates a perspective projection matrix with the given bounds.
  * The near/far clip planes correspond to a normalized device coordinate Z range of [-1, 1],
  * which matches WebGL/OpenGL's clip volume.
@@ -1022,9 +1066,19 @@ function derived(stores, fn, initial_value) {
 	});
 }
 
+const degree = Math.PI / 180;
+/**
+ * Convert Degree To Radian
+ *
+ * @param {Number} a Angle in Degrees
+ */
+
+function toRadian(a) {
+  return a * degree;
+}
+
 function setupNormalMatrix(context){
     return function createNormalMatrix() {
-        console.log("setupNormalMatrix");
         context = get_store_value(context);
         const gl = context.gl;
         const program = context.program;
@@ -1039,159 +1093,14 @@ function setupNormalMatrix(context){
     };
 }
 
-const degree = Math.PI / 180;
-/**
- * Convert Degree To Radian
- *
- * @param {Number} a Angle in Degrees
- */
-
-function toRadian(a) {
-  return a * degree;
-}
-function createRenderer(){
-    
-    const {subscribe, set, update} = writable({
-        init:initRenderer,
-        backgroundColor: [2.55,2.55,2.55,1],
-        canvas: null,
-        camera: null,
-        worldMatrix: null,
-        meshes: [],
-        lights: [],
-        loop: null,
-    });
-    return {
-        subscribe,
-        setCamera: (fov,near,far,position,target,up) => update(renderer => {
-            renderer.camera = {
-                fov,
-                near,
-                far,
-                position,
-                target,
-                up,
-            };
-            return renderer;
-        }),
-        addMesh: (mesh) => update(renderer => {
-            renderer.meshes = [...renderer.meshes, mesh];
-            return renderer;
-        }),
-        addLight: (light) => update(renderer => {
-            renderer.lights = [...renderer.lights, light];
-            return renderer;
-        }),
-        setLoop: (loop) => update(renderer => {
-            renderer.loop = loop;
-            return renderer;
-        }),
-        setWorldMAtrix: (worldMatrix) => update(renderer => {
-            renderer.worldMatrix = worldMatrix;
-            return renderer;
-        }),
-        setCanvas: (canvas) => update(renderer => {
-            renderer.canvas = canvas;
-            return renderer;
-        }),
-        setBackgroundColor: (backgroundColor) => update(renderer => {
-            renderer.backgroundColor = backgroundColor;
-            return renderer;
-        }),
-    };
-}
-const renderer = createRenderer();
-
-const programs = derived(renderer,$renderer => {
-    return $renderer.meshes.map(mesh => {
-        return {
-            createProgram,
-            mesh,
-            material:mesh.material,
-            attributes:mesh.attributes,
-            createShaders:createShaders(mesh.material,mesh.attributes),
-            endProgramSetup,
-        }
-    });
-});
-
-function createRenderState () {
-    const {subscribe,set} = writable({
-        init:false,
-        rendered:false,
-    });
-    return {
-        subscribe,
-        set,
-    };
-}
-const renderState = createRenderState();
-
-function createContextStore () {
-    const {subscribe,set} = writable({});
-    return {
-        subscribe,
-        set: (context) => {
-            set(context);
-        },
-    };
-}
-
-const contextStore = createContextStore();
-
-const webglapp = derived([renderer,programs], ([$renderer,$programs]) => {
-    let context = {
-        canvas: $renderer.canvas,
-        backgroundColor: $renderer.backgroundColor,
-    };
-
-    if(
-        !$renderer ||
-        !$programs ||
-        !$renderer.canvas ||
-        $programs.length === 0 ||
-        !$renderer.camera ||
-        !$renderer.lights
-    ){
-        console.log("no renderer or programs or canvas");
-        return [];
-    }
-    console.log("$renderState",renderState);
-    const initInstructions = renderState.init ? [] : [$renderer.init(context)];
-
-    const setupInstructions = renderState.rendered ? [] : $programs.reduce((acc,program) => {
-        return [
-            ...acc,
-            program.createProgram(contextStore),
-            program.createShaders(contextStore),
-            program.endProgramSetup(contextStore),
-            setupCamera(contextStore,$renderer.camera),
-            setupWorldMatrix(contextStore,$renderer.worldMatrix),
-            setupNormalMatrix(contextStore),
-            setupAttributes(contextStore,program.mesh),
-            setupLights(contextStore,$renderer.lights),
-        ];
-    },[]);
-    renderState.set({
-        init:true,
-        rendered:true,
-    });
-    const list = [
-        ...initInstructions,
-        ...setupInstructions,
-        render(contextStore),
-    ];
-    //list.forEach(fn => console.log(fn.toString()));
-    return list;
-});
-
-function initRenderer(context) {
+function initRenderer(context, contextStore) {
     return function () {
 
         const canvasRect = context.canvas.getBoundingClientRect();
         context.canvas.width = canvasRect.width;
         context.canvas.height = canvasRect.height;
         const gl = context.gl = context.canvas.getContext("webgl");
+        console.log("initRenderer",contextStore);
         contextStore.set(context);
         gl.viewportWidth = context.canvas.width;
         gl.viewportHeight = context.canvas.height;
@@ -1201,11 +1110,16 @@ function initRenderer(context) {
         gl.enable(gl.CULL_FACE);
         gl.frontFace(gl.CCW);
         gl.cullFace(gl.BACK);
+        console.log("initRenderer",renderState);
+        renderState.set({
+            init:true,
+        });
     };
 }
 
 function render(context) {
     return function () {
+        console.log("render");
         context = get_store_value(context);
         const gl = context.gl;
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -1217,6 +1131,7 @@ function render(context) {
         }
     };
 }
+
 function createProgram(context) {
     return function createProgram() {
         context = get_store_value(context);
@@ -1225,6 +1140,7 @@ function createProgram(context) {
         context.program = program;
     };
 }
+
 function endProgramSetup(context) {
     return function () {
         context = get_store_value(context);
@@ -1241,40 +1157,7 @@ function endProgramSetup(context) {
         gl.useProgram(program);
     };
 }
-function setupCamera(context, camera) {
-    return function createCamera() {
-        context = get_store_value(context);
-        const gl = context.gl;
-        const program = context.program;
 
-        // projection matrix
-        const projectionLocation = gl.getUniformLocation(program, "projection");
-
-        const fieldOfViewInRadians = toRadian(camera.fov);
-        const aspectRatio = context.canvas.width / context.canvas.height;
-        const nearClippingPlaneDistance = camera.near;
-        const farClippingPlaneDistance = camera.far;
-
-        let projection = new Float32Array(16);
-        projection = perspective(
-            projection,
-            fieldOfViewInRadians,
-            aspectRatio,
-            nearClippingPlaneDistance,
-            farClippingPlaneDistance
-        );
-
-        gl.uniformMatrix4fv(projectionLocation, false, projection);
-
-
-        // view matrix
-        const viewLocation = gl.getUniformLocation(program, "view");
-        const view = new Float32Array(16);
-
-        lookAt(view, camera.position, camera.target, camera.up);
-        gl.uniformMatrix4fv(viewLocation, false, view);
-    };
-}
 function createShaders(material, attributes) {
     return function (context) {
         return function () {
@@ -1341,6 +1224,42 @@ void main() {
         };
     };
 }
+
+function setupCamera(context, camera) {
+    return function createCamera() {
+        context = get_store_value(context);
+        const gl = context.gl;
+        const program = context.program;
+
+        // projection matrix
+        const projectionLocation = gl.getUniformLocation(program, "projection");
+
+        const fieldOfViewInRadians = toRadian(camera.fov);
+        const aspectRatio = context.canvas.width / context.canvas.height;
+        const nearClippingPlaneDistance = camera.near;
+        const farClippingPlaneDistance = camera.far;
+
+        let projection = new Float32Array(16);
+        projection = perspective(
+            projection,
+            fieldOfViewInRadians,
+            aspectRatio,
+            nearClippingPlaneDistance,
+            farClippingPlaneDistance
+        );
+
+        gl.uniformMatrix4fv(projectionLocation, false, projection);
+
+
+        // view matrix
+        const viewLocation = gl.getUniformLocation(program, "view");
+        const view = new Float32Array(16);
+
+        lookAt(view, camera.position, camera.target, camera.up);
+        gl.uniformMatrix4fv(viewLocation, false, view);
+    };
+}
+
 function setupLights(context, lights) {
     return function () {
         context = get_store_value(context);
@@ -1350,6 +1269,7 @@ function setupLights(context, lights) {
         gl.uniform3fv(lightPositionLocation, new Float32Array(lights[0]));
     };
 }
+
 function setupWorldMatrix(context, worldMatrix) {
     return function () {
         context = get_store_value(context);
@@ -1364,6 +1284,16 @@ function setupWorldMatrix(context, worldMatrix) {
         gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
     };
 }
+    
+function updateWorldMatrix(context,worldMatrix) {
+    console.log("updateWorldMatrix",worldMatrix);
+    context = get_store_value(context);
+    const gl = context.gl;
+    const program = context.program;
+    const worldLocation = gl.getUniformLocation(program, "world");
+    gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
+}
+
 function setupAttributes(context, mesh) {
     return function () {
         context = get_store_value(context);
@@ -1400,6 +1330,158 @@ function setupAttributes(context, mesh) {
 
     };
 }
+
+function createRenderer(){
+    
+    const {subscribe, set, update} = writable({
+        initRenderer,
+        backgroundColor: [2.55,2.55,2.55,1],
+        canvas: null,
+        camera: null,
+        //worldMatrix: null,
+        meshes: [],
+        lights: [],
+        loop: null,
+    });
+    return {
+        subscribe,
+        setCamera: (fov,near,far,position,target,up) => update(renderer => {
+            renderer.camera = {
+                fov,
+                near,
+                far,
+                position,
+                target,
+                up,
+            };
+            return renderer;
+        }),
+        addMesh: (mesh) => update(renderer => {
+            renderer.meshes = [...renderer.meshes, mesh];
+            return renderer;
+        }),
+        addLight: (light) => update(renderer => {
+            renderer.lights = [...renderer.lights, light];
+            return renderer;
+        }),
+        setLoop: (loop) => update(renderer => {
+            renderer.loop = loop;
+            return renderer;
+        }),
+        /*setWorldMAtrix: (worldMatrix) => update(renderer => {
+            renderer.worldMatrix = worldMatrix;
+            return renderer;
+        }),*/
+        setCanvas: (canvas) => update(renderer => {
+            renderer.canvas = canvas;
+            return renderer;
+        }),
+        setBackgroundColor: (backgroundColor) => update(renderer => {
+            renderer.backgroundColor = backgroundColor;
+            return renderer;
+        }),
+    };
+}
+const renderer = createRenderer();
+const defaultWorldMatrix = new Float32Array(16);
+identity(defaultWorldMatrix);
+const createWorldMatrix = () => {
+    const {subscribe, set} = writable(defaultWorldMatrix);
+    return {
+        subscribe,
+        set: (worldMatrix) => {
+            set(worldMatrix);
+            console.log("set worldMatrix",worldMatrix);
+            if(contextStore && get_store_value(contextStore).program){
+
+                updateWorldMatrix(contextStore,worldMatrix);
+            }
+        },
+    };
+};
+const worldMatrix = createWorldMatrix();
+
+const programs = derived(renderer,$renderer => {
+    return $renderer.meshes.map(mesh => {
+        return {
+            createProgram,
+            mesh,
+            material:mesh.material,
+            attributes:mesh.attributes,
+            createShaders:createShaders(mesh.material,mesh.attributes),
+            endProgramSetup,
+        }
+    });
+});
+
+function createRenderState () {
+    const {subscribe,set} = writable({
+        init:false,
+        rendered:false,
+    });
+    return {
+        subscribe,
+        set,
+    };
+}
+const renderState = createRenderState();
+
+function createContextStore () {
+    const {subscribe,set} = writable({});
+    return {
+        subscribe,
+        set: (context) => {
+            console.log("set context",context);
+            set(context);
+        },
+    };
+}
+
+const contextStore = createContextStore();
+// make this store inactive until the conditions are met (single flag?)
+const webglapp = derived([renderer,programs,worldMatrix], ([$renderer,$programs,$worldMatrix]) => {
+    let context = {
+        canvas: $renderer.canvas,
+        backgroundColor: $renderer.backgroundColor,
+    };
+
+    if(
+        !$renderer ||
+        !$programs ||
+        !$renderer.canvas ||
+        $programs.length === 0 ||
+        !$renderer.camera ||
+        $renderer.lights.length === 0
+    ){
+        console.log("no renderer or programs or canvas");
+        return [];
+    }
+    
+    console.log("$renderState",get_store_value(renderState),context);
+    const initInstructions = get_store_value(renderState).init ? [] : [$renderer.initRenderer(context,contextStore)];
+
+    const setupInstructions = get_store_value(renderState).init ? [] : $programs.reduce((acc,program) => {
+        return [
+            ...acc,
+            program.createProgram(contextStore),
+            program.createShaders(contextStore),
+            program.endProgramSetup(contextStore),
+            setupCamera(contextStore,$renderer.camera),
+            setupWorldMatrix(contextStore,get_store_value(worldMatrix)),
+            setupNormalMatrix(contextStore),
+            setupAttributes(contextStore,program.mesh),
+            setupLights(contextStore,$renderer.lights),
+        ];
+    },[]);
+    
+    const list = [
+        ...initInstructions,
+        ...setupInstructions,
+        render(contextStore),
+    ];
+    //list.forEach(fn => console.log(fn));
+    return list;
+});
 
 function createCube() {
     return {
@@ -1528,7 +1610,18 @@ function instance($$self, $$props, $$invalidate) {
 		renderer.setCamera(45, 0.1, 1000, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
 		renderer.addMesh({ attributes: createCube() });
 		renderer.addLight([0, 7, -3]);
+		setTimeout(animate, 1000);
 	});
+
+	function animate() {
+		console.log('animate');
+		const rotation = performance.now() / 1000 / 6 * Math.PI;
+		const tmp = new Float32Array(16);
+		identity(tmp);
+		rotateY(tmp, tmp, rotation);
+		worldMatrix.set(tmp);
+		requestAnimationFrame(animate);
+	} //renderer.render();
 
 	function canvas_1_binding($$value) {
 		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
@@ -1539,14 +1632,14 @@ function instance($$self, $$props, $$invalidate) {
 
 	$$self.$$.update = () => {
 		if ($$self.$$.dirty & /*$webglapp*/ 2) {
-			$webglapp && $webglapp.forEach(instruction => {
-				console.log("instruction", instruction);
-				instruction();
-			});
-		}
+			if ($webglapp) {
+				console.log('webglapp');
 
-		if ($$self.$$.dirty & /*$webglapp*/ 2) {
-			console.log("$webglapp", $webglapp);
+				$webglapp.forEach(instruction => {
+					console.log('webglapp', instruction);
+					instruction();
+				});
+			}
 		}
 	};
 
