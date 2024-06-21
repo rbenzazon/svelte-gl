@@ -36,7 +36,6 @@ export function initRenderer(context, contextStore) {
         context.canvas.width = canvasRect.width;
         context.canvas.height = canvasRect.height;
         const gl = context.gl = context.canvas.getContext("webgl");
-        console.log("initRenderer",contextStore);
         contextStore.set(context);
         gl.viewportWidth = context.canvas.width;
         gl.viewportHeight = context.canvas.height;
@@ -46,7 +45,6 @@ export function initRenderer(context, contextStore) {
         gl.enable(gl.CULL_FACE);
         gl.frontFace(gl.CCW);
         gl.cullFace(gl.BACK);
-        console.log("initRenderer",renderState);
         renderState.set({
             init:true,
         });
@@ -55,7 +53,6 @@ export function initRenderer(context, contextStore) {
 
 export function render(context) {
     return function () {
-        console.log("render");
         context = get(context);
         const gl = context.gl;
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -119,7 +116,7 @@ void main() {
     
 
     // Pass the color down to the fragment shader
-    fragColor = vec3(2.55,2.55,2.55);
+    fragColor = vec3(1.27,1.27,1.27);
     // Pass the vertex down to the fragment shader
     vertex = vec3(world * vec4(position, 1.0));
     // Pass the normal down to the fragment shader
@@ -148,7 +145,7 @@ void main() {
     vec3 direction = normalize(offset);
 
     float diffuse = max(dot(direction, vNormal), 0.0);
-    float attenuation = 3.0 / (1.0 + 0.1*distance + 0.1*distance*distance);
+    float attenuation = 10.0 / (0.1 + 0.1*distance + 0.1*distance*distance);
     float brightness = max(diffuse * attenuation,0.1);
     gl_FragColor = vec4(brightness*fragColor,1.0);
 }`;
@@ -222,7 +219,6 @@ export function setupWorldMatrix(context, worldMatrix) {
 }
     
 export function updateWorldMatrix(context,worldMatrix) {
-    console.log("updateWorldMatrix",worldMatrix);
     context = get(context);
     const gl = context.gl;
     const program = context.program;

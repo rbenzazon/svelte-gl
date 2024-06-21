@@ -65,6 +65,11 @@ function component_subscribe(component, store, callback) {
 	component.$$.on_destroy.push(subscribe(store, callback));
 }
 
+function set_store_value(store, ret, value) {
+	store.set(value);
+	return ret;
+}
+
 /**
  * @param {Node} target
  * @param {Node} node
@@ -714,6 +719,50 @@ function invert(out, a) {
   return out;
 }
 /**
+ * Rotates a matrix by the given angle around the X axis
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the matrix to rotate
+ * @param {Number} rad the angle to rotate the matrix by
+ * @returns {mat4} out
+ */
+
+function rotateX(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a10 = a[4];
+  var a11 = a[5];
+  var a12 = a[6];
+  var a13 = a[7];
+  var a20 = a[8];
+  var a21 = a[9];
+  var a22 = a[10];
+  var a23 = a[11];
+
+  if (a !== out) {
+    // If the source and destination differ, copy the unchanged rows
+    out[0] = a[0];
+    out[1] = a[1];
+    out[2] = a[2];
+    out[3] = a[3];
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+  } // Perform axis-specific matrix multiplication
+
+
+  out[4] = a10 * c + a20 * s;
+  out[5] = a11 * c + a21 * s;
+  out[6] = a12 * c + a22 * s;
+  out[7] = a13 * c + a23 * s;
+  out[8] = a20 * c - a10 * s;
+  out[9] = a21 * c - a11 * s;
+  out[10] = a22 * c - a12 * s;
+  out[11] = a23 * c - a13 * s;
+  return out;
+}
+/**
  * Rotates a matrix by the given angle around the Y axis
  *
  * @param {mat4} out the receiving matrix
@@ -755,6 +804,50 @@ function rotateY(out, a, rad) {
   out[9] = a01 * s + a21 * c;
   out[10] = a02 * s + a22 * c;
   out[11] = a03 * s + a23 * c;
+  return out;
+}
+/**
+ * Rotates a matrix by the given angle around the Z axis
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the matrix to rotate
+ * @param {Number} rad the angle to rotate the matrix by
+ * @returns {mat4} out
+ */
+
+function rotateZ(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a00 = a[0];
+  var a01 = a[1];
+  var a02 = a[2];
+  var a03 = a[3];
+  var a10 = a[4];
+  var a11 = a[5];
+  var a12 = a[6];
+  var a13 = a[7];
+
+  if (a !== out) {
+    // If the source and destination differ, copy the unchanged last row
+    out[8] = a[8];
+    out[9] = a[9];
+    out[10] = a[10];
+    out[11] = a[11];
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+  } // Perform axis-specific matrix multiplication
+
+
+  out[0] = a00 * c + a10 * s;
+  out[1] = a01 * c + a11 * s;
+  out[2] = a02 * c + a12 * s;
+  out[3] = a03 * c + a13 * s;
+  out[4] = a10 * c - a00 * s;
+  out[5] = a11 * c - a01 * s;
+  out[6] = a12 * c - a02 * s;
+  out[7] = a13 * c - a03 * s;
   return out;
 }
 /**
@@ -1100,7 +1193,6 @@ function initRenderer(context, contextStore) {
         context.canvas.width = canvasRect.width;
         context.canvas.height = canvasRect.height;
         const gl = context.gl = context.canvas.getContext("webgl");
-        console.log("initRenderer",contextStore);
         contextStore.set(context);
         gl.viewportWidth = context.canvas.width;
         gl.viewportHeight = context.canvas.height;
@@ -1110,7 +1202,6 @@ function initRenderer(context, contextStore) {
         gl.enable(gl.CULL_FACE);
         gl.frontFace(gl.CCW);
         gl.cullFace(gl.BACK);
-        console.log("initRenderer",renderState);
         renderState.set({
             init:true,
         });
@@ -1119,7 +1210,6 @@ function initRenderer(context, contextStore) {
 
 function render(context) {
     return function () {
-        console.log("render");
         context = get_store_value(context);
         const gl = context.gl;
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -1183,7 +1273,7 @@ void main() {
     
 
     // Pass the color down to the fragment shader
-    fragColor = vec3(2.55,2.55,2.55);
+    fragColor = vec3(1.27,1.27,1.27);
     // Pass the vertex down to the fragment shader
     vertex = vec3(world * vec4(position, 1.0));
     // Pass the normal down to the fragment shader
@@ -1212,7 +1302,7 @@ void main() {
     vec3 direction = normalize(offset);
 
     float diffuse = max(dot(direction, vNormal), 0.0);
-    float attenuation = 3.0 / (1.0 + 0.1*distance + 0.1*distance*distance);
+    float attenuation = 10.0 / (0.1 + 0.1*distance + 0.1*distance*distance);
     float brightness = max(diffuse * attenuation,0.1);
     gl_FragColor = vec4(brightness*fragColor,1.0);
 }`;
@@ -1286,7 +1376,6 @@ function setupWorldMatrix(context, worldMatrix) {
 }
     
 function updateWorldMatrix(context,worldMatrix) {
-    console.log("updateWorldMatrix",worldMatrix);
     context = get_store_value(context);
     const gl = context.gl;
     const program = context.program;
@@ -1382,6 +1471,7 @@ function createRenderer(){
         }),
     };
 }
+
 const renderer = createRenderer();
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
@@ -1391,11 +1481,11 @@ const createWorldMatrix = () => {
         subscribe,
         set: (worldMatrix) => {
             set(worldMatrix);
-            console.log("set worldMatrix",worldMatrix);
             if(contextStore && get_store_value(contextStore).program){
 
                 updateWorldMatrix(contextStore,worldMatrix);
             }
+            return worldMatrix;
         },
     };
 };
@@ -1431,7 +1521,6 @@ function createContextStore () {
     return {
         subscribe,
         set: (context) => {
-            console.log("set context",context);
             set(context);
         },
     };
@@ -1439,6 +1528,23 @@ function createContextStore () {
 
 const contextStore = createContextStore();
 // make this store inactive until the conditions are met (single flag?)
+
+const normalMatrix = derived(worldMatrix,$worldMatrix => {
+    const normalMatrix = create();
+    const worldMatrix = $worldMatrix || defaultWorldMatrix;
+    invert(normalMatrix,worldMatrix);
+    transpose(normalMatrix,normalMatrix);
+    const context = get_store_value(contextStore);
+    if(!context.gl) {
+        return normalMatrix;
+    }
+    const gl = context.gl;
+    const program = context.program;
+    const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
+    gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+    return normalMatrix;
+});
+
 const webglapp = derived([renderer,programs,worldMatrix], ([$renderer,$programs,$worldMatrix]) => {
     let context = {
         canvas: $renderer.canvas,
@@ -1457,7 +1563,6 @@ const webglapp = derived([renderer,programs,worldMatrix], ([$renderer,$programs,
         return [];
     }
     
-    console.log("$renderState",get_store_value(renderState),context);
     const initInstructions = get_store_value(renderState).init ? [] : [$renderer.initRenderer(context,contextStore)];
 
     const setupInstructions = get_store_value(renderState).init ? [] : $programs.reduce((acc,program) => {
@@ -1599,12 +1704,14 @@ function create_fragment(ctx) {
 }
 
 function instance($$self, $$props, $$invalidate) {
+	let $worldMatrix;
 	let $webglapp;
+	component_subscribe($$self, worldMatrix, $$value => $$invalidate(3, $worldMatrix = $$value));
+	component_subscribe($$self, normalMatrix, $$value => $$invalidate(4, $$value));
 	component_subscribe($$self, webglapp, $$value => $$invalidate(1, $webglapp = $$value));
 	let canvas;
 
 	onMount(() => {
-		console.log('mounted', canvas);
 		renderer.setCanvas(canvas);
 		renderer.setBackgroundColor([0.0, 0.0, 0.0, 1.0]);
 		renderer.setCamera(45, 0.1, 1000, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
@@ -1614,14 +1721,15 @@ function instance($$self, $$props, $$invalidate) {
 	});
 
 	function animate() {
-		console.log('animate');
 		const rotation = performance.now() / 1000 / 6 * Math.PI;
 		const tmp = new Float32Array(16);
 		identity(tmp);
 		rotateY(tmp, tmp, rotation);
-		worldMatrix.set(tmp);
+		rotateX(tmp, tmp, rotation);
+		rotateZ(tmp, tmp, rotation);
+		set_store_value(worldMatrix, $worldMatrix = tmp, $worldMatrix);
 		requestAnimationFrame(animate);
-	} //renderer.render();
+	}
 
 	function canvas_1_binding($$value) {
 		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
@@ -1633,10 +1741,7 @@ function instance($$self, $$props, $$invalidate) {
 	$$self.$$.update = () => {
 		if ($$self.$$.dirty & /*$webglapp*/ 2) {
 			if ($webglapp) {
-				console.log('webglapp');
-
 				$webglapp.forEach(instruction => {
-					console.log('webglapp', instruction);
 					instruction();
 				});
 			}

@@ -54,6 +54,7 @@ function createRenderer(){
         }),
     };
 }
+
 export const renderer = createRenderer();
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
@@ -63,11 +64,11 @@ const createWorldMatrix = () => {
         subscribe,
         set: (worldMatrix) => {
             set(worldMatrix);
-            console.log("set worldMatrix",worldMatrix);
             if(contextStore && get(contextStore).program){
 
                 updateWorldMatrix(contextStore,worldMatrix);
             }
+            return worldMatrix;
         },
     };
 };
@@ -103,7 +104,6 @@ function createContextStore () {
     return {
         subscribe,
         set: (context) => {
-            console.log("set context",context);
             set(context)
         },
     };
@@ -111,6 +111,23 @@ function createContextStore () {
 
 export const contextStore = createContextStore();
 // make this store inactive until the conditions are met (single flag?)
+
+export const normalMatrix = derived(worldMatrix,$worldMatrix => {
+    const normalMatrix = create();
+    const worldMatrix = $worldMatrix || defaultWorldMatrix;
+    invert(normalMatrix,worldMatrix);
+    transpose(normalMatrix,normalMatrix);
+    const context = get(contextStore);
+    if(!context.gl) {
+        return normalMatrix;
+    }
+    const gl = context.gl;
+    const program = context.program;
+    const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix")
+    gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+    return normalMatrix;
+});
+
 export const webglapp = derived([renderer,programs,worldMatrix], ([$renderer,$programs,$worldMatrix]) => {
     let context = {
         canvas: $renderer.canvas,
@@ -129,7 +146,6 @@ export const webglapp = derived([renderer,programs,worldMatrix], ([$renderer,$pr
         return[];
     }
     
-    console.log("$renderState",get(renderState),context);
     const initInstructions = get(renderState).init ? [] : [$renderer.initRenderer(context,contextStore)];
 
     const setupInstructions = get(renderState).init ? [] : $programs.reduce((acc,program) => {
