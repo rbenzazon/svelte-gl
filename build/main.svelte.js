@@ -1167,97 +1167,96 @@ const degree = Math.PI / 180;
  */
 
 function toRadian(a) {
-  return a * degree;
+	return a * degree;
 }
 
-function setupNormalMatrix(context){
-    return function createNormalMatrix() {
-        context = get_store_value(context);
-        const gl = context.gl;
-        const program = context.program;
-        const worldMatrix = context.worldMatrix;
-        const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-        context.normalMatrixLocation = normalMatrixLocation;
-        let normalMatrix = create();
-        invert(normalMatrix, worldMatrix);
-        transpose(normalMatrix, normalMatrix);
-        gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
-
-    };
+function setupNormalMatrix(context) {
+	return function createNormalMatrix() {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = context.program;
+		const worldMatrix = context.worldMatrix;
+		const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
+		context.normalMatrixLocation = normalMatrixLocation;
+		let normalMatrix = create();
+		invert(normalMatrix, worldMatrix);
+		transpose(normalMatrix, normalMatrix);
+		gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+	};
 }
 
 function initRenderer(context, contextStore) {
-    return function () {
-
-        const canvasRect = context.canvas.getBoundingClientRect();
-        context.canvas.width = canvasRect.width;
-        context.canvas.height = canvasRect.height;
-        const gl = context.gl = context.canvas.getContext("webgl");
-        contextStore.set(context);
-        gl.viewportWidth = context.canvas.width;
-        gl.viewportHeight = context.canvas.height;
-        gl.clearColor.apply(gl, context.backgroundColor);
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
-        gl.enable(gl.DEPTH_TEST);
-        gl.enable(gl.CULL_FACE);
-        gl.frontFace(gl.CCW);
-        gl.cullFace(gl.BACK);
-        renderState.set({
-            init:true,
-        });
-    };
+	return function () {
+		const canvasRect = context.canvas.getBoundingClientRect();
+		context.canvas.width = canvasRect.width;
+		context.canvas.height = canvasRect.height;
+		const gl = (context.gl = context.canvas.getContext("webgl2"));
+		contextStore.set(context);
+		gl.viewportWidth = context.canvas.width;
+		gl.viewportHeight = context.canvas.height;
+		gl.clearColor.apply(gl, context.backgroundColor);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
+		gl.enable(gl.DEPTH_TEST);
+		gl.enable(gl.CULL_FACE);
+		gl.frontFace(gl.CCW);
+		gl.cullFace(gl.BACK);
+		renderState.set({
+			init: true,
+		});
+	};
 }
 
 function render(context) {
-    return function () {
-        context = get_store_value(context);
-        const gl = context.gl;
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        context.loop && context.loop();
-        if (context.hasElements) {
-            gl.drawElements(gl.TRIANGLES, context.attributeLength, gl.UNSIGNED_SHORT, 0);
-        } else {
-            gl.drawArrays(gl.TRIANGLES, 0, context.attributeLength);
-        }
-    };
+	return function () {
+		context = get_store_value(context);
+		const gl = context.gl;
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		context.loop && context.loop();
+		if (context.hasElements) {
+			gl.drawElements(gl.TRIANGLES, context.attributeLength, gl.UNSIGNED_SHORT, 0);
+		} else {
+			gl.drawArrays(gl.TRIANGLES, 0, context.attributeLength);
+		}
+	};
 }
 
 function createProgram(context) {
-    return function createProgram() {
-        context = get_store_value(context);
-        const gl = context.gl;
-        const program = gl.createProgram();
-        context.program = program;
-    };
+	return function createProgram() {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = gl.createProgram();
+		context.program = program;
+	};
 }
 
 function endProgramSetup(context) {
-    return function () {
-        context = get_store_value(context);
-        const gl = context.gl;
-        const program = context.program;
-        gl.linkProgram(program);
-        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-            console.error('ERROR linking program!', gl.getProgramInfoLog(program));
-        }
-        gl.validateProgram(program);
-        if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-            console.error('ERROR validating program!', gl.getProgramInfoLog(program));
-        }
-        gl.useProgram(program);
-    };
+	return function () {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = context.program;
+		gl.linkProgram(program);
+		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+			console.error("ERROR linking program!", gl.getProgramInfoLog(program));
+		}
+		gl.validateProgram(program);
+		if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
+			console.error("ERROR validating program!", gl.getProgramInfoLog(program));
+		}
+		gl.useProgram(program);
+	};
 }
 
-function createShaders(material, attributes) {
-    return function (context) {
-        return function () {
-            context = get_store_value(context);
-            const gl = context.gl;
-            const program = context.program;
-            const vertexShaderSource = `precision mediump float;
+function createShaders(material, attributes, uniforms) {
+	return function (context) {
+		return function () {
+			context = get_store_value(context);
+			const gl = context.gl;
+			const program = context.program;
+			const vertexShaderSource = `#version 300 es
+precision mediump float;
     
-attribute vec3 position;
-attribute vec3 normal;
+in vec3 position;
+in vec3 normal;
 
 uniform mat4 world;
 uniform mat4 view;
@@ -1265,15 +1264,15 @@ uniform mat4 projection;
 uniform mat4 normalMatrix;
 
 // Pass the color attribute down to the fragment shader
-varying vec3 fragColor;
-varying vec3 vNormal;
-varying vec3 vertex;
+out vec3 vertexColor;
+out vec3 vNormal;
+out vec3 vertex;
 
 void main() {
     
 
     // Pass the color down to the fragment shader
-    fragColor = vec3(1.27,1.27,1.27);
+    vertexColor = vec3(1.27,1.27,1.27);
     // Pass the vertex down to the fragment shader
     vertex = vec3(world * vec4(position, 1.0));
     // Pass the normal down to the fragment shader
@@ -1283,17 +1282,20 @@ void main() {
     // Pass the position down to the fragment shader
     gl_Position = projection * view * world * vec4(position, 1.0);
 }`;
-            const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-            gl.shaderSource(vertexShader, vertexShaderSource);
-            gl.compileShader(vertexShader);
-            const fragmentShaderSource = `precision mediump float;
+			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+			gl.shaderSource(vertexShader, vertexShaderSource);
+			gl.compileShader(vertexShader);
+			const fragmentShaderSource = `#version 300 es
+precision mediump float;
 
 uniform vec3 lightPosition;
+uniform vec3 color;
 
-varying vec3 vertex;
-varying vec3 vNormal;    
-varying vec3 fragColor;
+in vec3 vertex;
+in vec3 vNormal;    
+in vec3 vertexColor;
 
+out vec4 fragColor;
 
 void main() {
     //vec3 offset = lightPosition - vertex;
@@ -1304,377 +1306,351 @@ void main() {
     float diffuse = max(dot(direction, vNormal), 0.0);
     float attenuation = 10.0 / (0.1 + 0.1*distance + 0.1*distance*distance);
     float brightness = max(diffuse * attenuation,0.1);
-    gl_FragColor = vec4(brightness*fragColor,1.0);
+    fragColor = vec4(brightness*color,1.0);
 }`;
-            const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-            gl.shaderSource(fragmentShader, fragmentShaderSource);
-            gl.compileShader(fragmentShader);
-            gl.attachShader(program, vertexShader);
-            gl.attachShader(program, fragmentShader);
-        };
-    };
+			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+			gl.shaderSource(fragmentShader, fragmentShaderSource);
+			gl.compileShader(fragmentShader);
+			gl.attachShader(program, vertexShader);
+			gl.attachShader(program, fragmentShader);
+		};
+	};
+}
+
+function setupMeshColor(context, { color }) {
+	return function () {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = context.program;
+		console.log("color", color, context.program, context.gl);
+		const colorLocation = gl.getUniformLocation(program, "color");
+		gl.uniform3fv(colorLocation, new Float32Array(color));
+	};
 }
 
 function setupCamera(context, camera) {
-    return function createCamera() {
-        context = get_store_value(context);
-        const gl = context.gl;
-        const program = context.program;
+	return function createCamera() {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = context.program;
 
-        // projection matrix
-        const projectionLocation = gl.getUniformLocation(program, "projection");
+		// projection matrix
+		const projectionLocation = gl.getUniformLocation(program, "projection");
 
-        const fieldOfViewInRadians = toRadian(camera.fov);
-        const aspectRatio = context.canvas.width / context.canvas.height;
-        const nearClippingPlaneDistance = camera.near;
-        const farClippingPlaneDistance = camera.far;
+		const fieldOfViewInRadians = toRadian(camera.fov);
+		const aspectRatio = context.canvas.width / context.canvas.height;
+		const nearClippingPlaneDistance = camera.near;
+		const farClippingPlaneDistance = camera.far;
 
-        let projection = new Float32Array(16);
-        projection = perspective(
-            projection,
-            fieldOfViewInRadians,
-            aspectRatio,
-            nearClippingPlaneDistance,
-            farClippingPlaneDistance
-        );
+		let projection = new Float32Array(16);
+		projection = perspective(
+			projection,
+			fieldOfViewInRadians,
+			aspectRatio,
+			nearClippingPlaneDistance,
+			farClippingPlaneDistance,
+		);
 
-        gl.uniformMatrix4fv(projectionLocation, false, projection);
+		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
+		// view matrix
+		const viewLocation = gl.getUniformLocation(program, "view");
+		const view = new Float32Array(16);
 
-        // view matrix
-        const viewLocation = gl.getUniformLocation(program, "view");
-        const view = new Float32Array(16);
-
-        lookAt(view, camera.position, camera.target, camera.up);
-        gl.uniformMatrix4fv(viewLocation, false, view);
-    };
+		lookAt(view, camera.position, camera.target, camera.up);
+		gl.uniformMatrix4fv(viewLocation, false, view);
+	};
 }
 
 function setupLights(context, lights) {
-    return function () {
-        context = get_store_value(context);
-        const gl = context.gl;
-        const program = context.program;
-        const lightPositionLocation = gl.getUniformLocation(program, "lightPosition");
-        gl.uniform3fv(lightPositionLocation, new Float32Array(lights[0]));
-    };
+	return function () {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = context.program;
+		const lightPositionLocation = gl.getUniformLocation(program, "lightPosition");
+		gl.uniform3fv(lightPositionLocation, new Float32Array(lights[0]));
+	};
 }
 
 function setupWorldMatrix(context, worldMatrix) {
-    return function () {
-        context = get_store_value(context);
-        const gl = context.gl;
-        const program = context.program;
-        if (!worldMatrix) {
-            worldMatrix = new Float32Array(16);
-            identity(worldMatrix);
-        }
-        context.worldMatrix = worldMatrix;
-        const worldLocation = gl.getUniformLocation(program, "world");
-        gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
-    };
+	return function () {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = context.program;
+		if (!worldMatrix) {
+			worldMatrix = new Float32Array(16);
+			identity(worldMatrix);
+		}
+		context.worldMatrix = worldMatrix;
+		const worldLocation = gl.getUniformLocation(program, "world");
+		gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
+	};
 }
-    
-function updateWorldMatrix(context,worldMatrix) {
-    context = get_store_value(context);
-    const gl = context.gl;
-    const program = context.program;
-    const worldLocation = gl.getUniformLocation(program, "world");
-    gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
+
+function updateWorldMatrix(context, worldMatrix) {
+	context = get_store_value(context);
+	const gl = context.gl;
+	const program = context.program;
+	const worldLocation = gl.getUniformLocation(program, "world");
+	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 }
 
 function setupAttributes(context, mesh) {
-    return function () {
-        context = get_store_value(context);
-        const gl = context.gl;
-        const program = context.program;
-        context.attributeLength = mesh.attributes.elements ? mesh.attributes.elements.length : mesh.attributes.positions.length / 3;
+	return function () {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = context.program;
+		context.attributeLength = mesh.attributes.elements
+			? mesh.attributes.elements.length
+			: mesh.attributes.positions.length / 3;
 
-        const positionsData = new Float32Array(mesh.attributes.positions);
-        //position
-        const positionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, positionsData, gl.STATIC_DRAW);
-        const positionLocation = gl.getAttribLocation(program, "position");
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer); //todo check if redundant
-        gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(positionLocation);
-        //normal
-        const normalsData = new Float32Array(mesh.attributes.normals);
-        const normalBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, normalsData, gl.STATIC_DRAW);
-        const normalLocation = gl.getAttribLocation(program, "normal");
-        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
-        gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(normalLocation);
-        if (mesh.attributes.elements) {
-            
-            context.hasElements = true;
-            const elementsData = new Uint16Array(mesh.attributes.elements);
-            const elementBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, elementsData, gl.STATIC_DRAW);
-        }
-
-    };
+		const positionsData = new Float32Array(mesh.attributes.positions);
+		//position
+		const positionBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, positionsData, gl.STATIC_DRAW);
+		const positionLocation = gl.getAttribLocation(program, "position");
+		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer); //todo check if redundant
+		gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(positionLocation);
+		//normal
+		const normalsData = new Float32Array(mesh.attributes.normals);
+		const normalBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, normalsData, gl.STATIC_DRAW);
+		const normalLocation = gl.getAttribLocation(program, "normal");
+		gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
+		gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, 0, 0);
+		gl.enableVertexAttribArray(normalLocation);
+		if (mesh.attributes.elements) {
+			context.hasElements = true;
+			const elementsData = new Uint16Array(mesh.attributes.elements);
+			const elementBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, elementsData, gl.STATIC_DRAW);
+		}
+	};
 }
 
-function createRenderer(){
-    
-    const {subscribe, set, update} = writable({
-        initRenderer,
-        backgroundColor: [2.55,2.55,2.55,1],
-        canvas: null,
-        camera: null,
-        //worldMatrix: null,
-        meshes: [],
-        lights: [],
-        loop: null,
-    });
-    return {
-        subscribe,
-        setCamera: (fov,near,far,position,target,up) => update(renderer => {
-            renderer.camera = {
-                fov,
-                near,
-                far,
-                position,
-                target,
-                up,
-            };
-            return renderer;
-        }),
-        addMesh: (mesh) => update(renderer => {
-            renderer.meshes = [...renderer.meshes, mesh];
-            return renderer;
-        }),
-        addLight: (light) => update(renderer => {
-            renderer.lights = [...renderer.lights, light];
-            return renderer;
-        }),
-        setLoop: (loop) => update(renderer => {
-            renderer.loop = loop;
-            return renderer;
-        }),
-        /*setWorldMAtrix: (worldMatrix) => update(renderer => {
+function createRenderer() {
+	const { subscribe, set, update } = writable({
+		backgroundColor: [2.55, 2.55, 2.55, 1],
+		canvas: null,
+		camera: null,
+		//worldMatrix: null,
+		meshes: [],
+		lights: [],
+		loop: null,
+	});
+	return {
+		subscribe,
+		setCamera: (fov, near, far, position, target, up) =>
+			update((renderer) => {
+				renderer.camera = {
+					fov,
+					near,
+					far,
+					position,
+					target,
+					up,
+				};
+				return renderer;
+			}),
+		addMesh: (mesh) =>
+			update((renderer) => {
+				renderer.meshes = [...renderer.meshes, mesh];
+				return renderer;
+			}),
+		addLight: (light) =>
+			update((renderer) => {
+				renderer.lights = [...renderer.lights, light];
+				return renderer;
+			}),
+		setLoop: (loop) =>
+			update((renderer) => {
+				renderer.loop = loop;
+				return renderer;
+			}),
+		/*setWorldMAtrix: (worldMatrix) => update(renderer => {
             renderer.worldMatrix = worldMatrix;
             return renderer;
         }),*/
-        setCanvas: (canvas) => update(renderer => {
-            renderer.canvas = canvas;
-            return renderer;
-        }),
-        setBackgroundColor: (backgroundColor) => update(renderer => {
-            renderer.backgroundColor = backgroundColor;
-            return renderer;
-        }),
-    };
+		setCanvas: (canvas) =>
+			update((renderer) => {
+				renderer.canvas = canvas;
+				return renderer;
+			}),
+		setBackgroundColor: (backgroundColor) =>
+			update((renderer) => {
+				renderer.backgroundColor = backgroundColor;
+				return renderer;
+			}),
+	};
 }
 
 const renderer = createRenderer();
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
 const createWorldMatrix = () => {
-    const {subscribe, set} = writable(defaultWorldMatrix);
-    return {
-        subscribe,
-        set: (worldMatrix) => {
-            set(worldMatrix);
-            if(contextStore && get_store_value(contextStore).program){
-
-                updateWorldMatrix(contextStore,worldMatrix);
-            }
-            return worldMatrix;
-        },
-    };
+	const { subscribe, set } = writable(defaultWorldMatrix);
+	return {
+		subscribe,
+		set: (worldMatrix) => {
+			set(worldMatrix);
+			if (contextStore && get_store_value(contextStore).program) {
+				updateWorldMatrix(contextStore, worldMatrix);
+			}
+			return worldMatrix;
+		},
+	};
 };
 const worldMatrix = createWorldMatrix();
 
-const programs = derived(renderer,$renderer => {
-    return $renderer.meshes.map(mesh => {
-        return {
-            createProgram,
-            mesh,
-            material:mesh.material,
-            attributes:mesh.attributes,
-            createShaders:createShaders(mesh.material,mesh.attributes),
-            endProgramSetup,
-        }
-    });
+const programs = derived(renderer, ($renderer) => {
+	return $renderer.meshes.map((mesh) => {
+		return {
+			createProgram,
+			mesh,
+			material: mesh.material,
+			attributes: mesh.attributes,
+			uniforms: mesh.uniforms,
+			createShaders: createShaders(mesh.material, mesh.attributes, mesh.uniforms),
+			endProgramSetup,
+		};
+	});
 });
 
-function createRenderState () {
-    const {subscribe,set} = writable({
-        init:false,
-        rendered:false,
-    });
-    return {
-        subscribe,
-        set,
-    };
+function createRenderState() {
+	const { subscribe, set } = writable({
+		init: false,
+		rendered: false,
+	});
+	return {
+		subscribe,
+		set,
+	};
 }
 const renderState = createRenderState();
 
-function createContextStore () {
-    const {subscribe,set} = writable({});
-    return {
-        subscribe,
-        set: (context) => {
-            set(context);
-        },
-    };
+function createContextStore() {
+	const { subscribe, set } = writable({});
+	return {
+		subscribe,
+		set: (context) => {
+			set(context);
+		},
+	};
 }
 
 const contextStore = createContextStore();
 // make this store inactive until the conditions are met (single flag?)
 
-const normalMatrix = derived(worldMatrix,$worldMatrix => {
-    const normalMatrix = create();
-    const worldMatrix = $worldMatrix || defaultWorldMatrix;
-    invert(normalMatrix,worldMatrix);
-    transpose(normalMatrix,normalMatrix);
-    const context = get_store_value(contextStore);
-    if(!context.gl) {
-        return normalMatrix;
-    }
-    const gl = context.gl;
-    const program = context.program;
-    const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-    gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
-    return normalMatrix;
+const lastProgramRendered = writable(null);
+
+const normalMatrix = derived(worldMatrix, ($worldMatrix) => {
+	const normalMatrix = create();
+	const worldMatrix = $worldMatrix || defaultWorldMatrix;
+	invert(normalMatrix, worldMatrix);
+	transpose(normalMatrix, normalMatrix);
+	const context = get_store_value(contextStore);
+	if (!context.gl) {
+		return normalMatrix;
+	}
+	const gl = context.gl;
+	const program = context.program;
+	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
+	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+	return normalMatrix;
 });
 
-const webglapp = derived([renderer,programs,worldMatrix], ([$renderer,$programs,$worldMatrix]) => {
-    let context = {
-        canvas: $renderer.canvas,
-        backgroundColor: $renderer.backgroundColor,
-    };
+const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, $programs, $worldMatrix]) => {
+	let context = {
+		canvas: $renderer.canvas,
+		backgroundColor: $renderer.backgroundColor,
+	};
 
-    if(
-        !$renderer ||
-        !$programs ||
-        !$renderer.canvas ||
-        $programs.length === 0 ||
-        !$renderer.camera ||
-        $renderer.lights.length === 0
-    ){
-        console.log("no renderer or programs or canvas");
-        return [];
-    }
-    
-    const initInstructions = get_store_value(renderState).init ? [] : [$renderer.initRenderer(context,contextStore)];
+	if (
+		!$renderer ||
+		!$programs ||
+		!$renderer.canvas ||
+		$programs.length === 0 ||
+		!$renderer.camera ||
+		$renderer.lights.length === 0
+	) {
+		console.log("no renderer or programs or canvas");
+		return [];
+	}
 
-    const setupInstructions = get_store_value(renderState).init ? [] : $programs.reduce((acc,program) => {
-        return [
-            ...acc,
-            program.createProgram(contextStore),
-            program.createShaders(contextStore),
-            program.endProgramSetup(contextStore),
-            setupCamera(contextStore,$renderer.camera),
-            setupWorldMatrix(contextStore,get_store_value(worldMatrix)),
-            setupNormalMatrix(contextStore),
-            setupAttributes(contextStore,program.mesh),
-            setupLights(contextStore,$renderer.lights),
-        ];
-    },[]);
-    
-    const list = [
-        ...initInstructions,
-        ...setupInstructions,
-        render(contextStore),
-    ];
-    //list.forEach(fn => console.log(fn));
-    return list;
+	const initInstructions = get_store_value(renderState).init ? [] : [initRenderer(context, contextStore)];
+
+	const setupInstructions = get_store_value(renderState).init
+		? []
+		: $programs.reduce((acc, program) => {
+				lastProgramRendered.set(program);
+				return [
+					...acc,
+					program.createProgram(contextStore),
+					program.createShaders(contextStore),
+					program.endProgramSetup(contextStore),
+					...(program.mesh.uniforms?.color ? [setupMeshColor(contextStore, program.uniforms)] : []),
+					setupCamera(contextStore, $renderer.camera),
+					setupWorldMatrix(contextStore, get_store_value(worldMatrix)),
+					setupNormalMatrix(contextStore),
+					setupAttributes(contextStore, program.mesh),
+					setupLights(contextStore, $renderer.lights),
+				];
+			}, []);
+
+	const list = [...initInstructions, ...setupInstructions, render(contextStore)];
+	//list.forEach(fn => console.log(fn));
+	return list;
 });
 
 function createCube() {
-    return {
-        positions:[
-            //top
-            -1.0, 1.0, -1.0,
-            -1.0, 1.0, 1.0,
-            1.0, 1.0, 1.0,
-            1.0, 1.0, -1.0,
-            //left
-            -1.0, 1.0, 1.0,
-            -1.0, -1.0, 1.0,
-            -1.0, -1.0, -1.0,
-            -1.0, 1.0, -1.0,
-            //right
-            1.0, 1.0, 1.0,
-            1.0, -1.0, 1.0,
-            1.0, -1.0, -1.0,
-            1.0, 1.0, -1.0,
-            //front
-            1.0, 1.0, 1.0,
-            1.0, -1.0, 1.0,
-            -1.0, -1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            //back
-            1.0, 1.0, -1.0,
-            1.0, -1.0, -1.0,
-            -1.0, -1.0, -1.0,
-            -1.0, 1.0, -1.0,
-            //bottom
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0, 1.0,
-            1.0, -1.0, 1.0,
-            1.0, -1.0, -1.0,
-        ],
-        normals:[
-            //top
-            0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0,
-            0.0, 1.0, 0.0,
-            //left
-            -1.0, 0.0, 0.0,
-            -1.0, 0.0, 0.0,
-            -1.0, 0.0, 0.0,
-            -1.0, 0.0, 0.0,
-            //right
-            1.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            1.0, 0.0, 0.0,
-            //front
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            0.0, 0.0, 1.0,
-            //back
-            0.0, 0.0, -1.0,
-            0.0, 0.0, -1.0,
-            0.0, 0.0, -1.0,
-            0.0, 0.0, -1.0,
-            //bottom
-            0.0, -1.0, 0.0,
-            0.0, -1.0, 0.0,
-            0.0, -1.0, 0.0,
-            0.0, -1.0, 0.0,
-        ],
-        elements:[
-            //top
-            0, 1, 2,
-            0, 2, 3,
-            //left
-            5, 4, 6,
-            6, 4, 7,
-            // right
-            8, 9, 10,
-            8, 10, 11,
-            //front
-            13, 12, 14,
-            15, 14, 12,
-            //back
-            16, 17, 18,
-            16, 18, 19,
-            //bottom
-            21, 20, 22,
-            22, 20, 23
-        ],
-    }
+	return {
+		positions: [
+			//top
+			-1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0,
+			//left
+			-1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0,
+			//right
+			1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0,
+			//front
+			1.0, 1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0,
+			//back
+			1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0,
+			//bottom
+			-1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
+		],
+		normals: [
+			//top
+			0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
+			//left
+			-1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0,
+			//right
+			1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+			//front
+			0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
+			//back
+			0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0,
+			//bottom
+			0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0,
+		],
+		elements: [
+			//top
+			0, 1, 2, 0, 2, 3,
+			//left
+			5, 4, 6, 6, 4, 7,
+			// right
+			8, 9, 10, 8, 10, 11,
+			//front
+			13, 12, 14, 15, 14, 12,
+			//back
+			16, 17, 18, 16, 18, 19,
+			//bottom
+			21, 20, 22, 22, 20, 23,
+		],
+	};
 }
 
 /* src\main.svelte generated by Svelte v4.2.18 */
@@ -1688,7 +1664,7 @@ function create_fragment(ctx) {
 		},
 		m(target, anchor) {
 			insert(target, canvas_1, anchor);
-			/*canvas_1_binding*/ ctx[2](canvas_1);
+			/*canvas_1_binding*/ ctx[3](canvas_1);
 		},
 		p: noop,
 		i: noop,
@@ -1698,27 +1674,34 @@ function create_fragment(ctx) {
 				detach(canvas_1);
 			}
 
-			/*canvas_1_binding*/ ctx[2](null);
+			/*canvas_1_binding*/ ctx[3](null);
 		}
 	};
 }
 
 function instance($$self, $$props, $$invalidate) {
 	let $worldMatrix;
+	let $lastProgramRendered;
 	let $webglapp;
-	component_subscribe($$self, worldMatrix, $$value => $$invalidate(3, $worldMatrix = $$value));
-	component_subscribe($$self, normalMatrix, $$value => $$invalidate(4, $$value));
-	component_subscribe($$self, webglapp, $$value => $$invalidate(1, $webglapp = $$value));
+	component_subscribe($$self, worldMatrix, $$value => $$invalidate(4, $worldMatrix = $$value));
+	component_subscribe($$self, normalMatrix, $$value => $$invalidate(5, $$value));
+	component_subscribe($$self, lastProgramRendered, $$value => $$invalidate(1, $lastProgramRendered = $$value));
+	component_subscribe($$self, webglapp, $$value => $$invalidate(2, $webglapp = $$value));
 	let canvas;
 
 	onMount(() => {
 		renderer.setCanvas(canvas);
 		renderer.setBackgroundColor([0.0, 0.0, 0.0, 1.0]);
 		renderer.setCamera(45, 0.1, 1000, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
-		renderer.addMesh({ attributes: createCube() });
+
+		renderer.addMesh({
+			attributes: createCube(),
+			uniforms: { color: [1, 0, 0] }
+		});
+
 		renderer.addLight([0, 7, -3]);
-		setTimeout(animate, 1000);
-	});
+		animate();
+	}); //setTimeout(animate, 1000);
 
 	function animate() {
 		const rotation = performance.now() / 1000 / 6 * Math.PI;
@@ -1739,16 +1722,20 @@ function instance($$self, $$props, $$invalidate) {
 	}
 
 	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*$webglapp*/ 2) {
+		if ($$self.$$.dirty & /*$webglapp*/ 4) {
 			if ($webglapp) {
 				$webglapp.forEach(instruction => {
 					instruction();
 				});
 			}
 		}
+
+		if ($$self.$$.dirty & /*$lastProgramRendered*/ 2) {
+			console.log("lastProgramRendered", $lastProgramRendered);
+		}
 	};
 
-	return [canvas, $webglapp, canvas_1_binding];
+	return [canvas, $lastProgramRendered, $webglapp, canvas_1_binding];
 }
 
 class Main extends SvelteComponent {

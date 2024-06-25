@@ -15,6 +15,6 @@ export default {
             exportConditions: ['svelte'],
             extensions: ['.svelte']
           }),
-          /*terser(),*/
+        /*terser(),*/
     ]
 };
