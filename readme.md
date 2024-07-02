@@ -11,12 +11,12 @@ One constraint it follows is to never over bundle code, using a less easy API, w
 To give credit where credit is due, most of the 3d science is plundered from three.js, but everything must be optimized and rewritten to fit the constraints (no OOP, no over bundling, no over abstraction)
 
 Existing features :
--PointLight
--Cube
--PolyHedron Sphere
+- PointLight
+- Cube
+- PolyHedron Sphere
 
 List of planned features :
--PBR material
--DirectionalLight
--multiple lights
--multiple objects (partially done)
+- PBR material
+- DirectionalLight
+- multiple lights
+- multiple objects (partially done)
