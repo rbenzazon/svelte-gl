@@ -7,7 +7,7 @@ import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhe
 import { createFlatShadedNormals } from "./geometries/common.js";
 let canvas;
 onMount(() => {
-	const data = createPolyhedron(1, 1, createFlatShadedNormals);
+	const data = createPolyhedron(1, 3, createFlatShadedNormals);
 	console.log("data", data);
 	renderer.setCanvas(canvas);
 	renderer.setBackgroundColor([0.0, 0.0, 0.0, 1.0]);
