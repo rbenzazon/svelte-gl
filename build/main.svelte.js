@@ -555,7 +555,7 @@ if (!Math.hypot) Math.hypot = function () {
  * @returns {mat4} a new 4x4 matrix
  */
 
-function create() {
+function create$1() {
   var out = new ARRAY_TYPE(16);
 
   if (ARRAY_TYPE != Float32Array) {
@@ -1178,23 +1178,26 @@ function setupNormalMatrix(context) {
 		const worldMatrix = context.worldMatrix;
 		const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
 		context.normalMatrixLocation = normalMatrixLocation;
-		let normalMatrix = create();
+		let normalMatrix = create$1();
 		invert(normalMatrix, worldMatrix);
 		transpose(normalMatrix, normalMatrix);
 		gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
 	};
 }
 
-function initRenderer(context, contextStore) {
+function initRenderer(rendererContext, appContext) {
 	return function () {
-		const canvasRect = context.canvas.getBoundingClientRect();
-		context.canvas.width = canvasRect.width;
-		context.canvas.height = canvasRect.height;
-		const gl = (context.gl = context.canvas.getContext("webgl2"));
-		contextStore.set(context);
-		gl.viewportWidth = context.canvas.width;
-		gl.viewportHeight = context.canvas.height;
-		gl.clearColor.apply(gl, context.backgroundColor);
+		const canvasRect = rendererContext.canvas.getBoundingClientRect();
+		rendererContext.canvas.width = canvasRect.width;
+		rendererContext.canvas.height = canvasRect.height;
+		const gl = (rendererContext.gl = rendererContext.canvas.getContext("webgl2"));
+		appContext.update((appContext) => ({
+			...appContext,
+			...rendererContext,
+		}));
+		gl.viewportWidth = rendererContext.canvas.width;
+		gl.viewportHeight = rendererContext.canvas.height;
+		gl.clearColor.apply(gl, rendererContext.backgroundColor);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
@@ -1497,8 +1500,14 @@ const createWorldMatrix = () => {
 		subscribe,
 		set: (worldMatrix) => {
 			set(worldMatrix);
-			if (contextStore && get_store_value(contextStore).program) {
-				updateWorldMatrix(contextStore, worldMatrix);
+			if (appContext && get_store_value(appContext).program) {
+				// in case of a single program app, let's update the uniform only and draw the single program
+				if (get_store_value(programs).length === 1) {
+					updateWorldMatrix(appContext, worldMatrix);
+				} // in case of a multi program app, we need to setup and draw the programs
+				else {
+					renderState.set({ init: false });
+				}
 			}
 			return worldMatrix;
 		},
@@ -1523,7 +1532,6 @@ const programs = derived(renderer, ($renderer) => {
 function createRenderState() {
 	const { subscribe, set } = writable({
 		init: false,
-		rendered: false,
 	});
 	return {
 		subscribe,
@@ -1533,26 +1541,30 @@ function createRenderState() {
 const renderState = createRenderState();
 
 function createContextStore() {
-	const { subscribe, set } = writable({});
+	const { subscribe, update } = writable({});
 	return {
 		subscribe,
-		set: (context) => {
-			set(context);
-		},
+		update,
 	};
 }
 
-const contextStore = createContextStore();
+const appContext = createContextStore();
 // make this store inactive until the conditions are met (single flag?)
 
+/*
+Single program apps (one mesh/material) will not need to setup the program again
+but multi program apps require to setup the program before rendering if the last changes
+affect a program that is not the last one rendered. because the last one rendered is still mounted / in memory of the GPU
+this store will be used to know if we need to setup the program before rendering again
+*/
 const lastProgramRendered = writable(null);
 
 const normalMatrix = derived(worldMatrix, ($worldMatrix) => {
-	const normalMatrix = create();
+	const normalMatrix = create$1();
 	const worldMatrix = $worldMatrix || defaultWorldMatrix;
 	invert(normalMatrix, worldMatrix);
 	transpose(normalMatrix, normalMatrix);
-	const context = get_store_value(contextStore);
+	const context = get_store_value(appContext);
 	if (!context.gl) {
 		return normalMatrix;
 	}
@@ -1564,11 +1576,7 @@ const normalMatrix = derived(worldMatrix, ($worldMatrix) => {
 });
 
 const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, $programs, $worldMatrix]) => {
-	let context = {
-		canvas: $renderer.canvas,
-		backgroundColor: $renderer.backgroundColor,
-	};
-
+	// todo find a way to avoid this, like init this store only when renderer is ready
 	if (
 		!$renderer ||
 		!$programs ||
@@ -1581,77 +1589,433 @@ const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, $progra
 		return [];
 	}
 
-	const initInstructions = get_store_value(renderState).init ? [] : [initRenderer(context, contextStore)];
+	let rendererContext = {
+		canvas: $renderer.canvas,
+		backgroundColor: $renderer.backgroundColor,
+	};
+	const list = [];
 
-	const setupInstructions = get_store_value(renderState).init
-		? []
-		: $programs.reduce((acc, program) => {
+	!get_store_value(renderState).init && list.push(initRenderer(rendererContext, appContext));
+
+	!get_store_value(renderState).init &&
+		list.push(
+			...$programs.reduce((acc, program) => {
 				lastProgramRendered.set(program);
 				return [
 					...acc,
-					program.createProgram(contextStore),
-					program.createShaders(contextStore),
-					program.endProgramSetup(contextStore),
-					...(program.mesh.uniforms?.color ? [setupMeshColor(contextStore, program.uniforms)] : []),
-					setupCamera(contextStore, $renderer.camera),
-					setupWorldMatrix(contextStore, get_store_value(worldMatrix)),
-					setupNormalMatrix(contextStore),
-					setupAttributes(contextStore, program.mesh),
-					setupLights(contextStore, $renderer.lights),
+					program.createProgram(appContext),
+					program.createShaders(appContext),
+					program.endProgramSetup(appContext),
+					...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
+					setupAttributes(appContext, program.mesh),
+					/* these uniforms are probably common to any program */
+					setupCamera(appContext, $renderer.camera),
+					setupWorldMatrix(appContext, get_store_value(worldMatrix)),
+					setupNormalMatrix(appContext),
+					setupLights(appContext, $renderer.lights),
 				];
-			}, []);
+			}, []),
+		);
 
-	const list = [...initInstructions, ...setupInstructions, render(contextStore)];
-	//list.forEach(fn => console.log(fn));
+	list.push(render(appContext));
 	return list;
 });
 
-function createCube() {
-	return {
-		positions: [
-			//top
-			-1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0,
-			//left
-			-1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0,
-			//right
-			1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0,
-			//front
-			1.0, 1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0,
-			//back
-			1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0,
-			//bottom
-			-1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
-		],
-		normals: [
-			//top
-			0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
-			//left
-			-1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0,
-			//right
-			1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-			//front
-			0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
-			//back
-			0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0,
-			//bottom
-			0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0,
-		],
-		elements: [
-			//top
-			0, 1, 2, 0, 2, 3,
-			//left
-			5, 4, 6, 6, 4, 7,
-			// right
-			8, 9, 10, 8, 10, 11,
-			//front
-			13, 12, 14, 15, 14, 12,
-			//back
-			16, 17, 18, 16, 18, 19,
-			//bottom
-			21, 20, 22, 22, 20, 23,
-		],
-	};
+/**
+ * 3 Dimensional Vector
+ * @module vec3
+ */
+
+/**
+ * Creates a new, empty vec3
+ *
+ * @returns {vec3} a new 3D vector
+ */
+
+function create() {
+  var out = new ARRAY_TYPE(3);
+
+  if (ARRAY_TYPE != Float32Array) {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+  }
+
+  return out;
 }
+/**
+ * Subtracts vector b from vector a
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+
+function subtract(out, a, b) {
+  out[0] = a[0] - b[0];
+  out[1] = a[1] - b[1];
+  out[2] = a[2] - b[2];
+  return out;
+}
+/**
+ * Normalize a vec3
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a vector to normalize
+ * @returns {vec3} out
+ */
+
+function normalize(out, a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  var len = x * x + y * y + z * z;
+
+  if (len > 0) {
+    //TODO: evaluate use of glm_invsqrt here?
+    len = 1 / Math.sqrt(len);
+  }
+
+  out[0] = a[0] * len;
+  out[1] = a[1] * len;
+  out[2] = a[2] * len;
+  return out;
+}
+/**
+ * Computes the cross product of two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+
+function cross(out, a, b) {
+  var ax = a[0],
+      ay = a[1],
+      az = a[2];
+  var bx = b[0],
+      by = b[1],
+      bz = b[2];
+  out[0] = ay * bz - az * by;
+  out[1] = az * bx - ax * bz;
+  out[2] = ax * by - ay * bx;
+  return out;
+}
+/**
+ * Performs a linear interpolation between two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
+ * @returns {vec3} out
+ */
+
+function lerp(out, a, b, t) {
+  var ax = a[0];
+  var ay = a[1];
+  var az = a[2];
+  out[0] = ax + t * (b[0] - ax);
+  out[1] = ay + t * (b[1] - ay);
+  out[2] = az + t * (b[2] - az);
+  return out;
+}
+/**
+ * Perform some operation over an array of vec3s.
+ *
+ * @param {Array} a the array of vectors to iterate over
+ * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
+ * @param {Number} offset Number of elements to skip at the beginning of the array
+ * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
+ * @param {Function} fn Function to call for each vector in the array
+ * @param {Object} [arg] additional argument to pass to fn
+ * @returns {Array} a
+ * @function
+ */
+
+(function () {
+  var vec = create();
+  return function (a, stride, offset, count, fn, arg) {
+    var i, l;
+
+    if (!stride) {
+      stride = 3;
+    }
+
+    if (!offset) {
+      offset = 0;
+    }
+
+    if (count) {
+      l = Math.min(count * stride + offset, a.length);
+    } else {
+      l = a.length;
+    }
+
+    for (i = offset; i < l; i += stride) {
+      vec[0] = a[i];
+      vec[1] = a[i + 1];
+      vec[2] = a[i + 2];
+      fn(vec, vec, arg);
+      a[i] = vec[0];
+      a[i + 1] = vec[1];
+      a[i + 2] = vec[2];
+    }
+
+    return a;
+  };
+})();
+
+function createVec3() {
+	return new Array(3).fill(0);
+}
+
+function multiplyScalarVec3(a, scalar) {
+	a[0] *= scalar;
+	a[1] *= scalar;
+	a[2] *= scalar;
+
+	return a;
+}
+
+function createFlatShadedNormals(positions) {
+	const normals = [];
+	for (let i = 0; i < positions.length; i += 9) {
+		const a = createVec3();
+		const b = createVec3();
+		const c = createVec3();
+
+		a[0] = positions[i];
+		a[1] = positions[i + 1];
+		a[2] = positions[i + 2];
+
+		b[0] = positions[i + 3];
+		b[1] = positions[i + 4];
+		b[2] = positions[i + 5];
+
+		c[0] = positions[i + 6];
+		c[1] = positions[i + 7];
+		c[2] = positions[i + 8];
+
+		const cb = createVec3();
+		subtract(cb, c, b);
+
+		const ab = createVec3();
+		subtract(ab, a, b);
+
+		const normal = createVec3();
+		cross(normal, cb, ab);
+		normalize(normal, normal);
+		// todo, replace with
+		normals.push(...normal, ...normal, ...normal);
+	}
+	return normals;
+}
+
+/**
+ * @typedef {{
+ *    positions: Float32Array,
+ *   normals: Float32Array,
+ * }} Geometry
+ */
+/*elements: Uint16Array*/
+/**
+ *
+ * @param {*} radius
+ * @param {*} subdivisions
+ * @returns {Geometry}
+ */
+const createPolyhedron = (radius, detail, normalCreator) => {
+	const positions = [];
+	subdivide(detail);
+	applyRadius(radius);
+
+	let normals = normalCreator(positions);
+
+	return {
+		positions,
+		normals,
+	};
+
+	function subdivide(detail) {
+		const a = createVec3();
+		const b = createVec3();
+		const c = createVec3();
+
+		// iterate over all faces and apply a subdivision with the given detail value
+
+		for (let i = 0; i < initialIndices.length; i += 3) {
+			// get the vertices of the face
+
+			getVertexByIndex(initialIndices[i + 0], a);
+			getVertexByIndex(initialIndices[i + 1], b);
+			getVertexByIndex(initialIndices[i + 2], c);
+
+			// perform subdivision
+
+			subdivideFace(a, b, c, detail);
+		}
+	}
+
+	function getVertexByIndex(index, vertex) {
+		const stride = index * 3;
+
+		vertex[0] = initialVertices[stride + 0];
+		vertex[1] = initialVertices[stride + 1];
+		vertex[2] = initialVertices[stride + 2];
+	}
+
+	function subdivideFace(a, b, c, detail) {
+		const cols = detail + 1;
+
+		// we use this multidimensional array as a data structure for creating the subdivision
+
+		const v = [];
+
+		// construct all of the vertices for this subdivision
+		for (let i = 0; i <= cols; i++) {
+			v[i] = [];
+			let aj = createVec3();
+			lerp(aj, [...a], c, i / cols);
+			let bj = createVec3();
+			lerp(bj, [...b], c, i / cols);
+			const rows = cols - i;
+
+			for (let j = 0; j <= rows; j++) {
+				if (j === 0 && i === cols) {
+					v[i][j] = aj;
+				} else {
+					let tmp = createVec3();
+					lerp(tmp, [...aj], bj, j / rows);
+					v[i][j] = tmp;
+				}
+			}
+		}
+
+		// construct all of the faces
+
+		for (let i = 0; i < cols; i++) {
+			for (let j = 0; j < 2 * (cols - i) - 1; j++) {
+				const k = Math.floor(j / 2);
+
+				if (j % 2 === 0) {
+					pushVertex(v[i][k + 1]);
+					pushVertex(v[i + 1][k]);
+					pushVertex(v[i][k]);
+				} else {
+					pushVertex(v[i][k + 1]);
+					pushVertex(v[i + 1][k + 1]);
+					pushVertex(v[i + 1][k]);
+				}
+			}
+		}
+	}
+
+	function pushVertex(vertex) {
+		positions.push(...vertex);
+	}
+
+	function applyRadius(radius) {
+		const vertex = createVec3();
+
+		// iterate over the entire buffer and apply the radius to each vertex
+
+		for (let i = 0; i < positions.length; i += 3) {
+			vertex[0] = positions[i + 0];
+			vertex[1] = positions[i + 1];
+			vertex[2] = positions[i + 2];
+
+			normalize(vertex, vertex);
+			multiplyScalarVec3(vertex, radius);
+
+			positions[i + 0] = vertex[0];
+			positions[i + 1] = vertex[1];
+			positions[i + 2] = vertex[2];
+		}
+	}
+};
+
+const t = (1 + Math.sqrt(5)) / 2;
+const r = 1 / t;
+
+const initialVertices = [
+	// (±1, ±1, ±1)
+	-1,
+	-1,
+	-1,
+	-1,
+	-1,
+	1,
+	-1,
+	1,
+	-1,
+	-1,
+	1,
+	1,
+	1,
+	-1,
+	-1,
+	1,
+	-1,
+	1,
+	1,
+	1,
+	-1,
+	1,
+	1,
+	1,
+
+	// (0, ±1/φ, ±φ)
+	0,
+	-r,
+	-t,
+	0,
+	-r,
+	t,
+	0,
+	r,
+	-t,
+	0,
+	r,
+	t,
+
+	// (±1/φ, ±φ, 0)
+	-r,
+	-t,
+	0,
+	-r,
+	t,
+	0,
+	r,
+	-t,
+	0,
+	r,
+	t,
+	0,
+
+	// (±φ, 0, ±1/φ)
+	-t,
+	0,
+	-r,
+	t,
+	0,
+	-r,
+	-t,
+	0,
+	r,
+	t,
+	0,
+	r,
+];
+
+const initialIndices = [
+	3, 11, 7, 3, 7, 15, 3, 15, 13, 7, 19, 17, 7, 17, 6, 7, 6, 15, 17, 4, 8, 17, 8, 10, 17, 10, 6, 8, 0, 16, 8, 16, 2, 8, 2,
+	10, 0, 12, 1, 0, 1, 18, 0, 18, 16, 6, 10, 2, 6, 2, 13, 6, 13, 15, 2, 16, 18, 2, 18, 3, 2, 3, 13, 18, 1, 9, 18, 9, 11,
+	18, 11, 3, 4, 14, 12, 4, 12, 0, 4, 0, 8, 11, 9, 5, 11, 5, 19, 11, 19, 7, 19, 5, 14, 19, 14, 4, 19, 4, 17, 1, 12, 14, 1,
+	14, 5, 1, 5, 9,
+];
 
 /* src\main.svelte generated by Svelte v4.2.18 */
 
@@ -1690,12 +2054,14 @@ function instance($$self, $$props, $$invalidate) {
 	let canvas;
 
 	onMount(() => {
+		const data = createPolyhedron(1, 1, createFlatShadedNormals);
+		console.log("data", data);
 		renderer.setCanvas(canvas);
 		renderer.setBackgroundColor([0.0, 0.0, 0.0, 1.0]);
 		renderer.setCamera(45, 0.1, 1000, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
 
 		renderer.addMesh({
-			attributes: createCube(),
+			attributes: data,
 			uniforms: { color: [1, 0, 0] }
 		});
 

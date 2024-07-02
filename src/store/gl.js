@@ -28,16 +28,19 @@ export function setupNormalMatrix(context) {
 	};
 }
 
-export function initRenderer(context, contextStore) {
+export function initRenderer(rendererContext, appContext) {
 	return function () {
-		const canvasRect = context.canvas.getBoundingClientRect();
-		context.canvas.width = canvasRect.width;
-		context.canvas.height = canvasRect.height;
-		const gl = (context.gl = context.canvas.getContext("webgl2"));
-		contextStore.set(context);
-		gl.viewportWidth = context.canvas.width;
-		gl.viewportHeight = context.canvas.height;
-		gl.clearColor.apply(gl, context.backgroundColor);
+		const canvasRect = rendererContext.canvas.getBoundingClientRect();
+		rendererContext.canvas.width = canvasRect.width;
+		rendererContext.canvas.height = canvasRect.height;
+		const gl = (rendererContext.gl = rendererContext.canvas.getContext("webgl2"));
+		appContext.update((appContext) => ({
+			...appContext,
+			...rendererContext,
+		}));
+		gl.viewportWidth = rendererContext.canvas.width;
+		gl.viewportHeight = rendererContext.canvas.height;
+		gl.clearColor.apply(gl, rendererContext.backgroundColor);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);

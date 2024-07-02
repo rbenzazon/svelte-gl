@@ -3,13 +3,17 @@ import { onMount } from "svelte";
 import { renderer, webglapp, worldMatrix, normalMatrix, lastProgramRendered } from "./store/engine.js";
 import { createCube } from "./geometries/cube.js";
 import { identity, rotateX, rotateY, rotateZ } from "gl-matrix/esm/mat4.js";
+import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
+import { createFlatShadedNormals } from "./geometries/common.js";
 let canvas;
 onMount(() => {
+	const data = createPolyhedron(1, 1, createFlatShadedNormals);
+	console.log("data", data);
 	renderer.setCanvas(canvas);
 	renderer.setBackgroundColor([0.0, 0.0, 0.0, 1.0]);
 	renderer.setCamera(45, 0.1, 1000, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
 	renderer.addMesh({
-		attributes: createCube(),
+		attributes: data,
 		uniforms: {
 			color: [1, 0, 0],
 		},

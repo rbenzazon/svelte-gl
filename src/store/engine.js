@@ -80,8 +80,14 @@ const createWorldMatrix = () => {
 		subscribe,
 		set: (worldMatrix) => {
 			set(worldMatrix);
-			if (contextStore && get(contextStore).program) {
-				updateWorldMatrix(contextStore, worldMatrix);
+			if (appContext && get(appContext).program) {
+				// in case of a single program app, let's update the uniform only and draw the single program
+				if (get(programs).length === 1) {
+					updateWorldMatrix(appContext, worldMatrix);
+				} // in case of a multi program app, we need to setup and draw the programs
+				else {
+					renderState.set({ init: false });
+				}
 			}
 			return worldMatrix;
 		},
@@ -106,7 +112,6 @@ export const programs = derived(renderer, ($renderer) => {
 function createRenderState() {
 	const { subscribe, set } = writable({
 		init: false,
-		rendered: false,
 	});
 	return {
 		subscribe,
@@ -116,18 +121,22 @@ function createRenderState() {
 export const renderState = createRenderState();
 
 function createContextStore() {
-	const { subscribe, set } = writable({});
+	const { subscribe, update } = writable({});
 	return {
 		subscribe,
-		set: (context) => {
-			set(context);
-		},
+		update,
 	};
 }
 
-export const contextStore = createContextStore();
+export const appContext = createContextStore();
 // make this store inactive until the conditions are met (single flag?)
 
+/*
+Single program apps (one mesh/material) will not need to setup the program again
+but multi program apps require to setup the program before rendering if the last changes
+affect a program that is not the last one rendered. because the last one rendered is still mounted / in memory of the GPU
+this store will be used to know if we need to setup the program before rendering again
+*/
 export const lastProgramRendered = writable(null);
 
 export const normalMatrix = derived(worldMatrix, ($worldMatrix) => {
@@ -135,7 +144,7 @@ export const normalMatrix = derived(worldMatrix, ($worldMatrix) => {
 	const worldMatrix = $worldMatrix || defaultWorldMatrix;
 	invert(normalMatrix, worldMatrix);
 	transpose(normalMatrix, normalMatrix);
-	const context = get(contextStore);
+	const context = get(appContext);
 	if (!context.gl) {
 		return normalMatrix;
 	}
@@ -147,11 +156,7 @@ export const normalMatrix = derived(worldMatrix, ($worldMatrix) => {
 });
 
 export const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, $programs, $worldMatrix]) => {
-	let context = {
-		canvas: $renderer.canvas,
-		backgroundColor: $renderer.backgroundColor,
-	};
-
+	// todo find a way to avoid this, like init this store only when renderer is ready
 	if (
 		!$renderer ||
 		!$programs ||
@@ -164,27 +169,34 @@ export const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, 
 		return [];
 	}
 
-	const initInstructions = get(renderState).init ? [] : [initRenderer(context, contextStore)];
+	let rendererContext = {
+		canvas: $renderer.canvas,
+		backgroundColor: $renderer.backgroundColor,
+	};
+	const list = [];
 
-	const setupInstructions = get(renderState).init
-		? []
-		: $programs.reduce((acc, program) => {
+	!get(renderState).init && list.push(initRenderer(rendererContext, appContext));
+
+	!get(renderState).init &&
+		list.push(
+			...$programs.reduce((acc, program) => {
 				lastProgramRendered.set(program);
 				return [
 					...acc,
-					program.createProgram(contextStore),
-					program.createShaders(contextStore),
-					program.endProgramSetup(contextStore),
-					...(program.mesh.uniforms?.color ? [setupMeshColor(contextStore, program.uniforms)] : []),
-					setupCamera(contextStore, $renderer.camera),
-					setupWorldMatrix(contextStore, get(worldMatrix)),
-					setupNormalMatrix(contextStore),
-					setupAttributes(contextStore, program.mesh),
-					setupLights(contextStore, $renderer.lights),
+					program.createProgram(appContext),
+					program.createShaders(appContext),
+					program.endProgramSetup(appContext),
+					...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
+					setupAttributes(appContext, program.mesh),
+					/* these uniforms are probably common to any program */
+					setupCamera(appContext, $renderer.camera),
+					setupWorldMatrix(appContext, get(worldMatrix)),
+					setupNormalMatrix(appContext),
+					setupLights(appContext, $renderer.lights),
 				];
-			}, []);
+			}, []),
+		);
 
-	const list = [...initInstructions, ...setupInstructions, render(contextStore)];
-	//list.forEach(fn => console.log(fn));
+	list.push(render(appContext));
 	return list;
 });
