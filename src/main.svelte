@@ -18,7 +18,8 @@ onMount(() => {
 			color: [1, 0, 0],
 		},
 	});
-	renderer.addLight([0, 7, -3]);
+	renderer.addLight({type:"point",position:[0, 3, -1],color:[1, 1, 1],intensity:0.5});
+	renderer.addLight({type:"point",position:[2, 0, -1],color:[1, 1, 1],intensity:0.2});
 	animate();
 	//setTimeout(animate, 1000);
 });

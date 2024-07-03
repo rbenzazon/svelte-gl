@@ -172,6 +172,7 @@ export const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, 
 	let rendererContext = {
 		canvas: $renderer.canvas,
 		backgroundColor: $renderer.backgroundColor,
+		numPointLights: $renderer.lights.filter(l=>l.type === "point").length,
 	};
 	const list = [];
 

@@ -1,6 +1,9 @@
 import { create, invert, transpose, identity, lookAt, perspective } from "gl-matrix/esm/mat4.js";
 import { get } from "svelte/store";
 import { renderState } from "./engine.js";
+import defaultVertex from '../shaders/default-vertex.glsl';
+import defaultFragment from '../shaders/default-fragment.glsl';
+import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";
 
 const degree = Math.PI / 180;
 /**
@@ -98,62 +101,17 @@ export function createShaders(material, attributes, uniforms) {
 			context = get(context);
 			const gl = context.gl;
 			const program = context.program;
-			const vertexShaderSource = `#version 300 es
-precision mediump float;
-    
-in vec3 position;
-in vec3 normal;
-
-uniform mat4 world;
-uniform mat4 view;
-uniform mat4 projection;
-uniform mat4 normalMatrix;
-
-// Pass the color attribute down to the fragment shader
-out vec3 vertexColor;
-out vec3 vNormal;
-out vec3 vertex;
-
-void main() {
-    
-
-    // Pass the color down to the fragment shader
-    vertexColor = vec3(1.27,1.27,1.27);
-    // Pass the vertex down to the fragment shader
-    vertex = vec3(world * vec4(position, 1.0));
-    // Pass the normal down to the fragment shader
-    vNormal = vec3(normalMatrix * vec4(normal, 1.0));
-    //vNormal = normal;
-    
-    // Pass the position down to the fragment shader
-    gl_Position = projection * view * world * vec4(position, 1.0);
-}`;
+			const vertexShaderSource = defaultVertex;
+			
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
-			const fragmentShaderSource = `#version 300 es
-precision mediump float;
-
-uniform vec3 lightPosition;
-uniform vec3 color;
-
-in vec3 vertex;
-in vec3 vNormal;    
-in vec3 vertexColor;
-
-out vec4 fragColor;
-
-void main() {
-    //vec3 offset = lightPosition - vertex;
-    vec3 offset = vec3(0.0,7.0,-3.0) - vertex;
-    float distance = length(offset);
-    vec3 direction = normalize(offset);
-
-    float diffuse = max(dot(direction, vNormal), 0.0);
-    float attenuation = 10.0 / (0.1 + 0.1*distance + 0.1*distance*distance);
-    float brightness = max(diffuse * attenuation,0.1);
-    fragColor = vec4(brightness*color,1.0);
-}`;
+			const fragmentShaderSource = templateLiteralRenderer({
+					defines: objectToDefines({
+						NUM_POINT_LIGHTS: context.numPointLights,
+					})
+				},defaultFragment);
+			console.log("fragmentShaderSource", fragmentShaderSource);
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
 			gl.compileShader(fragmentShader);
@@ -213,8 +171,22 @@ export function setupLights(context, lights) {
 		context = get(context);
 		const gl = context.gl;
 		const program = context.program;
-		const lightPositionLocation = gl.getUniformLocation(program, "lightPosition");
-		gl.uniform3fv(lightPositionLocation, new Float32Array(lights[0]));
+		const pointLigths = lights.filter(l => l.type === "point");
+		const lightPositionsLocation = gl.getUniformLocation(program, "pointLightPositions[0]");
+		const lightPositionsData = pointLigths.reduce((acc, light) => {
+			return [...acc, ...light.position];
+		}, []);
+		gl.uniform3fv(lightPositionsLocation, new Float32Array(lightPositionsData));
+		const lightColorsLocation = gl.getUniformLocation(program, "pointLightColors[0]");
+		const lightColorsData = pointLigths.reduce((acc, light) => {
+			return [...acc, ...light.color];
+		}, []);
+		gl.uniform3fv(lightColorsLocation, new Float32Array(lightColorsData));
+		const lightIntensitiesLocation = gl.getUniformLocation(program, "pointLightIntensities[0]");
+		const lightIntensitiesData = pointLigths.reduce((acc, light) => {
+			return [...acc, light.intensity];
+		}, []);
+		gl.uniform1fv(lightIntensitiesLocation, new Float32Array(lightIntensitiesData));
 	};
 }
 
