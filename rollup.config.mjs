@@ -14,6 +14,7 @@ export default {
             // By default, everything gets included
             include: 'src/**/*.glsl',
             /*sourceMap: false*/
+            compress: false,
         }),
         svelte(),
         
@@ -22,6 +23,6 @@ export default {
             exportConditions: ['svelte'],
             extensions: ['.svelte']
           }),
-        terser(),
+        //terser(),
     ]
 };

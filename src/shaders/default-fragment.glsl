@@ -3,44 +3,63 @@ precision mediump float;
 
 ${defines}
 
-#if NUM_POINT_LIGHTS > 0
-    uniform vec3 pointLightPositions[NUM_POINT_LIGHTS];
-    uniform vec3 pointLightColors[NUM_POINT_LIGHTS];
-    uniform float pointLightIntensities[NUM_POINT_LIGHTS];
-#endif
+struct PointLight {
+    vec3 position;
+    vec3 color;
+    float intensity;
+};
 
-uniform vec3 lightPosition;
+layout(std140) uniform PointLights {
+    PointLight pointLights[NUM_POINT_LIGHTS];
+};
+
 uniform vec3 color;
 
 in vec3 vertex;
-in vec3 vNormal;    
-in vec3 vertexColor;
+in vec3 vNormal;
 
 out vec4 fragColor;
 
-float calculateLightBrightness(vec3 lightPosition, vec3 lightColor, float lightIntensity, vec3 vertexPosition, vec3 normal) {
+float getDistanceAttenuation( const in float lightDistance, const in float cutoffDistance, const in float decayExponent ) {
+
+	// based upon Frostbite 3 Moving to Physically-based Rendering
+	// page 32, equation 26: E[window1]
+	// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf
+	float distanceFalloff = 1.0 / max( pow( lightDistance, decayExponent ), 0.01 );
+
+	if ( cutoffDistance > 0.0 ) {
+
+		distanceFalloff *= pow2( saturate( 1.0 - pow4( lightDistance / cutoffDistance ) ) );
+
+	}
+
+	return distanceFalloff;
+
+}
+
+vec3 calculateLightBrightness(vec3 lightPosition, vec3 lightColor, float lightIntensity, vec3 vertexPosition, vec3 normal) {
     vec3 offset = lightPosition - vertexPosition;
+    //debug position
+    //vec3 offset = vec3(0.0,3.0, -1.0) - vertexPosition;
     float distance = length(offset);
     vec3 direction = normalize(offset);
     float diffuse = max(dot(direction, normal), 0.0);
     // Assuming a simple attenuation model where lightIntensity is factored into the attenuation calculation
     float attenuation = lightIntensity / (0.1 + 0.1*distance + 0.1*distance*distance);
-    float brightness = max(diffuse * attenuation, 0.1);
-    return brightness;
+    
+    float brightness = max(diffuse * attenuation, 0.2);
+    return vec3(brightness*lightColor);
 }
 
 void main() {
-    float totalBrightness = 0.0;
-    for (int i = 0; i < NUM_POINT_LIGHTS; i++) {
-        totalBrightness += calculateLightBrightness(pointLightPositions[i], pointLightColors[i], pointLightIntensities[i], vertex, vNormal);
-    }
-    //vec3 offset = lightPosition - vertex;
-    /*vec3 offset = vec3(0.0,7.0,-3.0) - vertex;
-    float distance = length(offset);
-    vec3 direction = normalize(offset);
 
-    float diffuse = max(dot(direction, vNormal), 0.0);
-    float attenuation = 10.0 / (0.1 + 0.1*distance + 0.1*distance*distance);
-    float brightness = max(diffuse * attenuation,0.1);*/
-    fragColor = vec4(totalBrightness*color,1.0);
+    vec3 totalBrightness = vec3(0.0);
+    for (int i = 0; i < NUM_POINT_LIGHTS; i++) {
+        PointLight pointLight = pointLights[i];
+        totalBrightness += calculateLightBrightness(pointLight.position, pointLight.color, pointLight.intensity, vertex, vNormal);
+    }
+
+    //debug normals
+    //fragColor = vec4(normalize(vNormal) * 0.5 + 0.5, 1.0);
+    fragColor = vec4(color*totalBrightness,1.0);
 }

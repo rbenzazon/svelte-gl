@@ -112,6 +112,7 @@ export function createShaders(material, attributes, uniforms) {
 					})
 				},defaultFragment);
 			console.log("fragmentShaderSource", fragmentShaderSource);
+			console.log("defaultFragment", defaultFragment);
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
 			gl.compileShader(fragmentShader);
@@ -126,7 +127,6 @@ export function setupMeshColor(context, { color }) {
 		context = get(context);
 		const gl = context.gl;
 		const program = context.program;
-		console.log("color", color, context.program, context.gl);
 		const colorLocation = gl.getUniformLocation(program, "color");
 		gl.uniform3fv(colorLocation, new Float32Array(color));
 	};
@@ -172,6 +172,69 @@ export function setupLights(context, lights) {
 		const gl = context.gl;
 		const program = context.program;
 		const pointLigths = lights.filter(l => l.type === "point");
+
+
+
+		const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
+		// Bind the UBO to the binding point
+		const pointLightsBindingPoint = 0; // Choose a binding point for the UBO
+
+		console.log("pointLightsBlockIndex", pointLightsBlockIndex);
+		gl.uniformBlockBinding(program, pointLightsBlockIndex, pointLightsBindingPoint);
+
+		const indices = gl.getUniformIndices(program, ["PointLights[0].position", "PointLights[0].color", "PointLights[0].intensity"]);
+		console.log("indices", indices);
+		const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
+		console.log("offsets", offsets);
+
+		// Create UBO for point lights
+		const pointLightsUBO = gl.createBuffer();
+
+		gl.bindBuffer(gl.UNIFORM_BUFFER, pointLightsUBO);
+
+		// Calculate the size of the UBO
+		const pointLightSize = 12 * Float32Array.BYTES_PER_ELEMENT; // Size of a single point light in bytes
+		const numPointLights = pointLigths.length;
+		const pointLightsBufferSize = pointLightSize * numPointLights;
+
+		// Allocate memory for the UBO
+		//gl.bufferData(gl.UNIFORM_BUFFER, pointLightsBufferSize, gl.DYNAMIC_DRAW);
+
+		
+		gl.bindBufferBase(gl.UNIFORM_BUFFER, pointLightsBindingPoint, pointLightsUBO);
+		
+		// Create a single Float32Array to hold all the point light data
+
+		const pointLightsData = new Float32Array(numPointLights * 8); // Each point light has 12 values (position(3=>4), color(3=>4), intensity(1=>4))
+
+		// Fill the Float32Array with the point light data
+		for (let i = 0; i < numPointLights; i++) {
+			const light = pointLigths[i];
+			const offset = i * 8; // Each point light takes up 8 positions in the array
+		
+			// Set the position data
+			pointLightsData[offset] = light.position[0];
+			pointLightsData[offset + 1] = light.position[1];
+			pointLightsData[offset + 2] = light.position[2];
+			pointLightsData[offset + 4] = light.color[0];
+			pointLightsData[offset + 5] = light.color[1];
+			pointLightsData[offset + 6] = light.color[2];
+			pointLightsData[offset + 7] = light.intensity;
+			pointLightsData[offset + 8] = 0;
+
+			//
+
+		}
+		console.log("pointLightsData", pointLightsData);
+		
+		// Set the data in the UBO using bufferData
+		gl.bufferData(gl.UNIFORM_BUFFER, pointLightsData, gl.DYNAMIC_DRAW);
+
+		// Bind the UBO to the uniform block in the shader
+		
+		
+
+/*
 		const lightPositionsLocation = gl.getUniformLocation(program, "pointLightPositions[0]");
 		const lightPositionsData = pointLigths.reduce((acc, light) => {
 			return [...acc, ...light.position];
@@ -186,7 +249,7 @@ export function setupLights(context, lights) {
 		const lightIntensitiesData = pointLigths.reduce((acc, light) => {
 			return [...acc, light.intensity];
 		}, []);
-		gl.uniform1fv(lightIntensitiesLocation, new Float32Array(lightIntensitiesData));
+		gl.uniform1fv(lightIntensitiesLocation, new Float32Array(lightIntensitiesData));*/
 	};
 }
 

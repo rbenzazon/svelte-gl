@@ -1,4 +1,4 @@
-<script>
+<script type="module">
 import { onMount } from "svelte";
 import { renderer, webglapp, worldMatrix, normalMatrix, lastProgramRendered } from "./store/engine.js";
 import { createCube } from "./geometries/cube.js";
@@ -15,11 +15,11 @@ onMount(() => {
 	renderer.addMesh({
 		attributes: data,
 		uniforms: {
-			color: [1, 0, 0],
+			color: [1, 1, 1],
 		},
 	});
-	renderer.addLight({type:"point",position:[0, 3, -1],color:[1, 1, 1],intensity:0.5});
-	renderer.addLight({type:"point",position:[2, 0, -1],color:[1, 1, 1],intensity:0.2});
+	renderer.addLight({type:"point",position:[-2,2,-3],color:[1,1,1],intensity:0.2});
+	renderer.addLight({type:"point",position:[1,-2,-3],color:[1,1,0],intensity:0.7});
 	animate();
 	//setTimeout(animate, 1000);
 });
