@@ -17,9 +17,10 @@ Existing features :
 - PointLight
 - Cube
 - PolyHedron Sphere
+- multiple point lights using UBO
 
 List of planned features :
 - PBR material
 - DirectionalLight
-- multiple lights
+
 - multiple objects (partially done)

@@ -8,7 +8,6 @@ export function multiplyScalarVec3(a, scalar) {
 	a[0] *= scalar;
 	a[1] *= scalar;
 	a[2] *= scalar;
-
 	return a;
 }
 

@@ -1,9 +1,10 @@
 import { create, invert, transpose, identity, lookAt, perspective } from "gl-matrix/esm/mat4.js";
 import { get } from "svelte/store";
 import { renderState } from "./engine.js";
-import defaultVertex from '../shaders/default-vertex.glsl';
-import defaultFragment from '../shaders/default-fragment.glsl';
+import defaultVertex from "../shaders/default-vertex.glsl";
+import defaultFragment from "../shaders/default-fragment.glsl";
 import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";
+import { multiplyScalarVec3 } from "../geometries/common.js";
 
 const degree = Math.PI / 180;
 /**
@@ -102,15 +103,18 @@ export function createShaders(material, attributes, uniforms) {
 			const gl = context.gl;
 			const program = context.program;
 			const vertexShaderSource = defaultVertex;
-			
+
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
-			const fragmentShaderSource = templateLiteralRenderer({
+			const fragmentShaderSource = templateLiteralRenderer(
+				{
 					defines: objectToDefines({
 						NUM_POINT_LIGHTS: context.numPointLights,
-					})
-				},defaultFragment);
+					}),
+				},
+				defaultFragment,
+			);
 			console.log("fragmentShaderSource", fragmentShaderSource);
 			console.log("defaultFragment", defaultFragment);
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
@@ -171,9 +175,7 @@ export function setupLights(context, lights) {
 		context = get(context);
 		const gl = context.gl;
 		const program = context.program;
-		const pointLigths = lights.filter(l => l.type === "point");
-
-
+		const pointLigths = lights.filter((l) => l.type === "point");
 
 		const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
 		// Bind the UBO to the binding point
@@ -182,7 +184,11 @@ export function setupLights(context, lights) {
 		console.log("pointLightsBlockIndex", pointLightsBlockIndex);
 		gl.uniformBlockBinding(program, pointLightsBlockIndex, pointLightsBindingPoint);
 
-		const indices = gl.getUniformIndices(program, ["PointLights[0].position", "PointLights[0].color", "PointLights[0].intensity"]);
+		const indices = gl.getUniformIndices(program, [
+			"PointLights[0].position",
+			"PointLights[0].color",
+			"PointLights[0].intensity",
+		]);
 		console.log("indices", indices);
 		const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
 		console.log("offsets", offsets);
@@ -200,18 +206,17 @@ export function setupLights(context, lights) {
 		// Allocate memory for the UBO
 		//gl.bufferData(gl.UNIFORM_BUFFER, pointLightsBufferSize, gl.DYNAMIC_DRAW);
 
-		
 		gl.bindBufferBase(gl.UNIFORM_BUFFER, pointLightsBindingPoint, pointLightsUBO);
-		
+
 		// Create a single Float32Array to hold all the point light data
 
-		const pointLightsData = new Float32Array(numPointLights * 8); // Each point light has 12 values (position(3=>4), color(3=>4), intensity(1=>4))
+		const pointLightsData = new Float32Array(numPointLights * 12); // Each point light has 12 values (position(3=>4), color(3=>4), intensity(1=>4))
 
 		// Fill the Float32Array with the point light data
 		for (let i = 0; i < numPointLights; i++) {
 			const light = pointLigths[i];
-			const offset = i * 8; // Each point light takes up 8 positions in the array
-		
+			const offset = i * 12; // Each point light takes up 8 positions in the array
+			multiplyScalarVec3(light.color, light.intensity);
 			// Set the position data
 			pointLightsData[offset] = light.position[0];
 			pointLightsData[offset + 1] = light.position[1];
@@ -219,22 +224,21 @@ export function setupLights(context, lights) {
 			pointLightsData[offset + 4] = light.color[0];
 			pointLightsData[offset + 5] = light.color[1];
 			pointLightsData[offset + 6] = light.color[2];
-			pointLightsData[offset + 7] = light.intensity;
-			pointLightsData[offset + 8] = 0;
-
-			//
-
+			pointLightsData[offset + 7] = light.cutoffDistance;
+			pointLightsData[offset + 8] = light.decayExponent;
+			pointLightsData[offset + 9] = 0.25;
+			pointLightsData[offset + 10] = 0.5;
+			pointLightsData[offset + 11] = 0.75;
+			pointLightsData[offset + 12] = 1;
 		}
 		console.log("pointLightsData", pointLightsData);
-		
+
 		// Set the data in the UBO using bufferData
 		gl.bufferData(gl.UNIFORM_BUFFER, pointLightsData, gl.DYNAMIC_DRAW);
 
 		// Bind the UBO to the uniform block in the shader
-		
-		
 
-/*
+		/*
 		const lightPositionsLocation = gl.getUniformLocation(program, "pointLightPositions[0]");
 		const lightPositionsData = pointLigths.reduce((acc, light) => {
 			return [...acc, ...light.position];

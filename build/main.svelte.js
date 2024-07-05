@@ -1161,21 +1161,215 @@ function derived(stores, fn, initial_value) {
 
 var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\n\r\nuniform mat4 world;\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 normalMatrix;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\n\r\nvoid main() {\r\n    \r\n\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n}";
 
-var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float intensity;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nuniform vec3 color;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\nfloat getDistanceAttenuation( const in float lightDistance, const in float cutoffDistance, const in float decayExponent ) {\r\n\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n\tfloat distanceFalloff = 1.0 / max( pow( lightDistance, decayExponent ), 0.01 );\r\n\r\n\tif ( cutoffDistance > 0.0 ) {\r\n\r\n\t\tdistanceFalloff *= pow2( saturate( 1.0 - pow4( lightDistance / cutoffDistance ) ) );\r\n\r\n\t}\r\n\r\n\treturn distanceFalloff;\r\n\r\n}\r\n\r\nvec3 calculateLightBrightness(vec3 lightPosition, vec3 lightColor, float lightIntensity, vec3 vertexPosition, vec3 normal) {\r\n    vec3 offset = lightPosition - vertexPosition;\r\n    //debug position\r\n    //vec3 offset = vec3(0.0,3.0, -1.0) - vertexPosition;\r\n    float distance = length(offset);\r\n    vec3 direction = normalize(offset);\r\n    float diffuse = max(dot(direction, normal), 0.0);\r\n    // Assuming a simple attenuation model where lightIntensity is factored into the attenuation calculation\r\n    float attenuation = lightIntensity / (0.1 + 0.1*distance + 0.1*distance*distance);\r\n    \r\n    float brightness = max(diffuse * attenuation, 0.2);\r\n    return vec3(brightness*lightColor);\r\n}\r\n\r\nvoid main() {\r\n\r\n    vec3 totalBrightness = vec3(0.0);\r\n    for (int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        totalBrightness += calculateLightBrightness(pointLight.position, pointLight.color, pointLight.intensity, vertex, vNormal);\r\n    }\r\n\r\n    //debug normals\r\n    //fragColor = vec4(normalize(vNormal) * 0.5 + 0.5, 1.0);\r\n    fragColor = vec4(color*totalBrightness,1.0);\r\n}";
+var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nuniform vec3 color;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\n// tone mapping taken from three.js\r\nfloat toneMappingExposure = 1.0f;\r\n\r\n    // Matrices for rec 2020 <> rec 709 color space conversion\r\n    // matrix provided in row-major order so it has been transposed\r\n    // https://www.itu.int/pub/R-REP-BT.2407-2017\r\nconst mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(vec3(1.6605f, -0.1246f, -0.0182f), vec3(-0.5876f, 1.1329f, -0.1006f), vec3(-0.0728f, -0.0083f, 1.1187f));\r\n\r\nconst mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(vec3(0.6274f, 0.0691f, 0.0164f), vec3(0.3293f, 0.9195f, 0.0880f), vec3(0.0433f, 0.0113f, 0.8956f));\r\n\r\n    // https://iolite-engine.com/blog_posts/minimal_agx_implementation\r\n    // Mean error^2: 3.6705141e-06\r\nvec3 agxDefaultContrastApprox(vec3 x) {\r\n\r\n    vec3 x2 = x * x;\r\n    vec3 x4 = x2 * x2;\r\n\r\n    return +15.5f * x4 * x2 - 40.14f * x4 * x + 31.96f * x4 - 6.868f * x2 * x + 0.4298f * x2 + 0.1191f * x - 0.00232f;\r\n\r\n}\r\n\r\nvec3 AgXToneMapping(vec3 color) {\r\n\r\n        // AgX constants\r\n    const mat3 AgXInsetMatrix = mat3(vec3(0.856627153315983f, 0.137318972929847f, 0.11189821299995f), vec3(0.0951212405381588f, 0.761241990602591f, 0.0767994186031903f), vec3(0.0482516061458583f, 0.101439036467562f, 0.811302368396859f));\r\n\r\n        // explicit AgXOutsetMatrix generated from Filaments AgXOutsetMatrixInv\r\n    const mat3 AgXOutsetMatrix = mat3(vec3(1.1271005818144368f, -0.1413297634984383f, -0.14132976349843826f), vec3(-0.11060664309660323f, 1.157823702216272f, -0.11060664309660294f), vec3(-0.016493938717834573f, -0.016493938717834257f, 1.2519364065950405f));\r\n\r\n        // LOG2_MIN      = -10.0\r\n        // LOG2_MAX      =  +6.5\r\n        // MIDDLE_GRAY   =  0.18\r\n    const float AgxMinEv = -12.47393f;  // log2( pow( 2, LOG2_MIN ) * MIDDLE_GRAY )\r\n    const float AgxMaxEv = 4.026069f;    // log2( pow( 2, LOG2_MAX ) * MIDDLE_GRAY )\r\n\r\n    color *= toneMappingExposure;\r\n\r\n    color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;\r\n\r\n    color = AgXInsetMatrix * color;\r\n\r\n        // Log2 encoding\r\n    color = max(color, 1e-10f); // avoid 0 or negative numbers for log2\r\n    color = log2(color);\r\n    color = (color - AgxMinEv) / (AgxMaxEv - AgxMinEv);\r\n\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n        // Apply sigmoid\r\n    color = agxDefaultContrastApprox(color);\r\n\r\n        // Apply AgX look\r\n        // v = agxLook(v, look);\r\n\r\n    color = AgXOutsetMatrix * color;\r\n\r\n        // Linearize\r\n    color = pow(max(vec3(0.0f), color), vec3(2.2f));\r\n\r\n    color = LINEAR_REC2020_TO_LINEAR_SRGB * color;\r\n\r\n        // Gamut mapping. Simple clamp for now.\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n    return color;\r\n\r\n}\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n\r\n    if(cutoffDistance > 0.0f) {\r\n\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n\r\n    }\r\n\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nvec3 calculateLightBrightness(vec3 lightPosition, vec3 lightColor, float cutoffDistance, float decayExponent, vec3 vertexPosition, vec3 normal) {\r\n    vec3 offset = lightPosition - vertexPosition;\r\n    float lightDistance = length(offset);\r\n    vec3 direction = normalize(offset);\r\n    vec3 irradiance = saturate(dot(normal, direction)) * lightColor;\r\n    float distanceFalloff = getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n    return vec3(irradiance * distanceFalloff);\r\n}\r\n\r\nvoid main() {\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        totalIrradiance += calculateLightBrightness(pointLight.position, pointLight.color, pointLight.cutoffDistance, pointLight.decayExponent, vertex, vNormal);\r\n    }\r\n\r\n    //debug normals\r\n    //fragColor = vec4(normalize(vNormal) * 0.5 + 0.5, 1.0);\r\n    fragColor = vec4(AgXToneMapping(RECIPROCAL_PI * color * totalIrradiance), 1.0f);\r\n}";
 
-const templateGenerator = (props,template) => {
-    return (propsValues) => 
-        Function.constructor(...props,`return \`${template}\``)(...propsValues);
+const templateGenerator = (props, template) => {
+	return (propsValues) => Function.constructor(...props, `return \`${template}\``)(...propsValues);
 };
-const templateLiteralRenderer = (props,template) => {
-    return templateGenerator(Object.keys(props),template)(Object.values(props));
+const templateLiteralRenderer = (props, template) => {
+	return templateGenerator(Object.keys(props), template)(Object.values(props));
 };
 
 const objectToDefines = (obj) => {
-    return ['',...Object.entries(obj).map(([key,value]) => {
-        return `#define ${key} ${value}`;
-    })].join('\n');
+	return [
+		"",
+		...Object.entries(obj).map(([key, value]) => {
+			return `#define ${key} ${value}`;
+		}),
+	].join("\n");
 };
+
+/**
+ * 3 Dimensional Vector
+ * @module vec3
+ */
+
+/**
+ * Creates a new, empty vec3
+ *
+ * @returns {vec3} a new 3D vector
+ */
+
+function create() {
+  var out = new ARRAY_TYPE(3);
+
+  if (ARRAY_TYPE != Float32Array) {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+  }
+
+  return out;
+}
+/**
+ * Subtracts vector b from vector a
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+
+function subtract(out, a, b) {
+  out[0] = a[0] - b[0];
+  out[1] = a[1] - b[1];
+  out[2] = a[2] - b[2];
+  return out;
+}
+/**
+ * Normalize a vec3
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a vector to normalize
+ * @returns {vec3} out
+ */
+
+function normalize(out, a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  var len = x * x + y * y + z * z;
+
+  if (len > 0) {
+    //TODO: evaluate use of glm_invsqrt here?
+    len = 1 / Math.sqrt(len);
+  }
+
+  out[0] = a[0] * len;
+  out[1] = a[1] * len;
+  out[2] = a[2] * len;
+  return out;
+}
+/**
+ * Computes the cross product of two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+
+function cross(out, a, b) {
+  var ax = a[0],
+      ay = a[1],
+      az = a[2];
+  var bx = b[0],
+      by = b[1],
+      bz = b[2];
+  out[0] = ay * bz - az * by;
+  out[1] = az * bx - ax * bz;
+  out[2] = ax * by - ay * bx;
+  return out;
+}
+/**
+ * Performs a linear interpolation between two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
+ * @returns {vec3} out
+ */
+
+function lerp(out, a, b, t) {
+  var ax = a[0];
+  var ay = a[1];
+  var az = a[2];
+  out[0] = ax + t * (b[0] - ax);
+  out[1] = ay + t * (b[1] - ay);
+  out[2] = az + t * (b[2] - az);
+  return out;
+}
+/**
+ * Perform some operation over an array of vec3s.
+ *
+ * @param {Array} a the array of vectors to iterate over
+ * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
+ * @param {Number} offset Number of elements to skip at the beginning of the array
+ * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
+ * @param {Function} fn Function to call for each vector in the array
+ * @param {Object} [arg] additional argument to pass to fn
+ * @returns {Array} a
+ * @function
+ */
+
+(function () {
+  var vec = create();
+  return function (a, stride, offset, count, fn, arg) {
+    var i, l;
+
+    if (!stride) {
+      stride = 3;
+    }
+
+    if (!offset) {
+      offset = 0;
+    }
+
+    if (count) {
+      l = Math.min(count * stride + offset, a.length);
+    } else {
+      l = a.length;
+    }
+
+    for (i = offset; i < l; i += stride) {
+      vec[0] = a[i];
+      vec[1] = a[i + 1];
+      vec[2] = a[i + 2];
+      fn(vec, vec, arg);
+      a[i] = vec[0];
+      a[i + 1] = vec[1];
+      a[i + 2] = vec[2];
+    }
+
+    return a;
+  };
+})();
+
+function createVec3() {
+	return new Array(3).fill(0);
+}
+
+function multiplyScalarVec3(a, scalar) {
+	a[0] *= scalar;
+	a[1] *= scalar;
+	a[2] *= scalar;
+	return a;
+}
+
+function createFlatShadedNormals(positions) {
+	const normals = [];
+	for (let i = 0; i < positions.length; i += 9) {
+		const a = createVec3();
+		const b = createVec3();
+		const c = createVec3();
+
+		a[0] = positions[i];
+		a[1] = positions[i + 1];
+		a[2] = positions[i + 2];
+
+		b[0] = positions[i + 3];
+		b[1] = positions[i + 4];
+		b[2] = positions[i + 5];
+
+		c[0] = positions[i + 6];
+		c[1] = positions[i + 7];
+		c[2] = positions[i + 8];
+
+		const cb = createVec3();
+		subtract(cb, c, b);
+
+		const ab = createVec3();
+		subtract(ab, a, b);
+
+		const normal = createVec3();
+		cross(normal, cb, ab);
+		normalize(normal, normal);
+		// todo, replace with
+		normals.push(...normal, ...normal, ...normal);
+	}
+	return normals;
+}
 
 const degree = Math.PI / 180;
 /**
@@ -1274,15 +1468,18 @@ function createShaders(material, attributes, uniforms) {
 			const gl = context.gl;
 			const program = context.program;
 			const vertexShaderSource = defaultVertex;
-			
+
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
-			const fragmentShaderSource = templateLiteralRenderer({
+			const fragmentShaderSource = templateLiteralRenderer(
+				{
 					defines: objectToDefines({
 						NUM_POINT_LIGHTS: context.numPointLights,
-					})
-				},defaultFragment);
+					}),
+				},
+				defaultFragment,
+			);
 			console.log("fragmentShaderSource", fragmentShaderSource);
 			console.log("defaultFragment", defaultFragment);
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
@@ -1343,9 +1540,7 @@ function setupLights(context, lights) {
 		context = get_store_value(context);
 		const gl = context.gl;
 		const program = context.program;
-		const pointLigths = lights.filter(l => l.type === "point");
-
-
+		const pointLigths = lights.filter((l) => l.type === "point");
 
 		const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
 		// Bind the UBO to the binding point
@@ -1354,7 +1549,11 @@ function setupLights(context, lights) {
 		console.log("pointLightsBlockIndex", pointLightsBlockIndex);
 		gl.uniformBlockBinding(program, pointLightsBlockIndex, pointLightsBindingPoint);
 
-		const indices = gl.getUniformIndices(program, ["PointLights[0].position", "PointLights[0].color", "PointLights[0].intensity"]);
+		const indices = gl.getUniformIndices(program, [
+			"PointLights[0].position",
+			"PointLights[0].color",
+			"PointLights[0].intensity",
+		]);
 		console.log("indices", indices);
 		const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
 		console.log("offsets", offsets);
@@ -1368,18 +1567,17 @@ function setupLights(context, lights) {
 		// Allocate memory for the UBO
 		//gl.bufferData(gl.UNIFORM_BUFFER, pointLightsBufferSize, gl.DYNAMIC_DRAW);
 
-		
 		gl.bindBufferBase(gl.UNIFORM_BUFFER, pointLightsBindingPoint, pointLightsUBO);
-		
+
 		// Create a single Float32Array to hold all the point light data
 
-		const pointLightsData = new Float32Array(numPointLights * 8); // Each point light has 12 values (position(3=>4), color(3=>4), intensity(1=>4))
+		const pointLightsData = new Float32Array(numPointLights * 12); // Each point light has 12 values (position(3=>4), color(3=>4), intensity(1=>4))
 
 		// Fill the Float32Array with the point light data
 		for (let i = 0; i < numPointLights; i++) {
 			const light = pointLigths[i];
-			const offset = i * 8; // Each point light takes up 8 positions in the array
-		
+			const offset = i * 12; // Each point light takes up 8 positions in the array
+			multiplyScalarVec3(light.color, light.intensity);
 			// Set the position data
 			pointLightsData[offset] = light.position[0];
 			pointLightsData[offset + 1] = light.position[1];
@@ -1387,22 +1585,21 @@ function setupLights(context, lights) {
 			pointLightsData[offset + 4] = light.color[0];
 			pointLightsData[offset + 5] = light.color[1];
 			pointLightsData[offset + 6] = light.color[2];
-			pointLightsData[offset + 7] = light.intensity;
-			pointLightsData[offset + 8] = 0;
-
-			//
-
+			pointLightsData[offset + 7] = light.cutoffDistance;
+			pointLightsData[offset + 8] = light.decayExponent;
+			pointLightsData[offset + 9] = 0.25;
+			pointLightsData[offset + 10] = 0.5;
+			pointLightsData[offset + 11] = 0.75;
+			pointLightsData[offset + 12] = 1;
 		}
 		console.log("pointLightsData", pointLightsData);
-		
+
 		// Set the data in the UBO using bufferData
 		gl.bufferData(gl.UNIFORM_BUFFER, pointLightsData, gl.DYNAMIC_DRAW);
 
 		// Bind the UBO to the uniform block in the shader
-		
-		
 
-/*
+		/*
 		const lightPositionsLocation = gl.getUniformLocation(program, "pointLightPositions[0]");
 		const lightPositionsData = pointLigths.reduce((acc, light) => {
 			return [...acc, ...light.position];
@@ -1638,7 +1835,7 @@ const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, $progra
 	let rendererContext = {
 		canvas: $renderer.canvas,
 		backgroundColor: $renderer.backgroundColor,
-		numPointLights: $renderer.lights.filter(l=>l.type === "point").length,
+		numPointLights: $renderer.lights.filter((l) => l.type === "point").length,
 	};
 	const list = [];
 
@@ -1667,199 +1864,6 @@ const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, $progra
 	list.push(render(appContext));
 	return list;
 });
-
-/**
- * 3 Dimensional Vector
- * @module vec3
- */
-
-/**
- * Creates a new, empty vec3
- *
- * @returns {vec3} a new 3D vector
- */
-
-function create() {
-  var out = new ARRAY_TYPE(3);
-
-  if (ARRAY_TYPE != Float32Array) {
-    out[0] = 0;
-    out[1] = 0;
-    out[2] = 0;
-  }
-
-  return out;
-}
-/**
- * Subtracts vector b from vector a
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-
-function subtract(out, a, b) {
-  out[0] = a[0] - b[0];
-  out[1] = a[1] - b[1];
-  out[2] = a[2] - b[2];
-  return out;
-}
-/**
- * Normalize a vec3
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to normalize
- * @returns {vec3} out
- */
-
-function normalize(out, a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var len = x * x + y * y + z * z;
-
-  if (len > 0) {
-    //TODO: evaluate use of glm_invsqrt here?
-    len = 1 / Math.sqrt(len);
-  }
-
-  out[0] = a[0] * len;
-  out[1] = a[1] * len;
-  out[2] = a[2] * len;
-  return out;
-}
-/**
- * Computes the cross product of two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-
-function cross(out, a, b) {
-  var ax = a[0],
-      ay = a[1],
-      az = a[2];
-  var bx = b[0],
-      by = b[1],
-      bz = b[2];
-  out[0] = ay * bz - az * by;
-  out[1] = az * bx - ax * bz;
-  out[2] = ax * by - ay * bx;
-  return out;
-}
-/**
- * Performs a linear interpolation between two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec3} out
- */
-
-function lerp(out, a, b, t) {
-  var ax = a[0];
-  var ay = a[1];
-  var az = a[2];
-  out[0] = ax + t * (b[0] - ax);
-  out[1] = ay + t * (b[1] - ay);
-  out[2] = az + t * (b[2] - az);
-  return out;
-}
-/**
- * Perform some operation over an array of vec3s.
- *
- * @param {Array} a the array of vectors to iterate over
- * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
- * @param {Number} offset Number of elements to skip at the beginning of the array
- * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
- * @param {Function} fn Function to call for each vector in the array
- * @param {Object} [arg] additional argument to pass to fn
- * @returns {Array} a
- * @function
- */
-
-(function () {
-  var vec = create();
-  return function (a, stride, offset, count, fn, arg) {
-    var i, l;
-
-    if (!stride) {
-      stride = 3;
-    }
-
-    if (!offset) {
-      offset = 0;
-    }
-
-    if (count) {
-      l = Math.min(count * stride + offset, a.length);
-    } else {
-      l = a.length;
-    }
-
-    for (i = offset; i < l; i += stride) {
-      vec[0] = a[i];
-      vec[1] = a[i + 1];
-      vec[2] = a[i + 2];
-      fn(vec, vec, arg);
-      a[i] = vec[0];
-      a[i + 1] = vec[1];
-      a[i + 2] = vec[2];
-    }
-
-    return a;
-  };
-})();
-
-function createVec3() {
-	return new Array(3).fill(0);
-}
-
-function multiplyScalarVec3(a, scalar) {
-	a[0] *= scalar;
-	a[1] *= scalar;
-	a[2] *= scalar;
-
-	return a;
-}
-
-function createFlatShadedNormals(positions) {
-	const normals = [];
-	for (let i = 0; i < positions.length; i += 9) {
-		const a = createVec3();
-		const b = createVec3();
-		const c = createVec3();
-
-		a[0] = positions[i];
-		a[1] = positions[i + 1];
-		a[2] = positions[i + 2];
-
-		b[0] = positions[i + 3];
-		b[1] = positions[i + 4];
-		b[2] = positions[i + 5];
-
-		c[0] = positions[i + 6];
-		c[1] = positions[i + 7];
-		c[2] = positions[i + 8];
-
-		const cb = createVec3();
-		subtract(cb, c, b);
-
-		const ab = createVec3();
-		subtract(ab, a, b);
-
-		const normal = createVec3();
-		cross(normal, cb, ab);
-		normalize(normal, normal);
-		// todo, replace with
-		normals.push(...normal, ...normal, ...normal);
-	}
-	return normals;
-}
 
 /**
  * @typedef {{
@@ -2116,14 +2120,18 @@ function instance($$self, $$props, $$invalidate) {
 			type: "point",
 			position: [-2, 2, -3],
 			color: [1, 1, 1],
-			intensity: 0.2
+			intensity: 3,
+			cutoffDistance: 5,
+			decayExponent: 1
 		});
 
 		renderer.addLight({
 			type: "point",
-			position: [1, -2, -3],
+			position: [1, -2, 0],
 			color: [1, 1, 0],
-			intensity: 0.7
+			intensity: 2,
+			cutoffDistance: 5,
+			decayExponent: 1
 		});
 
 		animate();
