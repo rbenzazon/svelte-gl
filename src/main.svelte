@@ -4,6 +4,8 @@ import { renderer, webglapp, worldMatrix, normalMatrix, lastProgramRendered } fr
 import { createCube } from "./geometries/cube.js";
 import { identity, rotateX, rotateY, rotateZ } from "gl-matrix/esm/mat4.js";
 import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
+import { createPointLight } from "./lights/point-light.js";
+import { createAGXToneMapping } from "./tone-mapping/agx.js";
 import { createFlatShadedNormals } from "./geometries/common.js";
 let canvas;
 onMount(() => {
@@ -18,22 +20,29 @@ onMount(() => {
 			color: [1, 1, 1],
 		},
 	});
-	renderer.addLight({
-		type: "point",
-		position: [-2, 2, -3],
-		color: [1, 1, 1],
-		intensity: 3,
-		cutoffDistance: 5,
-		decayExponent: 1,
-	});
-	renderer.addLight({
-		type: "point",
-		position: [1, -2, 0],
-		color: [1, 1, 0],
-		intensity: 2,
-		cutoffDistance: 5,
-		decayExponent: 1,
-	});
+	renderer.addLight(
+		createPointLight({
+			position: [-2, 2, -3],
+			color: [1, 1, 1],
+			intensity: 3,
+			cutoffDistance: 5,
+			decayExponent: 1,
+		}),
+	);
+	renderer.addLight(
+		createPointLight({
+			position: [1, -2, 0],
+			color: [1, 1, 0],
+			intensity: 2,
+			cutoffDistance: 5,
+			decayExponent: 1,
+		}),
+	);
+	renderer.addToneMapping(
+		createAGXToneMapping({
+			exposure: 1,
+		}),
+	);
 	animate();
 	//setTimeout(animate, 1000);
 });

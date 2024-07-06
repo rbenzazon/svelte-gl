@@ -23,6 +23,7 @@ function createRenderer() {
 		//worldMatrix: null,
 		meshes: [],
 		lights: [],
+		toneMappings: [],
 		loop: null,
 	});
 	return {
@@ -47,6 +48,11 @@ function createRenderer() {
 		addLight: (light) =>
 			update((renderer) => {
 				renderer.lights = [...renderer.lights, light];
+				return renderer;
+			}),
+		addToneMapping: (toneMapping) =>
+			update((renderer) => {
+				renderer.toneMappings = [...renderer.toneMappings, toneMapping];
 				return renderer;
 			}),
 		setLoop: (loop) =>
@@ -169,10 +175,22 @@ export const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, 
 		return [];
 	}
 
+	const numPointLights = $renderer.lights.filter((l) => l.type === "point").length;
+	const pointLightShader = $renderer.lights.find((l) => l.type === "point").shader;
 	let rendererContext = {
 		canvas: $renderer.canvas,
 		backgroundColor: $renderer.backgroundColor,
-		numPointLights: $renderer.lights.filter((l) => l.type === "point").length,
+		...($renderer.toneMappings.length > 0
+			? {
+					toneMappings: $renderer.toneMappings,
+				}
+			: undefined),
+		...(numPointLights > 0
+			? {
+					numPointLights,
+					pointLightShader,
+				}
+			: undefined),
 	};
 	const list = [];
 

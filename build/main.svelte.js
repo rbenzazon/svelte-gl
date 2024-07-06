@@ -1161,7 +1161,7 @@ function derived(stores, fn, initial_value) {
 
 var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\n\r\nuniform mat4 world;\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 normalMatrix;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\n\r\nvoid main() {\r\n    \r\n\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n}";
 
-var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nuniform vec3 color;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\n// tone mapping taken from three.js\r\nfloat toneMappingExposure = 1.0f;\r\n\r\n    // Matrices for rec 2020 <> rec 709 color space conversion\r\n    // matrix provided in row-major order so it has been transposed\r\n    // https://www.itu.int/pub/R-REP-BT.2407-2017\r\nconst mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(vec3(1.6605f, -0.1246f, -0.0182f), vec3(-0.5876f, 1.1329f, -0.1006f), vec3(-0.0728f, -0.0083f, 1.1187f));\r\n\r\nconst mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(vec3(0.6274f, 0.0691f, 0.0164f), vec3(0.3293f, 0.9195f, 0.0880f), vec3(0.0433f, 0.0113f, 0.8956f));\r\n\r\n    // https://iolite-engine.com/blog_posts/minimal_agx_implementation\r\n    // Mean error^2: 3.6705141e-06\r\nvec3 agxDefaultContrastApprox(vec3 x) {\r\n\r\n    vec3 x2 = x * x;\r\n    vec3 x4 = x2 * x2;\r\n\r\n    return +15.5f * x4 * x2 - 40.14f * x4 * x + 31.96f * x4 - 6.868f * x2 * x + 0.4298f * x2 + 0.1191f * x - 0.00232f;\r\n\r\n}\r\n\r\nvec3 AgXToneMapping(vec3 color) {\r\n\r\n        // AgX constants\r\n    const mat3 AgXInsetMatrix = mat3(vec3(0.856627153315983f, 0.137318972929847f, 0.11189821299995f), vec3(0.0951212405381588f, 0.761241990602591f, 0.0767994186031903f), vec3(0.0482516061458583f, 0.101439036467562f, 0.811302368396859f));\r\n\r\n        // explicit AgXOutsetMatrix generated from Filaments AgXOutsetMatrixInv\r\n    const mat3 AgXOutsetMatrix = mat3(vec3(1.1271005818144368f, -0.1413297634984383f, -0.14132976349843826f), vec3(-0.11060664309660323f, 1.157823702216272f, -0.11060664309660294f), vec3(-0.016493938717834573f, -0.016493938717834257f, 1.2519364065950405f));\r\n\r\n        // LOG2_MIN      = -10.0\r\n        // LOG2_MAX      =  +6.5\r\n        // MIDDLE_GRAY   =  0.18\r\n    const float AgxMinEv = -12.47393f;  // log2( pow( 2, LOG2_MIN ) * MIDDLE_GRAY )\r\n    const float AgxMaxEv = 4.026069f;    // log2( pow( 2, LOG2_MAX ) * MIDDLE_GRAY )\r\n\r\n    color *= toneMappingExposure;\r\n\r\n    color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;\r\n\r\n    color = AgXInsetMatrix * color;\r\n\r\n        // Log2 encoding\r\n    color = max(color, 1e-10f); // avoid 0 or negative numbers for log2\r\n    color = log2(color);\r\n    color = (color - AgxMinEv) / (AgxMaxEv - AgxMinEv);\r\n\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n        // Apply sigmoid\r\n    color = agxDefaultContrastApprox(color);\r\n\r\n        // Apply AgX look\r\n        // v = agxLook(v, look);\r\n\r\n    color = AgXOutsetMatrix * color;\r\n\r\n        // Linearize\r\n    color = pow(max(vec3(0.0f), color), vec3(2.2f));\r\n\r\n    color = LINEAR_REC2020_TO_LINEAR_SRGB * color;\r\n\r\n        // Gamut mapping. Simple clamp for now.\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n    return color;\r\n\r\n}\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n\r\n    if(cutoffDistance > 0.0f) {\r\n\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n\r\n    }\r\n\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nvec3 calculateLightBrightness(vec3 lightPosition, vec3 lightColor, float cutoffDistance, float decayExponent, vec3 vertexPosition, vec3 normal) {\r\n    vec3 offset = lightPosition - vertexPosition;\r\n    float lightDistance = length(offset);\r\n    vec3 direction = normalize(offset);\r\n    vec3 irradiance = saturate(dot(normal, direction)) * lightColor;\r\n    float distanceFalloff = getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n    return vec3(irradiance * distanceFalloff);\r\n}\r\n\r\nvoid main() {\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        totalIrradiance += calculateLightBrightness(pointLight.position, pointLight.color, pointLight.cutoffDistance, pointLight.decayExponent, vertex, vNormal);\r\n    }\r\n\r\n    //debug normals\r\n    //fragColor = vec4(normalize(vNormal) * 0.5 + 0.5, 1.0);\r\n    fragColor = vec4(AgXToneMapping(RECIPROCAL_PI * color * totalIrradiance), 1.0f);\r\n}";
+var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 color;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\r\n    //debug normals\r\n    //fragColor = vec4(normalize(vNormal) * 0.5 + 0.5, 1.0);\r\n    fragColor = vec4(RECIPROCAL_PI * color * totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n}";
 
 const templateGenerator = (props, template) => {
 	return (propsValues) => Function.constructor(...props, `return \`${template}\``)(...propsValues);
@@ -1475,8 +1475,28 @@ function createShaders(material, attributes, uniforms) {
 			const fragmentShaderSource = templateLiteralRenderer(
 				{
 					defines: objectToDefines({
-						NUM_POINT_LIGHTS: context.numPointLights,
+						...(context.numPointLights
+							? {
+									NUM_POINT_LIGHTS: context.numPointLights,
+								}
+							: undefined),
 					}),
+					declarations: [
+						...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : undefined),
+						...(context.toneMappings.length > 0
+							? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure, color: false }))]
+							: undefined),
+					].join("\n"),
+					irradiance: [
+						...(context.numPointLights ? [context.pointLightShader({ declaration: false, irradiance: true })] : undefined),
+					].join("\n"),
+					toneMapping: [
+						...(context.toneMappings.length > 0
+							? [...context.toneMappings.map((tm) => tm.shader({ declaration: false, exposure: false, color: true }))]
+							: undefined),
+					].join("\n"),
+					//todo, remove this after decoupling the point light shader
+					numPointLights: context.numPointLights,
 				},
 				defaultFragment,
 			);
@@ -1686,6 +1706,7 @@ function createRenderer() {
 		//worldMatrix: null,
 		meshes: [],
 		lights: [],
+		toneMappings: [],
 		loop: null,
 	});
 	return {
@@ -1710,6 +1731,11 @@ function createRenderer() {
 		addLight: (light) =>
 			update((renderer) => {
 				renderer.lights = [...renderer.lights, light];
+				return renderer;
+			}),
+		addToneMapping: (toneMapping) =>
+			update((renderer) => {
+				renderer.toneMappings = [...renderer.toneMappings, toneMapping];
 				return renderer;
 			}),
 		setLoop: (loop) =>
@@ -1832,10 +1858,22 @@ const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, $progra
 		return [];
 	}
 
+	const numPointLights = $renderer.lights.filter((l) => l.type === "point").length;
+	const pointLightShader = $renderer.lights.find((l) => l.type === "point").shader;
 	let rendererContext = {
 		canvas: $renderer.canvas,
 		backgroundColor: $renderer.backgroundColor,
-		numPointLights: $renderer.lights.filter((l) => l.type === "point").length,
+		...($renderer.toneMappings.length > 0
+			? {
+					toneMappings: $renderer.toneMappings,
+				}
+			: undefined),
+		...(numPointLights > 0
+			? {
+					numPointLights,
+					pointLightShader,
+				}
+			: undefined),
 	};
 	const list = [];
 
@@ -2068,6 +2106,30 @@ const initialIndices = [
 	14, 5, 1, 5, 9,
 ];
 
+var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nvec3 calculatePointLightBrightness(vec3 lightPosition, vec3 lightColor, float cutoffDistance, float decayExponent, vec3 vertexPosition, vec3 normal) {\r\n    vec3 offset = lightPosition - vertexPosition;\r\n    float lightDistance = length(offset);\r\n    vec3 direction = normalize(offset);\r\n    vec3 irradiance = saturate(dot(normal, direction)) * lightColor;\r\n    float distanceFalloff = getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n    return vec3(irradiance * distanceFalloff);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        totalIrradiance += calculatePointLightBrightness(pointLight.position, pointLight.color, pointLight.cutoffDistance, pointLight.decayExponent, vertex, vNormal);\r\n    }\r\n` : ''\r\n}\r\n";
+
+const createPointLight = (props) => {
+	return {
+		type: "point",
+		position: [0, 0, 0],
+		color: [1, 1, 1],
+		intensity: 3,
+		cutoffDistance: 5,
+		decayExponent: 1,
+		...props,
+		shader: (segment) => templateLiteralRenderer(segment, pointLightShader),
+	};
+};
+
+var AGXShader = "${declaration?\r\n`\r\n// tone mapping taken from three.js\r\nfloat toneMappingExposure = ${exposure};\r\n\r\n    // Matrices for rec 2020 <> rec 709 color space conversion\r\n    // matrix provided in row-major order so it has been transposed\r\n    // https://www.itu.int/pub/R-REP-BT.2407-2017\r\nconst mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(vec3(1.6605f, -0.1246f, -0.0182f), vec3(-0.5876f, 1.1329f, -0.1006f), vec3(-0.0728f, -0.0083f, 1.1187f));\r\n\r\nconst mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(vec3(0.6274f, 0.0691f, 0.0164f), vec3(0.3293f, 0.9195f, 0.0880f), vec3(0.0433f, 0.0113f, 0.8956f));\r\n\r\n    // https://iolite-engine.com/blog_posts/minimal_agx_implementation\r\n    // Mean error^2: 3.6705141e-06\r\nvec3 agxDefaultContrastApprox(vec3 x) {\r\n\r\n    vec3 x2 = x * x;\r\n    vec3 x4 = x2 * x2;\r\n\r\n    return +15.5f * x4 * x2 - 40.14f * x4 * x + 31.96f * x4 - 6.868f * x2 * x + 0.4298f * x2 + 0.1191f * x - 0.00232f;\r\n\r\n}\r\n\r\nvec3 AgXToneMapping(vec3 color) {\r\n\r\n        // AgX constants\r\n    const mat3 AgXInsetMatrix = mat3(vec3(0.856627153315983f, 0.137318972929847f, 0.11189821299995f), vec3(0.0951212405381588f, 0.761241990602591f, 0.0767994186031903f), vec3(0.0482516061458583f, 0.101439036467562f, 0.811302368396859f));\r\n\r\n        // explicit AgXOutsetMatrix generated from Filaments AgXOutsetMatrixInv\r\n    const mat3 AgXOutsetMatrix = mat3(vec3(1.1271005818144368f, -0.1413297634984383f, -0.14132976349843826f), vec3(-0.11060664309660323f, 1.157823702216272f, -0.11060664309660294f), vec3(-0.016493938717834573f, -0.016493938717834257f, 1.2519364065950405f));\r\n\r\n        // LOG2_MIN      = -10.0\r\n        // LOG2_MAX      =  +6.5\r\n        // MIDDLE_GRAY   =  0.18\r\n    const float AgxMinEv = -12.47393f;  // log2( pow( 2, LOG2_MIN ) * MIDDLE_GRAY )\r\n    const float AgxMaxEv = 4.026069f;    // log2( pow( 2, LOG2_MAX ) * MIDDLE_GRAY )\r\n\r\n    color *= toneMappingExposure;\r\n\r\n    color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;\r\n\r\n    color = AgXInsetMatrix * color;\r\n\r\n        // Log2 encoding\r\n    color = max(color, 1e-10f); // avoid 0 or negative numbers for log2\r\n    color = log2(color);\r\n    color = (color - AgxMinEv) / (AgxMaxEv - AgxMinEv);\r\n\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n        // Apply sigmoid\r\n    color = agxDefaultContrastApprox(color);\r\n\r\n        // Apply AgX look\r\n        // v = agxLook(v, look);\r\n\r\n    color = AgXOutsetMatrix * color;\r\n\r\n        // Linearize\r\n    color = pow(max(vec3(0.0f), color), vec3(2.2f));\r\n\r\n    color = LINEAR_REC2020_TO_LINEAR_SRGB * color;\r\n\r\n        // Gamut mapping. Simple clamp for now.\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n    return color;\r\n\r\n}\r\n` : ''\r\n}\r\n${color?\r\n`\r\n    fragColor = vec4(AgXToneMapping(fragColor.xyz),1.0f);\r\n` : ''\r\n}";
+
+const createAGXToneMapping = (props) => {
+	return {
+		exposure: `${props.exposure.toLocaleString("en", { minimumFractionDigits: 1 })}f`,
+		shader: (segment) => templateLiteralRenderer(segment, AGXShader),
+	};
+};
+
 /* src\main.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
@@ -2116,24 +2178,23 @@ function instance($$self, $$props, $$invalidate) {
 			uniforms: { color: [1, 1, 1] }
 		});
 
-		renderer.addLight({
-			type: "point",
+		renderer.addLight(createPointLight({
 			position: [-2, 2, -3],
 			color: [1, 1, 1],
 			intensity: 3,
 			cutoffDistance: 5,
 			decayExponent: 1
-		});
+		}));
 
-		renderer.addLight({
-			type: "point",
+		renderer.addLight(createPointLight({
 			position: [1, -2, 0],
 			color: [1, 1, 0],
 			intensity: 2,
 			cutoffDistance: 5,
 			decayExponent: 1
-		});
+		}));
 
+		renderer.addToneMapping(createAGXToneMapping({ exposure: 1 }));
 		animate();
 	}); //setTimeout(animate, 1000);
 

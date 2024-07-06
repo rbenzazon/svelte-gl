@@ -110,8 +110,28 @@ export function createShaders(material, attributes, uniforms) {
 			const fragmentShaderSource = templateLiteralRenderer(
 				{
 					defines: objectToDefines({
-						NUM_POINT_LIGHTS: context.numPointLights,
+						...(context.numPointLights
+							? {
+									NUM_POINT_LIGHTS: context.numPointLights,
+								}
+							: undefined),
 					}),
+					declarations: [
+						...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : undefined),
+						...(context.toneMappings.length > 0
+							? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure, color: false }))]
+							: undefined),
+					].join("\n"),
+					irradiance: [
+						...(context.numPointLights ? [context.pointLightShader({ declaration: false, irradiance: true })] : undefined),
+					].join("\n"),
+					toneMapping: [
+						...(context.toneMappings.length > 0
+							? [...context.toneMappings.map((tm) => tm.shader({ declaration: false, exposure: false, color: true }))]
+							: undefined),
+					].join("\n"),
+					//todo, remove this after decoupling the point light shader
+					numPointLights: context.numPointLights,
 				},
 				defaultFragment,
 			);
