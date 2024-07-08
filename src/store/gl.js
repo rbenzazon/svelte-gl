@@ -97,7 +97,7 @@ export function endProgramSetup(context) {
 	};
 }
 
-export function createShaders(material, attributes, uniforms) {
+export function createShaders() {
 	return function (context) {
 		return function () {
 			context = get(context);
@@ -136,7 +136,7 @@ export function createShaders(material, attributes, uniforms) {
 				},
 				defaultFragment,
 			);
-			console.log("fragmentShaderSource", fragmentShaderSource);
+			console.log(fragmentShaderSource);
 
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);

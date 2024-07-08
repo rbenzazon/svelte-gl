@@ -1,9 +1,9 @@
 <script type="module">
 import { onMount } from "svelte";
 import { renderer, webglapp, worldMatrix, normalMatrix, lastProgramRendered } from "./store/engine.js";
-import { createCube } from "./geometries/cube.js";
+//import { createCube } from "./geometries/cube.js";
 import { identity, rotateX, rotateY, rotateZ } from "gl-matrix/esm/mat4.js";
-import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
+import { createPolyhedron /*createSmoothShadedNormals*/ } from "./geometries/polyhedron.js";
 import { createPointLight } from "./lights/point-light.js";
 import { createAGXToneMapping } from "./tone-mapping/agx.js";
 import { createFlatShadedNormals } from "./geometries/common.js";

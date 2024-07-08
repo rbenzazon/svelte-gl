@@ -132,10 +132,10 @@ export const programs = derived(renderer, ($renderer) => {
 		return {
 			createProgram,
 			mesh,
-			material: mesh.material,
+			/*material: mesh.material,*/
 			attributes: mesh.attributes,
 			uniforms: mesh.uniforms,
-			createShaders: createShaders(mesh.material, mesh.attributes, mesh.uniforms),
+			createShaders: createShaders(),
 			endProgramSetup,
 		};
 	});
@@ -237,7 +237,7 @@ export const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, 
 					setupCamera(appContext, $renderer.camera),
 					setupWorldMatrix(appContext, get(worldMatrix)),
 					setupNormalMatrix(appContext),
-					// reduce by type
+					// reduce by type to setup lights once per type
 					...[
 						...$renderer.lights.reduce((acc, light) => {
 							const lightValue = get(light);

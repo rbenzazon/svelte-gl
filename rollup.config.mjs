@@ -17,7 +17,6 @@ export default {
             compress: false,
         }),
         svelte(),
-        
         resolve({
             browser: true,
             exportConditions: ['svelte'],
