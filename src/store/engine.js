@@ -8,7 +8,6 @@ import {
 	createShaders,
 	setupCamera,
 	render,
-	setupLights,
 	setupWorldMatrix,
 	setupAttributes,
 	updateWorldMatrix,
@@ -28,7 +27,7 @@ function createRenderer() {
 	});
 	return {
 		subscribe,
-		setCamera: (fov, near, far, position, target, up) =>
+		setCamera: (position = [0, 0, -1], target = [0, 0, 0], fov = 80, near = 0.1, far = 1000, up = [0, 1, 0]) =>
 			update((renderer) => {
 				renderer.camera = {
 					fov,
@@ -45,11 +44,21 @@ function createRenderer() {
 				renderer.meshes = [...renderer.meshes, mesh];
 				return renderer;
 			}),
-		addLight: (light) =>
+		addLight: (light) => {
+			const store = createLightStore(light);
 			update((renderer) => {
-				renderer.lights = [...renderer.lights, light];
+				renderer.lights = [...renderer.lights, store];
 				return renderer;
-			}),
+			});
+			return {
+				remove: () =>
+					update((renderer) => {
+						renderer.lights = renderer.lights.filter((l) => l !== light);
+						return renderer;
+					}),
+				store,
+			};
+		},
 		addToneMapping: (toneMapping) =>
 			update((renderer) => {
 				renderer.toneMappings = [...renderer.toneMappings, toneMapping];
@@ -76,6 +85,23 @@ function createRenderer() {
 			}),
 	};
 }
+
+const createLightStore = (initialProps) => {
+	const store = writable(initialProps);
+	const { subscribe, set, update } = store;
+	const customStore = {
+		subscribe,
+		set: (props) => {
+			update((prev) => {
+				if (appContext && get(appContext).program) {
+					prev.updateOneLight(appContext, get(renderer).lights, customStore);
+				}
+				return { ...prev, ...props };
+			});
+		},
+	};
+	return customStore;
+};
 
 export const renderer = createRenderer();
 const defaultWorldMatrix = new Float32Array(16);
@@ -174,9 +200,9 @@ export const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, 
 		console.log("no renderer or programs or canvas");
 		return [];
 	}
+	const numPointLights = $renderer.lights.filter((l) => get(l).type === "point").length;
+	const pointLightShader = get($renderer.lights.find((l) => get(l).type === "point")).shader;
 
-	const numPointLights = $renderer.lights.filter((l) => l.type === "point").length;
-	const pointLightShader = $renderer.lights.find((l) => l.type === "point").shader;
 	let rendererContext = {
 		canvas: $renderer.canvas,
 		backgroundColor: $renderer.backgroundColor,
@@ -211,7 +237,14 @@ export const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, 
 					setupCamera(appContext, $renderer.camera),
 					setupWorldMatrix(appContext, get(worldMatrix)),
 					setupNormalMatrix(appContext),
-					setupLights(appContext, $renderer.lights),
+					// reduce by type
+					...[
+						...$renderer.lights.reduce((acc, light) => {
+							const lightValue = get(light);
+							acc.set(lightValue.type, lightValue.setupLights);
+							return acc;
+						}, new Map()),
+					].map(([_, setupLights]) => setupLights(appContext, $renderer.lights)),
 				];
 			}, []),
 		);

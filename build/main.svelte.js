@@ -1371,6 +1371,112 @@ function createFlatShadedNormals(positions) {
 	return normals;
 }
 
+var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nvec3 calculatePointLightBrightness(vec3 lightPosition, vec3 lightColor, float cutoffDistance, float decayExponent, vec3 vertexPosition, vec3 normal) {\r\n    vec3 offset = lightPosition - vertexPosition;\r\n    float lightDistance = length(offset);\r\n    vec3 direction = normalize(offset);\r\n    vec3 irradiance = saturate(dot(normal, direction)) * lightColor;\r\n    float distanceFalloff = getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n    return vec3(irradiance * distanceFalloff);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        totalIrradiance += calculatePointLightBrightness(pointLight.position, pointLight.color, pointLight.cutoffDistance, pointLight.decayExponent, vertex, vNormal);\r\n    }\r\n` : ''\r\n}\r\n";
+
+const createPointLight = (props) => {
+	return {
+		type: "point",
+		position: [0, 0, 0],
+		color: [1, 1, 1],
+		intensity: 3,
+		cutoffDistance: 5,
+		decayExponent: 1,
+		...props,
+		shader: (segment) => templateLiteralRenderer(segment, pointLightShader),
+		setupLights,
+		updateOneLight,
+	};
+};
+let pointLightsUBO = null;
+const setPointLightsUBO = (newPointLightsUBO) => {
+	pointLightsUBO = newPointLightsUBO;
+};
+
+const getPointLightsUBO = () => {
+	return pointLightsUBO;
+};
+
+function setupLights(context, lights) {
+	return function () {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = context.program;
+		const pointLigths = lights.filter((l) => get_store_value(l).type === "point");
+
+		const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
+		// Bind the UBO to the binding point
+		const pointLightsBindingPoint = 0; // Choose a binding point for the UBO
+
+		gl.uniformBlockBinding(program, pointLightsBlockIndex, pointLightsBindingPoint);
+
+		// Create UBO for point lights
+		const tmpPointLightsUBO = gl.createBuffer();
+		setPointLightsUBO(tmpPointLightsUBO);
+
+		gl.bindBuffer(gl.UNIFORM_BUFFER, tmpPointLightsUBO);
+
+		const numPointLights = pointLigths.length;
+
+		gl.bindBufferBase(gl.UNIFORM_BUFFER, pointLightsBindingPoint, tmpPointLightsUBO);
+
+		// Create a single Float32Array to hold all the point light data
+		const pointLightsData = new Float32Array(numPointLights * 12); // Each point light has 12 values (position(3=>4), color(3=>4), intensity(1=>4))
+
+		// Fill the Float32Array with the point light data
+		for (let i = 0; i < numPointLights; i++) {
+			const light = get_store_value(pointLigths[i]);
+			const offset = i * 12; // Each point light takes up 8 positions in the array
+			light.preMultipliedColor = [...light.color];
+			multiplyScalarVec3(light.preMultipliedColor, light.intensity);
+			// Set the position data
+			pointLightsData[offset] = light.position[0];
+			pointLightsData[offset + 1] = light.position[1];
+			pointLightsData[offset + 2] = light.position[2];
+			pointLightsData[offset + 4] = light.preMultipliedColor[0];
+			pointLightsData[offset + 5] = light.preMultipliedColor[1];
+			pointLightsData[offset + 6] = light.preMultipliedColor[2];
+			pointLightsData[offset + 7] = light.cutoffDistance;
+			pointLightsData[offset + 8] = light.decayExponent;
+			pointLightsData[offset + 9] = 0.25;
+			pointLightsData[offset + 10] = 0.5;
+			pointLightsData[offset + 11] = 0.75;
+			pointLightsData[offset + 12] = 1;
+		}
+
+		// Set the data in the UBO using bufferData
+		gl.bufferData(gl.UNIFORM_BUFFER, pointLightsData, gl.DYNAMIC_DRAW);
+	};
+}
+
+function updateOneLight(context, lights, light) {
+	context = get_store_value(context);
+	const gl = context.gl;
+	const pointLigths = lights.filter((l) => get_store_value(l).type === "point");
+	const lightIndex = pointLigths.findIndex((l) => l === light);
+	const pointLightsUBO = getPointLightsUBO();
+	if (lightIndex !== -1) {
+		const lightData = new Float32Array(12);
+		const offset = lightIndex * 12;
+		const lightValue = get_store_value(light);
+		lightValue.preMultipliedColor = [...lightValue.color];
+		multiplyScalarVec3(lightValue.preMultipliedColor, lightValue.intensity);
+		lightData[0] = lightValue.position[0];
+		lightData[1] = lightValue.position[1];
+		lightData[2] = lightValue.position[2];
+		lightData[4] = lightValue.preMultipliedColor[0];
+		lightData[5] = lightValue.preMultipliedColor[1];
+		lightData[6] = lightValue.preMultipliedColor[2];
+		lightData[7] = lightValue.cutoffDistance;
+		lightData[8] = lightValue.decayExponent;
+		lightData[9] = 0.25;
+		lightData[10] = 0.5;
+		lightData[11] = 0.75;
+		lightData[12] = 1;
+		gl.bindBuffer(gl.UNIFORM_BUFFER, pointLightsUBO);
+		gl.bufferSubData(gl.UNIFORM_BUFFER, offset * Float32Array.BYTES_PER_ELEMENT, lightData);
+	}
+}
+
 const degree = Math.PI / 180;
 /**
  * Convert Degree To Radian
@@ -1501,7 +1607,7 @@ function createShaders(material, attributes, uniforms) {
 				defaultFragment,
 			);
 			console.log("fragmentShaderSource", fragmentShaderSource);
-			console.log("defaultFragment", defaultFragment);
+
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
 			gl.compileShader(fragmentShader);
@@ -1529,7 +1635,6 @@ function setupCamera(context, camera) {
 
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
-
 		const fieldOfViewInRadians = toRadian(camera.fov);
 		const aspectRatio = context.canvas.width / context.canvas.height;
 		const nearClippingPlaneDistance = camera.near;
@@ -1552,89 +1657,6 @@ function setupCamera(context, camera) {
 
 		lookAt(view, camera.position, camera.target, camera.up);
 		gl.uniformMatrix4fv(viewLocation, false, view);
-	};
-}
-
-function setupLights(context, lights) {
-	return function () {
-		context = get_store_value(context);
-		const gl = context.gl;
-		const program = context.program;
-		const pointLigths = lights.filter((l) => l.type === "point");
-
-		const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
-		// Bind the UBO to the binding point
-		const pointLightsBindingPoint = 0; // Choose a binding point for the UBO
-
-		console.log("pointLightsBlockIndex", pointLightsBlockIndex);
-		gl.uniformBlockBinding(program, pointLightsBlockIndex, pointLightsBindingPoint);
-
-		const indices = gl.getUniformIndices(program, [
-			"PointLights[0].position",
-			"PointLights[0].color",
-			"PointLights[0].intensity",
-		]);
-		console.log("indices", indices);
-		const offsets = gl.getActiveUniforms(program, indices, gl.UNIFORM_OFFSET);
-		console.log("offsets", offsets);
-
-		// Create UBO for point lights
-		const pointLightsUBO = gl.createBuffer();
-
-		gl.bindBuffer(gl.UNIFORM_BUFFER, pointLightsUBO);
-		const numPointLights = pointLigths.length;
-
-		// Allocate memory for the UBO
-		//gl.bufferData(gl.UNIFORM_BUFFER, pointLightsBufferSize, gl.DYNAMIC_DRAW);
-
-		gl.bindBufferBase(gl.UNIFORM_BUFFER, pointLightsBindingPoint, pointLightsUBO);
-
-		// Create a single Float32Array to hold all the point light data
-
-		const pointLightsData = new Float32Array(numPointLights * 12); // Each point light has 12 values (position(3=>4), color(3=>4), intensity(1=>4))
-
-		// Fill the Float32Array with the point light data
-		for (let i = 0; i < numPointLights; i++) {
-			const light = pointLigths[i];
-			const offset = i * 12; // Each point light takes up 8 positions in the array
-			multiplyScalarVec3(light.color, light.intensity);
-			// Set the position data
-			pointLightsData[offset] = light.position[0];
-			pointLightsData[offset + 1] = light.position[1];
-			pointLightsData[offset + 2] = light.position[2];
-			pointLightsData[offset + 4] = light.color[0];
-			pointLightsData[offset + 5] = light.color[1];
-			pointLightsData[offset + 6] = light.color[2];
-			pointLightsData[offset + 7] = light.cutoffDistance;
-			pointLightsData[offset + 8] = light.decayExponent;
-			pointLightsData[offset + 9] = 0.25;
-			pointLightsData[offset + 10] = 0.5;
-			pointLightsData[offset + 11] = 0.75;
-			pointLightsData[offset + 12] = 1;
-		}
-		console.log("pointLightsData", pointLightsData);
-
-		// Set the data in the UBO using bufferData
-		gl.bufferData(gl.UNIFORM_BUFFER, pointLightsData, gl.DYNAMIC_DRAW);
-
-		// Bind the UBO to the uniform block in the shader
-
-		/*
-		const lightPositionsLocation = gl.getUniformLocation(program, "pointLightPositions[0]");
-		const lightPositionsData = pointLigths.reduce((acc, light) => {
-			return [...acc, ...light.position];
-		}, []);
-		gl.uniform3fv(lightPositionsLocation, new Float32Array(lightPositionsData));
-		const lightColorsLocation = gl.getUniformLocation(program, "pointLightColors[0]");
-		const lightColorsData = pointLigths.reduce((acc, light) => {
-			return [...acc, ...light.color];
-		}, []);
-		gl.uniform3fv(lightColorsLocation, new Float32Array(lightColorsData));
-		const lightIntensitiesLocation = gl.getUniformLocation(program, "pointLightIntensities[0]");
-		const lightIntensitiesData = pointLigths.reduce((acc, light) => {
-			return [...acc, light.intensity];
-		}, []);
-		gl.uniform1fv(lightIntensitiesLocation, new Float32Array(lightIntensitiesData));*/
 	};
 }
 
@@ -1711,7 +1733,7 @@ function createRenderer() {
 	});
 	return {
 		subscribe,
-		setCamera: (fov, near, far, position, target, up) =>
+		setCamera: (position = [0, 0, -1], target = [0, 0, 0], fov = 80, near = 0.1, far = 1000, up = [0, 1, 0]) =>
 			update((renderer) => {
 				renderer.camera = {
 					fov,
@@ -1728,11 +1750,21 @@ function createRenderer() {
 				renderer.meshes = [...renderer.meshes, mesh];
 				return renderer;
 			}),
-		addLight: (light) =>
+		addLight: (light) => {
+			const store = createLightStore(light);
 			update((renderer) => {
-				renderer.lights = [...renderer.lights, light];
+				renderer.lights = [...renderer.lights, store];
 				return renderer;
-			}),
+			});
+			return {
+				remove: () =>
+					update((renderer) => {
+						renderer.lights = renderer.lights.filter((l) => l !== light);
+						return renderer;
+					}),
+				store,
+			};
+		},
 		addToneMapping: (toneMapping) =>
 			update((renderer) => {
 				renderer.toneMappings = [...renderer.toneMappings, toneMapping];
@@ -1759,6 +1791,23 @@ function createRenderer() {
 			}),
 	};
 }
+
+const createLightStore = (initialProps) => {
+	const store = writable(initialProps);
+	const { subscribe, set, update } = store;
+	const customStore = {
+		subscribe,
+		set: (props) => {
+			update((prev) => {
+				if (appContext && get_store_value(appContext).program) {
+					prev.updateOneLight(appContext, get_store_value(renderer).lights, customStore);
+				}
+				return { ...prev, ...props };
+			});
+		},
+	};
+	return customStore;
+};
 
 const renderer = createRenderer();
 const defaultWorldMatrix = new Float32Array(16);
@@ -1857,9 +1906,9 @@ const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, $progra
 		console.log("no renderer or programs or canvas");
 		return [];
 	}
+	const numPointLights = $renderer.lights.filter((l) => get_store_value(l).type === "point").length;
+	const pointLightShader = get_store_value($renderer.lights.find((l) => get_store_value(l).type === "point")).shader;
 
-	const numPointLights = $renderer.lights.filter((l) => l.type === "point").length;
-	const pointLightShader = $renderer.lights.find((l) => l.type === "point").shader;
 	let rendererContext = {
 		canvas: $renderer.canvas,
 		backgroundColor: $renderer.backgroundColor,
@@ -1894,7 +1943,14 @@ const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, $progra
 					setupCamera(appContext, $renderer.camera),
 					setupWorldMatrix(appContext, get_store_value(worldMatrix)),
 					setupNormalMatrix(appContext),
-					setupLights(appContext, $renderer.lights),
+					// reduce by type
+					...[
+						...$renderer.lights.reduce((acc, light) => {
+							const lightValue = get_store_value(light);
+							acc.set(lightValue.type, lightValue.setupLights);
+							return acc;
+						}, new Map()),
+					].map(([_, setupLights]) => setupLights(appContext, $renderer.lights)),
 				];
 			}, []),
 		);
@@ -2106,21 +2162,6 @@ const initialIndices = [
 	14, 5, 1, 5, 9,
 ];
 
-var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nvec3 calculatePointLightBrightness(vec3 lightPosition, vec3 lightColor, float cutoffDistance, float decayExponent, vec3 vertexPosition, vec3 normal) {\r\n    vec3 offset = lightPosition - vertexPosition;\r\n    float lightDistance = length(offset);\r\n    vec3 direction = normalize(offset);\r\n    vec3 irradiance = saturate(dot(normal, direction)) * lightColor;\r\n    float distanceFalloff = getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n    return vec3(irradiance * distanceFalloff);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        totalIrradiance += calculatePointLightBrightness(pointLight.position, pointLight.color, pointLight.cutoffDistance, pointLight.decayExponent, vertex, vNormal);\r\n    }\r\n` : ''\r\n}\r\n";
-
-const createPointLight = (props) => {
-	return {
-		type: "point",
-		position: [0, 0, 0],
-		color: [1, 1, 1],
-		intensity: 3,
-		cutoffDistance: 5,
-		decayExponent: 1,
-		...props,
-		shader: (segment) => templateLiteralRenderer(segment, pointLightShader),
-	};
-};
-
 var AGXShader = "${declaration?\r\n`\r\n// tone mapping taken from three.js\r\nfloat toneMappingExposure = ${exposure};\r\n\r\n    // Matrices for rec 2020 <> rec 709 color space conversion\r\n    // matrix provided in row-major order so it has been transposed\r\n    // https://www.itu.int/pub/R-REP-BT.2407-2017\r\nconst mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(vec3(1.6605f, -0.1246f, -0.0182f), vec3(-0.5876f, 1.1329f, -0.1006f), vec3(-0.0728f, -0.0083f, 1.1187f));\r\n\r\nconst mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(vec3(0.6274f, 0.0691f, 0.0164f), vec3(0.3293f, 0.9195f, 0.0880f), vec3(0.0433f, 0.0113f, 0.8956f));\r\n\r\n    // https://iolite-engine.com/blog_posts/minimal_agx_implementation\r\n    // Mean error^2: 3.6705141e-06\r\nvec3 agxDefaultContrastApprox(vec3 x) {\r\n\r\n    vec3 x2 = x * x;\r\n    vec3 x4 = x2 * x2;\r\n\r\n    return +15.5f * x4 * x2 - 40.14f * x4 * x + 31.96f * x4 - 6.868f * x2 * x + 0.4298f * x2 + 0.1191f * x - 0.00232f;\r\n\r\n}\r\n\r\nvec3 AgXToneMapping(vec3 color) {\r\n\r\n        // AgX constants\r\n    const mat3 AgXInsetMatrix = mat3(vec3(0.856627153315983f, 0.137318972929847f, 0.11189821299995f), vec3(0.0951212405381588f, 0.761241990602591f, 0.0767994186031903f), vec3(0.0482516061458583f, 0.101439036467562f, 0.811302368396859f));\r\n\r\n        // explicit AgXOutsetMatrix generated from Filaments AgXOutsetMatrixInv\r\n    const mat3 AgXOutsetMatrix = mat3(vec3(1.1271005818144368f, -0.1413297634984383f, -0.14132976349843826f), vec3(-0.11060664309660323f, 1.157823702216272f, -0.11060664309660294f), vec3(-0.016493938717834573f, -0.016493938717834257f, 1.2519364065950405f));\r\n\r\n        // LOG2_MIN      = -10.0\r\n        // LOG2_MAX      =  +6.5\r\n        // MIDDLE_GRAY   =  0.18\r\n    const float AgxMinEv = -12.47393f;  // log2( pow( 2, LOG2_MIN ) * MIDDLE_GRAY )\r\n    const float AgxMaxEv = 4.026069f;    // log2( pow( 2, LOG2_MAX ) * MIDDLE_GRAY )\r\n\r\n    color *= toneMappingExposure;\r\n\r\n    color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;\r\n\r\n    color = AgXInsetMatrix * color;\r\n\r\n        // Log2 encoding\r\n    color = max(color, 1e-10f); // avoid 0 or negative numbers for log2\r\n    color = log2(color);\r\n    color = (color - AgxMinEv) / (AgxMaxEv - AgxMinEv);\r\n\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n        // Apply sigmoid\r\n    color = agxDefaultContrastApprox(color);\r\n\r\n        // Apply AgX look\r\n        // v = agxLook(v, look);\r\n\r\n    color = AgXOutsetMatrix * color;\r\n\r\n        // Linearize\r\n    color = pow(max(vec3(0.0f), color), vec3(2.2f));\r\n\r\n    color = LINEAR_REC2020_TO_LINEAR_SRGB * color;\r\n\r\n        // Gamut mapping. Simple clamp for now.\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n    return color;\r\n\r\n}\r\n` : ''\r\n}\r\n${color?\r\n`\r\n    fragColor = vec4(AgXToneMapping(fragColor.xyz),1.0f);\r\n` : ''\r\n}";
 
 const createAGXToneMapping = (props) => {
@@ -2141,7 +2182,7 @@ function create_fragment(ctx) {
 		},
 		m(target, anchor) {
 			insert(target, canvas_1, anchor);
-			/*canvas_1_binding*/ ctx[3](canvas_1);
+			/*canvas_1_binding*/ ctx[2](canvas_1);
 		},
 		p: noop,
 		i: noop,
@@ -2151,34 +2192,32 @@ function create_fragment(ctx) {
 				detach(canvas_1);
 			}
 
-			/*canvas_1_binding*/ ctx[3](null);
+			/*canvas_1_binding*/ ctx[2](null);
 		}
 	};
 }
 
 function instance($$self, $$props, $$invalidate) {
 	let $worldMatrix;
-	let $lastProgramRendered;
 	let $webglapp;
 	component_subscribe($$self, worldMatrix, $$value => $$invalidate(4, $worldMatrix = $$value));
 	component_subscribe($$self, normalMatrix, $$value => $$invalidate(5, $$value));
-	component_subscribe($$self, lastProgramRendered, $$value => $$invalidate(1, $lastProgramRendered = $$value));
-	component_subscribe($$self, webglapp, $$value => $$invalidate(2, $webglapp = $$value));
+	component_subscribe($$self, webglapp, $$value => $$invalidate(1, $webglapp = $$value));
 	let canvas;
+	let light1;
 
 	onMount(() => {
-		const data = createPolyhedron(1, 3, createFlatShadedNormals);
-		console.log("data", data);
+		const data = createPolyhedron(1, 7, createFlatShadedNormals);
 		renderer.setCanvas(canvas);
-		renderer.setBackgroundColor([0.0, 0.0, 0.0, 1.0]);
-		renderer.setCamera(45, 0.1, 1000, [0, 0, -8], [0, 0, 0], [0, 1, 0]);
+		renderer.setBackgroundColor([0, 0, 0, 1.0]);
+		renderer.setCamera([0, 0, -3]);
 
 		renderer.addMesh({
 			attributes: data,
 			uniforms: { color: [1, 1, 1] }
 		});
 
-		renderer.addLight(createPointLight({
+		light1 = renderer.addLight(createPointLight({
 			position: [-2, 2, -3],
 			color: [1, 1, 1],
 			intensity: 3,
@@ -2196,7 +2235,7 @@ function instance($$self, $$props, $$invalidate) {
 
 		renderer.addToneMapping(createAGXToneMapping({ exposure: 1 }));
 		animate();
-	}); //setTimeout(animate, 1000);
+	});
 
 	function animate() {
 		const rotation = performance.now() / 1000 / 6 * Math.PI;
@@ -2205,6 +2244,17 @@ function instance($$self, $$props, $$invalidate) {
 		rotateY(tmp, tmp, rotation);
 		rotateX(tmp, tmp, rotation);
 		rotateZ(tmp, tmp, rotation);
+		const lightX = Math.sin(performance.now() / 1000) * 2;
+		const lightY = Math.cos(performance.now() / 1000) * 2;
+		const r = Math.sin(performance.now() / 250) * 0.5 + 0.5;
+		const g = Math.cos(performance.now() / 500) * 0.5 + 0.5;
+		const b = Math.sin(performance.now() / 1000) * 0.5 + 0.5;
+
+		light1.store.set({
+			position: [lightX, lightY, -3],
+			color: [r, g, b]
+		});
+
 		set_store_value(worldMatrix, $worldMatrix = tmp, $worldMatrix);
 		requestAnimationFrame(animate);
 	}
@@ -2217,20 +2267,16 @@ function instance($$self, $$props, $$invalidate) {
 	}
 
 	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*$webglapp*/ 4) {
+		if ($$self.$$.dirty & /*$webglapp*/ 2) {
 			if ($webglapp) {
 				$webglapp.forEach(instruction => {
 					instruction();
 				});
 			}
 		}
-
-		if ($$self.$$.dirty & /*$lastProgramRendered*/ 2) {
-			console.log("lastProgramRendered", $lastProgramRendered);
-		}
 	};
 
-	return [canvas, $lastProgramRendered, $webglapp, canvas_1_binding];
+	return [canvas, $webglapp, canvas_1_binding];
 }
 
 class Main extends SvelteComponent {
