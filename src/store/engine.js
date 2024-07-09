@@ -8,10 +8,12 @@ import {
 	createShaders,
 	setupCamera,
 	render,
-	setupWorldMatrix,
+	setupTransformMatrix,
 	setupAttributes,
-	updateWorldMatrix,
+	updateTransformMatrix,
 	setupMeshColor,
+	updateNormalMatrix,
+	deriveNormalMatrix,
 } from "./gl.js";
 
 function createRenderer() {
@@ -39,11 +41,25 @@ function createRenderer() {
 				};
 				return renderer;
 			}),
-		addMesh: (mesh) =>
+		addMesh: (mesh) => {
+			const index = get(renderer).meshes.length;
+			const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index);
+			const meshWithMatrix = { ...mesh, transformMatrix };
 			update((renderer) => {
-				renderer.meshes = [...renderer.meshes, mesh];
+				renderer.meshes = [...renderer.meshes, meshWithMatrix];
 				return renderer;
-			}),
+			});
+			return {
+				remove: () => {
+					update((renderer) => {
+						renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
+						return renderer;
+					});
+					unsubNormalMatrix();
+				},
+				transformMatrix,
+			};
+		},
 		addLight: (light) => {
 			const store = createLightStore(light);
 			update((renderer) => {
@@ -56,7 +72,7 @@ function createRenderer() {
 						renderer.lights = renderer.lights.filter((l) => l !== light);
 						return renderer;
 					}),
-				store,
+				set: store.set,
 			};
 		},
 		addToneMapping: (toneMapping) =>
@@ -69,10 +85,6 @@ function createRenderer() {
 				renderer.loop = loop;
 				return renderer;
 			}),
-		/*setWorldMAtrix: (worldMatrix) => update(renderer => {
-            renderer.worldMatrix = worldMatrix;
-            return renderer;
-        }),*/
 		setCanvas: (canvas) =>
 			update((renderer) => {
 				renderer.canvas = canvas;
@@ -106,26 +118,46 @@ const createLightStore = (initialProps) => {
 export const renderer = createRenderer();
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
-const createWorldMatrix = () => {
+
+const createMeshMatricesStore = (parentStoreUpdate, meshIndex) => {
 	const { subscribe, set } = writable(defaultWorldMatrix);
-	return {
+	const transformMatrix = {
 		subscribe,
-		set: (worldMatrix) => {
-			set(worldMatrix);
+		set: (matrix) => {
+			set(matrix);
 			if (appContext && get(appContext).program) {
 				// in case of a single program app, let's update the uniform only and draw the single program
 				if (get(programs).length === 1) {
-					updateWorldMatrix(appContext, worldMatrix);
+					updateTransformMatrix(appContext, matrix);
+					// update the store to trigger the render
+					parentStoreUpdate((renderer) => {
+						renderer.meshes[meshIndex].transformMatrix = matrix;
+						return renderer;
+					});
 				} // in case of a multi program app, we need to setup and draw the programs
 				else {
 					renderState.set({ init: false });
 				}
 			}
-			return worldMatrix;
+			return matrix;
 		},
 	};
+	const normalMatrixStore = derived(transformMatrix, ($transformMatrix) => {
+		const context = get(appContext);
+		if (!context.gl) {
+			return;
+		}
+		const normalMatrix = deriveNormalMatrix($transformMatrix);
+		updateNormalMatrix(context, normalMatrix);
+		return normalMatrix;
+	});
+	const unsubNormalMatrix = normalMatrixStore.subscribe(() => {});
+	return {
+		transformMatrix,
+		unsubNormalMatrix,
+	};
 };
-export const worldMatrix = createWorldMatrix();
+//export const worldMatrix = createMeshMatricesStore();
 
 export const programs = derived(renderer, ($renderer) => {
 	return $renderer.meshes.map((mesh) => {
@@ -171,23 +203,7 @@ this store will be used to know if we need to setup the program before rendering
 */
 export const lastProgramRendered = writable(null);
 
-export const normalMatrix = derived(worldMatrix, ($worldMatrix) => {
-	const normalMatrix = create();
-	const worldMatrix = $worldMatrix || defaultWorldMatrix;
-	invert(normalMatrix, worldMatrix);
-	transpose(normalMatrix, normalMatrix);
-	const context = get(appContext);
-	if (!context.gl) {
-		return normalMatrix;
-	}
-	const gl = context.gl;
-	const program = context.program;
-	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
-	return normalMatrix;
-});
-
-export const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, $programs, $worldMatrix]) => {
+export const webglapp = derived([renderer, programs], ([$renderer, $programs]) => {
 	// todo find a way to avoid this, like init this store only when renderer is ready
 	if (
 		!$renderer ||
@@ -200,6 +216,7 @@ export const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, 
 		console.log("no renderer or programs or canvas");
 		return [];
 	}
+
 	const numPointLights = $renderer.lights.filter((l) => get(l).type === "point").length;
 	const pointLightShader = get($renderer.lights.find((l) => get(l).type === "point")).shader;
 
@@ -233,9 +250,8 @@ export const webglapp = derived([renderer, programs, worldMatrix], ([$renderer, 
 					program.endProgramSetup(appContext),
 					...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
 					setupAttributes(appContext, program.mesh),
-					/* these uniforms are probably common to any program */
 					setupCamera(appContext, $renderer.camera),
-					setupWorldMatrix(appContext, get(worldMatrix)),
+					setupTransformMatrix(appContext, get(program.mesh.transformMatrix)),
 					setupNormalMatrix(appContext),
 					// reduce by type to setup lights once per type
 					...[

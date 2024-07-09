@@ -18,21 +18,6 @@ function toRadian(a) {
 	return a * degree;
 }
 
-export function setupNormalMatrix(context) {
-	return function createNormalMatrix() {
-		context = get(context);
-		const gl = context.gl;
-		const program = context.program;
-		const worldMatrix = context.worldMatrix;
-		const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-		context.normalMatrixLocation = normalMatrixLocation;
-		let normalMatrix = create();
-		invert(normalMatrix, worldMatrix);
-		transpose(normalMatrix, normalMatrix);
-		gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
-	};
-}
-
 export function initRenderer(rendererContext, appContext) {
 	return function () {
 		const canvasRect = rendererContext.canvas.getBoundingClientRect();
@@ -136,7 +121,7 @@ export function createShaders() {
 				},
 				defaultFragment,
 			);
-			console.log(fragmentShaderSource);
+			//console.log(fragmentShaderSource);
 
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
@@ -190,27 +175,48 @@ export function setupCamera(context, camera) {
 	};
 }
 
-export function setupWorldMatrix(context, worldMatrix) {
+export function setupTransformMatrix(context, transformMatrix) {
 	return function () {
 		context = get(context);
 		const gl = context.gl;
 		const program = context.program;
-		if (!worldMatrix) {
-			worldMatrix = new Float32Array(16);
-			identity(worldMatrix);
+		if (!transformMatrix) {
+			transformMatrix = new Float32Array(16);
+			identity(transformMatrix);
 		}
-		context.worldMatrix = worldMatrix;
+		context.transformMatrix = transformMatrix;
 		const worldLocation = gl.getUniformLocation(program, "world");
-		gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
+		gl.uniformMatrix4fv(worldLocation, false, transformMatrix);
 	};
 }
 
-export function updateWorldMatrix(context, worldMatrix) {
+export function updateTransformMatrix(context, worldMatrix) {
 	context = get(context);
 	const gl = context.gl;
 	const program = context.program;
 	const worldLocation = gl.getUniformLocation(program, "world");
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
+}
+
+export function setupNormalMatrix(context) {
+	return function createNormalMatrix() {
+		const { gl, program, transformMatrix } = get(context);
+		const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
+		context.normalMatrixLocation = normalMatrixLocation;
+		gl.uniformMatrix4fv(normalMatrixLocation, setupNormalMatrix, deriveNormalMatrix(transformMatrix));
+	};
+}
+
+export function updateNormalMatrix({ gl, program }, normalMatrix) {
+	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
+	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+}
+
+export function deriveNormalMatrix(transformMatrix) {
+	const normalMatrix = create();
+	invert(normalMatrix, transformMatrix);
+	transpose(normalMatrix, normalMatrix);
+	return normalMatrix;
 }
 
 export function setupAttributes(context, mesh) {
