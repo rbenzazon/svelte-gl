@@ -4,8 +4,10 @@ import { renderState } from "./engine.js";
 import defaultVertex from "../shaders/default-vertex.glsl";
 import defaultFragment from "../shaders/default-fragment.glsl";
 import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";
-import { multiplyScalarVec3 } from "../geometries/common.js";
-import { getPointLightsUBO, setPointLightsUBO } from "../lights/point-light.js";
+
+// Uniform Buffer Objects, must have unique binding points
+export const UBO_BINDING_POINT_POINTLIGHT = 0;
+export const UBO_BINDING_POINT_SPOTLIGHT = 1;
 
 const degree = Math.PI / 180;
 /**

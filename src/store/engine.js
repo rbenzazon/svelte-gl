@@ -239,6 +239,10 @@ export const webglapp = derived([renderer, programs], ([$renderer, $programs]) =
 
 	!get(renderState).init && list.push(initRenderer(rendererContext, appContext));
 
+	//global setup (UBOs, textures, etc)
+	/*!get(renderState).init && 
+		list.push(*/
+
 	!get(renderState).init &&
 		list.push(
 			...$programs.reduce((acc, program) => {

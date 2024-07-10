@@ -46,6 +46,8 @@ onMount(() => {
 	);
 	animate();
 });
+
+//render
 $: if ($webglapp) {
 	$webglapp.forEach((instruction) => {
 		instruction();
