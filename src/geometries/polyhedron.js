@@ -3,8 +3,8 @@ import { normalizeNormals, createVec3, multiplyScalarVec3 } from "./common";
 
 /**
  * @typedef {{
- *    positions: Float32Array,
- *   normals: Float32Array,
+ *	positions: Float32Array,
+ *	normals: Float32Array,
  * }} Geometry
  */
 /*elements: Uint16Array*/

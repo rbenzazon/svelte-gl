@@ -43,25 +43,50 @@ function createRenderer() {
 			}),
 		addMesh: (mesh) => {
 			const index = get(renderer).meshes.length;
-			const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index);
-			const meshWithMatrix = { ...mesh, transformMatrix };
+
+			if (mesh.instances && mesh.instances > 1) {
+				var { matrices, unsubs } = new Array(mesh.instances).fill().reduce(
+					(acc, curr, instanceIndex) => {
+						const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index, instanceIndex);
+						acc.matrices.push(transformMatrix);
+						acc.unsubs.push(unsubNormalMatrix);
+						return acc;
+					},
+					{ matrices: [], unsubs: [] },
+				);
+			} else {
+				var { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index);
+			}
+			const meshWithMatrix = {
+				...mesh,
+				...(matrices ? { matrices, unsubs } : { transformMatrix }),
+			};
 			update((renderer) => {
 				renderer.meshes = [...renderer.meshes, meshWithMatrix];
 				return renderer;
 			});
 			return {
-				remove: () => {
-					update((renderer) => {
-						renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
-						return renderer;
-					});
-					unsubNormalMatrix();
-				},
-				transformMatrix,
+				remove: matrices
+					? () => {
+							update((renderer) => {
+								renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
+								return renderer;
+							});
+							unsubNormalMatrix();
+						}
+					: () => {
+							update((renderer) => {
+								renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
+								return renderer;
+							});
+							meshWithMatrix.unsubs.forEach((unsub) => unsub());
+						},
+				...(matrices ? { matrices } : { transformMatrix }),
 			};
 		},
 		addLight: (light) => {
-			const store = createLightStore(light);
+			const index = get(renderer).lights.length;
+			const store = createLightStore(update, light, index);
 			update((renderer) => {
 				renderer.lights = [...renderer.lights, store];
 				return renderer;
@@ -98,7 +123,7 @@ function createRenderer() {
 	};
 }
 
-const createLightStore = (initialProps) => {
+const createLightStore = (parentStoreUpdate, initialProps, lightIndex) => {
 	const store = writable(initialProps);
 	const { subscribe, set, update } = store;
 	const customStore = {
@@ -110,6 +135,10 @@ const createLightStore = (initialProps) => {
 				}
 				return { ...prev, ...props };
 			});
+			parentStoreUpdate((renderer) => {
+				renderer.lights[lightIndex] = customStore;
+				return renderer;
+			});
 		},
 	};
 	return customStore;
@@ -119,7 +148,7 @@ export const renderer = createRenderer();
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
 
-const createMeshMatricesStore = (parentStoreUpdate, meshIndex) => {
+const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex) => {
 	const { subscribe, set } = writable(defaultWorldMatrix);
 	const transformMatrix = {
 		subscribe,
@@ -128,7 +157,11 @@ const createMeshMatricesStore = (parentStoreUpdate, meshIndex) => {
 			if (appContext && get(appContext).program) {
 				// in case of a single program app, let's update the uniform only and draw the single program
 				if (get(programs).length === 1) {
-					updateTransformMatrix(appContext, matrix);
+					if (instanceIndex == null) {
+						updateTransformMatrix(appContext, matrix);
+					} else {
+						updateInstanceTransformMatrix(appContext, matrix, instanceIndex);
+					}
 					// update the store to trigger the render
 					parentStoreUpdate((renderer) => {
 						renderer.meshes[meshIndex].transformMatrix = matrix;
@@ -148,7 +181,11 @@ const createMeshMatricesStore = (parentStoreUpdate, meshIndex) => {
 			return;
 		}
 		const normalMatrix = deriveNormalMatrix($transformMatrix);
-		updateNormalMatrix(context, normalMatrix);
+		if (instanceIndex == null) {
+			updateNormalMatrix(context, normalMatrix);
+		} else {
+			updateInstanceNormalMatrix(context, normalMatrix, instanceIndex);
+		}
 		return normalMatrix;
 	});
 	const unsubNormalMatrix = normalMatrixStore.subscribe(() => {});
@@ -200,9 +237,9 @@ Single program apps (one mesh/material) will not need to setup the program again
 but multi program apps require to setup the program before rendering if the last changes
 affect a program that is not the last one rendered. because the last one rendered is still mounted / in memory of the GPU
 this store will be used to know if we need to setup the program before rendering again
+todo : map existing compiled programs and decouple draw passes from program setup
 */
 export const lastProgramRendered = writable(null);
-
 export const webglapp = derived([renderer, programs], ([$renderer, $programs]) => {
 	// todo find a way to avoid this, like init this store only when renderer is ready
 	if (
@@ -255,8 +292,12 @@ export const webglapp = derived([renderer, programs], ([$renderer, $programs]) =
 					...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
 					setupAttributes(appContext, program.mesh),
 					setupCamera(appContext, $renderer.camera),
-					setupTransformMatrix(appContext, get(program.mesh.transformMatrix)),
-					setupNormalMatrix(appContext),
+					setupTransformMatrix(
+						appContext,
+						program.mesh.instances == null ? get(program.mesh.transformMatrix) : program.mesh.matrices,
+						program.mesh.instances,
+					),
+					setupNormalMatrix(appContext, program.mesh.instances),
 					// reduce by type to setup lights once per type
 					...[
 						...$renderer.lights.reduce((acc, light) => {
@@ -269,6 +310,6 @@ export const webglapp = derived([renderer, programs], ([$renderer, $programs]) =
 			}, []),
 		);
 
-	list.push(render(appContext));
+	list.push(render(appContext, $programs[0].mesh.instances));
 	return list;
 });

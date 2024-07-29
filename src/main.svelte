@@ -17,6 +17,7 @@ onMount(() => {
 	renderer.setCamera([0, 0, -3]);
 	mesh1 = renderer.addMesh({
 		attributes: data,
+		instances: 3,
 		uniforms: {
 			color: [1, 1, 1],
 		},
@@ -54,11 +55,11 @@ $: if ($webglapp) {
 	});
 }
 
-//$: console.log("lastProgramRendered", $lastProgramRendered);
 /* this is necessary to have normalMatrix working cause 
     derived stores without listeners are not reactive */
 
 function animate() {
+	/*
 	const rotation = (performance.now() / 1000 / 6) * Math.PI;
 	const tmp = new Float32Array(16);
 	identity(tmp);
@@ -66,6 +67,7 @@ function animate() {
 	rotateX(tmp, tmp, rotation);
 	rotateZ(tmp, tmp, rotation);
 	mesh1.transformMatrix.set(tmp);
+	*/
 	const lightX = Math.sin(performance.now() / 1000) * 2;
 	const lightY = Math.cos(performance.now() / 1000) * 2;
 	const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;

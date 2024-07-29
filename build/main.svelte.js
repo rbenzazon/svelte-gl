@@ -714,47 +714,89 @@ function invert(out, a) {
   return out;
 }
 /**
- * Rotates a matrix by the given angle around the X axis
+ * Translate a mat4 by the given vector
  *
  * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the matrix to rotate
- * @param {Number} rad the angle to rotate the matrix by
+ * @param {ReadonlyMat4} a the matrix to translate
+ * @param {ReadonlyVec3} v vector to translate by
  * @returns {mat4} out
  */
 
-function rotateX(out, a, rad) {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
-  var a10 = a[4];
-  var a11 = a[5];
-  var a12 = a[6];
-  var a13 = a[7];
-  var a20 = a[8];
-  var a21 = a[9];
-  var a22 = a[10];
-  var a23 = a[11];
+function translate(out, a, v) {
+  var x = v[0],
+      y = v[1],
+      z = v[2];
+  var a00, a01, a02, a03;
+  var a10, a11, a12, a13;
+  var a20, a21, a22, a23;
 
-  if (a !== out) {
-    // If the source and destination differ, copy the unchanged rows
-    out[0] = a[0];
-    out[1] = a[1];
-    out[2] = a[2];
-    out[3] = a[3];
-    out[12] = a[12];
-    out[13] = a[13];
-    out[14] = a[14];
-    out[15] = a[15];
-  } // Perform axis-specific matrix multiplication
+  if (a === out) {
+    out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
+    out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
+    out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
+    out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
+  } else {
+    a00 = a[0];
+    a01 = a[1];
+    a02 = a[2];
+    a03 = a[3];
+    a10 = a[4];
+    a11 = a[5];
+    a12 = a[6];
+    a13 = a[7];
+    a20 = a[8];
+    a21 = a[9];
+    a22 = a[10];
+    a23 = a[11];
+    out[0] = a00;
+    out[1] = a01;
+    out[2] = a02;
+    out[3] = a03;
+    out[4] = a10;
+    out[5] = a11;
+    out[6] = a12;
+    out[7] = a13;
+    out[8] = a20;
+    out[9] = a21;
+    out[10] = a22;
+    out[11] = a23;
+    out[12] = a00 * x + a10 * y + a20 * z + a[12];
+    out[13] = a01 * x + a11 * y + a21 * z + a[13];
+    out[14] = a02 * x + a12 * y + a22 * z + a[14];
+    out[15] = a03 * x + a13 * y + a23 * z + a[15];
+  }
 
+  return out;
+}
+/**
+ * Scales the mat4 by the dimensions in the given vec3 not using vectorization
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the matrix to scale
+ * @param {ReadonlyVec3} v the vec3 to scale the matrix by
+ * @returns {mat4} out
+ **/
 
-  out[4] = a10 * c + a20 * s;
-  out[5] = a11 * c + a21 * s;
-  out[6] = a12 * c + a22 * s;
-  out[7] = a13 * c + a23 * s;
-  out[8] = a20 * c - a10 * s;
-  out[9] = a21 * c - a11 * s;
-  out[10] = a22 * c - a12 * s;
-  out[11] = a23 * c - a13 * s;
+function scale(out, a, v) {
+  var x = v[0],
+      y = v[1],
+      z = v[2];
+  out[0] = a[0] * x;
+  out[1] = a[1] * x;
+  out[2] = a[2] * x;
+  out[3] = a[3] * x;
+  out[4] = a[4] * y;
+  out[5] = a[5] * y;
+  out[6] = a[6] * y;
+  out[7] = a[7] * y;
+  out[8] = a[8] * z;
+  out[9] = a[9] * z;
+  out[10] = a[10] * z;
+  out[11] = a[11] * z;
+  out[12] = a[12];
+  out[13] = a[13];
+  out[14] = a[14];
+  out[15] = a[15];
   return out;
 }
 /**
@@ -799,50 +841,6 @@ function rotateY(out, a, rad) {
   out[9] = a01 * s + a21 * c;
   out[10] = a02 * s + a22 * c;
   out[11] = a03 * s + a23 * c;
-  return out;
-}
-/**
- * Rotates a matrix by the given angle around the Z axis
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the matrix to rotate
- * @param {Number} rad the angle to rotate the matrix by
- * @returns {mat4} out
- */
-
-function rotateZ(out, a, rad) {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
-  var a00 = a[0];
-  var a01 = a[1];
-  var a02 = a[2];
-  var a03 = a[3];
-  var a10 = a[4];
-  var a11 = a[5];
-  var a12 = a[6];
-  var a13 = a[7];
-
-  if (a !== out) {
-    // If the source and destination differ, copy the unchanged last row
-    out[8] = a[8];
-    out[9] = a[9];
-    out[10] = a[10];
-    out[11] = a[11];
-    out[12] = a[12];
-    out[13] = a[13];
-    out[14] = a[14];
-    out[15] = a[15];
-  } // Perform axis-specific matrix multiplication
-
-
-  out[0] = a00 * c + a10 * s;
-  out[1] = a01 * c + a11 * s;
-  out[2] = a02 * c + a12 * s;
-  out[3] = a03 * c + a13 * s;
-  out[4] = a10 * c - a00 * s;
-  out[5] = a11 * c - a01 * s;
-  out[6] = a12 * c - a02 * s;
-  out[7] = a13 * c - a03 * s;
   return out;
 }
 /**
@@ -1154,9 +1152,9 @@ function derived(stores, fn, initial_value) {
 	});
 }
 
-var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\n\r\nuniform mat4 world;\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 normalMatrix;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\n\r\nvoid main() {\r\n    \r\n\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n}";
+var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\n\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\n\r\nvoid main() {\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n}";
 
-var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 color;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\r\n    //debug normals\r\n    //fragColor = vec4(normalize(vNormal) * 0.5 + 0.5, 1.0);\r\n    fragColor = vec4(RECIPROCAL_PI * color * totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n}";
+var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 color;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n    fragColor = vec4(RECIPROCAL_PI * color * totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n}";
 
 const templateGenerator = (props, template) => {
 	return (propsValues) => Function.constructor(...props, `return \`${template}\``)(...propsValues);
@@ -1212,17 +1210,26 @@ function initRenderer(rendererContext, appContext) {
 	};
 }
 
-function render(context) {
+function render(context, instances) {
 	return function () {
 		context = get_store_value(context);
+		/** @type {WebGL2RenderingContext} **/
 		const gl = context.gl;
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		context.loop && context.loop();
-		if (context.hasElements) {
-			gl.drawElements(gl.TRIANGLES, context.attributeLength, gl.UNSIGNED_SHORT, 0);
+		// when using vertex array objects, you must bind it before rendering
+		gl.bindVertexArray(context.vao);
+		if (instances) {
+			gl.drawArraysInstanced(gl.TRIANGLES, 0, context.attributeLength, instances);
 		} else {
-			gl.drawArrays(gl.TRIANGLES, 0, context.attributeLength);
+			if (context.hasElements) {
+				gl.drawElements(gl.TRIANGLES, context.attributeLength, gl.UNSIGNED_SHORT, 0);
+			} else {
+				gl.drawArrays(gl.TRIANGLES, 0, context.attributeLength);
+			}
 		}
+		// when binding vertex array objects you must unbind it after rendering
+		gl.bindVertexArray(null);
 	};
 }
 
@@ -1263,6 +1270,9 @@ function createShaders() {
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
+			if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+				console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
+			}
 			const fragmentShaderSource = templateLiteralRenderer(
 				{
 					defines: objectToDefines({
@@ -1291,11 +1301,12 @@ function createShaders() {
 				},
 				defaultFragment,
 			);
-			//console.log(fragmentShaderSource);
-
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
 			gl.compileShader(fragmentShader);
+			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
+			}
 			gl.attachShader(program, vertexShader);
 			gl.attachShader(program, fragmentShader);
 		};
@@ -1345,21 +1356,76 @@ function setupCamera(context, camera) {
 	};
 }
 
-function setupTransformMatrix(context, transformMatrix) {
-	return function () {
-		context = get_store_value(context);
-		const gl = context.gl;
-		const program = context.program;
-		if (!transformMatrix) {
-			transformMatrix = new Float32Array(16);
-			identity(transformMatrix);
-		}
-		context.transformMatrix = transformMatrix;
-		const worldLocation = gl.getUniformLocation(program, "world");
-		gl.uniformMatrix4fv(worldLocation, false, transformMatrix);
-	};
-}
+function setupTransformMatrix(context, transformMatrix, numInstances) {
+	if (numInstances == null) {
+		return function createTransformMatrix() {
+			context = get_store_value(context);
+			const gl = context.gl;
+			const program = context.program;
+			if (!transformMatrix) {
+				transformMatrix = new Float32Array(16);
+				identity(transformMatrix);
+			}
+			context.transformMatrix = transformMatrix;
+			const worldLocation = gl.getUniformLocation(program, "world");
+			gl.uniformMatrix4fv(worldLocation, false, transformMatrix);
+		};
+	} else {
+		return function createTransformMatrices() {
+			const attributeName = "world";
+			/** @type {{gl: WebGL2RenderingContext}} **/
+			const { gl, program, vao } = get_store_value(context);
 
+			const transformMatricesWindows = (context.transformMatricesWindows = context.transformMatricesWindows || []);
+			const transformMatricesValues = transformMatrix.reduce((acc, m) => [...acc, ...get_store_value(m)], []);
+			const transformMatricesData = new Float32Array(transformMatricesValues);
+
+			// create windows for each matrix
+			for (let i = 0; i < numInstances; ++i) {
+				const byteOffsetToMatrix = i * 16 * 4;
+				const numFloatsForView = 16;
+				transformMatricesWindows.push(new Float32Array(transformMatricesData.buffer, byteOffsetToMatrix, numFloatsForView));
+			}
+
+			transformMatricesWindows.forEach((mat, index) => {
+				const count = index - Math.floor(numInstances / 2);
+				identity(mat);
+				//transform the model matrix
+				translate(mat, mat, [count * 2, 0, 0]);
+				rotateY(mat, mat, toRadian(count * 10));
+				scale(mat, mat, [0.5, 0.5, 0.5]);
+			});
+
+			context.transformMatrix = transformMatricesWindows;
+			gl.bindVertexArray(vao);
+			const matrixBuffer = /*context.matrixBuffer = context.matrixBuffer || */ gl.createBuffer();
+			const transformMatricesLocation = gl.getAttribLocation(program, attributeName);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, transformMatricesData.byteLength, gl.DYNAMIC_DRAW);
+			// set all 4 attributes for matrix
+			const bytesPerMatrix = 4 * 16;
+			for (let i = 0; i < 4; ++i) {
+				const loc = transformMatricesLocation + i;
+				gl.enableVertexAttribArray(loc);
+				// note the stride and offset
+				const offset = i * 16; // 4 floats per row, 4 bytes per float
+				gl.vertexAttribPointer(
+					loc, // location
+					4, // size (num values to pull from buffer per iteration)
+					gl.FLOAT, // type of data in buffer
+					false, // normalize
+					bytesPerMatrix, // stride, num bytes to advance to get to next set of values
+					offset, // offset in buffer
+				);
+				// this line says this attribute only changes for each 1 instance
+				gl.vertexAttribDivisor(loc, 1);
+			}
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, transformMatricesData);
+
+			gl.bindVertexArray(null);
+		};
+	}
+}
 function updateTransformMatrix(context, worldMatrix) {
 	context = get_store_value(context);
 	const gl = context.gl;
@@ -1368,13 +1434,52 @@ function updateTransformMatrix(context, worldMatrix) {
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 }
 
-function setupNormalMatrix(context) {
-	return function createNormalMatrix() {
-		const { gl, program, transformMatrix } = get_store_value(context);
-		const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-		context.normalMatrixLocation = normalMatrixLocation;
-		gl.uniformMatrix4fv(normalMatrixLocation, setupNormalMatrix, deriveNormalMatrix(transformMatrix));
-	};
+function setupNormalMatrix(context, numInstances) {
+	if (numInstances == null) {
+		return function createNormalMatrix() {
+			/** @type{{gl:WebGL2RenderingContext}} **/
+			const { gl, program, transformMatrix } = get_store_value(context);
+			const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
+			context.normalMatrixLocation = normalMatrixLocation;
+			gl.uniformMatrix4fv(normalMatrixLocation, false, deriveNormalMatrix(transformMatrix));
+		};
+	} else {
+		return function createNormalMatrices() {
+			const { gl, program, transformMatrix, vao } = get_store_value(context);
+			gl.bindVertexArray(vao);
+			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
+			const normalMatricesValues = [];
+
+			for (let i = 0; i < numInstances; i++) {
+				normalMatricesValues.push(...deriveNormalMatrix(context.transformMatricesWindows[i]));
+			}
+			const normalMatrices = new Float32Array(normalMatricesValues);
+			const normalMatrixBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, normalMatrices.byteLength, gl.DYNAMIC_DRAW);
+
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, normalMatrices);
+			// set all 4 attributes for matrix
+			const bytesPerMatrix = 4 * 16;
+			for (let i = 0; i < 4; ++i) {
+				const loc = normalMatricesLocation + i;
+				gl.enableVertexAttribArray(loc);
+				// note the stride and offset
+				const offset = i * 16; // 4 floats per row, 4 bytes per float
+				gl.vertexAttribPointer(
+					loc, // location
+					4, // size (num values to pull from buffer per iteration)
+					gl.FLOAT, // type of data in buffer
+					false, // normalize
+					bytesPerMatrix, // stride, num bytes to advance to get to next set of values
+					offset, // offset in buffer
+				);
+				// this line says this attribute only changes for each 1 instance
+				gl.vertexAttribDivisor(loc, 1);
+			}
+			gl.bindVertexArray(null);
+		};
+	}
 }
 
 function updateNormalMatrix({ gl, program }, normalMatrix) {
@@ -1392,12 +1497,15 @@ function deriveNormalMatrix(transformMatrix) {
 function setupAttributes(context, mesh) {
 	return function () {
 		context = get_store_value(context);
+		/** @type {WebGL2RenderingContext} **/
 		const gl = context.gl;
 		const program = context.program;
 		context.attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / 3;
 
+		const vao = (context.vao = gl.createVertexArray());
+		gl.bindVertexArray(vao);
 		const positionsData = new Float32Array(mesh.attributes.positions);
 		//position
 		const positionBuffer = gl.createBuffer();
@@ -1423,6 +1531,7 @@ function setupAttributes(context, mesh) {
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
 			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, elementsData, gl.STATIC_DRAW);
 		}
+		gl.bindVertexArray(null);
 	};
 }
 
@@ -1453,25 +1562,50 @@ function createRenderer() {
 			}),
 		addMesh: (mesh) => {
 			const index = get_store_value(renderer).meshes.length;
-			const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index);
-			const meshWithMatrix = { ...mesh, transformMatrix };
+
+			if (mesh.instances && mesh.instances > 1) {
+				var { matrices, unsubs } = new Array(mesh.instances).fill().reduce(
+					(acc, curr, instanceIndex) => {
+						const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index, instanceIndex);
+						acc.matrices.push(transformMatrix);
+						acc.unsubs.push(unsubNormalMatrix);
+						return acc;
+					},
+					{ matrices: [], unsubs: [] },
+				);
+			} else {
+				var { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index);
+			}
+			const meshWithMatrix = {
+				...mesh,
+				...(matrices ? { matrices, unsubs } : { transformMatrix }),
+			};
 			update((renderer) => {
 				renderer.meshes = [...renderer.meshes, meshWithMatrix];
 				return renderer;
 			});
 			return {
-				remove: () => {
-					update((renderer) => {
-						renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
-						return renderer;
-					});
-					unsubNormalMatrix();
-				},
-				transformMatrix,
+				remove: matrices
+					? () => {
+							update((renderer) => {
+								renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
+								return renderer;
+							});
+							unsubNormalMatrix();
+						}
+					: () => {
+							update((renderer) => {
+								renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
+								return renderer;
+							});
+							meshWithMatrix.unsubs.forEach((unsub) => unsub());
+						},
+				...(matrices ? { matrices } : { transformMatrix }),
 			};
 		},
 		addLight: (light) => {
-			const store = createLightStore(light);
+			const index = get_store_value(renderer).lights.length;
+			const store = createLightStore(update, light, index);
 			update((renderer) => {
 				renderer.lights = [...renderer.lights, store];
 				return renderer;
@@ -1508,7 +1642,7 @@ function createRenderer() {
 	};
 }
 
-const createLightStore = (initialProps) => {
+const createLightStore = (parentStoreUpdate, initialProps, lightIndex) => {
 	const store = writable(initialProps);
 	const { subscribe, set, update } = store;
 	const customStore = {
@@ -1520,6 +1654,10 @@ const createLightStore = (initialProps) => {
 				}
 				return { ...prev, ...props };
 			});
+			parentStoreUpdate((renderer) => {
+				renderer.lights[lightIndex] = customStore;
+				return renderer;
+			});
 		},
 	};
 	return customStore;
@@ -1529,7 +1667,7 @@ const renderer = createRenderer();
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
 
-const createMeshMatricesStore = (parentStoreUpdate, meshIndex) => {
+const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex) => {
 	const { subscribe, set } = writable(defaultWorldMatrix);
 	const transformMatrix = {
 		subscribe,
@@ -1538,7 +1676,11 @@ const createMeshMatricesStore = (parentStoreUpdate, meshIndex) => {
 			if (appContext && get_store_value(appContext).program) {
 				// in case of a single program app, let's update the uniform only and draw the single program
 				if (get_store_value(programs).length === 1) {
-					updateTransformMatrix(appContext, matrix);
+					if (instanceIndex == null) {
+						updateTransformMatrix(appContext, matrix);
+					} else {
+						updateInstanceTransformMatrix(appContext, matrix, instanceIndex);
+					}
 					// update the store to trigger the render
 					parentStoreUpdate((renderer) => {
 						renderer.meshes[meshIndex].transformMatrix = matrix;
@@ -1558,7 +1700,11 @@ const createMeshMatricesStore = (parentStoreUpdate, meshIndex) => {
 			return;
 		}
 		const normalMatrix = deriveNormalMatrix($transformMatrix);
-		updateNormalMatrix(context, normalMatrix);
+		if (instanceIndex == null) {
+			updateNormalMatrix(context, normalMatrix);
+		} else {
+			updateInstanceNormalMatrix(context, normalMatrix, instanceIndex);
+		}
 		return normalMatrix;
 	});
 	const unsubNormalMatrix = normalMatrixStore.subscribe(() => {});
@@ -1610,9 +1756,9 @@ Single program apps (one mesh/material) will not need to setup the program again
 but multi program apps require to setup the program before rendering if the last changes
 affect a program that is not the last one rendered. because the last one rendered is still mounted / in memory of the GPU
 this store will be used to know if we need to setup the program before rendering again
+todo : map existing compiled programs and decouple draw passes from program setup
 */
 const lastProgramRendered = writable(null);
-
 const webglapp = derived([renderer, programs], ([$renderer, $programs]) => {
 	// todo find a way to avoid this, like init this store only when renderer is ready
 	if (
@@ -1665,8 +1811,12 @@ const webglapp = derived([renderer, programs], ([$renderer, $programs]) => {
 					...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
 					setupAttributes(appContext, program.mesh),
 					setupCamera(appContext, $renderer.camera),
-					setupTransformMatrix(appContext, get_store_value(program.mesh.transformMatrix)),
-					setupNormalMatrix(appContext),
+					setupTransformMatrix(
+						appContext,
+						program.mesh.instances == null ? get_store_value(program.mesh.transformMatrix) : program.mesh.matrices,
+						program.mesh.instances,
+					),
+					setupNormalMatrix(appContext, program.mesh.instances),
 					// reduce by type to setup lights once per type
 					...[
 						...$renderer.lights.reduce((acc, light) => {
@@ -1679,7 +1829,7 @@ const webglapp = derived([renderer, programs], ([$renderer, $programs]) => {
 			}, []),
 		);
 
-	list.push(render(appContext));
+	list.push(render(appContext, $programs[0].mesh.instances));
 	return list;
 });
 
@@ -1877,8 +2027,8 @@ function createFlatShadedNormals(positions) {
 
 /**
  * @typedef {{
- *    positions: Float32Array,
- *   normals: Float32Array,
+ *	positions: Float32Array,
+ *	normals: Float32Array,
  * }} Geometry
  */
 /*elements: Uint16Array*/
@@ -2215,7 +2365,6 @@ function instance($$self, $$props, $$invalidate) {
 	component_subscribe($$self, webglapp, $$value => $$invalidate(1, $webglapp = $$value));
 	let canvas;
 	let light1;
-	let mesh1;
 
 	onMount(() => {
 		const data = createPolyhedron(1, 7, createFlatShadedNormals);
@@ -2223,8 +2372,9 @@ function instance($$self, $$props, $$invalidate) {
 		renderer.setBackgroundColor([0, 0, 0, 1.0]);
 		renderer.setCamera([0, 0, -3]);
 
-		mesh1 = renderer.addMesh({
+		renderer.addMesh({
 			attributes: data,
+			instances: 3,
 			uniforms: { color: [1, 1, 1] }
 		});
 
@@ -2248,18 +2398,20 @@ function instance($$self, $$props, $$invalidate) {
 		animate();
 	});
 
-	//$: console.log("lastProgramRendered", $lastProgramRendered);
 	/* this is necessary to have normalMatrix working cause 
     derived stores without listeners are not reactive */
 	function animate() {
-		const rotation = performance.now() / 1000 / 6 * Math.PI;
-		const tmp = new Float32Array(16);
-		identity(tmp);
-		rotateY(tmp, tmp, rotation);
-		rotateX(tmp, tmp, rotation);
-		rotateZ(tmp, tmp, rotation);
-		mesh1.transformMatrix.set(tmp);
+		/*
+const rotation = (performance.now() / 1000 / 6) * Math.PI;
+const tmp = new Float32Array(16);
+identity(tmp);
+rotateY(tmp, tmp, rotation);
+rotateX(tmp, tmp, rotation);
+rotateZ(tmp, tmp, rotation);
+mesh1.transformMatrix.set(tmp);
+*/
 		const lightX = Math.sin(performance.now() / 1000) * 2;
+
 		const lightY = Math.cos(performance.now() / 1000) * 2;
 		const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;
 		const g = Math.cos(performance.now() / 5000) * 0.5 + 0.5;
