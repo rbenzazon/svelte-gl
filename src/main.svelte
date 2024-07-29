@@ -1,12 +1,13 @@
 <script type="module">
 import { onMount } from "svelte";
+import { get } from "svelte/store";
 import { renderer, webglapp, lastProgramRendered } from "./store/engine.js";
 //import { createCube } from "./geometries/cube.js";
-import { identity, rotateX, rotateY, rotateZ } from "gl-matrix/esm/mat4.js";
+import { identity, rotateX, rotateY, rotateZ, translate, scale } from "gl-matrix/esm/mat4.js";
 import { createPolyhedron /*createSmoothShadedNormals*/ } from "./geometries/polyhedron.js";
 import { createPointLight } from "./lights/point-light.js";
 import { createAGXToneMapping } from "./tone-mapping/agx.js";
-import { createFlatShadedNormals } from "./geometries/common.js";
+import { createFlatShadedNormals, toRadian } from "./geometries/common.js";
 let canvas;
 let light1;
 let mesh1;
@@ -15,13 +16,29 @@ onMount(() => {
 	renderer.setCanvas(canvas);
 	renderer.setBackgroundColor([0, 0, 0, 1.0]);
 	renderer.setCamera([0, 0, -3]);
+	const numInstances = 3;
+	let identityMatrix = new Array(16).fill(0);
+	identity(identityMatrix);
+	let matrices = new Array(numInstances).fill(0).map((_, index) => {
+		const count = index - Math.floor(numInstances / 2);
+		console.log("count", count);
+		let mat = [...identityMatrix];
+		//transform the model matrix
+		translate(mat, mat, [count * 2, 0, 0]);
+		rotateY(mat, mat, toRadian(count * 10));
+		scale(mat, mat, [0.5, 0.5, 0.5]);
+		return new Float32Array(mat);
+	});
+
 	mesh1 = renderer.addMesh({
 		attributes: data,
-		instances: 3,
+		instances: numInstances,
+		matrices,
 		uniforms: {
 			color: [1, 1, 1],
 		},
 	});
+
 	light1 = renderer.addLight(
 		createPointLight({
 			position: [-2, 2, -3],
@@ -59,15 +76,13 @@ $: if ($webglapp) {
     derived stores without listeners are not reactive */
 
 function animate() {
-	/*
-	const rotation = (performance.now() / 1000 / 6) * Math.PI;
-	const tmp = new Float32Array(16);
-	identity(tmp);
-	rotateY(tmp, tmp, rotation);
+	const rotation = 0.001 * Math.PI;
+	const tmp = get(mesh1.matrices[0]);
+	rotateY(tmp, tmp, rotation / 2);
 	rotateX(tmp, tmp, rotation);
-	rotateZ(tmp, tmp, rotation);
-	mesh1.transformMatrix.set(tmp);
-	*/
+	rotateZ(tmp, tmp, rotation / 3);
+	mesh1.matrices[0].set(tmp);
+
 	const lightX = Math.sin(performance.now() / 1000) * 2;
 	const lightY = Math.cos(performance.now() / 1000) * 2;
 	const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;

@@ -521,6 +521,181 @@ if (typeof window !== 'undefined')
 	// @ts-ignore
 	(window.__svelte || (window.__svelte = { v: new Set() })).v.add(PUBLIC_VERSION);
 
+const subscriber_queue = [];
+
+/**
+ * Creates a `Readable` store that allows reading by subscription.
+ *
+ * https://svelte.dev/docs/svelte-store#readable
+ * @template T
+ * @param {T} [value] initial value
+ * @param {import('./public.js').StartStopNotifier<T>} [start]
+ * @returns {import('./public.js').Readable<T>}
+ */
+function readable(value, start) {
+	return {
+		subscribe: writable(value, start).subscribe
+	};
+}
+
+/**
+ * Create a `Writable` store that allows both updating and reading by subscription.
+ *
+ * https://svelte.dev/docs/svelte-store#writable
+ * @template T
+ * @param {T} [value] initial value
+ * @param {import('./public.js').StartStopNotifier<T>} [start]
+ * @returns {import('./public.js').Writable<T>}
+ */
+function writable(value, start = noop) {
+	/** @type {import('./public.js').Unsubscriber} */
+	let stop;
+	/** @type {Set<import('./private.js').SubscribeInvalidateTuple<T>>} */
+	const subscribers = new Set();
+	/** @param {T} new_value
+	 * @returns {void}
+	 */
+	function set(new_value) {
+		if (safe_not_equal(value, new_value)) {
+			value = new_value;
+			if (stop) {
+				// store is ready
+				const run_queue = !subscriber_queue.length;
+				for (const subscriber of subscribers) {
+					subscriber[1]();
+					subscriber_queue.push(subscriber, value);
+				}
+				if (run_queue) {
+					for (let i = 0; i < subscriber_queue.length; i += 2) {
+						subscriber_queue[i][0](subscriber_queue[i + 1]);
+					}
+					subscriber_queue.length = 0;
+				}
+			}
+		}
+	}
+
+	/**
+	 * @param {import('./public.js').Updater<T>} fn
+	 * @returns {void}
+	 */
+	function update(fn) {
+		set(fn(value));
+	}
+
+	/**
+	 * @param {import('./public.js').Subscriber<T>} run
+	 * @param {import('./private.js').Invalidator<T>} [invalidate]
+	 * @returns {import('./public.js').Unsubscriber}
+	 */
+	function subscribe(run, invalidate = noop) {
+		/** @type {import('./private.js').SubscribeInvalidateTuple<T>} */
+		const subscriber = [run, invalidate];
+		subscribers.add(subscriber);
+		if (subscribers.size === 1) {
+			stop = start(set, update) || noop;
+		}
+		run(value);
+		return () => {
+			subscribers.delete(subscriber);
+			if (subscribers.size === 0 && stop) {
+				stop();
+				stop = null;
+			}
+		};
+	}
+	return { set, update, subscribe };
+}
+
+/**
+ * Derived value store by synchronizing one or more readable stores and
+ * applying an aggregation function over its input values.
+ *
+ * https://svelte.dev/docs/svelte-store#derived
+ * @template {import('./private.js').Stores} S
+ * @template T
+ * @overload
+ * @param {S} stores - input stores
+ * @param {(values: import('./private.js').StoresValues<S>, set: (value: T) => void, update: (fn: import('./public.js').Updater<T>) => void) => import('./public.js').Unsubscriber | void} fn - function callback that aggregates the values
+ * @param {T} [initial_value] - initial value
+ * @returns {import('./public.js').Readable<T>}
+ */
+
+/**
+ * Derived value store by synchronizing one or more readable stores and
+ * applying an aggregation function over its input values.
+ *
+ * https://svelte.dev/docs/svelte-store#derived
+ * @template {import('./private.js').Stores} S
+ * @template T
+ * @overload
+ * @param {S} stores - input stores
+ * @param {(values: import('./private.js').StoresValues<S>) => T} fn - function callback that aggregates the values
+ * @param {T} [initial_value] - initial value
+ * @returns {import('./public.js').Readable<T>}
+ */
+
+/**
+ * @template {import('./private.js').Stores} S
+ * @template T
+ * @param {S} stores
+ * @param {Function} fn
+ * @param {T} [initial_value]
+ * @returns {import('./public.js').Readable<T>}
+ */
+function derived(stores, fn, initial_value) {
+	const single = !Array.isArray(stores);
+	/** @type {Array<import('./public.js').Readable<any>>} */
+	const stores_array = single ? [stores] : stores;
+	if (!stores_array.every(Boolean)) {
+		throw new Error('derived() expects stores as input, got a falsy value');
+	}
+	const auto = fn.length < 2;
+	return readable(initial_value, (set, update) => {
+		let started = false;
+		const values = [];
+		let pending = 0;
+		let cleanup = noop;
+		const sync = () => {
+			if (pending) {
+				return;
+			}
+			cleanup();
+			const result = fn(single ? values[0] : values, set, update);
+			if (auto) {
+				set(result);
+			} else {
+				cleanup = is_function(result) ? result : noop;
+			}
+		};
+		const unsubscribers = stores_array.map((store, i) =>
+			subscribe(
+				store,
+				(value) => {
+					values[i] = value;
+					pending &= ~(1 << i);
+					if (started) {
+						sync();
+					}
+				},
+				() => {
+					pending |= 1 << i;
+				}
+			)
+		);
+		started = true;
+		sync();
+		return function stop() {
+			run_all(unsubscribers);
+			cleanup();
+			// We need to set this to false because callbacks can still happen despite having unsubscribed:
+			// Callbacks might already be placed in the queue which doesn't know it should no longer
+			// invoke this derived store.
+			started = false;
+		};
+	});
+}
+
 /**
  * Common utilities
  * @module glMatrix
@@ -800,6 +975,50 @@ function scale(out, a, v) {
   return out;
 }
 /**
+ * Rotates a matrix by the given angle around the X axis
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the matrix to rotate
+ * @param {Number} rad the angle to rotate the matrix by
+ * @returns {mat4} out
+ */
+
+function rotateX(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a10 = a[4];
+  var a11 = a[5];
+  var a12 = a[6];
+  var a13 = a[7];
+  var a20 = a[8];
+  var a21 = a[9];
+  var a22 = a[10];
+  var a23 = a[11];
+
+  if (a !== out) {
+    // If the source and destination differ, copy the unchanged rows
+    out[0] = a[0];
+    out[1] = a[1];
+    out[2] = a[2];
+    out[3] = a[3];
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+  } // Perform axis-specific matrix multiplication
+
+
+  out[4] = a10 * c + a20 * s;
+  out[5] = a11 * c + a21 * s;
+  out[6] = a12 * c + a22 * s;
+  out[7] = a13 * c + a23 * s;
+  out[8] = a20 * c - a10 * s;
+  out[9] = a21 * c - a11 * s;
+  out[10] = a22 * c - a12 * s;
+  out[11] = a23 * c - a13 * s;
+  return out;
+}
+/**
  * Rotates a matrix by the given angle around the Y axis
  *
  * @param {mat4} out the receiving matrix
@@ -841,6 +1060,50 @@ function rotateY(out, a, rad) {
   out[9] = a01 * s + a21 * c;
   out[10] = a02 * s + a22 * c;
   out[11] = a03 * s + a23 * c;
+  return out;
+}
+/**
+ * Rotates a matrix by the given angle around the Z axis
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the matrix to rotate
+ * @param {Number} rad the angle to rotate the matrix by
+ * @returns {mat4} out
+ */
+
+function rotateZ(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a00 = a[0];
+  var a01 = a[1];
+  var a02 = a[2];
+  var a03 = a[3];
+  var a10 = a[4];
+  var a11 = a[5];
+  var a12 = a[6];
+  var a13 = a[7];
+
+  if (a !== out) {
+    // If the source and destination differ, copy the unchanged last row
+    out[8] = a[8];
+    out[9] = a[9];
+    out[10] = a[10];
+    out[11] = a[11];
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+  } // Perform axis-specific matrix multiplication
+
+
+  out[0] = a00 * c + a10 * s;
+  out[1] = a01 * c + a11 * s;
+  out[2] = a02 * c + a12 * s;
+  out[3] = a03 * c + a13 * s;
+  out[4] = a10 * c - a00 * s;
+  out[5] = a11 * c - a01 * s;
+  out[6] = a12 * c - a02 * s;
+  out[7] = a13 * c - a03 * s;
   return out;
 }
 /**
@@ -977,181 +1240,6 @@ function lookAt(out, eye, center, up) {
   return out;
 }
 
-const subscriber_queue = [];
-
-/**
- * Creates a `Readable` store that allows reading by subscription.
- *
- * https://svelte.dev/docs/svelte-store#readable
- * @template T
- * @param {T} [value] initial value
- * @param {import('./public.js').StartStopNotifier<T>} [start]
- * @returns {import('./public.js').Readable<T>}
- */
-function readable(value, start) {
-	return {
-		subscribe: writable(value, start).subscribe
-	};
-}
-
-/**
- * Create a `Writable` store that allows both updating and reading by subscription.
- *
- * https://svelte.dev/docs/svelte-store#writable
- * @template T
- * @param {T} [value] initial value
- * @param {import('./public.js').StartStopNotifier<T>} [start]
- * @returns {import('./public.js').Writable<T>}
- */
-function writable(value, start = noop) {
-	/** @type {import('./public.js').Unsubscriber} */
-	let stop;
-	/** @type {Set<import('./private.js').SubscribeInvalidateTuple<T>>} */
-	const subscribers = new Set();
-	/** @param {T} new_value
-	 * @returns {void}
-	 */
-	function set(new_value) {
-		if (safe_not_equal(value, new_value)) {
-			value = new_value;
-			if (stop) {
-				// store is ready
-				const run_queue = !subscriber_queue.length;
-				for (const subscriber of subscribers) {
-					subscriber[1]();
-					subscriber_queue.push(subscriber, value);
-				}
-				if (run_queue) {
-					for (let i = 0; i < subscriber_queue.length; i += 2) {
-						subscriber_queue[i][0](subscriber_queue[i + 1]);
-					}
-					subscriber_queue.length = 0;
-				}
-			}
-		}
-	}
-
-	/**
-	 * @param {import('./public.js').Updater<T>} fn
-	 * @returns {void}
-	 */
-	function update(fn) {
-		set(fn(value));
-	}
-
-	/**
-	 * @param {import('./public.js').Subscriber<T>} run
-	 * @param {import('./private.js').Invalidator<T>} [invalidate]
-	 * @returns {import('./public.js').Unsubscriber}
-	 */
-	function subscribe(run, invalidate = noop) {
-		/** @type {import('./private.js').SubscribeInvalidateTuple<T>} */
-		const subscriber = [run, invalidate];
-		subscribers.add(subscriber);
-		if (subscribers.size === 1) {
-			stop = start(set, update) || noop;
-		}
-		run(value);
-		return () => {
-			subscribers.delete(subscriber);
-			if (subscribers.size === 0 && stop) {
-				stop();
-				stop = null;
-			}
-		};
-	}
-	return { set, update, subscribe };
-}
-
-/**
- * Derived value store by synchronizing one or more readable stores and
- * applying an aggregation function over its input values.
- *
- * https://svelte.dev/docs/svelte-store#derived
- * @template {import('./private.js').Stores} S
- * @template T
- * @overload
- * @param {S} stores - input stores
- * @param {(values: import('./private.js').StoresValues<S>, set: (value: T) => void, update: (fn: import('./public.js').Updater<T>) => void) => import('./public.js').Unsubscriber | void} fn - function callback that aggregates the values
- * @param {T} [initial_value] - initial value
- * @returns {import('./public.js').Readable<T>}
- */
-
-/**
- * Derived value store by synchronizing one or more readable stores and
- * applying an aggregation function over its input values.
- *
- * https://svelte.dev/docs/svelte-store#derived
- * @template {import('./private.js').Stores} S
- * @template T
- * @overload
- * @param {S} stores - input stores
- * @param {(values: import('./private.js').StoresValues<S>) => T} fn - function callback that aggregates the values
- * @param {T} [initial_value] - initial value
- * @returns {import('./public.js').Readable<T>}
- */
-
-/**
- * @template {import('./private.js').Stores} S
- * @template T
- * @param {S} stores
- * @param {Function} fn
- * @param {T} [initial_value]
- * @returns {import('./public.js').Readable<T>}
- */
-function derived(stores, fn, initial_value) {
-	const single = !Array.isArray(stores);
-	/** @type {Array<import('./public.js').Readable<any>>} */
-	const stores_array = single ? [stores] : stores;
-	if (!stores_array.every(Boolean)) {
-		throw new Error('derived() expects stores as input, got a falsy value');
-	}
-	const auto = fn.length < 2;
-	return readable(initial_value, (set, update) => {
-		let started = false;
-		const values = [];
-		let pending = 0;
-		let cleanup = noop;
-		const sync = () => {
-			if (pending) {
-				return;
-			}
-			cleanup();
-			const result = fn(single ? values[0] : values, set, update);
-			if (auto) {
-				set(result);
-			} else {
-				cleanup = is_function(result) ? result : noop;
-			}
-		};
-		const unsubscribers = stores_array.map((store, i) =>
-			subscribe(
-				store,
-				(value) => {
-					values[i] = value;
-					pending &= ~(1 << i);
-					if (started) {
-						sync();
-					}
-				},
-				() => {
-					pending |= 1 << i;
-				}
-			)
-		);
-		started = true;
-		sync();
-		return function stop() {
-			run_all(unsubscribers);
-			cleanup();
-			// We need to set this to false because callbacks can still happen despite having unsubscribed:
-			// Callbacks might already be placed in the queue which doesn't know it should no longer
-			// invoke this derived store.
-			started = false;
-		};
-	});
-}
-
 var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\n\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\n\r\nvoid main() {\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n}";
 
 var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 color;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n    fragColor = vec4(RECIPROCAL_PI * color * totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n}";
@@ -1175,15 +1263,15 @@ const objectToDefines = (obj) => {
 // Uniform Buffer Objects, must have unique binding points
 const UBO_BINDING_POINT_POINTLIGHT = 0;
 
-const degree = Math.PI / 180;
+const degree$1 = Math.PI / 180;
 /**
  * Convert Degree To Radian
  *
  * @param {Number} a Angle in Degrees
  */
 
-function toRadian(a) {
-	return a * degree;
+function toRadian$1(a) {
+	return a * degree$1;
 }
 
 function initRenderer(rendererContext, appContext) {
@@ -1331,7 +1419,7 @@ function setupCamera(context, camera) {
 
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
-		const fieldOfViewInRadians = toRadian(camera.fov);
+		const fieldOfViewInRadians = toRadian$1(camera.fov);
 		const aspectRatio = context.canvas.width / context.canvas.height;
 		const nearClippingPlaneDistance = camera.near;
 		const farClippingPlaneDistance = camera.far;
@@ -1374,9 +1462,11 @@ function setupTransformMatrix(context, transformMatrix, numInstances) {
 		return function createTransformMatrices() {
 			const attributeName = "world";
 			/** @type {{gl: WebGL2RenderingContext}} **/
-			const { gl, program, vao } = get_store_value(context);
+			context = get_store_value(context);
+			const { gl, program, vao } = context;
 
 			const transformMatricesWindows = (context.transformMatricesWindows = context.transformMatricesWindows || []);
+
 			const transformMatricesValues = transformMatrix.reduce((acc, m) => [...acc, ...get_store_value(m)], []);
 			const transformMatricesData = new Float32Array(transformMatricesValues);
 
@@ -1386,7 +1476,7 @@ function setupTransformMatrix(context, transformMatrix, numInstances) {
 				const numFloatsForView = 16;
 				transformMatricesWindows.push(new Float32Array(transformMatricesData.buffer, byteOffsetToMatrix, numFloatsForView));
 			}
-
+			/*
 			transformMatricesWindows.forEach((mat, index) => {
 				const count = index - Math.floor(numInstances / 2);
 				identity(mat);
@@ -1395,10 +1485,12 @@ function setupTransformMatrix(context, transformMatrix, numInstances) {
 				rotateY(mat, mat, toRadian(count * 10));
 				scale(mat, mat, [0.5, 0.5, 0.5]);
 			});
-
-			context.transformMatrix = transformMatricesWindows;
+*/
+			//context.transformMatrix = transformMatricesWindows;
 			gl.bindVertexArray(vao);
-			const matrixBuffer = /*context.matrixBuffer = context.matrixBuffer || */ gl.createBuffer();
+			const matrixBuffer = gl.createBuffer();
+			context.matrixBuffer = matrixBuffer;
+			console.log("matrixBuffer", matrixBuffer, context.matrixBuffer);
 			const transformMatricesLocation = gl.getAttribLocation(program, attributeName);
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, transformMatricesData.byteLength, gl.DYNAMIC_DRAW);
@@ -1434,6 +1526,22 @@ function updateTransformMatrix(context, worldMatrix) {
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 }
 
+function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
+	context = get_store_value(context);
+	/** @type{{gl:WebGL2RenderingContext}} **/
+	const { gl, program, vao, matrixBuffer } = context;
+	gl.bindVertexArray(vao);
+
+	//const worldLocation = gl.getAttribLocation(program, `world[${instanceIndex}]`);
+	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
+	const bytesPerMatrix = 4 * 16;
+	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
+
+	//console.log("updateInstanceTransformMatrix",matrixBuffer,context);
+	//gl.bufferSubData(gl.ARRAY_BUFFER, 0, worldMatrix);
+	gl.bindVertexArray(null);
+}
+
 function setupNormalMatrix(context, numInstances) {
 	if (numInstances == null) {
 		return function createNormalMatrix() {
@@ -1445,16 +1553,19 @@ function setupNormalMatrix(context, numInstances) {
 		};
 	} else {
 		return function createNormalMatrices() {
-			const { gl, program, transformMatrix, vao } = get_store_value(context);
+			context = get_store_value(context);
+			/** @type{{gl:WebGL2RenderingContext}} **/
+			const { gl, program, transformMatrix, vao, transformMatricesWindows } = context;
 			gl.bindVertexArray(vao);
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
 			const normalMatricesValues = [];
 
 			for (let i = 0; i < numInstances; i++) {
-				normalMatricesValues.push(...deriveNormalMatrix(context.transformMatricesWindows[i]));
+				normalMatricesValues.push(...deriveNormalMatrix(transformMatricesWindows[i]));
 			}
 			const normalMatrices = new Float32Array(normalMatricesValues);
 			const normalMatrixBuffer = gl.createBuffer();
+			context.normalMatrixBuffer = normalMatrixBuffer;
 			gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, normalMatrices.byteLength, gl.DYNAMIC_DRAW);
 
@@ -1485,6 +1596,31 @@ function setupNormalMatrix(context, numInstances) {
 function updateNormalMatrix({ gl, program }, normalMatrix) {
 	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
 	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+}
+
+/*
+export function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
+	context = get(context);
+	
+	const {gl,program,vao,matrixBuffer} = context;
+	gl.bindVertexArray(vao);
+	
+	//const worldLocation = gl.getAttribLocation(program, `world[${instanceIndex}]`);
+	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
+	const bytesPerMatrix = 4 * 16;
+	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
+
+	//console.log("updateInstanceTransformMatrix",matrixBuffer,context);
+	//gl.bufferSubData(gl.ARRAY_BUFFER, 0, worldMatrix);
+	gl.bindVertexArray(null);
+}
+*/
+function updateInstanceNormalMatrix({ gl, program, vao, normalMatrixBuffer }, normalMatrix, instanceIndex) {
+	gl.bindVertexArray(vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
+	const bytesPerMatrix = 4 * 16;
+	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, normalMatrix);
+	gl.bindVertexArray(null);
 }
 
 function deriveNormalMatrix(transformMatrix) {
@@ -1566,7 +1702,12 @@ function createRenderer() {
 			if (mesh.instances && mesh.instances > 1) {
 				var { matrices, unsubs } = new Array(mesh.instances).fill().reduce(
 					(acc, curr, instanceIndex) => {
-						const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index, instanceIndex);
+						const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(
+							update,
+							index,
+							instanceIndex,
+							mesh.matrices[instanceIndex],
+						);
 						acc.matrices.push(transformMatrix);
 						acc.unsubs.push(unsubNormalMatrix);
 						return acc;
@@ -1667,8 +1808,8 @@ const renderer = createRenderer();
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
 
-const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex) => {
-	const { subscribe, set } = writable(defaultWorldMatrix);
+const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex, initialValue) => {
+	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
 	const transformMatrix = {
 		subscribe,
 		set: (matrix) => {
@@ -2025,6 +2166,17 @@ function createFlatShadedNormals(positions) {
 	return normals;
 }
 
+const degree = Math.PI / 180;
+/**
+ * Convert Degree To Radian
+ *
+ * @param {Number} a Angle in Degrees
+ */
+
+function toRadian(a) {
+	return a * degree;
+}
+
 /**
  * @typedef {{
  *	positions: Float32Array,
@@ -2365,16 +2517,34 @@ function instance($$self, $$props, $$invalidate) {
 	component_subscribe($$self, webglapp, $$value => $$invalidate(1, $webglapp = $$value));
 	let canvas;
 	let light1;
+	let mesh1;
 
 	onMount(() => {
 		const data = createPolyhedron(1, 7, createFlatShadedNormals);
 		renderer.setCanvas(canvas);
 		renderer.setBackgroundColor([0, 0, 0, 1.0]);
 		renderer.setCamera([0, 0, -3]);
+		const numInstances = 3;
+		let identityMatrix = new Array(16).fill(0);
+		identity(identityMatrix);
 
-		renderer.addMesh({
+		let matrices = new Array(numInstances).fill(0).map((_, index) => {
+			const count = index - Math.floor(numInstances / 2);
+			console.log("count", count);
+			let mat = [...identityMatrix];
+
+			//transform the model matrix
+			translate(mat, mat, [count * 2, 0, 0]);
+
+			rotateY(mat, mat, toRadian(count * 10));
+			scale(mat, mat, [0.5, 0.5, 0.5]);
+			return new Float32Array(mat);
+		});
+
+		mesh1 = renderer.addMesh({
 			attributes: data,
-			instances: 3,
+			instances: numInstances,
+			matrices,
 			uniforms: { color: [1, 1, 1] }
 		});
 
@@ -2401,17 +2571,13 @@ function instance($$self, $$props, $$invalidate) {
 	/* this is necessary to have normalMatrix working cause 
     derived stores without listeners are not reactive */
 	function animate() {
-		/*
-const rotation = (performance.now() / 1000 / 6) * Math.PI;
-const tmp = new Float32Array(16);
-identity(tmp);
-rotateY(tmp, tmp, rotation);
-rotateX(tmp, tmp, rotation);
-rotateZ(tmp, tmp, rotation);
-mesh1.transformMatrix.set(tmp);
-*/
+		const rotation = 0.001 * Math.PI;
+		const tmp = get_store_value(mesh1.matrices[0]);
+		rotateY(tmp, tmp, rotation / 2);
+		rotateX(tmp, tmp, rotation);
+		rotateZ(tmp, tmp, rotation / 3);
+		mesh1.matrices[0].set(tmp);
 		const lightX = Math.sin(performance.now() / 1000) * 2;
-
 		const lightY = Math.cos(performance.now() / 1000) * 2;
 		const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;
 		const g = Math.cos(performance.now() / 5000) * 0.5 + 0.5;

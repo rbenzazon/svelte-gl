@@ -1,14 +1,4 @@
-import {
-	create,
-	invert,
-	transpose,
-	identity,
-	lookAt,
-	perspective,
-	translate,
-	rotateY,
-	scale,
-} from "gl-matrix/esm/mat4.js";
+import { create, invert, transpose, identity, lookAt, perspective } from "gl-matrix/esm/mat4.js";
 import { get } from "svelte/store";
 import { renderState } from "./engine.js";
 import defaultVertex from "../shaders/default-vertex.glsl";
@@ -218,9 +208,11 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 		return function createTransformMatrices() {
 			const attributeName = "world";
 			/** @type {{gl: WebGL2RenderingContext}} **/
-			const { gl, program, vao } = get(context);
+			context = get(context);
+			const { gl, program, vao } = context;
 
 			const transformMatricesWindows = (context.transformMatricesWindows = context.transformMatricesWindows || []);
+
 			const transformMatricesValues = transformMatrix.reduce((acc, m) => [...acc, ...get(m)], []);
 			const transformMatricesData = new Float32Array(transformMatricesValues);
 
@@ -230,7 +222,7 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 				const numFloatsForView = 16;
 				transformMatricesWindows.push(new Float32Array(transformMatricesData.buffer, byteOffsetToMatrix, numFloatsForView));
 			}
-
+			/*
 			transformMatricesWindows.forEach((mat, index) => {
 				const count = index - Math.floor(numInstances / 2);
 				identity(mat);
@@ -239,10 +231,12 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 				rotateY(mat, mat, toRadian(count * 10));
 				scale(mat, mat, [0.5, 0.5, 0.5]);
 			});
-
-			context.transformMatrix = transformMatricesWindows;
+*/
+			//context.transformMatrix = transformMatricesWindows;
 			gl.bindVertexArray(vao);
-			const matrixBuffer = /*context.matrixBuffer = context.matrixBuffer || */ gl.createBuffer();
+			const matrixBuffer = gl.createBuffer();
+			context.matrixBuffer = matrixBuffer;
+			console.log("matrixBuffer", matrixBuffer, context.matrixBuffer);
 			const transformMatricesLocation = gl.getAttribLocation(program, attributeName);
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, transformMatricesData.byteLength, gl.DYNAMIC_DRAW);
@@ -267,26 +261,6 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 			gl.bufferSubData(gl.ARRAY_BUFFER, 0, transformMatricesData);
 
 			gl.bindVertexArray(null);
-			function showMatrices(matrices, numMatrices) {
-				const matricesArray = Array.from(matrices);
-				const length = matricesArray.length / numMatrices;
-				const res = [];
-				for (let i = 0; i < numMatrices; i++) {
-					res.push(showMatrix(matricesArray.slice(i * length, (i + 1) * length)));
-				}
-				return res.join("\n");
-			}
-			function showMatrix(matrix) {
-				const matrixArray = Array.from(matrix);
-				const matrixString = matrixArray.reduce((acc, val, index) => {
-					if (index % 4 === 0) {
-						return acc + "\n" + val;
-					} else {
-						return acc + " " + val;
-					}
-				}, "");
-				return matrixString;
-			}
 		};
 	}
 }
@@ -299,12 +273,19 @@ export function updateTransformMatrix(context, worldMatrix) {
 }
 
 export function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
-	console.log("updateInstanceTransformMatrix", instanceIndex);
 	context = get(context);
-	const gl = context.gl;
-	const program = context.program;
-	const worldLocation = gl.getUniformLocation(program, `world[${instanceIndex}]`);
-	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
+	/** @type{{gl:WebGL2RenderingContext}} **/
+	const { gl, program, vao, matrixBuffer } = context;
+	gl.bindVertexArray(vao);
+
+	//const worldLocation = gl.getAttribLocation(program, `world[${instanceIndex}]`);
+	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
+	const bytesPerMatrix = 4 * 16;
+	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
+
+	//console.log("updateInstanceTransformMatrix",matrixBuffer,context);
+	//gl.bufferSubData(gl.ARRAY_BUFFER, 0, worldMatrix);
+	gl.bindVertexArray(null);
 }
 
 export function setupNormalMatrix(context, numInstances) {
@@ -318,16 +299,19 @@ export function setupNormalMatrix(context, numInstances) {
 		};
 	} else {
 		return function createNormalMatrices() {
-			const { gl, program, transformMatrix, vao } = get(context);
+			context = get(context);
+			/** @type{{gl:WebGL2RenderingContext}} **/
+			const { gl, program, transformMatrix, vao, transformMatricesWindows } = context;
 			gl.bindVertexArray(vao);
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
 			const normalMatricesValues = [];
 
 			for (let i = 0; i < numInstances; i++) {
-				normalMatricesValues.push(...deriveNormalMatrix(context.transformMatricesWindows[i]));
+				normalMatricesValues.push(...deriveNormalMatrix(transformMatricesWindows[i]));
 			}
 			const normalMatrices = new Float32Array(normalMatricesValues);
 			const normalMatrixBuffer = gl.createBuffer();
+			context.normalMatrixBuffer = normalMatrixBuffer;
 			gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, normalMatrices.byteLength, gl.DYNAMIC_DRAW);
 
@@ -358,6 +342,31 @@ export function setupNormalMatrix(context, numInstances) {
 export function updateNormalMatrix({ gl, program }, normalMatrix) {
 	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
 	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+}
+
+/*
+export function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
+	context = get(context);
+	
+	const {gl,program,vao,matrixBuffer} = context;
+	gl.bindVertexArray(vao);
+	
+	//const worldLocation = gl.getAttribLocation(program, `world[${instanceIndex}]`);
+	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
+	const bytesPerMatrix = 4 * 16;
+	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
+
+	//console.log("updateInstanceTransformMatrix",matrixBuffer,context);
+	//gl.bufferSubData(gl.ARRAY_BUFFER, 0, worldMatrix);
+	gl.bindVertexArray(null);
+}
+*/
+export function updateInstanceNormalMatrix({ gl, program, vao, normalMatrixBuffer }, normalMatrix, instanceIndex) {
+	gl.bindVertexArray(vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
+	const bytesPerMatrix = 4 * 16;
+	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, normalMatrix);
+	gl.bindVertexArray(null);
 }
 
 export function deriveNormalMatrix(transformMatrix) {

@@ -58,3 +58,35 @@ export function createFlatShadedNormals(positions) {
 	}
 	return normals;
 }
+
+const degree = Math.PI / 180;
+/**
+ * Convert Degree To Radian
+ *
+ * @param {Number} a Angle in Degrees
+ */
+
+export function toRadian(a) {
+	return a * degree;
+}
+
+export function showMatrices(matrices, numMatrices) {
+	const matricesArray = Array.from(matrices);
+	const length = matricesArray.length / numMatrices;
+	const res = [];
+	for (let i = 0; i < numMatrices; i++) {
+		res.push(showMatrix(matricesArray.slice(i * length, (i + 1) * length)));
+	}
+	return res.join("\n");
+}
+export function showMatrix(matrix) {
+	const matrixArray = Array.from(matrix);
+	const matrixString = matrixArray.reduce((acc, val, index) => {
+		if (index % 4 === 0) {
+			return acc + "\n" + val;
+		} else {
+			return acc + " " + val;
+		}
+	}, "");
+	return matrixString;
+}

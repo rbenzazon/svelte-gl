@@ -11,8 +11,10 @@ import {
 	setupTransformMatrix,
 	setupAttributes,
 	updateTransformMatrix,
+	updateInstanceTransformMatrix,
 	setupMeshColor,
 	updateNormalMatrix,
+	updateInstanceNormalMatrix,
 	deriveNormalMatrix,
 } from "./gl.js";
 
@@ -47,7 +49,12 @@ function createRenderer() {
 			if (mesh.instances && mesh.instances > 1) {
 				var { matrices, unsubs } = new Array(mesh.instances).fill().reduce(
 					(acc, curr, instanceIndex) => {
-						const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index, instanceIndex);
+						const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(
+							update,
+							index,
+							instanceIndex,
+							mesh.matrices[instanceIndex],
+						);
 						acc.matrices.push(transformMatrix);
 						acc.unsubs.push(unsubNormalMatrix);
 						return acc;
@@ -148,8 +155,8 @@ export const renderer = createRenderer();
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
 
-const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex) => {
-	const { subscribe, set } = writable(defaultWorldMatrix);
+const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex, initialValue) => {
+	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
 	const transformMatrix = {
 		subscribe,
 		set: (matrix) => {
