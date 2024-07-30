@@ -1372,17 +1372,17 @@ function createShaders() {
 					}),
 					declarations: [
 						...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : undefined),
-						...(context.toneMappings.length > 0
+						...(context.toneMappings?.length > 0
 							? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure, color: false }))]
-							: undefined),
+							: []),
 					].join("\n"),
 					irradiance: [
 						...(context.numPointLights ? [context.pointLightShader({ declaration: false, irradiance: true })] : undefined),
 					].join("\n"),
 					toneMapping: [
-						...(context.toneMappings.length > 0
+						...(context.toneMappings?.length > 0
 							? [...context.toneMappings.map((tm) => tm.shader({ declaration: false, exposure: false, color: true }))]
-							: undefined),
+							: []),
 					].join("\n"),
 					//todo, remove this after decoupling the point light shader
 					numPointLights: context.numPointLights,
@@ -1997,21 +1997,6 @@ function create() {
   return out;
 }
 /**
- * Subtracts vector b from vector a
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-
-function subtract(out, a, b) {
-  out[0] = a[0] - b[0];
-  out[1] = a[1] - b[1];
-  out[2] = a[2] - b[2];
-  return out;
-}
-/**
  * Normalize a vec3
  *
  * @param {vec3} out the receiving vector
@@ -2033,27 +2018,6 @@ function normalize(out, a) {
   out[0] = a[0] * len;
   out[1] = a[1] * len;
   out[2] = a[2] * len;
-  return out;
-}
-/**
- * Computes the cross product of two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-
-function cross(out, a, b) {
-  var ax = a[0],
-      ay = a[1],
-      az = a[2];
-  var bx = b[0],
-      by = b[1],
-      bz = b[2];
-  out[0] = ay * bz - az * by;
-  out[1] = az * bx - ax * bz;
-  out[2] = ax * by - ay * bx;
   return out;
 }
 /**
@@ -2132,38 +2096,18 @@ function multiplyScalarVec3(a, scalar) {
 	return a;
 }
 
-function createFlatShadedNormals(positions) {
-	const normals = [];
-	for (let i = 0; i < positions.length; i += 9) {
-		const a = createVec3();
-		const b = createVec3();
-		const c = createVec3();
+function normalizeNormals(normals) {
+	for (let i = 0, il = normals.length; i < il; i += 3) {
+		const x = normals[i + 0];
+		const y = normals[i + 1];
+		const z = normals[i + 2];
 
-		a[0] = positions[i];
-		a[1] = positions[i + 1];
-		a[2] = positions[i + 2];
+		const n = 1.0 / Math.sqrt(x * x + y * y + z * z);
 
-		b[0] = positions[i + 3];
-		b[1] = positions[i + 4];
-		b[2] = positions[i + 5];
-
-		c[0] = positions[i + 6];
-		c[1] = positions[i + 7];
-		c[2] = positions[i + 8];
-
-		const cb = createVec3();
-		subtract(cb, c, b);
-
-		const ab = createVec3();
-		subtract(ab, a, b);
-
-		const normal = createVec3();
-		cross(normal, cb, ab);
-		normalize(normal, normal);
-		// todo, replace with
-		normals.push(...normal, ...normal, ...normal);
+		normals[i + 0] *= n;
+		normals[i + 1] *= n;
+		normals[i + 2] *= n;
 	}
-	return normals;
 }
 
 const degree = Math.PI / 180;
@@ -2299,6 +2243,12 @@ const createPolyhedron = (radius, detail, normalCreator) => {
 		}
 	}
 };
+
+function createSmoothShadedNormals(positions) {
+	const normals = positions.slice();
+	normalizeNormals(normals);
+	return normals;
+}
 
 const t = (1 + Math.sqrt(5)) / 2;
 const r = 1 / t;
@@ -2512,6 +2462,9 @@ function create_fragment(ctx) {
 	};
 }
 
+const numInstances = 20;
+const radius = 0.7;
+
 function instance($$self, $$props, $$invalidate) {
 	let $webglapp;
 	component_subscribe($$self, webglapp, $$value => $$invalidate(1, $webglapp = $$value));
@@ -2520,11 +2473,10 @@ function instance($$self, $$props, $$invalidate) {
 	let mesh1;
 
 	onMount(() => {
-		const data = createPolyhedron(1, 7, createFlatShadedNormals);
+		const data = createPolyhedron(1, 7, createSmoothShadedNormals);
 		renderer.setCanvas(canvas);
 		renderer.setBackgroundColor([0, 0, 0, 1.0]);
-		renderer.setCamera([0, 0, -3]);
-		const numInstances = 3;
+		renderer.setCamera([0, 0, -3], [0, 0, 0], 30);
 		let identityMatrix = new Array(16).fill(0);
 		identity(identityMatrix);
 
@@ -2534,10 +2486,22 @@ function instance($$self, $$props, $$invalidate) {
 			let mat = [...identityMatrix];
 
 			//transform the model matrix
-			translate(mat, mat, [count * 2, 0, 0]);
+			const scaleFactor = 0.1;
 
+			const centerX = 0;
+			const centerY = 0;
+			const angleIncrement = 2 * Math.PI / numInstances;
+
+			translate(mat, mat, [
+				centerX + radius * Math.cos(count * angleIncrement),
+				centerY + radius * Math.sin(count * angleIncrement),
+				0
+			]);
+
+			//translate(mat, mat, [count * -2, 0, 0]);
 			rotateY(mat, mat, toRadian(count * 10));
-			scale(mat, mat, [0.5, 0.5, 0.5]);
+
+			scale(mat, mat, [scaleFactor, scaleFactor, scaleFactor]);
 			return new Float32Array(mat);
 		});
 
@@ -2551,17 +2515,33 @@ function instance($$self, $$props, $$invalidate) {
 		light1 = renderer.addLight(createPointLight({
 			position: [-2, 2, -3],
 			color: [1, 1, 1],
-			intensity: 3,
-			cutoffDistance: 5,
-			decayExponent: 1
+			intensity: 0.6,
+			cutoffDistance: 3,
+			decayExponent: 3
 		}));
 
 		renderer.addLight(createPointLight({
-			position: [1, -2, 0],
-			color: [1, 1, 0],
+			position: [1, 1, -2],
+			color: [1, 1, 1],
 			intensity: 2,
-			cutoffDistance: 5,
-			decayExponent: 1
+			cutoffDistance: 4,
+			decayExponent: 2
+		}));
+
+		renderer.addLight(createPointLight({
+			position: [-1, 1, -2],
+			color: [1, 1, 1],
+			intensity: 2,
+			cutoffDistance: 4,
+			decayExponent: 2
+		}));
+
+		renderer.addLight(createPointLight({
+			position: [0, 0, -5],
+			color: [1, 1, 1],
+			intensity: 3,
+			cutoffDistance: 10,
+			decayExponent: 2
 		}));
 
 		renderer.addToneMapping(createAGXToneMapping({ exposure: 1 }));
@@ -2572,19 +2552,23 @@ function instance($$self, $$props, $$invalidate) {
     derived stores without listeners are not reactive */
 	function animate() {
 		const rotation = 0.001 * Math.PI;
-		const tmp = get_store_value(mesh1.matrices[0]);
-		rotateY(tmp, tmp, rotation / 2);
-		rotateX(tmp, tmp, rotation);
-		rotateZ(tmp, tmp, rotation / 3);
-		mesh1.matrices[0].set(tmp);
-		const lightX = Math.sin(performance.now() / 1000) * 2;
-		const lightY = Math.cos(performance.now() / 1000) * 2;
+
+		for (let i = 0; i < numInstances; i++) {
+			const tmp = get_store_value(mesh1.matrices[i]);
+			rotateY(tmp, tmp, rotation / 2);
+			rotateX(tmp, tmp, rotation);
+			rotateZ(tmp, tmp, rotation / 3);
+			mesh1.matrices[i].set(tmp);
+		}
+
+		const lightX = Math.sin(performance.now() / 3000) * 1;
+		const lightY = Math.cos(performance.now() / 3000) * 1;
 		const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;
 		const g = Math.cos(performance.now() / 5000) * 0.5 + 0.5;
 		const b = Math.sin(performance.now() / 4000) * 0.5 + 0.5;
 
 		light1.set({
-			position: [lightX, lightY, -3],
+			position: [lightX, lightY, -0.4],
 			color: [r, g, b]
 		});
 
