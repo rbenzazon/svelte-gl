@@ -60,11 +60,6 @@ function get_store_value(store) {
 	return value;
 }
 
-/** @returns {void} */
-function component_subscribe(component, store, callback) {
-	component.$$.on_destroy.push(subscribe(store, callback));
-}
-
 /**
  * @param {Node} target
  * @param {Node} node
@@ -1300,20 +1295,20 @@ function initRenderer(rendererContext, appContext) {
 
 function render(context, instances) {
 	return function () {
-		context = get_store_value(context);
+		const contextValue = get_store_value(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
+		const gl = contextValue.gl;
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-		context.loop && context.loop();
+		contextValue.loop && contextValue.loop();
 		// when using vertex array objects, you must bind it before rendering
-		gl.bindVertexArray(context.vao);
+		gl.bindVertexArray(contextValue.vao);
 		if (instances) {
-			gl.drawArraysInstanced(gl.TRIANGLES, 0, context.attributeLength, instances);
+			gl.drawArraysInstanced(gl.TRIANGLES, 0, contextValue.attributeLength, instances);
 		} else {
-			if (context.hasElements) {
-				gl.drawElements(gl.TRIANGLES, context.attributeLength, gl.UNSIGNED_SHORT, 0);
+			if (contextValue.hasElements) {
+				gl.drawElements(gl.TRIANGLES, contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
-				gl.drawArrays(gl.TRIANGLES, 0, context.attributeLength);
+				gl.drawArrays(gl.TRIANGLES, 0, contextValue.attributeLength);
 			}
 		}
 		// when binding vertex array objects you must unbind it after rendering
@@ -1490,7 +1485,6 @@ function setupTransformMatrix(context, transformMatrix, numInstances) {
 			gl.bindVertexArray(vao);
 			const matrixBuffer = gl.createBuffer();
 			context.matrixBuffer = matrixBuffer;
-			console.log("matrixBuffer", matrixBuffer, context.matrixBuffer);
 			const transformMatricesLocation = gl.getAttribLocation(program, attributeName);
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, transformMatricesData.byteLength, gl.DYNAMIC_DRAW);
@@ -1531,14 +1525,9 @@ function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
 	/** @type{{gl:WebGL2RenderingContext}} **/
 	const { gl, program, vao, matrixBuffer } = context;
 	gl.bindVertexArray(vao);
-
-	//const worldLocation = gl.getAttribLocation(program, `world[${instanceIndex}]`);
 	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 	const bytesPerMatrix = 4 * 16;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
-
-	//console.log("updateInstanceTransformMatrix",matrixBuffer,context);
-	//gl.bufferSubData(gl.ARRAY_BUFFER, 0, worldMatrix);
 	gl.bindVertexArray(null);
 }
 
@@ -1598,23 +1587,6 @@ function updateNormalMatrix({ gl, program }, normalMatrix) {
 	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
 }
 
-/*
-export function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
-	context = get(context);
-	
-	const {gl,program,vao,matrixBuffer} = context;
-	gl.bindVertexArray(vao);
-	
-	//const worldLocation = gl.getAttribLocation(program, `world[${instanceIndex}]`);
-	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
-	const bytesPerMatrix = 4 * 16;
-	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
-
-	//console.log("updateInstanceTransformMatrix",matrixBuffer,context);
-	//gl.bufferSubData(gl.ARRAY_BUFFER, 0, worldMatrix);
-	gl.bindVertexArray(null);
-}
-*/
 function updateInstanceNormalMatrix({ gl, program, vao, normalMatrixBuffer }, normalMatrix, instanceIndex) {
 	gl.bindVertexArray(vao);
 	gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
@@ -1681,6 +1653,7 @@ function createRenderer() {
 		lights: [],
 		toneMappings: [],
 		loop: null,
+		enabled: false,
 	});
 	return {
 		subscribe,
@@ -1778,6 +1751,16 @@ function createRenderer() {
 		setBackgroundColor: (backgroundColor) =>
 			update((renderer) => {
 				renderer.backgroundColor = backgroundColor;
+				return renderer;
+			}),
+		start: () =>
+			update((renderer) => {
+				renderer.enabled = true;
+				return renderer;
+			}),
+		stop: () =>
+			update((renderer) => {
+				renderer.enabled = false;
 				return renderer;
 			}),
 	};
@@ -1881,97 +1864,127 @@ function createRenderState() {
 }
 const renderState = createRenderState();
 
-function createContextStore() {
-	const { subscribe, update } = writable({});
-	return {
-		subscribe,
-		update,
-	};
-}
-
-const appContext = createContextStore();
-// make this store inactive until the conditions are met (single flag?)
+const appContext = writable({});
 
 /*
 Single program apps (one mesh/material) will not need to setup the program again
 but multi program apps require to setup the program before rendering if the last changes
 affect a program that is not the last one rendered. because the last one rendered is still mounted / in memory of the GPU
 this store will be used to know if we need to setup the program before rendering again
-todo : map existing compiled programs and decouple draw passes from program setup
+todo : map existing compiled programs and decouple draw passes from program creation or setup
 */
 const lastProgramRendered = writable(null);
-const webglapp = derived([renderer, programs], ([$renderer, $programs]) => {
-	// todo find a way to avoid this, like init this store only when renderer is ready
-	if (
-		!$renderer ||
-		!$programs ||
-		!$renderer.canvas ||
-		$programs.length === 0 ||
-		!$renderer.camera ||
-		$renderer.lights.length === 0
-	) {
-		console.log("no renderer or programs or canvas");
-		return [];
+
+const emptyApp = [];
+const webglapp = derived(
+	[renderer, programs],
+	([$renderer, $programs]) => {
+		if (!$renderer || !$programs || !$renderer.enabled || get_store_value(running) === 4) {
+			//log("webglapp not ready");
+			return emptyApp;
+		}
+
+		const numPointLights = $renderer.lights.filter((l) => get_store_value(l).type === "point").length;
+		const pointLightShader = get_store_value($renderer.lights.find((l) => get_store_value(l).type === "point")).shader;
+
+		let rendererContext = {
+			canvas: $renderer.canvas,
+			backgroundColor: $renderer.backgroundColor,
+			...($renderer.toneMappings.length > 0
+				? {
+						toneMappings: $renderer.toneMappings,
+					}
+				: undefined),
+			...(numPointLights > 0
+				? {
+						numPointLights,
+						pointLightShader,
+					}
+				: undefined),
+		};
+		const list = [];
+
+		appContext.update((appContext) => ({
+			...appContext,
+			...rendererContext,
+		}));
+
+		!get_store_value(renderState).init && list.push(initRenderer(rendererContext, appContext));
+
+		!get_store_value(renderState).init &&
+			list.push(
+				...$programs.reduce((acc, program) => {
+					lastProgramRendered.set(program);
+					return [
+						...acc,
+						program.createProgram(appContext),
+						program.createShaders(appContext),
+						program.endProgramSetup(appContext),
+						...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
+						setupAttributes(appContext, program.mesh),
+						setupCamera(appContext, $renderer.camera),
+						setupTransformMatrix(
+							appContext,
+							program.mesh.instances == null ? get_store_value(program.mesh.transformMatrix) : program.mesh.matrices,
+							program.mesh.instances,
+						),
+						setupNormalMatrix(appContext, program.mesh.instances),
+						// reduce by type to setup lights once per type
+						...[
+							...$renderer.lights.reduce((acc, light) => {
+								const lightValue = get_store_value(light);
+								acc.set(lightValue.type, lightValue.setupLights);
+								return acc;
+							}, new Map()),
+						].map(([_, setupLights]) => setupLights(appContext, $renderer.lights)),
+					];
+				}, []),
+			);
+
+		list.push(render(appContext, $programs[0].mesh.instances));
+		return list;
+	},
+	emptyApp,
+);
+
+/**
+ * running states
+ * 0 : not started
+ * 1 : init currently running
+ * 2 : init done, waiting for start
+ * 3 : loop requested, ready to run									<---|
+ * 																		|---- end state occilates between 3 and 4
+ * 4 : loop currently running, renderer updates ignored momentarily	<---|
+ */
+const running = writable(0);
+const renderLoopStore = derived([webglapp], ([$webglapp]) => {
+	if ($webglapp.length === 0) {
+		return 0;
 	}
+	if (!get_store_value(renderState).init && get_store_value(running) === 0) {
+		running.set(1);
+		$webglapp.forEach((f) => f());
+		running.set(2);
+		return 1;
+	} else if (get_store_value(running) === 2) {
+		running.set(3);
+		requestAnimationFrame(loop);
+		return 2;
+	}
+	async function loop() {
+		// skipping this iteration is previous one not finished
+		if (get_store_value(running) !== 4) {
+			running.set(4);
+			get_store_value(renderer).loop && get_store_value(renderer).loop();
+			$webglapp.forEach((f) => f());
+			running.set(3);
+		}
+		requestAnimationFrame(loop);
+	}
+});
 
-	const numPointLights = $renderer.lights.filter((l) => get_store_value(l).type === "point").length;
-	const pointLightShader = get_store_value($renderer.lights.find((l) => get_store_value(l).type === "point")).shader;
-
-	let rendererContext = {
-		canvas: $renderer.canvas,
-		backgroundColor: $renderer.backgroundColor,
-		...($renderer.toneMappings.length > 0
-			? {
-					toneMappings: $renderer.toneMappings,
-				}
-			: undefined),
-		...(numPointLights > 0
-			? {
-					numPointLights,
-					pointLightShader,
-				}
-			: undefined),
-	};
-	const list = [];
-
-	!get_store_value(renderState).init && list.push(initRenderer(rendererContext, appContext));
-
-	//global setup (UBOs, textures, etc)
-	/*!get(renderState).init && 
-		list.push(*/
-
-	!get_store_value(renderState).init &&
-		list.push(
-			...$programs.reduce((acc, program) => {
-				lastProgramRendered.set(program);
-				return [
-					...acc,
-					program.createProgram(appContext),
-					program.createShaders(appContext),
-					program.endProgramSetup(appContext),
-					...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
-					setupAttributes(appContext, program.mesh),
-					setupCamera(appContext, $renderer.camera),
-					setupTransformMatrix(
-						appContext,
-						program.mesh.instances == null ? get_store_value(program.mesh.transformMatrix) : program.mesh.matrices,
-						program.mesh.instances,
-					),
-					setupNormalMatrix(appContext, program.mesh.instances),
-					// reduce by type to setup lights once per type
-					...[
-						...$renderer.lights.reduce((acc, light) => {
-							const lightValue = get_store_value(light);
-							acc.set(lightValue.type, lightValue.setupLights);
-							return acc;
-						}, new Map()),
-					].map(([_, setupLights]) => setupLights(appContext, $renderer.lights)),
-				];
-			}, []),
-		);
-
-	list.push(render(appContext, $programs[0].mesh.instances));
-	return list;
+renderLoopStore.subscribe((value) => {
+	console.log("render loop store subscribed", value);
 });
 
 /**
@@ -2447,7 +2460,7 @@ function create_fragment(ctx) {
 		},
 		m(target, anchor) {
 			insert(target, canvas_1, anchor);
-			/*canvas_1_binding*/ ctx[2](canvas_1);
+			/*canvas_1_binding*/ ctx[1](canvas_1);
 		},
 		p: noop,
 		i: noop,
@@ -2457,7 +2470,7 @@ function create_fragment(ctx) {
 				detach(canvas_1);
 			}
 
-			/*canvas_1_binding*/ ctx[2](null);
+			/*canvas_1_binding*/ ctx[1](null);
 		}
 	};
 }
@@ -2466,8 +2479,6 @@ const numInstances = 20;
 const radius = 0.7;
 
 function instance($$self, $$props, $$invalidate) {
-	let $webglapp;
-	component_subscribe($$self, webglapp, $$value => $$invalidate(1, $webglapp = $$value));
 	let canvas;
 	let light1;
 	let mesh1;
@@ -2482,7 +2493,6 @@ function instance($$self, $$props, $$invalidate) {
 
 		let matrices = new Array(numInstances).fill(0).map((_, index) => {
 			const count = index - Math.floor(numInstances / 2);
-			console.log("count", count);
 			let mat = [...identityMatrix];
 
 			//transform the model matrix
@@ -2545,11 +2555,10 @@ function instance($$self, $$props, $$invalidate) {
 		}));
 
 		renderer.addToneMapping(createAGXToneMapping({ exposure: 1 }));
-		animate();
+		renderer.setLoop(animate);
+		renderer.start();
 	});
 
-	/* this is necessary to have normalMatrix working cause 
-    derived stores without listeners are not reactive */
 	function animate() {
 		const rotation = 0.001 * Math.PI;
 
@@ -2571,8 +2580,6 @@ function instance($$self, $$props, $$invalidate) {
 			position: [lightX, lightY, -0.4],
 			color: [r, g, b]
 		});
-
-		requestAnimationFrame(animate);
 	}
 
 	function canvas_1_binding($$value) {
@@ -2582,18 +2589,7 @@ function instance($$self, $$props, $$invalidate) {
 		});
 	}
 
-	$$self.$$.update = () => {
-		if ($$self.$$.dirty & /*$webglapp*/ 2) {
-			//render
-			if ($webglapp) {
-				$webglapp.forEach(instruction => {
-					instruction();
-				});
-			}
-		}
-	};
-
-	return [canvas, $webglapp, canvas_1_binding];
+	return [canvas, canvas_1_binding];
 }
 
 class Main extends SvelteComponent {

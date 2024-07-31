@@ -28,6 +28,7 @@ function createRenderer() {
 		lights: [],
 		toneMappings: [],
 		loop: null,
+		enabled: false,
 	});
 	return {
 		subscribe,
@@ -125,6 +126,16 @@ function createRenderer() {
 		setBackgroundColor: (backgroundColor) =>
 			update((renderer) => {
 				renderer.backgroundColor = backgroundColor;
+				return renderer;
+			}),
+		start: () =>
+			update((renderer) => {
+				renderer.enabled = true;
+				return renderer;
+			}),
+		stop: () =>
+			update((renderer) => {
+				renderer.enabled = false;
 				return renderer;
 			}),
 	};
@@ -228,95 +239,125 @@ function createRenderState() {
 }
 export const renderState = createRenderState();
 
-function createContextStore() {
-	const { subscribe, update } = writable({});
-	return {
-		subscribe,
-		update,
-	};
-}
-
-export const appContext = createContextStore();
-// make this store inactive until the conditions are met (single flag?)
+export const appContext = writable({});
 
 /*
 Single program apps (one mesh/material) will not need to setup the program again
 but multi program apps require to setup the program before rendering if the last changes
 affect a program that is not the last one rendered. because the last one rendered is still mounted / in memory of the GPU
 this store will be used to know if we need to setup the program before rendering again
-todo : map existing compiled programs and decouple draw passes from program setup
+todo : map existing compiled programs and decouple draw passes from program creation or setup
 */
 export const lastProgramRendered = writable(null);
-export const webglapp = derived([renderer, programs], ([$renderer, $programs]) => {
-	// todo find a way to avoid this, like init this store only when renderer is ready
-	if (
-		!$renderer ||
-		!$programs ||
-		!$renderer.canvas ||
-		$programs.length === 0 ||
-		!$renderer.camera ||
-		$renderer.lights.length === 0
-	) {
-		console.log("no renderer or programs or canvas");
-		return [];
+
+const emptyApp = [];
+const webglapp = derived(
+	[renderer, programs],
+	([$renderer, $programs]) => {
+		if (!$renderer || !$programs || !$renderer.enabled || get(running) === 4) {
+			//log("webglapp not ready");
+			return emptyApp;
+		}
+
+		const numPointLights = $renderer.lights.filter((l) => get(l).type === "point").length;
+		const pointLightShader = get($renderer.lights.find((l) => get(l).type === "point")).shader;
+
+		let rendererContext = {
+			canvas: $renderer.canvas,
+			backgroundColor: $renderer.backgroundColor,
+			...($renderer.toneMappings.length > 0
+				? {
+						toneMappings: $renderer.toneMappings,
+					}
+				: undefined),
+			...(numPointLights > 0
+				? {
+						numPointLights,
+						pointLightShader,
+					}
+				: undefined),
+		};
+		const list = [];
+
+		appContext.update((appContext) => ({
+			...appContext,
+			...rendererContext,
+		}));
+
+		!get(renderState).init && list.push(initRenderer(rendererContext, appContext));
+
+		!get(renderState).init &&
+			list.push(
+				...$programs.reduce((acc, program) => {
+					lastProgramRendered.set(program);
+					return [
+						...acc,
+						program.createProgram(appContext),
+						program.createShaders(appContext),
+						program.endProgramSetup(appContext),
+						...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
+						setupAttributes(appContext, program.mesh),
+						setupCamera(appContext, $renderer.camera),
+						setupTransformMatrix(
+							appContext,
+							program.mesh.instances == null ? get(program.mesh.transformMatrix) : program.mesh.matrices,
+							program.mesh.instances,
+						),
+						setupNormalMatrix(appContext, program.mesh.instances),
+						// reduce by type to setup lights once per type
+						...[
+							...$renderer.lights.reduce((acc, light) => {
+								const lightValue = get(light);
+								acc.set(lightValue.type, lightValue.setupLights);
+								return acc;
+							}, new Map()),
+						].map(([_, setupLights]) => setupLights(appContext, $renderer.lights)),
+					];
+				}, []),
+			);
+
+		list.push(render(appContext, $programs[0].mesh.instances));
+		return list;
+	},
+	emptyApp,
+);
+
+/**
+ * running states
+ * 0 : not started
+ * 1 : init currently running
+ * 2 : init done, waiting for start
+ * 3 : loop requested, ready to run									<---|
+ * 																		|---- end state occilates between 3 and 4
+ * 4 : loop currently running, renderer updates ignored momentarily	<---|
+ */
+const running = writable(0);
+const renderLoopStore = derived([webglapp], ([$webglapp]) => {
+	if ($webglapp.length === 0) {
+		return 0;
 	}
+	if (!get(renderState).init && get(running) === 0) {
+		running.set(1);
+		$webglapp.forEach((f) => f());
+		running.set(2);
+		return 1;
+	} else if (get(running) === 2) {
+		running.set(3);
+		requestAnimationFrame(loop);
+		return 2;
+	}
+	async function loop() {
+		// skipping this iteration is previous one not finished
+		if (get(running) !== 4) {
+			running.set(4);
+			get(renderer).loop && get(renderer).loop();
+			$webglapp.forEach((f) => f());
+			running.set(3);
+		}
+		requestAnimationFrame(loop);
+	}
+});
 
-	const numPointLights = $renderer.lights.filter((l) => get(l).type === "point").length;
-	const pointLightShader = get($renderer.lights.find((l) => get(l).type === "point")).shader;
-
-	let rendererContext = {
-		canvas: $renderer.canvas,
-		backgroundColor: $renderer.backgroundColor,
-		...($renderer.toneMappings.length > 0
-			? {
-					toneMappings: $renderer.toneMappings,
-				}
-			: undefined),
-		...(numPointLights > 0
-			? {
-					numPointLights,
-					pointLightShader,
-				}
-			: undefined),
-	};
-	const list = [];
-
-	!get(renderState).init && list.push(initRenderer(rendererContext, appContext));
-
-	//global setup (UBOs, textures, etc)
-	/*!get(renderState).init && 
-		list.push(*/
-
-	!get(renderState).init &&
-		list.push(
-			...$programs.reduce((acc, program) => {
-				lastProgramRendered.set(program);
-				return [
-					...acc,
-					program.createProgram(appContext),
-					program.createShaders(appContext),
-					program.endProgramSetup(appContext),
-					...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
-					setupAttributes(appContext, program.mesh),
-					setupCamera(appContext, $renderer.camera),
-					setupTransformMatrix(
-						appContext,
-						program.mesh.instances == null ? get(program.mesh.transformMatrix) : program.mesh.matrices,
-						program.mesh.instances,
-					),
-					setupNormalMatrix(appContext, program.mesh.instances),
-					// reduce by type to setup lights once per type
-					...[
-						...$renderer.lights.reduce((acc, light) => {
-							const lightValue = get(light);
-							acc.set(lightValue.type, lightValue.setupLights);
-							return acc;
-						}, new Map()),
-					].map(([_, setupLights]) => setupLights(appContext, $renderer.lights)),
-				];
-			}, []),
-		);
-
-	list.push(render(appContext, $programs[0].mesh.instances));
-	return list;
+const unsub = renderLoopStore.subscribe((value) => {
+	console.log("render loop store subscribed", value);
 });

@@ -1,13 +1,13 @@
 <script type="module">
 import { onMount } from "svelte";
 import { get } from "svelte/store";
-import { renderer, webglapp, lastProgramRendered } from "./store/engine.js";
+import { renderer } from "./store/engine.js";
 //import { createCube } from "./geometries/cube.js";
 import { identity, rotateX, rotateY, rotateZ, translate, scale } from "gl-matrix/esm/mat4.js";
 import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
 import { createPointLight } from "./lights/point-light.js";
 import { createAGXToneMapping } from "./tone-mapping/agx.js";
-import { createFlatShadedNormals, toRadian } from "./geometries/common.js";
+import { /*createFlatShadedNormals,*/ toRadian } from "./geometries/common.js";
 let canvas;
 let light1;
 let mesh1;
@@ -23,7 +23,6 @@ onMount(() => {
 	identity(identityMatrix);
 	let matrices = new Array(numInstances).fill(0).map((_, index) => {
 		const count = index - Math.floor(numInstances / 2);
-		console.log("count", count);
 		let mat = [...identityMatrix];
 		//transform the model matrix
 		const scaleFactor = 0.1;
@@ -94,18 +93,10 @@ onMount(() => {
 			exposure: 1,
 		}),
 	);
-	animate();
+
+	renderer.setLoop(animate);
+	renderer.start();
 });
-
-//render
-$: if ($webglapp) {
-	$webglapp.forEach((instruction) => {
-		instruction();
-	});
-}
-
-/* this is necessary to have normalMatrix working cause 
-    derived stores without listeners are not reactive */
 
 function animate() {
 	const rotation = 0.001 * Math.PI;
@@ -126,8 +117,6 @@ function animate() {
 		position: [lightX, lightY, -0.4],
 		color: [r, g, b],
 	});
-
-	requestAnimationFrame(animate);
 }
 </script>
 <canvas bind:this={canvas}></canvas>
