@@ -1788,6 +1788,7 @@ const createLightStore = (parentStoreUpdate, initialProps, lightIndex) => {
 };
 
 const renderer = createRenderer();
+
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
 
@@ -1853,16 +1854,9 @@ const programs = derived(renderer, ($renderer) => {
 	});
 });
 
-function createRenderState() {
-	const { subscribe, set } = writable({
-		init: false,
-	});
-	return {
-		subscribe,
-		set,
-	};
-}
-const renderState = createRenderState();
+const renderState = writable({
+	init: false,
+});
 
 const appContext = writable({});
 
@@ -1879,7 +1873,9 @@ const emptyApp = [];
 const webglapp = derived(
 	[renderer, programs],
 	([$renderer, $programs]) => {
-		if (!$renderer || !$programs || !$renderer.enabled || get_store_value(running) === 4) {
+		// if renderer.enabled is false, the scene is being setup, we should not render
+		// if running is 4, we let the loop run completly as a way to batch scene updates
+		if (!$renderer.enabled || get_store_value(running) === 4) {
 			//log("webglapp not ready");
 			return emptyApp;
 		}
