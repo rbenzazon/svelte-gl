@@ -94,7 +94,7 @@ export function endProgramSetup(context) {
 }
 
 export function createShaders() {
-	return function (context) {
+	return function (context, mesh) {
 		return function () {
 			context = get(context);
 			const gl = context.gl;
@@ -107,6 +107,12 @@ export function createShaders() {
 			if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
 				console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
 			}
+			let specularIrradiance = "";
+			let specularDeclaration = "";
+			if (mesh.material.specular) {
+				specularDeclaration = mesh.material.specular.shader({ declaration: true, irradiance: false });
+				specularIrradiance = mesh.material.specular.shader({ declaration: false, irradiance: true });
+			}
 			const fragmentShaderSource = templateLiteralRenderer(
 				{
 					defines: objectToDefines({
@@ -117,13 +123,16 @@ export function createShaders() {
 							: undefined),
 					}),
 					declarations: [
-						...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : undefined),
+						...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : []),
 						...(context.toneMappings?.length > 0
 							? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure, color: false }))]
 							: []),
+						...(mesh.material.specular ? [specularDeclaration] : []),
 					].join("\n"),
 					irradiance: [
-						...(context.numPointLights ? [context.pointLightShader({ declaration: false, irradiance: true })] : undefined),
+						...(context.numPointLights
+							? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
+							: []),
 					].join("\n"),
 					toneMapping: [
 						...(context.toneMappings?.length > 0
@@ -137,6 +146,7 @@ export function createShaders() {
 			);
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
+			console.log(fragmentShaderSource);
 			gl.compileShader(fragmentShader);
 			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
 				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
@@ -165,6 +175,7 @@ export function setupCamera(context, camera) {
 
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
+
 		const fieldOfViewInRadians = toRadian(camera.fov);
 		const aspectRatio = context.canvas.width / context.canvas.height;
 		const nearClippingPlaneDistance = camera.near;
@@ -187,6 +198,9 @@ export function setupCamera(context, camera) {
 
 		lookAt(view, camera.position, camera.target, camera.up);
 		gl.uniformMatrix4fv(viewLocation, false, view);
+
+		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");
+		gl.uniform3fv(cameraPositionLocation, camera.position);
 	};
 }
 
@@ -289,7 +303,7 @@ export function setupNormalMatrix(context, numInstances) {
 			const { gl, program, transformMatrix } = get(context);
 			const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
 			context.normalMatrixLocation = normalMatrixLocation;
-			gl.uniformMatrix4fv(normalMatrixLocation, false, deriveNormalMatrix(transformMatrix));
+			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(transformMatrix));
 		};
 	} else {
 		return function createNormalMatrices() {
@@ -301,7 +315,7 @@ export function setupNormalMatrix(context, numInstances) {
 			const normalMatricesValues = [];
 
 			for (let i = 0; i < numInstances; i++) {
-				normalMatricesValues.push(...deriveNormalMatrix(transformMatricesWindows[i]));
+				normalMatricesValues.push(...derivateNormalMatrix(transformMatricesWindows[i]));
 			}
 			const normalMatrices = new Float32Array(normalMatricesValues);
 			const normalMatrixBuffer = gl.createBuffer();
@@ -346,7 +360,7 @@ export function updateInstanceNormalMatrix({ gl, program, vao, normalMatrixBuffe
 	gl.bindVertexArray(null);
 }
 
-export function deriveNormalMatrix(transformMatrix) {
+export function derivateNormalMatrix(transformMatrix) {
 	const normalMatrix = create();
 	invert(normalMatrix, transformMatrix);
 	transpose(normalMatrix, normalMatrix);

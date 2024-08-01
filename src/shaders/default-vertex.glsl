@@ -14,6 +14,7 @@ uniform mat4 projection;
 out vec3 vertexColor;
 out vec3 vNormal;
 out vec3 vertex;
+out vec3 vViewPosition;
 
 void main() {
     // Pass the color down to the fragment shader
@@ -27,4 +28,5 @@ void main() {
     
     // Pass the position down to the fragment shader
     gl_Position = projection * view * world * vec4(position, 1.0);
+    vViewPosition = -gl_Position.xyz;
 }

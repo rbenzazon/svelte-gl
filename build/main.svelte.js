@@ -970,138 +970,6 @@ function scale(out, a, v) {
   return out;
 }
 /**
- * Rotates a matrix by the given angle around the X axis
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the matrix to rotate
- * @param {Number} rad the angle to rotate the matrix by
- * @returns {mat4} out
- */
-
-function rotateX(out, a, rad) {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
-  var a10 = a[4];
-  var a11 = a[5];
-  var a12 = a[6];
-  var a13 = a[7];
-  var a20 = a[8];
-  var a21 = a[9];
-  var a22 = a[10];
-  var a23 = a[11];
-
-  if (a !== out) {
-    // If the source and destination differ, copy the unchanged rows
-    out[0] = a[0];
-    out[1] = a[1];
-    out[2] = a[2];
-    out[3] = a[3];
-    out[12] = a[12];
-    out[13] = a[13];
-    out[14] = a[14];
-    out[15] = a[15];
-  } // Perform axis-specific matrix multiplication
-
-
-  out[4] = a10 * c + a20 * s;
-  out[5] = a11 * c + a21 * s;
-  out[6] = a12 * c + a22 * s;
-  out[7] = a13 * c + a23 * s;
-  out[8] = a20 * c - a10 * s;
-  out[9] = a21 * c - a11 * s;
-  out[10] = a22 * c - a12 * s;
-  out[11] = a23 * c - a13 * s;
-  return out;
-}
-/**
- * Rotates a matrix by the given angle around the Y axis
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the matrix to rotate
- * @param {Number} rad the angle to rotate the matrix by
- * @returns {mat4} out
- */
-
-function rotateY(out, a, rad) {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
-  var a00 = a[0];
-  var a01 = a[1];
-  var a02 = a[2];
-  var a03 = a[3];
-  var a20 = a[8];
-  var a21 = a[9];
-  var a22 = a[10];
-  var a23 = a[11];
-
-  if (a !== out) {
-    // If the source and destination differ, copy the unchanged rows
-    out[4] = a[4];
-    out[5] = a[5];
-    out[6] = a[6];
-    out[7] = a[7];
-    out[12] = a[12];
-    out[13] = a[13];
-    out[14] = a[14];
-    out[15] = a[15];
-  } // Perform axis-specific matrix multiplication
-
-
-  out[0] = a00 * c - a20 * s;
-  out[1] = a01 * c - a21 * s;
-  out[2] = a02 * c - a22 * s;
-  out[3] = a03 * c - a23 * s;
-  out[8] = a00 * s + a20 * c;
-  out[9] = a01 * s + a21 * c;
-  out[10] = a02 * s + a22 * c;
-  out[11] = a03 * s + a23 * c;
-  return out;
-}
-/**
- * Rotates a matrix by the given angle around the Z axis
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the matrix to rotate
- * @param {Number} rad the angle to rotate the matrix by
- * @returns {mat4} out
- */
-
-function rotateZ(out, a, rad) {
-  var s = Math.sin(rad);
-  var c = Math.cos(rad);
-  var a00 = a[0];
-  var a01 = a[1];
-  var a02 = a[2];
-  var a03 = a[3];
-  var a10 = a[4];
-  var a11 = a[5];
-  var a12 = a[6];
-  var a13 = a[7];
-
-  if (a !== out) {
-    // If the source and destination differ, copy the unchanged last row
-    out[8] = a[8];
-    out[9] = a[9];
-    out[10] = a[10];
-    out[11] = a[11];
-    out[12] = a[12];
-    out[13] = a[13];
-    out[14] = a[14];
-    out[15] = a[15];
-  } // Perform axis-specific matrix multiplication
-
-
-  out[0] = a00 * c + a10 * s;
-  out[1] = a01 * c + a11 * s;
-  out[2] = a02 * c + a12 * s;
-  out[3] = a03 * c + a13 * s;
-  out[4] = a10 * c - a00 * s;
-  out[5] = a11 * c - a01 * s;
-  out[6] = a12 * c - a02 * s;
-  out[7] = a13 * c - a03 * s;
-  return out;
-}
-/**
  * Generates a perspective projection matrix with the given bounds.
  * The near/far clip planes correspond to a normalized device coordinate Z range of [-1, 1],
  * which matches WebGL/OpenGL's clip volume.
@@ -1235,9 +1103,9 @@ function lookAt(out, eye, center, up) {
   return out;
 }
 
-var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\n\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\n\r\nvoid main() {\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n}";
+var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\n\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\nout vec3 vViewPosition;\r\n\r\nvoid main() {\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n    vViewPosition = -gl_Position.xyz;\r\n}";
 
-var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 color;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n    fragColor = vec4(RECIPROCAL_PI * color * totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n}";
+var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 color;\r\nuniform vec3 cameraPosition;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n    fragColor = vec4(RECIPROCAL_PI * color * totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n}";
 
 const templateGenerator = (props, template) => {
 	return (propsValues) => Function.constructor(...props, `return \`${template}\``)(...propsValues);
@@ -1258,15 +1126,15 @@ const objectToDefines = (obj) => {
 // Uniform Buffer Objects, must have unique binding points
 const UBO_BINDING_POINT_POINTLIGHT = 0;
 
-const degree$1 = Math.PI / 180;
+const degree = Math.PI / 180;
 /**
  * Convert Degree To Radian
  *
  * @param {Number} a Angle in Degrees
  */
 
-function toRadian$1(a) {
-	return a * degree$1;
+function toRadian(a) {
+	return a * degree;
 }
 
 function initRenderer(rendererContext, appContext) {
@@ -1343,7 +1211,7 @@ function endProgramSetup(context) {
 }
 
 function createShaders() {
-	return function (context) {
+	return function (context, mesh) {
 		return function () {
 			context = get_store_value(context);
 			const gl = context.gl;
@@ -1356,6 +1224,12 @@ function createShaders() {
 			if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
 				console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
 			}
+			let specularIrradiance = "";
+			let specularDeclaration = "";
+			if (mesh.material.specular) {
+				specularDeclaration = mesh.material.specular.shader({ declaration: true, irradiance: false });
+				specularIrradiance = mesh.material.specular.shader({ declaration: false, irradiance: true });
+			}
 			const fragmentShaderSource = templateLiteralRenderer(
 				{
 					defines: objectToDefines({
@@ -1366,13 +1240,16 @@ function createShaders() {
 							: undefined),
 					}),
 					declarations: [
-						...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : undefined),
+						...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : []),
 						...(context.toneMappings?.length > 0
 							? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure, color: false }))]
 							: []),
+						...(mesh.material.specular ? [specularDeclaration] : []),
 					].join("\n"),
 					irradiance: [
-						...(context.numPointLights ? [context.pointLightShader({ declaration: false, irradiance: true })] : undefined),
+						...(context.numPointLights
+							? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
+							: []),
 					].join("\n"),
 					toneMapping: [
 						...(context.toneMappings?.length > 0
@@ -1386,6 +1263,7 @@ function createShaders() {
 			);
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
+			console.log(fragmentShaderSource);
 			gl.compileShader(fragmentShader);
 			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
 				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
@@ -1414,7 +1292,8 @@ function setupCamera(context, camera) {
 
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
-		const fieldOfViewInRadians = toRadian$1(camera.fov);
+
+		const fieldOfViewInRadians = toRadian(camera.fov);
 		const aspectRatio = context.canvas.width / context.canvas.height;
 		const nearClippingPlaneDistance = camera.near;
 		const farClippingPlaneDistance = camera.far;
@@ -1436,6 +1315,9 @@ function setupCamera(context, camera) {
 
 		lookAt(view, camera.position, camera.target, camera.up);
 		gl.uniformMatrix4fv(viewLocation, false, view);
+
+		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");
+		gl.uniform3fv(cameraPositionLocation, camera.position);
 	};
 }
 
@@ -1538,7 +1420,7 @@ function setupNormalMatrix(context, numInstances) {
 			const { gl, program, transformMatrix } = get_store_value(context);
 			const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
 			context.normalMatrixLocation = normalMatrixLocation;
-			gl.uniformMatrix4fv(normalMatrixLocation, false, deriveNormalMatrix(transformMatrix));
+			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(transformMatrix));
 		};
 	} else {
 		return function createNormalMatrices() {
@@ -1550,7 +1432,7 @@ function setupNormalMatrix(context, numInstances) {
 			const normalMatricesValues = [];
 
 			for (let i = 0; i < numInstances; i++) {
-				normalMatricesValues.push(...deriveNormalMatrix(transformMatricesWindows[i]));
+				normalMatricesValues.push(...derivateNormalMatrix(transformMatricesWindows[i]));
 			}
 			const normalMatrices = new Float32Array(normalMatricesValues);
 			const normalMatrixBuffer = gl.createBuffer();
@@ -1595,7 +1477,7 @@ function updateInstanceNormalMatrix({ gl, program, vao, normalMatrixBuffer }, no
 	gl.bindVertexArray(null);
 }
 
-function deriveNormalMatrix(transformMatrix) {
+function derivateNormalMatrix(transformMatrix) {
 	const normalMatrix = create$1();
 	invert(normalMatrix, transformMatrix);
 	transpose(normalMatrix, normalMatrix);
@@ -1657,18 +1539,30 @@ function createRenderer() {
 	});
 	return {
 		subscribe,
-		setCamera: (position = [0, 0, -1], target = [0, 0, 0], fov = 80, near = 0.1, far = 1000, up = [0, 1, 0]) =>
-			update((renderer) => {
-				renderer.camera = {
-					fov,
-					near,
-					far,
-					position,
-					target,
-					up,
-				};
-				return renderer;
-			}),
+		setCamera: (...rest) => {
+			updateCamera(...rest);
+			return {
+				set: (...rest) => {
+					updateCamera(...rest);
+					setupCamera(appContext, get_store_value(renderer).camera)();
+				},
+				get: () => get_store_value(renderer).camera,
+			};
+			function updateCamera(position = [0, 0, -1], target = [0, 0, 0], fov = 80, near = 0.1, far = 1000, up = [0, 1, 0]) {
+				update((renderer) => {
+					renderer.camera = {
+						fov,
+						near,
+						far,
+						position,
+						target,
+						up,
+					};
+					return renderer;
+				});
+			}
+		},
+
 		addMesh: (mesh) => {
 			const index = get_store_value(renderer).meshes.length;
 
@@ -1715,6 +1609,7 @@ function createRenderer() {
 							meshWithMatrix.unsubs.forEach((unsub) => unsub());
 						},
 				...(matrices ? { matrices } : { transformMatrix }),
+				material: mesh.material,
 			};
 		},
 		addLight: (light) => {
@@ -1824,7 +1719,7 @@ const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex, in
 		if (!context.gl) {
 			return;
 		}
-		const normalMatrix = deriveNormalMatrix($transformMatrix);
+		const normalMatrix = derivateNormalMatrix($transformMatrix);
 		if (instanceIndex == null) {
 			updateNormalMatrix(context, normalMatrix);
 		} else {
@@ -1906,7 +1801,6 @@ const webglapp = derived(
 		}));
 
 		!get_store_value(renderState).init && list.push(initRenderer(rendererContext, appContext));
-
 		!get_store_value(renderState).init &&
 			list.push(
 				...$programs.reduce((acc, program) => {
@@ -1914,11 +1808,12 @@ const webglapp = derived(
 					return [
 						...acc,
 						program.createProgram(appContext),
-						program.createShaders(appContext),
+						program.createShaders(appContext, program.mesh),
 						program.endProgramSetup(appContext),
 						...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
 						setupAttributes(appContext, program.mesh),
 						setupCamera(appContext, $renderer.camera),
+						...(program.mesh?.material?.specular ? [program.mesh.material.specular.setupSpecular(appContext)] : []),
 						setupTransformMatrix(
 							appContext,
 							program.mesh.instances == null ? get_store_value(program.mesh.transformMatrix) : program.mesh.matrices,
@@ -2118,16 +2013,12 @@ function normalizeNormals(normals) {
 		normals[i + 2] *= n;
 	}
 }
-
-const degree = Math.PI / 180;
-/**
- * Convert Degree To Radian
- *
- * @param {Number} a Angle in Degrees
- */
-
-function toRadian(a) {
-	return a * degree;
+function distributeCirclePoints(radius, index, numberOfPoints) {
+	const angleIncrement = (2 * Math.PI) / numberOfPoints;
+	return {
+		x: radius * Math.cos(index * angleIncrement),
+		y: radius * Math.sin(index * angleIncrement),
+	};
 }
 
 /**
@@ -2339,7 +2230,7 @@ const initialIndices = [
 	14, 5, 1, 5, 9,
 ];
 
-var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nvec3 calculatePointLightBrightness(vec3 lightPosition, vec3 lightColor, float cutoffDistance, float decayExponent, vec3 vertexPosition, vec3 normal) {\r\n    vec3 offset = lightPosition - vertexPosition;\r\n    float lightDistance = length(offset);\r\n    vec3 direction = normalize(offset);\r\n    vec3 irradiance = saturate(dot(normal, direction)) * lightColor;\r\n    float distanceFalloff = getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n    return vec3(irradiance * distanceFalloff);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        totalIrradiance += calculatePointLightBrightness(pointLight.position, pointLight.color, pointLight.cutoffDistance, pointLight.decayExponent, vertex, vNormal);\r\n    }\r\n` : ''\r\n}\r\n";
+var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct LightParams {\r\n    float distance;\r\n    vec3 direction;\r\n    vec3 irradiance;\r\n};\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nLightParams getIrradiance(vec3 lightPosition, vec3 lightColor,vec3 vertexPosition, vec3 normal) {\r\n    LightParams lightParams;\r\n    vec3 offset = lightPosition - vertexPosition;\r\n    lightParams.distance = length(offset);\r\n    lightParams.direction = normalize(offset);\r\n    lightParams.irradiance = saturate(dot(normal, lightParams.direction)) * lightColor;\r\n    return lightParams;\r\n}\r\n\r\nfloat calculatePointLightBrightness(float lightDistance, float cutoffDistance, float decayExponent) {\r\n    return getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    vec3 irradiance = vec3(0.0f);\r\n    vec3 direction = vec3(0.0f);\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        LightParams lightParams = getIrradiance(pointLight.position, pointLight.color, vertex, vNormal);\r\n        totalIrradiance += lightParams.irradiance * calculatePointLightBrightness(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);\r\n        ${specularIrradiance}\r\n    }\r\n` : ''\r\n}\r\n";
 
 const createPointLight = (props) => {
 	return {
@@ -2445,6 +2336,66 @@ const createAGXToneMapping = (props) => {
 	};
 };
 
+function createOrbitControls(canvas, camera) {
+	console.log("Orbit controls");
+	canvas.addEventListener("mousedown", onMouseDown);
+	let startX;
+	let startY;
+	let cameraPosition;
+	function onMouseDown(event) {
+		console.log("Mouse down");
+		canvas.addEventListener("mousemove", onMouseMove);
+		startX = event.clientX;
+		startY = event.clientY;
+		cameraPosition = camera.get().position;
+		canvas.addEventListener("mouseup", onMouseUp);
+	}
+	function onMouseMove(event) {
+		const x = event.clientX - startX;
+		const y = event.clientY - startY;
+		console.log("Mouse move", x, y);
+		let cameraValue = camera.get();
+		console.log("cameraValue", cameraValue);
+		const { position, target, fov } = cameraValue;
+		position[0] = cameraPosition[0] + x * 0.001;
+		position[1] = cameraPosition[1] + y * 0.001;
+		camera.set(position, target, fov);
+	}
+	function onMouseUp(event) {
+		console.log("Mouse up");
+		canvas.removeEventListener("mousemove", onMouseMove);
+		canvas.removeEventListener("mouseup", onMouseUp);
+	}
+}
+
+var specularShader = "${declaration?\r\n`\r\n\r\nuniform vec3 specularColor;\r\nuniform float specularF90;\r\nuniform float specularRoughness;\r\n\r\nin vec3 vViewPosition;\r\n\r\n#define EPSILON 1e-6\r\n\r\nvec3 F_Schlick( const in vec3 f0, const in float f90, const in float dotVH ) {\r\n\r\n\t// Original approximation by Christophe Schlick '94\r\n\t// float fresnel = pow( 1.0 - dotVH, 5.0 );\r\n\r\n\t// Optimized variant (presented by Epic at SIGGRAPH '13)\r\n\t// https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf\r\n\tfloat fresnel = exp2( ( - 5.55473 * dotVH - 6.98316 ) * dotVH );\r\n\r\n\treturn f0 * ( 1.0 - fresnel ) + ( f90 * fresnel );\r\n\r\n} \r\n\r\n// Moving Frostbite to Physically Based Rendering 3.0 - page 12, listing 2\r\n// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\nfloat V_GGX_SmithCorrelated( const in float alpha, const in float dotNL, const in float dotNV ) {\r\n\r\n\tfloat a2 = pow2( alpha );\r\n\r\n\tfloat gv = dotNL * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNV ) );\r\n\tfloat gl = dotNV * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNL ) );\r\n\r\n\treturn 0.5 / max( gv + gl, EPSILON );\r\n\r\n}\r\n\r\n// Microfacet Models for Refraction through Rough Surfaces - equation (33)\r\n// http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html\r\n// alpha is \"roughness squared\" in Disney’s reparameterization\r\nfloat D_GGX( const in float alpha, const in float dotNH ) {\r\n\r\n\tfloat a2 = pow2( alpha );\r\n\r\n\tfloat denom = pow2( dotNH ) * ( a2 - 1.0 ) + 1.0; // avoid alpha = 0 with dotNH = 1\r\n\r\n\treturn RECIPROCAL_PI * a2 / pow2( denom );\r\n\r\n}\r\n\r\nvec3 BRDF_GGX( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in vec3 specularColor, const in float specularF90, const in float roughness) {\r\n\r\n\tfloat alpha = pow2( roughness ); // UE4's roughness\r\n\r\n\tvec3 halfDir = normalize( lightDir + viewDir );\r\n\r\n\tfloat dotNL = saturate( dot( normal, lightDir ) );\r\n\tfloat dotNV = saturate( dot( normal, viewDir ) );\r\n\tfloat dotNH = saturate( dot( normal, halfDir ) );\r\n\tfloat dotVH = saturate( dot( viewDir, halfDir ) );\r\n\r\n\tvec3 F = F_Schlick( specularColor, specularF90, dotVH );\r\n\r\n\tfloat V = V_GGX_SmithCorrelated( alpha, dotNL, dotNV );\r\n\r\n\tfloat D = D_GGX( alpha, dotNH );\r\n\r\n\treturn F * ( V * D );\r\n\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n        vec3 geometryViewDir = normalize( cameraPosition - vertex );\r\n        irradiance = lightParams.irradiance;\r\n        direction = lightParams.direction;\r\n        totalIrradiance += lightParams.irradiance * BRDF_GGX( lightParams.direction, geometryViewDir, normalize(vNormal), specularColor, specularF90, specularRoughness);//lightParams.irradiance; //* \r\n        //totalIrradiance = -vec3(geometryViewDir.z,geometryViewDir.z,geometryViewDir.z);//BRDF_GGX( lightParams.direction, geometryViewDir, normalize(vNormal), specularColor, specularF90, specularRoughness);\r\n\t\t//totalIrradiance = lightParams.irradiance;//vec3(-lightParams.direction.z,-lightParams.direction.z,-lightParams.direction.z);\r\n` : ''\r\n}";
+
+const createSpecular = ({ color, f90, roughness }) => {
+	return {
+		color,
+		f90,
+		roughness,
+		shader: (segment) => templateLiteralRenderer(segment, specularShader),
+		setupSpecular: (context) => setupSpecular(context, { color, f90, roughness }),
+	};
+};
+
+function setupSpecular(context, specular) {
+	return function () {
+		context = get_store_value(context);
+		/** @type {{gl: WebGL2RenderingContext}} **/
+		const { gl, program } = context;
+
+		const colorLocation = gl.getUniformLocation(program, "specularColor");
+		const f90Location = gl.getUniformLocation(program, "specularF90");
+		const roughnessLocation = gl.getUniformLocation(program, "specularRoughness");
+
+		gl.uniform3fv(colorLocation, specular.color);
+		gl.uniform1f(f90Location, specular.f90);
+		gl.uniform1f(roughnessLocation, specular.roughness);
+	};
+}
+
 /* src\main.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
@@ -2470,60 +2421,54 @@ function create_fragment(ctx) {
 		}
 	};
 }
-
 const numInstances = 20;
 const radius = 0.7;
 
 function instance($$self, $$props, $$invalidate) {
 	let canvas;
 	let light1;
-	let mesh1;
+	let camera;
 
 	onMount(() => {
-		const data = createPolyhedron(1, 7, createSmoothShadedNormals);
 		renderer.setCanvas(canvas);
-		renderer.setBackgroundColor([0, 0, 0, 1.0]);
-		renderer.setCamera([0, 0, -3], [0, 0, 0], 30);
+		renderer.setBackgroundColor([1, 1, 1, 1.0]);
+		camera = renderer.setCamera([0, 0, -3], [0, 0, 0], 30);
+		const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
 		let identityMatrix = new Array(16).fill(0);
 		identity(identityMatrix);
 
 		let matrices = new Array(numInstances).fill(0).map((_, index) => {
-			const count = index - Math.floor(numInstances / 2);
 			let mat = [...identityMatrix];
 
 			//transform the model matrix
 			const scaleFactor = 0.1;
 
-			const centerX = 0;
-			const centerY = 0;
-			const angleIncrement = 2 * Math.PI / numInstances;
-
-			translate(mat, mat, [
-				centerX + radius * Math.cos(count * angleIncrement),
-				centerY + radius * Math.sin(count * angleIncrement),
-				0
-			]);
+			const { x, y } = distributeCirclePoints(radius, index, numInstances);
+			translate(mat, mat, [x, y, 0]);
 
 			//translate(mat, mat, [count * -2, 0, 0]);
-			rotateY(mat, mat, toRadian(count * 10));
-
+			//rotateY(mat, mat, toRadian(count * 10));
 			scale(mat, mat, [scaleFactor, scaleFactor, scaleFactor]);
+
 			return new Float32Array(mat);
 		});
 
-		mesh1 = renderer.addMesh({
-			attributes: data,
+		renderer.addMesh({
+			attributes: sphereGeometry,
 			instances: numInstances,
 			matrices,
-			uniforms: { color: [1, 1, 1] }
+			uniforms: { color: [1, 1, 1] },
+			material: {
+				specular: createSpecular({ color: [1, 1, 1], f90: 1, roughness: 0.4 })
+			}
 		});
 
 		light1 = renderer.addLight(createPointLight({
-			position: [-2, 2, -3],
+			position: [-2, 2, -4],
 			color: [1, 1, 1],
 			intensity: 0.6,
 			cutoffDistance: 3,
-			decayExponent: 3
+			decayExponent: 1
 		}));
 
 		renderer.addLight(createPointLight({
@@ -2553,21 +2498,21 @@ function instance($$self, $$props, $$invalidate) {
 		renderer.addToneMapping(createAGXToneMapping({ exposure: 1 }));
 		renderer.setLoop(animate);
 		renderer.start();
+		createOrbitControls(canvas, camera);
 	});
 
 	function animate() {
-		const rotation = 0.001 * Math.PI;
+		/*const rotation = 0.001 * Math.PI;
+for (let i = 0; i < numInstances; i++) {
+	const tmp = get(mesh1.matrices[i]);
+	rotateY(tmp, tmp, rotation / 2);
+	rotateX(tmp, tmp, rotation);
+	rotateZ(tmp, tmp, rotation / 3);
+	mesh1.matrices[i].set(tmp);
+}*/
+		const lightX = Math.sin(performance.now() / 2000) * 0.5;
 
-		for (let i = 0; i < numInstances; i++) {
-			const tmp = get_store_value(mesh1.matrices[i]);
-			rotateY(tmp, tmp, rotation / 2);
-			rotateX(tmp, tmp, rotation);
-			rotateZ(tmp, tmp, rotation / 3);
-			mesh1.matrices[i].set(tmp);
-		}
-
-		const lightX = Math.sin(performance.now() / 3000) * 1;
-		const lightY = Math.cos(performance.now() / 3000) * 1;
+		const lightY = Math.cos(performance.now() / 2000) * 0.5;
 		const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;
 		const g = Math.cos(performance.now() / 5000) * 0.5 + 0.5;
 		const b = Math.sin(performance.now() / 4000) * 0.5 + 0.5;

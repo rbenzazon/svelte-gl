@@ -7,17 +7,23 @@ import { identity, rotateX, rotateY, rotateZ, translate, scale } from "gl-matrix
 import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
 import { createPointLight } from "./lights/point-light.js";
 import { createAGXToneMapping } from "./tone-mapping/agx.js";
-import { /*createFlatShadedNormals,*/ toRadian } from "./geometries/common.js";
+import { createOrbitControls } from "./interactivity/orbit-controls.js";
+import { /*createFlatShadedNormals,*/ distributeCirclePoints, toRadian } from "./geometries/common.js";
+import { createSpecular } from "./material/specular/specular.js";
 let canvas;
 let light1;
 let mesh1;
+let camera;
+let once = false;
 const numInstances = 20;
 const radius = 0.7;
 onMount(() => {
-	const data = createPolyhedron(1, 7, createSmoothShadedNormals);
 	renderer.setCanvas(canvas);
-	renderer.setBackgroundColor([0, 0, 0, 1.0]);
-	renderer.setCamera([0, 0, -3], [0, 0, 0], 30);
+
+	renderer.setBackgroundColor([1, 1, 1, 1.0]);
+	camera = renderer.setCamera([0, 0, -3], [0, 0, 0], 30);
+
+	const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
 
 	let identityMatrix = new Array(16).fill(0);
 	identity(identityMatrix);
@@ -27,37 +33,38 @@ onMount(() => {
 		//transform the model matrix
 		const scaleFactor = 0.1;
 
-		const centerX = 0;
-		const centerY = 0;
-		const angleIncrement = (2 * Math.PI) / numInstances;
+		const { x, y } = distributeCirclePoints(radius, index, numInstances);
 
-		translate(mat, mat, [
-			centerX + radius * Math.cos(count * angleIncrement),
-			centerY + radius * Math.sin(count * angleIncrement),
-			0,
-		]);
+		translate(mat, mat, [x, y, 0]);
 		//translate(mat, mat, [count * -2, 0, 0]);
-		rotateY(mat, mat, toRadian(count * 10));
+		//rotateY(mat, mat, toRadian(count * 10));
 		scale(mat, mat, [scaleFactor, scaleFactor, scaleFactor]);
 		return new Float32Array(mat);
 	});
 
 	mesh1 = renderer.addMesh({
-		attributes: data,
+		attributes: sphereGeometry,
 		instances: numInstances,
 		matrices,
 		uniforms: {
 			color: [1, 1, 1],
 		},
+		material: {
+			specular: createSpecular({
+				color: [1, 1, 1],
+				f90: 1,
+				roughness: 0.4,
+			}),
+		},
 	});
 
 	light1 = renderer.addLight(
 		createPointLight({
-			position: [-2, 2, -3],
+			position: [-2, 2, -4],
 			color: [1, 1, 1],
 			intensity: 0.6,
 			cutoffDistance: 3,
-			decayExponent: 3,
+			decayExponent: 1,
 		}),
 	);
 	renderer.addLight(
@@ -96,20 +103,21 @@ onMount(() => {
 
 	renderer.setLoop(animate);
 	renderer.start();
+	createOrbitControls(canvas, camera);
 });
 
 function animate() {
-	const rotation = 0.001 * Math.PI;
+	/*const rotation = 0.001 * Math.PI;
 	for (let i = 0; i < numInstances; i++) {
 		const tmp = get(mesh1.matrices[i]);
 		rotateY(tmp, tmp, rotation / 2);
 		rotateX(tmp, tmp, rotation);
 		rotateZ(tmp, tmp, rotation / 3);
 		mesh1.matrices[i].set(tmp);
-	}
+	}*/
 
-	const lightX = Math.sin(performance.now() / 3000) * 1;
-	const lightY = Math.cos(performance.now() / 3000) * 1;
+	const lightX = Math.sin(performance.now() / 2000) * 0.5;
+	const lightY = Math.cos(performance.now() / 2000) * 0.5;
 	const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;
 	const g = Math.cos(performance.now() / 5000) * 0.5 + 0.5;
 	const b = Math.sin(performance.now() / 4000) * 0.5 + 0.5;

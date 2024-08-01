@@ -13,6 +13,12 @@ float saturate(const in float a) {
     return clamp(a, 0.0f, 1.0f);
 }
 
+struct LightParams {
+    float distance;
+    vec3 direction;
+    vec3 irradiance;
+};
+
 struct PointLight {
     vec3 position;
     vec3 color;
@@ -36,21 +42,29 @@ float getDistanceAttenuation(const in float lightDistance, const in float cutoff
 
 }
 
-vec3 calculatePointLightBrightness(vec3 lightPosition, vec3 lightColor, float cutoffDistance, float decayExponent, vec3 vertexPosition, vec3 normal) {
+LightParams getIrradiance(vec3 lightPosition, vec3 lightColor,vec3 vertexPosition, vec3 normal) {
+    LightParams lightParams;
     vec3 offset = lightPosition - vertexPosition;
-    float lightDistance = length(offset);
-    vec3 direction = normalize(offset);
-    vec3 irradiance = saturate(dot(normal, direction)) * lightColor;
-    float distanceFalloff = getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);
-    return vec3(irradiance * distanceFalloff);
+    lightParams.distance = length(offset);
+    lightParams.direction = normalize(offset);
+    lightParams.irradiance = saturate(dot(normal, lightParams.direction)) * lightColor;
+    return lightParams;
+}
+
+float calculatePointLightBrightness(float lightDistance, float cutoffDistance, float decayExponent) {
+    return getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);
 }
 ` : ''
 }
 ${irradiance?
 `
+    vec3 irradiance = vec3(0.0f);
+    vec3 direction = vec3(0.0f);
     for(int i = 0; i < NUM_POINT_LIGHTS; i++) {
         PointLight pointLight = pointLights[i];
-        totalIrradiance += calculatePointLightBrightness(pointLight.position, pointLight.color, pointLight.cutoffDistance, pointLight.decayExponent, vertex, vNormal);
+        LightParams lightParams = getIrradiance(pointLight.position, pointLight.color, vertex, vNormal);
+        totalIrradiance += lightParams.irradiance * calculatePointLightBrightness(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);
+        ${specularIrradiance}
     }
 ` : ''
 }

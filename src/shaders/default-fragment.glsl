@@ -6,6 +6,7 @@ ${defines}
 #define RECIPROCAL_PI 0.3183098861837907
 
 uniform vec3 color;
+uniform vec3 cameraPosition;
 
 in vec3 vertex;
 in vec3 vNormal;

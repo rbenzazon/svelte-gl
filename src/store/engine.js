@@ -15,7 +15,7 @@ import {
 	setupMeshColor,
 	updateNormalMatrix,
 	updateInstanceNormalMatrix,
-	deriveNormalMatrix,
+	derivateNormalMatrix,
 } from "./gl.js";
 
 function createRenderer() {
@@ -32,18 +32,30 @@ function createRenderer() {
 	});
 	return {
 		subscribe,
-		setCamera: (position = [0, 0, -1], target = [0, 0, 0], fov = 80, near = 0.1, far = 1000, up = [0, 1, 0]) =>
-			update((renderer) => {
-				renderer.camera = {
-					fov,
-					near,
-					far,
-					position,
-					target,
-					up,
-				};
-				return renderer;
-			}),
+		setCamera: (...rest) => {
+			updateCamera(...rest);
+			return {
+				set: (...rest) => {
+					updateCamera(...rest);
+					setupCamera(appContext, get(renderer).camera)();
+				},
+				get: () => get(renderer).camera,
+			};
+			function updateCamera(position = [0, 0, -1], target = [0, 0, 0], fov = 80, near = 0.1, far = 1000, up = [0, 1, 0]) {
+				update((renderer) => {
+					renderer.camera = {
+						fov,
+						near,
+						far,
+						position,
+						target,
+						up,
+					};
+					return renderer;
+				});
+			}
+		},
+
 		addMesh: (mesh) => {
 			const index = get(renderer).meshes.length;
 
@@ -90,6 +102,7 @@ function createRenderer() {
 							meshWithMatrix.unsubs.forEach((unsub) => unsub());
 						},
 				...(matrices ? { matrices } : { transformMatrix }),
+				material: mesh.material,
 			};
 		},
 		addLight: (light) => {
@@ -199,7 +212,7 @@ const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex, in
 		if (!context.gl) {
 			return;
 		}
-		const normalMatrix = deriveNormalMatrix($transformMatrix);
+		const normalMatrix = derivateNormalMatrix($transformMatrix);
 		if (instanceIndex == null) {
 			updateNormalMatrix(context, normalMatrix);
 		} else {
@@ -281,7 +294,6 @@ const webglapp = derived(
 		}));
 
 		!get(renderState).init && list.push(initRenderer(rendererContext, appContext));
-
 		!get(renderState).init &&
 			list.push(
 				...$programs.reduce((acc, program) => {
@@ -289,11 +301,12 @@ const webglapp = derived(
 					return [
 						...acc,
 						program.createProgram(appContext),
-						program.createShaders(appContext),
+						program.createShaders(appContext, program.mesh),
 						program.endProgramSetup(appContext),
 						...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
 						setupAttributes(appContext, program.mesh),
 						setupCamera(appContext, $renderer.camera),
+						...(program.mesh?.material?.specular ? [program.mesh.material.specular.setupSpecular(appContext)] : []),
 						setupTransformMatrix(
 							appContext,
 							program.mesh.instances == null ? get(program.mesh.transformMatrix) : program.mesh.matrices,

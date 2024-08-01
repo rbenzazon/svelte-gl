@@ -90,3 +90,10 @@ export function showMatrix(matrix) {
 	}, "");
 	return matrixString;
 }
+export function distributeCirclePoints(radius, index, numberOfPoints) {
+	const angleIncrement = (2 * Math.PI) / numberOfPoints;
+	return {
+		x: radius * Math.cos(index * angleIncrement),
+		y: radius * Math.sin(index * angleIncrement),
+	};
+}
