@@ -3,9 +3,14 @@ precision mediump float;
     
 in vec3 position;
 in vec3 normal;
-
+${instances ?
+`
 in mat4 world;
 in mat4 normalMatrix;
+` : `
+uniform mat4 world;
+uniform mat4 normalMatrix;
+`}
 
 uniform mat4 view;
 uniform mat4 projection;

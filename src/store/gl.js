@@ -32,7 +32,7 @@ export function initRenderer(rendererContext, appContext) {
 		}));
 		gl.viewportWidth = rendererContext.canvas.width;
 		gl.viewportHeight = rendererContext.canvas.height;
-		gl.clearColor.apply(gl, rendererContext.backgroundColor);
+		gl.clearColor.apply(gl, rendererContext.backgroundColor.map(SRGBToLinear));
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
@@ -99,8 +99,11 @@ export function createShaders() {
 			context = get(context);
 			const gl = context.gl;
 			const program = context.program;
-			const vertexShaderSource = defaultVertex;
 
+			const vertexShaderSource = templateLiteralRenderer({
+				instances: mesh.instances > 1,
+			},defaultVertex);
+			console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
@@ -109,7 +112,7 @@ export function createShaders() {
 			}
 			let specularIrradiance = "";
 			let specularDeclaration = "";
-			if (mesh.material.specular) {
+			if (mesh.material?.specular) {
 				specularDeclaration = mesh.material.specular.shader({ declaration: true, irradiance: false });
 				specularIrradiance = mesh.material.specular.shader({ declaration: false, irradiance: true });
 			}
@@ -127,7 +130,7 @@ export function createShaders() {
 						...(context.toneMappings?.length > 0
 							? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure, color: false }))]
 							: []),
-						...(mesh.material.specular ? [specularDeclaration] : []),
+						...(mesh.material?.specular ? [specularDeclaration] : []),
 					].join("\n"),
 					irradiance: [
 						...(context.numPointLights
@@ -157,13 +160,40 @@ export function createShaders() {
 	};
 }
 
-export function setupMeshColor(context, { color }) {
+function convertSRGBToLinear(hex){
+	hex = Math.floor( hex );
+	return [
+		( hex >> 16 & 255 ) / 255,
+		( hex >> 8 & 255 ) / 255,
+		( hex & 255 ) / 255,
+	].map( SRGBToLinear );
+}
+
+function SRGBToLinear( c ,index) {
+	if(index === 3){
+		return c;
+	}
+	return ( c < 0.04045 ) ? c * 0.0773993808 : Math.pow( c * 0.9478672986 + 0.0521327014, 2.4 );
+}
+
+export function setupMeshColor(context, {diffuse,metalness}) {
 	return function () {
 		context = get(context);
 		const gl = context.gl;
 		const program = context.program;
-		const colorLocation = gl.getUniformLocation(program, "color");
-		gl.uniform3fv(colorLocation, new Float32Array(color));
+		const colorLocation = gl.getUniformLocation(program, "diffuse");
+		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map( SRGBToLinear )));
+		const metalnessLocation = gl.getUniformLocation(program, "metalness");
+		gl.uniform1f(metalnessLocation, metalness);
+	};
+}
+
+export function setupAmbientLight(context, ambientLightColor) {
+	return function () {
+		context = get(context);
+		const {gl,program} = context;
+		const ambientLightColorLocation = gl.getUniformLocation(program, "ambientLightColor");
+		gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
 	};
 }
 

@@ -1,5 +1,6 @@
-import { create, invert, transpose, identity, lookAt, perspective } from "gl-matrix/esm/mat4.js";
+import { identity } from "gl-matrix/esm/mat4.js";
 import { derived, get, writable } from "svelte/store";
+
 import {
 	setupNormalMatrix,
 	initRenderer,
@@ -10,6 +11,7 @@ import {
 	render,
 	setupTransformMatrix,
 	setupAttributes,
+	setupAmbientLight,
 	updateTransformMatrix,
 	updateInstanceTransformMatrix,
 	setupMeshColor,
@@ -23,12 +25,12 @@ function createRenderer() {
 		backgroundColor: [2.55, 2.55, 2.55, 1],
 		canvas: null,
 		camera: null,
-		//worldMatrix: null,
 		meshes: [],
 		lights: [],
 		toneMappings: [],
 		loop: null,
 		enabled: false,
+		ambientLightColor: [0, 0, 0],
 	});
 	return {
 		subscribe,
@@ -77,6 +79,10 @@ function createRenderer() {
 			} else {
 				var { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index);
 			}
+			mesh.material = {
+				metalness: 0,
+				...mesh.material,
+			};
 			const meshWithMatrix = {
 				...mesh,
 				...(matrices ? { matrices, unsubs } : { transformMatrix }),
@@ -226,14 +232,12 @@ const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex, in
 		unsubNormalMatrix,
 	};
 };
-//export const worldMatrix = createMeshMatricesStore();
 
 export const programs = derived(renderer, ($renderer) => {
 	return $renderer.meshes.map((mesh) => {
 		return {
 			createProgram,
 			mesh,
-			/*material: mesh.material,*/
 			attributes: mesh.attributes,
 			uniforms: mesh.uniforms,
 			createShaders: createShaders(),
@@ -297,13 +301,15 @@ const webglapp = derived(
 		!get(renderState).init &&
 			list.push(
 				...$programs.reduce((acc, program) => {
+					console.log("material", program.mesh.material);
 					lastProgramRendered.set(program);
 					return [
 						...acc,
 						program.createProgram(appContext),
 						program.createShaders(appContext, program.mesh),
 						program.endProgramSetup(appContext),
-						...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
+						setupAmbientLight(appContext, $renderer.ambientLightColor),
+						...(program.mesh.material ? [setupMeshColor(appContext, program.mesh.material)] : []),
 						setupAttributes(appContext, program.mesh),
 						setupCamera(appContext, $renderer.camera),
 						...(program.mesh?.material?.specular ? [program.mesh.material.specular.setupSpecular(appContext)] : []),

@@ -14,9 +14,10 @@ float saturate(const in float a) {
 }
 
 struct LightParams {
-    float distance;
-    vec3 direction;
     vec3 irradiance;
+    vec3 direction;
+    vec3 color;
+    float distance;
 };
 
 struct PointLight {
@@ -42,12 +43,17 @@ float getDistanceAttenuation(const in float lightDistance, const in float cutoff
 
 }
 
-LightParams getIrradiance(vec3 lightPosition, vec3 lightColor,vec3 vertexPosition, vec3 normal) {
-    LightParams lightParams;
-    vec3 offset = lightPosition - vertexPosition;
-    lightParams.distance = length(offset);
-    lightParams.direction = normalize(offset);
-    lightParams.irradiance = saturate(dot(normal, lightParams.direction)) * lightColor;
+LightParams getDirectDiffuse(const in PointLight pointLight,const in vec3 vertexPosition, const in vec3 normal,const in PhysicalMaterial material, inout ReflectedLight reflectedLight) {
+    LightParams lightParams = LightParams(vec3(0.0f), vec3(0.0f), vec3(0.0f), 0.0f);
+    vec3 lVector = pointLight.position - vertexPosition;
+    lightParams.distance = length(lVector);
+    lightParams.direction = normalize(lVector);
+    float dotNL = saturate(dot(normal, lightParams.direction));
+    lightParams.color = pointLight.color;
+    lightParams.color *= getDistanceAttenuation(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);
+    lightParams.irradiance = dotNL * lightParams.color;
+    
+    reflectedLight.directDiffuse += lightParams.irradiance * BRDF_Lambert(material.diffuseColor);
     return lightParams;
 }
 
@@ -62,8 +68,10 @@ ${irradiance?
     vec3 direction = vec3(0.0f);
     for(int i = 0; i < NUM_POINT_LIGHTS; i++) {
         PointLight pointLight = pointLights[i];
-        LightParams lightParams = getIrradiance(pointLight.position, pointLight.color, vertex, vNormal);
-        totalIrradiance += lightParams.irradiance * calculatePointLightBrightness(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);
+        
+
+        LightParams lightParams = getDirectDiffuse(pointLight, vertex, vNormal, material, reflectedLight);
+        totalIrradiance += reflectedLight.directDiffuse;
         ${specularIrradiance}
     }
 ` : ''
