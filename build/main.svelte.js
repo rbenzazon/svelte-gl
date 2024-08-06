@@ -884,92 +884,6 @@ function invert(out, a) {
   return out;
 }
 /**
- * Translate a mat4 by the given vector
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the matrix to translate
- * @param {ReadonlyVec3} v vector to translate by
- * @returns {mat4} out
- */
-
-function translate(out, a, v) {
-  var x = v[0],
-      y = v[1],
-      z = v[2];
-  var a00, a01, a02, a03;
-  var a10, a11, a12, a13;
-  var a20, a21, a22, a23;
-
-  if (a === out) {
-    out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
-    out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
-    out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
-    out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
-  } else {
-    a00 = a[0];
-    a01 = a[1];
-    a02 = a[2];
-    a03 = a[3];
-    a10 = a[4];
-    a11 = a[5];
-    a12 = a[6];
-    a13 = a[7];
-    a20 = a[8];
-    a21 = a[9];
-    a22 = a[10];
-    a23 = a[11];
-    out[0] = a00;
-    out[1] = a01;
-    out[2] = a02;
-    out[3] = a03;
-    out[4] = a10;
-    out[5] = a11;
-    out[6] = a12;
-    out[7] = a13;
-    out[8] = a20;
-    out[9] = a21;
-    out[10] = a22;
-    out[11] = a23;
-    out[12] = a00 * x + a10 * y + a20 * z + a[12];
-    out[13] = a01 * x + a11 * y + a21 * z + a[13];
-    out[14] = a02 * x + a12 * y + a22 * z + a[14];
-    out[15] = a03 * x + a13 * y + a23 * z + a[15];
-  }
-
-  return out;
-}
-/**
- * Scales the mat4 by the dimensions in the given vec3 not using vectorization
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the matrix to scale
- * @param {ReadonlyVec3} v the vec3 to scale the matrix by
- * @returns {mat4} out
- **/
-
-function scale(out, a, v) {
-  var x = v[0],
-      y = v[1],
-      z = v[2];
-  out[0] = a[0] * x;
-  out[1] = a[1] * x;
-  out[2] = a[2] * x;
-  out[3] = a[3] * x;
-  out[4] = a[4] * y;
-  out[5] = a[5] * y;
-  out[6] = a[6] * y;
-  out[7] = a[7] * y;
-  out[8] = a[8] * z;
-  out[9] = a[9] * z;
-  out[10] = a[10] * z;
-  out[11] = a[11] * z;
-  out[12] = a[12];
-  out[13] = a[13];
-  out[14] = a[14];
-  out[15] = a[15];
-  return out;
-}
-/**
  * Generates a perspective projection matrix with the given bounds.
  * The near/far clip planes correspond to a normalized device coordinate Z range of [-1, 1],
  * which matches WebGL/OpenGL's clip volume.
@@ -1103,9 +1017,9 @@ function lookAt(out, eye, center, up) {
   return out;
 }
 
-var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\n\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\nout vec3 vViewPosition;\r\n\r\nvoid main() {\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n    vViewPosition = -gl_Position.xyz;\r\n}";
+var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\n${instances ?\r\n`\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n` : `\r\nuniform mat4 world;\r\nuniform mat4 normalMatrix;\r\n`}\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\nout vec3 vViewPosition;\r\n\r\nvoid main() {\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n    vViewPosition = -gl_Position.xyz;\r\n}";
 
-var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 color;\r\nuniform vec3 cameraPosition;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n    fragColor = vec4(RECIPROCAL_PI * color * totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n}";
+var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n    fragColor = vec4(totalIrradiance, 1.0f);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
 
 const templateGenerator = (props, template) => {
 	return (propsValues) => Function.constructor(...props, `return \`${template}\``)(...propsValues);
@@ -1122,6 +1036,38 @@ const objectToDefines = (obj) => {
 		}),
 	].join("\n");
 };
+
+function convertToVector4(color) {
+    if(Array.isArray(color)) {
+        if(color.length === 4) {
+            return color;
+        }
+        return [...color, 1];
+    }
+    if (typeof color === 'number') {
+        return convertHexToVector4(color);
+    }
+    if (typeof color === 'string' && color.startsWith('#')) {
+        return convertHexToVector4(parseInt(color.replace('#', '0x')));
+    }
+    return color;
+}
+
+function convertHexToVector4(hex) {
+    return [
+        (hex >> 24 & 255) / 255,
+        (hex >> 16 & 255) / 255,
+        (hex >> 8 & 255) / 255,
+        (hex & 255) / 255
+    ];
+}
+
+function SRGBToLinear( c ,index) {
+	if(index === 3){
+		return c;
+	}
+	return ( c < 0.04045 ) ? c * 0.0773993808 : Math.pow( c * 0.9478672986 + 0.0521327014, 2.4 );
+}
 
 // Uniform Buffer Objects, must have unique binding points
 const UBO_BINDING_POINT_POINTLIGHT = 0;
@@ -1149,7 +1095,7 @@ function initRenderer(rendererContext, appContext) {
 		}));
 		gl.viewportWidth = rendererContext.canvas.width;
 		gl.viewportHeight = rendererContext.canvas.height;
-		gl.clearColor.apply(gl, rendererContext.backgroundColor);
+		gl.clearColor.apply(gl, rendererContext.backgroundColor.map(SRGBToLinear));
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
@@ -1216,8 +1162,11 @@ function createShaders() {
 			context = get_store_value(context);
 			const gl = context.gl;
 			const program = context.program;
-			const vertexShaderSource = defaultVertex;
 
+			const vertexShaderSource = templateLiteralRenderer({
+				instances: mesh.instances > 1,
+			},defaultVertex);
+			console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
@@ -1226,7 +1175,7 @@ function createShaders() {
 			}
 			let specularIrradiance = "";
 			let specularDeclaration = "";
-			if (mesh.material.specular) {
+			if (mesh.material?.specular) {
 				specularDeclaration = mesh.material.specular.shader({ declaration: true, irradiance: false });
 				specularIrradiance = mesh.material.specular.shader({ declaration: false, irradiance: true });
 			}
@@ -1244,7 +1193,7 @@ function createShaders() {
 						...(context.toneMappings?.length > 0
 							? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure, color: false }))]
 							: []),
-						...(mesh.material.specular ? [specularDeclaration] : []),
+						...(mesh.material?.specular ? [specularDeclaration] : []),
 					].join("\n"),
 					irradiance: [
 						...(context.numPointLights
@@ -1274,13 +1223,24 @@ function createShaders() {
 	};
 }
 
-function setupMeshColor(context, { color }) {
+function setupMeshColor(context, {diffuse,metalness}) {
 	return function () {
 		context = get_store_value(context);
 		const gl = context.gl;
 		const program = context.program;
-		const colorLocation = gl.getUniformLocation(program, "color");
-		gl.uniform3fv(colorLocation, new Float32Array(color));
+		const colorLocation = gl.getUniformLocation(program, "diffuse");
+		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map( SRGBToLinear )));
+		const metalnessLocation = gl.getUniformLocation(program, "metalness");
+		gl.uniform1f(metalnessLocation, metalness);
+	};
+}
+
+function setupAmbientLight(context, ambientLightColor) {
+	return function () {
+		context = get_store_value(context);
+		const {gl,program} = context;
+		const ambientLightColorLocation = gl.getUniformLocation(program, "ambientLightColor");
+		gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
 	};
 }
 
@@ -1530,12 +1490,12 @@ function createRenderer() {
 		backgroundColor: [2.55, 2.55, 2.55, 1],
 		canvas: null,
 		camera: null,
-		//worldMatrix: null,
 		meshes: [],
 		lights: [],
 		toneMappings: [],
 		loop: null,
 		enabled: false,
+		ambientLightColor: [0, 0, 0],
 	});
 	return {
 		subscribe,
@@ -1584,6 +1544,10 @@ function createRenderer() {
 			} else {
 				var { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index);
 			}
+			mesh.material = {
+				metalness: 0,
+				...mesh.material,
+			};
 			const meshWithMatrix = {
 				...mesh,
 				...(matrices ? { matrices, unsubs } : { transformMatrix }),
@@ -1645,7 +1609,7 @@ function createRenderer() {
 			}),
 		setBackgroundColor: (backgroundColor) =>
 			update((renderer) => {
-				renderer.backgroundColor = backgroundColor;
+				renderer.backgroundColor = convertToVector4(backgroundColor);
 				return renderer;
 			}),
 		start: () =>
@@ -1733,14 +1697,12 @@ const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex, in
 		unsubNormalMatrix,
 	};
 };
-//export const worldMatrix = createMeshMatricesStore();
 
 const programs = derived(renderer, ($renderer) => {
 	return $renderer.meshes.map((mesh) => {
 		return {
 			createProgram,
 			mesh,
-			/*material: mesh.material,*/
 			attributes: mesh.attributes,
 			uniforms: mesh.uniforms,
 			createShaders: createShaders(),
@@ -1804,13 +1766,15 @@ const webglapp = derived(
 		!get_store_value(renderState).init &&
 			list.push(
 				...$programs.reduce((acc, program) => {
+					console.log("material", program.mesh.material);
 					lastProgramRendered.set(program);
 					return [
 						...acc,
 						program.createProgram(appContext),
 						program.createShaders(appContext, program.mesh),
 						program.endProgramSetup(appContext),
-						...(program.mesh.uniforms?.color ? [setupMeshColor(appContext, program.uniforms)] : []),
+						setupAmbientLight(appContext, $renderer.ambientLightColor),
+						...(program.mesh.material ? [setupMeshColor(appContext, program.mesh.material)] : []),
 						setupAttributes(appContext, program.mesh),
 						setupCamera(appContext, $renderer.camera),
 						...(program.mesh?.material?.specular ? [program.mesh.material.specular.setupSpecular(appContext)] : []),
@@ -2012,13 +1976,6 @@ function normalizeNormals(normals) {
 		normals[i + 1] *= n;
 		normals[i + 2] *= n;
 	}
-}
-function distributeCirclePoints(radius, index, numberOfPoints) {
-	const angleIncrement = (2 * Math.PI) / numberOfPoints;
-	return {
-		x: radius * Math.cos(index * angleIncrement),
-		y: radius * Math.sin(index * angleIncrement),
-	};
 }
 
 /**
@@ -2230,7 +2187,7 @@ const initialIndices = [
 	14, 5, 1, 5, 9,
 ];
 
-var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct LightParams {\r\n    float distance;\r\n    vec3 direction;\r\n    vec3 irradiance;\r\n};\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nLightParams getIrradiance(vec3 lightPosition, vec3 lightColor,vec3 vertexPosition, vec3 normal) {\r\n    LightParams lightParams;\r\n    vec3 offset = lightPosition - vertexPosition;\r\n    lightParams.distance = length(offset);\r\n    lightParams.direction = normalize(offset);\r\n    lightParams.irradiance = saturate(dot(normal, lightParams.direction)) * lightColor;\r\n    return lightParams;\r\n}\r\n\r\nfloat calculatePointLightBrightness(float lightDistance, float cutoffDistance, float decayExponent) {\r\n    return getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    vec3 irradiance = vec3(0.0f);\r\n    vec3 direction = vec3(0.0f);\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        LightParams lightParams = getIrradiance(pointLight.position, pointLight.color, vertex, vNormal);\r\n        totalIrradiance += lightParams.irradiance * calculatePointLightBrightness(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);\r\n        ${specularIrradiance}\r\n    }\r\n` : ''\r\n}\r\n";
+var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct LightParams {\r\n    vec3 irradiance;\r\n    vec3 direction;\r\n    vec3 color;\r\n    float distance;\r\n};\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nLightParams getDirectDiffuse(const in PointLight pointLight,const in vec3 vertexPosition, const in vec3 normal,const in PhysicalMaterial material, inout ReflectedLight reflectedLight) {\r\n    LightParams lightParams = LightParams(vec3(0.0f), vec3(0.0f), vec3(0.0f), 0.0f);\r\n    vec3 lVector = pointLight.position - vertexPosition;\r\n    lightParams.distance = length(lVector);\r\n    lightParams.direction = normalize(lVector);\r\n    float dotNL = saturate(dot(normal, lightParams.direction));\r\n    lightParams.color = pointLight.color;\r\n    lightParams.color *= getDistanceAttenuation(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);\r\n    lightParams.irradiance = dotNL * lightParams.color;\r\n    \r\n    reflectedLight.directDiffuse += lightParams.irradiance * BRDF_Lambert(material.diffuseColor);\r\n    return lightParams;\r\n}\r\n\r\nfloat calculatePointLightBrightness(float lightDistance, float cutoffDistance, float decayExponent) {\r\n    return getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    vec3 irradiance = vec3(0.0f);\r\n    vec3 direction = vec3(0.0f);\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        \r\n\r\n        LightParams lightParams = getDirectDiffuse(pointLight, vertex, vNormal, material, reflectedLight);\r\n        totalIrradiance += reflectedLight.directDiffuse;\r\n        ${specularIrradiance}\r\n    }\r\n` : ''\r\n}\r\n";
 
 const createPointLight = (props) => {
 	return {
@@ -2327,15 +2284,6 @@ function updateOneLight(context, lights, light) {
 	}
 }
 
-var AGXShader = "${declaration?\r\n`\r\n// tone mapping taken from three.js\r\nfloat toneMappingExposure = ${exposure};\r\n\r\n    // Matrices for rec 2020 <> rec 709 color space conversion\r\n    // matrix provided in row-major order so it has been transposed\r\n    // https://www.itu.int/pub/R-REP-BT.2407-2017\r\nconst mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(vec3(1.6605f, -0.1246f, -0.0182f), vec3(-0.5876f, 1.1329f, -0.1006f), vec3(-0.0728f, -0.0083f, 1.1187f));\r\n\r\nconst mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(vec3(0.6274f, 0.0691f, 0.0164f), vec3(0.3293f, 0.9195f, 0.0880f), vec3(0.0433f, 0.0113f, 0.8956f));\r\n\r\n    // https://iolite-engine.com/blog_posts/minimal_agx_implementation\r\n    // Mean error^2: 3.6705141e-06\r\nvec3 agxDefaultContrastApprox(vec3 x) {\r\n\r\n    vec3 x2 = x * x;\r\n    vec3 x4 = x2 * x2;\r\n\r\n    return +15.5f * x4 * x2 - 40.14f * x4 * x + 31.96f * x4 - 6.868f * x2 * x + 0.4298f * x2 + 0.1191f * x - 0.00232f;\r\n\r\n}\r\n\r\nvec3 AgXToneMapping(vec3 color) {\r\n\r\n        // AgX constants\r\n    const mat3 AgXInsetMatrix = mat3(vec3(0.856627153315983f, 0.137318972929847f, 0.11189821299995f), vec3(0.0951212405381588f, 0.761241990602591f, 0.0767994186031903f), vec3(0.0482516061458583f, 0.101439036467562f, 0.811302368396859f));\r\n\r\n        // explicit AgXOutsetMatrix generated from Filaments AgXOutsetMatrixInv\r\n    const mat3 AgXOutsetMatrix = mat3(vec3(1.1271005818144368f, -0.1413297634984383f, -0.14132976349843826f), vec3(-0.11060664309660323f, 1.157823702216272f, -0.11060664309660294f), vec3(-0.016493938717834573f, -0.016493938717834257f, 1.2519364065950405f));\r\n\r\n        // LOG2_MIN      = -10.0\r\n        // LOG2_MAX      =  +6.5\r\n        // MIDDLE_GRAY   =  0.18\r\n    const float AgxMinEv = -12.47393f;  // log2( pow( 2, LOG2_MIN ) * MIDDLE_GRAY )\r\n    const float AgxMaxEv = 4.026069f;    // log2( pow( 2, LOG2_MAX ) * MIDDLE_GRAY )\r\n\r\n    color *= toneMappingExposure;\r\n\r\n    color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;\r\n\r\n    color = AgXInsetMatrix * color;\r\n\r\n        // Log2 encoding\r\n    color = max(color, 1e-10f); // avoid 0 or negative numbers for log2\r\n    color = log2(color);\r\n    color = (color - AgxMinEv) / (AgxMaxEv - AgxMinEv);\r\n\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n        // Apply sigmoid\r\n    color = agxDefaultContrastApprox(color);\r\n\r\n        // Apply AgX look\r\n        // v = agxLook(v, look);\r\n\r\n    color = AgXOutsetMatrix * color;\r\n\r\n        // Linearize\r\n    color = pow(max(vec3(0.0f), color), vec3(2.2f));\r\n\r\n    color = LINEAR_REC2020_TO_LINEAR_SRGB * color;\r\n\r\n        // Gamut mapping. Simple clamp for now.\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n    return color;\r\n\r\n}\r\n` : ''\r\n}\r\n${color?\r\n`\r\n    fragColor = vec4(AgXToneMapping(fragColor.xyz),1.0f);\r\n` : ''\r\n}";
-
-const createAGXToneMapping = (props) => {
-	return {
-		exposure: `${props.exposure.toLocaleString("en", { minimumFractionDigits: 1 })}f`,
-		shader: (segment) => templateLiteralRenderer(segment, AGXShader),
-	};
-};
-
 function createOrbitControls(canvas, camera) {
 	console.log("Orbit controls");
 	canvas.addEventListener("mousedown", onMouseDown);
@@ -2368,35 +2316,9 @@ function createOrbitControls(canvas, camera) {
 	}
 }
 
-var specularShader = "${declaration?\r\n`\r\n\r\nuniform vec3 specularColor;\r\nuniform float specularF90;\r\nuniform float specularRoughness;\r\n\r\nin vec3 vViewPosition;\r\n\r\n#define EPSILON 1e-6\r\n\r\nvec3 F_Schlick( const in vec3 f0, const in float f90, const in float dotVH ) {\r\n\r\n\t// Original approximation by Christophe Schlick '94\r\n\t// float fresnel = pow( 1.0 - dotVH, 5.0 );\r\n\r\n\t// Optimized variant (presented by Epic at SIGGRAPH '13)\r\n\t// https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf\r\n\tfloat fresnel = exp2( ( - 5.55473 * dotVH - 6.98316 ) * dotVH );\r\n\r\n\treturn f0 * ( 1.0 - fresnel ) + ( f90 * fresnel );\r\n\r\n} \r\n\r\n// Moving Frostbite to Physically Based Rendering 3.0 - page 12, listing 2\r\n// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\nfloat V_GGX_SmithCorrelated( const in float alpha, const in float dotNL, const in float dotNV ) {\r\n\r\n\tfloat a2 = pow2( alpha );\r\n\r\n\tfloat gv = dotNL * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNV ) );\r\n\tfloat gl = dotNV * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNL ) );\r\n\r\n\treturn 0.5 / max( gv + gl, EPSILON );\r\n\r\n}\r\n\r\n// Microfacet Models for Refraction through Rough Surfaces - equation (33)\r\n// http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html\r\n// alpha is \"roughness squared\" in Disney’s reparameterization\r\nfloat D_GGX( const in float alpha, const in float dotNH ) {\r\n\r\n\tfloat a2 = pow2( alpha );\r\n\r\n\tfloat denom = pow2( dotNH ) * ( a2 - 1.0 ) + 1.0; // avoid alpha = 0 with dotNH = 1\r\n\r\n\treturn RECIPROCAL_PI * a2 / pow2( denom );\r\n\r\n}\r\n\r\nvec3 BRDF_GGX( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in vec3 specularColor, const in float specularF90, const in float roughness) {\r\n\r\n\tfloat alpha = pow2( roughness ); // UE4's roughness\r\n\r\n\tvec3 halfDir = normalize( lightDir + viewDir );\r\n\r\n\tfloat dotNL = saturate( dot( normal, lightDir ) );\r\n\tfloat dotNV = saturate( dot( normal, viewDir ) );\r\n\tfloat dotNH = saturate( dot( normal, halfDir ) );\r\n\tfloat dotVH = saturate( dot( viewDir, halfDir ) );\r\n\r\n\tvec3 F = F_Schlick( specularColor, specularF90, dotVH );\r\n\r\n\tfloat V = V_GGX_SmithCorrelated( alpha, dotNL, dotNV );\r\n\r\n\tfloat D = D_GGX( alpha, dotNH );\r\n\r\n\treturn F * ( V * D );\r\n\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n        vec3 geometryViewDir = normalize( cameraPosition - vertex );\r\n        irradiance = lightParams.irradiance;\r\n        direction = lightParams.direction;\r\n        totalIrradiance += lightParams.irradiance * BRDF_GGX( lightParams.direction, geometryViewDir, normalize(vNormal), specularColor, specularF90, specularRoughness);//lightParams.irradiance; //* \r\n        //totalIrradiance = -vec3(geometryViewDir.z,geometryViewDir.z,geometryViewDir.z);//BRDF_GGX( lightParams.direction, geometryViewDir, normalize(vNormal), specularColor, specularF90, specularRoughness);\r\n\t\t//totalIrradiance = lightParams.irradiance;//vec3(-lightParams.direction.z,-lightParams.direction.z,-lightParams.direction.z);\r\n` : ''\r\n}";
+const skyblue = 0x87CEEB;
 
-const createSpecular = ({ color, f90, roughness }) => {
-	return {
-		color,
-		f90,
-		roughness,
-		shader: (segment) => templateLiteralRenderer(segment, specularShader),
-		setupSpecular: (context) => setupSpecular(context, { color, f90, roughness }),
-	};
-};
-
-function setupSpecular(context, specular) {
-	return function () {
-		context = get_store_value(context);
-		/** @type {{gl: WebGL2RenderingContext}} **/
-		const { gl, program } = context;
-
-		const colorLocation = gl.getUniformLocation(program, "specularColor");
-		const f90Location = gl.getUniformLocation(program, "specularF90");
-		const roughnessLocation = gl.getUniformLocation(program, "specularRoughness");
-
-		gl.uniform3fv(colorLocation, specular.color);
-		gl.uniform1f(f90Location, specular.f90);
-		gl.uniform1f(roughnessLocation, specular.roughness);
-	};
-}
-
-/* src\main.svelte generated by Svelte v4.2.18 */
+/* src\main-test.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
 	let canvas_1;
@@ -2421,107 +2343,59 @@ function create_fragment(ctx) {
 		}
 	};
 }
-const numInstances = 20;
-const radius = 0.7;
 
-function instance($$self, $$props, $$invalidate) {
-	let canvas;
-	let light1;
-	let camera;
-
-	onMount(() => {
-		renderer.setCanvas(canvas);
-		renderer.setBackgroundColor([1, 1, 1, 1.0]);
-		camera = renderer.setCamera([0, 0, -3], [0, 0, 0], 30);
-		const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
-		let identityMatrix = new Array(16).fill(0);
-		identity(identityMatrix);
-
-		let matrices = new Array(numInstances).fill(0).map((_, index) => {
-			let mat = [...identityMatrix];
-
-			//transform the model matrix
-			const scaleFactor = 0.1;
-
-			const { x, y } = distributeCirclePoints(radius, index, numInstances);
-			translate(mat, mat, [x, y, 0]);
-
-			//translate(mat, mat, [count * -2, 0, 0]);
-			//rotateY(mat, mat, toRadian(count * 10));
-			scale(mat, mat, [scaleFactor, scaleFactor, scaleFactor]);
-
-			return new Float32Array(mat);
-		});
-
-		renderer.addMesh({
-			attributes: sphereGeometry,
-			instances: numInstances,
-			matrices,
-			uniforms: { color: [1, 1, 1] },
-			material: {
-				specular: createSpecular({ color: [1, 1, 1], f90: 1, roughness: 0.4 })
-			}
-		});
-
-		light1 = renderer.addLight(createPointLight({
-			position: [-2, 2, -4],
-			color: [1, 1, 1],
-			intensity: 0.6,
-			cutoffDistance: 3,
-			decayExponent: 1
-		}));
-
-		renderer.addLight(createPointLight({
-			position: [1, 1, -2],
-			color: [1, 1, 1],
-			intensity: 2,
-			cutoffDistance: 4,
-			decayExponent: 2
-		}));
-
-		renderer.addLight(createPointLight({
-			position: [-1, 1, -2],
-			color: [1, 1, 1],
-			intensity: 2,
-			cutoffDistance: 4,
-			decayExponent: 2
-		}));
-
-		renderer.addLight(createPointLight({
-			position: [0, 0, -5],
-			color: [1, 1, 1],
-			intensity: 3,
-			cutoffDistance: 10,
-			decayExponent: 2
-		}));
-
-		renderer.addToneMapping(createAGXToneMapping({ exposure: 1 }));
-		renderer.setLoop(animate);
-		renderer.start();
-		createOrbitControls(canvas, camera);
-	});
-
-	function animate() {
-		/*const rotation = 0.001 * Math.PI;
+function animate() {
+	
+} /*const rotation = 0.001 * Math.PI;
 for (let i = 0; i < numInstances; i++) {
 	const tmp = get(mesh1.matrices[i]);
 	rotateY(tmp, tmp, rotation / 2);
 	rotateX(tmp, tmp, rotation);
 	rotateZ(tmp, tmp, rotation / 3);
 	mesh1.matrices[i].set(tmp);
-}*/
-		const lightX = Math.sin(performance.now() / 2000) * 0.5;
+}*/ /*
+	const lightX = Math.sin(performance.now() / 2000) * 0.5;
+	const lightY = Math.cos(performance.now() / 2000) * 0.5;
+	const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;
+	const g = Math.cos(performance.now() / 5000) * 0.5 + 0.5;
+	const b = Math.sin(performance.now() / 4000) * 0.5 + 0.5;
+	light1.set({
+		position: [lightX, lightY, -0.4],
+		color: [r, g, b],
+	});*/
 
-		const lightY = Math.cos(performance.now() / 2000) * 0.5;
-		const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;
-		const g = Math.cos(performance.now() / 5000) * 0.5 + 0.5;
-		const b = Math.sin(performance.now() / 4000) * 0.5 + 0.5;
+function instance($$self, $$props, $$invalidate) {
+	let canvas;
+	let camera;
 
-		light1.set({
-			position: [lightX, lightY, -0.4],
-			color: [r, g, b]
+	onMount(() => {
+		renderer.setCanvas(canvas);
+		renderer.setBackgroundColor(skyblue);
+		camera = renderer.setCamera([0, 0, -5], [0, 0, 0], 75);
+		const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
+
+		renderer.addMesh({
+			attributes: sphereGeometry,
+			material: { diffuse: [1, 0.5, 0.5] }, /*specular: createSpecular({
+	color: [1, 1, 1],
+	f90: 1,
+	roughness: 0.4,
+}),*/
+			
 		});
-	}
+
+		renderer.addLight(createPointLight({
+			position: [0, 1, -3],
+			color: [1, 1, 1],
+			intensity: 2,
+			cutoffDistance: 5,
+			decayExponent: 1
+		}));
+
+		renderer.setLoop(animate);
+		renderer.start();
+		createOrbitControls(canvas, camera);
+	});
 
 	function canvas_1_binding($$value) {
 		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
@@ -2533,11 +2407,11 @@ for (let i = 0; i < numInstances; i++) {
 	return [canvas, canvas_1_binding];
 }
 
-class Main extends SvelteComponent {
+class Main_test extends SvelteComponent {
 	constructor(options) {
 		super();
 		init(this, options, instance, create_fragment, safe_not_equal, {});
 	}
 }
 
-export { Main as default };
+export { Main_test as default };

@@ -19,6 +19,7 @@ import {
 	updateInstanceNormalMatrix,
 	derivateNormalMatrix,
 } from "./gl.js";
+import { convertToVector4 } from "../color/color-space.js";
 
 function createRenderer() {
 	const { subscribe, set, update } = writable({
@@ -144,7 +145,7 @@ function createRenderer() {
 			}),
 		setBackgroundColor: (backgroundColor) =>
 			update((renderer) => {
-				renderer.backgroundColor = backgroundColor;
+				renderer.backgroundColor = convertToVector4(backgroundColor);
 				return renderer;
 			}),
 		start: () =>

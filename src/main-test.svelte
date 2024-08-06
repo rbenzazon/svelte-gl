@@ -10,13 +10,15 @@ import { createAGXToneMapping } from "./tone-mapping/agx.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import { /*createFlatShadedNormals,*/ distributeCirclePoints, toRadian } from "./geometries/common.js";
 import { createSpecular } from "./material/specular/specular.js";
+import {skyblue} from "./color/color-keywords.js";
+
 let canvas;
 let light1;
 let mesh1;
 let camera;
 onMount(() => {
 	renderer.setCanvas(canvas);
-	renderer.setBackgroundColor([0.5294117647058824, 0.807843137254902, 0.9215686274509803, 1]);
+	renderer.setBackgroundColor(skyblue);
 	camera = renderer.setCamera([0, 0, -5], [0, 0, 0], 75);
 
 	const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);

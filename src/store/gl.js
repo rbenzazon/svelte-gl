@@ -4,6 +4,7 @@ import { renderState } from "./engine.js";
 import defaultVertex from "../shaders/default-vertex.glsl";
 import defaultFragment from "../shaders/default-fragment.glsl";
 import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";
+import { SRGBToLinear } from "../color/color-space.js";
 
 // Uniform Buffer Objects, must have unique binding points
 export const UBO_BINDING_POINT_POINTLIGHT = 0;
@@ -158,22 +159,6 @@ export function createShaders() {
 			gl.attachShader(program, fragmentShader);
 		};
 	};
-}
-
-function convertSRGBToLinear(hex){
-	hex = Math.floor( hex );
-	return [
-		( hex >> 16 & 255 ) / 255,
-		( hex >> 8 & 255 ) / 255,
-		( hex & 255 ) / 255,
-	].map( SRGBToLinear );
-}
-
-function SRGBToLinear( c ,index) {
-	if(index === 3){
-		return c;
-	}
-	return ( c < 0.04045 ) ? c * 0.0773993808 : Math.pow( c * 0.9478672986 + 0.0521327014, 2.4 );
 }
 
 export function setupMeshColor(context, {diffuse,metalness}) {
