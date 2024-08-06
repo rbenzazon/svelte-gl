@@ -19,7 +19,7 @@ import {
 	updateInstanceNormalMatrix,
 	derivateNormalMatrix,
 } from "./gl.js";
-import { convertToVector4 } from "../color/color-space.js";
+import { convertToVector4, convertToVector3 } from "../color/color-space.js";
 
 function createRenderer() {
 	const { subscribe, set, update } = writable({
@@ -111,6 +111,12 @@ function createRenderer() {
 				...(matrices ? { matrices } : { transformMatrix }),
 				material: mesh.material,
 			};
+		},
+		setAmbientLight: (color, intensity) =>{
+			update((renderer) => {
+				renderer.ambientLightColor = convertToVector3(color).map(c=>c*intensity);
+				return renderer
+			});
 		},
 		addLight: (light) => {
 			const index = get(renderer).lights.length;
@@ -303,6 +309,7 @@ const webglapp = derived(
 			list.push(
 				...$programs.reduce((acc, program) => {
 					console.log("material", program.mesh.material);
+					console.log("ambientLightColor", $renderer.ambientLightColor);
 					lastProgramRendered.set(program);
 					return [
 						...acc,

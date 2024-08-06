@@ -19,6 +19,7 @@ let camera;
 onMount(() => {
 	renderer.setCanvas(canvas);
 	renderer.setBackgroundColor(skyblue);
+	renderer.setAmbientLight(0xffffff,.5)
 	camera = renderer.setCamera([0, 0, -5], [0, 0, 0], 75);
 
 	const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
@@ -29,9 +30,9 @@ onMount(() => {
 		material: {
 			diffuse: [1, 0.5,0.5],
 			specular: createSpecular({
-				roughness: 0.1,
+				roughness: 0.3,
 				ior: 1.5,
-				intensity: 0.5,
+				intensity: 1,
 				color: [1, 1, 1],
 			}),
 		},

@@ -14,9 +14,30 @@ export function convertToVector4(color) {
     return color;
 }
 
+export function convertToVector3(color) {
+    if(Array.isArray(color)) {
+        return [...color];
+    }
+    if (typeof color === 'number') {
+        return convertHexToVector3(color);
+    }
+    if (typeof color === 'string' && color.startsWith('#')) {
+        return convertHexToVector3(parseInt(color.replace('#', '0x')));
+    }
+    return color;
+}
+
 export function convertHexToVector4(hex) {
     return [
         (hex >> 24 & 255) / 255,
+        (hex >> 16 & 255) / 255,
+        (hex >> 8 & 255) / 255,
+        (hex & 255) / 255
+    ];
+}
+
+export function convertHexToVector3(hex) {
+    return [
         (hex >> 16 & 255) / 255,
         (hex >> 8 & 255) / 255,
         (hex & 255) / 255

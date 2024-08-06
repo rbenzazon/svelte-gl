@@ -33,7 +33,7 @@ export function initRenderer(rendererContext, appContext) {
 		}));
 		gl.viewportWidth = rendererContext.canvas.width;
 		gl.viewportHeight = rendererContext.canvas.height;
-		gl.clearColor.apply(gl, rendererContext.backgroundColor.map(SRGBToLinear));
+		gl.clearColor.apply(gl, rendererContext.backgroundColor);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
@@ -178,6 +178,8 @@ export function setupAmbientLight(context, ambientLightColor) {
 		context = get(context);
 		const {gl,program} = context;
 		const ambientLightColorLocation = gl.getUniformLocation(program, "ambientLightColor");
+		console.log("ambientLightColor",ambientLightColor);
+		
 		gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
 	};
 }

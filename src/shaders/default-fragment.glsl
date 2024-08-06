@@ -55,7 +55,7 @@ void main() {
 
     vec3 totalIrradiance = vec3(0.0f);
     ${irradiance}
-	vec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.directSpecular;
+	vec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;
     fragColor = vec4(outgoingLight, 1.0f);
     //fragColor = vec4(totalIrradiance, 1.0f);
     ${toneMapping}

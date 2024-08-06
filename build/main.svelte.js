@@ -1019,7 +1019,7 @@ function lookAt(out, eye, center, up) {
 
 var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\n${instances ?\r\n`\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n` : `\r\nuniform mat4 world;\r\nuniform mat4 normalMatrix;\r\n`}\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\nout vec3 vViewPosition;\r\n\r\nvoid main() {\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n    vViewPosition = -gl_Position.xyz;\r\n}";
 
-var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, 1.0f);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
+var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, 1.0f);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
 
 const templateGenerator = (props, template) => {
 	return (propsValues) => Function.constructor(...props, `return \`${template}\``)(...propsValues);
@@ -1053,9 +1053,30 @@ function convertToVector4(color) {
     return color;
 }
 
+function convertToVector3(color) {
+    if(Array.isArray(color)) {
+        return [...color];
+    }
+    if (typeof color === 'number') {
+        return convertHexToVector3(color);
+    }
+    if (typeof color === 'string' && color.startsWith('#')) {
+        return convertHexToVector3(parseInt(color.replace('#', '0x')));
+    }
+    return color;
+}
+
 function convertHexToVector4(hex) {
     return [
         (hex >> 24 & 255) / 255,
+        (hex >> 16 & 255) / 255,
+        (hex >> 8 & 255) / 255,
+        (hex & 255) / 255
+    ];
+}
+
+function convertHexToVector3(hex) {
+    return [
         (hex >> 16 & 255) / 255,
         (hex >> 8 & 255) / 255,
         (hex & 255) / 255
@@ -1095,7 +1116,7 @@ function initRenderer(rendererContext, appContext) {
 		}));
 		gl.viewportWidth = rendererContext.canvas.width;
 		gl.viewportHeight = rendererContext.canvas.height;
-		gl.clearColor.apply(gl, rendererContext.backgroundColor.map(SRGBToLinear));
+		gl.clearColor.apply(gl, rendererContext.backgroundColor);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
@@ -1240,6 +1261,8 @@ function setupAmbientLight(context, ambientLightColor) {
 		context = get_store_value(context);
 		const {gl,program} = context;
 		const ambientLightColorLocation = gl.getUniformLocation(program, "ambientLightColor");
+		console.log("ambientLightColor",ambientLightColor);
+		
 		gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
 	};
 }
@@ -1576,6 +1599,12 @@ function createRenderer() {
 				material: mesh.material,
 			};
 		},
+		setAmbientLight: (color, intensity) =>{
+			update((renderer) => {
+				renderer.ambientLightColor = convertToVector3(color).map(c=>c*intensity);
+				return renderer
+			});
+		},
 		addLight: (light) => {
 			const index = get_store_value(renderer).lights.length;
 			const store = createLightStore(update, light, index);
@@ -1767,6 +1796,7 @@ const webglapp = derived(
 			list.push(
 				...$programs.reduce((acc, program) => {
 					console.log("material", program.mesh.material);
+					console.log("ambientLightColor", $renderer.ambientLightColor);
 					lastProgramRendered.set(program);
 					return [
 						...acc,
@@ -2413,6 +2443,7 @@ function instance($$self, $$props, $$invalidate) {
 	onMount(() => {
 		renderer.setCanvas(canvas);
 		renderer.setBackgroundColor(skyblue);
+		renderer.setAmbientLight(0xffffff, .5);
 		camera = renderer.setCamera([0, 0, -5], [0, 0, 0], 75);
 		const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
 
@@ -2421,9 +2452,9 @@ function instance($$self, $$props, $$invalidate) {
 			material: {
 				diffuse: [1, 0.5, 0.5],
 				specular: createSpecular({
-					roughness: 0.1,
+					roughness: 0.3,
 					ior: 1.5,
-					intensity: 0.5,
+					intensity: 1,
 					color: [1, 1, 1]
 				})
 			}
