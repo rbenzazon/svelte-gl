@@ -28,11 +28,12 @@ onMount(() => {
 		attributes: sphereGeometry,
 		material: {
 			diffuse: [1, 0.5,0.5],
-			/*specular: createSpecular({
+			specular: createSpecular({
+				roughness: 0.1,
+				ior: 1.5,
+				intensity: 0.5,
 				color: [1, 1, 1],
-				f90: 1,
-				roughness: 0.4,
-			}),*/
+			}),
 		},
 	});
 
