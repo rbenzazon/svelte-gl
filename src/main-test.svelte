@@ -10,7 +10,7 @@ import { createAGXToneMapping } from "./tone-mapping/agx.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import { /*createFlatShadedNormals,*/ distributeCirclePoints, toRadian } from "./geometries/common.js";
 import { createSpecular } from "./material/specular/specular.js";
-import {skyblue} from "./color/color-keywords.js";
+import { skyblue } from "./color/color-keywords.js";
 
 let canvas;
 let light1;
@@ -19,16 +19,15 @@ let camera;
 onMount(() => {
 	renderer.setCanvas(canvas);
 	renderer.setBackgroundColor(skyblue);
-	renderer.setAmbientLight(0xffffff,.5)
+	renderer.setAmbientLight(0xffffff, 0.5);
 	camera = renderer.setCamera([0, 0, -5], [0, 0, 0], 75);
 
 	const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
-	
 
 	mesh1 = renderer.addMesh({
 		attributes: sphereGeometry,
 		material: {
-			diffuse: [1, 0.5,0.5],
+			diffuse: [1, 0.5, 0.5],
 			specular: createSpecular({
 				roughness: 0.3,
 				ior: 1.5,
@@ -62,7 +61,7 @@ function animate() {
 		rotateZ(tmp, tmp, rotation / 3);
 		mesh1.matrices[i].set(tmp);
 	}*/
-/*
+	/*
 	const lightX = Math.sin(performance.now() / 2000) * 0.5;
 	const lightY = Math.cos(performance.now() / 2000) * 0.5;
 	const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;

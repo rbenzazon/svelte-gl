@@ -10,6 +10,6 @@ Sources at https://github.com/ParksProjets/Compile-JS-like-C
 
 */
 
-var Preprocessor = require('./lib/preprocessor.js');
+var Preprocessor = require("./lib/preprocessor.js");
 
 module.exports = Preprocessor;

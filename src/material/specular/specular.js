@@ -1,7 +1,7 @@
 import specularShader from "./specular.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
 import { get } from "svelte/store";
-//{ roughness = 0, ior = 1.5, intensity = 1, color = [1, 1, 1] } = 
+//{ roughness = 0, ior = 1.5, intensity = 1, color = [1, 1, 1] } =
 /**
  * @typedef SpecularProps
  * @property {number} [roughness=0]
@@ -11,9 +11,9 @@ import { get } from "svelte/store";
  */
 
 /**
- * 
- * @param {SpecularProps} props 
- * @returns 
+ *
+ * @param {SpecularProps} props
+ * @returns
  */
 export const createSpecular = (props) => {
 	return {

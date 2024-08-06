@@ -112,10 +112,10 @@ function createRenderer() {
 				material: mesh.material,
 			};
 		},
-		setAmbientLight: (color, intensity) =>{
+		setAmbientLight: (color, intensity) => {
 			update((renderer) => {
-				renderer.ambientLightColor = convertToVector3(color).map(c=>c*intensity);
-				return renderer
+				renderer.ambientLightColor = convertToVector3(color).map((c) => c * intensity);
+				return renderer;
 			});
 		},
 		addLight: (light) => {
@@ -308,8 +308,6 @@ const webglapp = derived(
 		!get(renderState).init &&
 			list.push(
 				...$programs.reduce((acc, program) => {
-					console.log("material", program.mesh.material);
-					console.log("ambientLightColor", $renderer.ambientLightColor);
 					lastProgramRendered.set(program);
 					return [
 						...acc,

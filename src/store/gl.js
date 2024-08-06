@@ -101,9 +101,12 @@ export function createShaders() {
 			const gl = context.gl;
 			const program = context.program;
 
-			const vertexShaderSource = templateLiteralRenderer({
-				instances: mesh.instances > 1,
-			},defaultVertex);
+			const vertexShaderSource = templateLiteralRenderer(
+				{
+					instances: mesh.instances > 1,
+				},
+				defaultVertex,
+			);
 			console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
@@ -161,13 +164,13 @@ export function createShaders() {
 	};
 }
 
-export function setupMeshColor(context, {diffuse,metalness}) {
+export function setupMeshColor(context, { diffuse, metalness }) {
 	return function () {
 		context = get(context);
 		const gl = context.gl;
 		const program = context.program;
 		const colorLocation = gl.getUniformLocation(program, "diffuse");
-		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map( SRGBToLinear )));
+		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
 		const metalnessLocation = gl.getUniformLocation(program, "metalness");
 		gl.uniform1f(metalnessLocation, metalness);
 	};
@@ -176,10 +179,8 @@ export function setupMeshColor(context, {diffuse,metalness}) {
 export function setupAmbientLight(context, ambientLightColor) {
 	return function () {
 		context = get(context);
-		const {gl,program} = context;
+		const { gl, program } = context;
 		const ambientLightColorLocation = gl.getUniformLocation(program, "ambientLightColor");
-		console.log("ambientLightColor",ambientLightColor);
-		
 		gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
 	};
 }

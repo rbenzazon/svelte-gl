@@ -1,5 +1,5 @@
-var Preprocessor = require('./@andrewray/glsl-preprocessor/index.js');
-const fs = require('fs');
+var Preprocessor = require("./@andrewray/glsl-preprocessor/index.js");
+const fs = require("fs");
 
 const shaderSource = `
 #version 300 es
@@ -1815,14 +1815,12 @@ gl_FragColor = linearToOutputTexel( gl_FragColor );
 }
 `;
 
-const result = new Preprocessor({
-	
-}).preprocess(shaderSource);
+const result = new Preprocessor({}).preprocess(shaderSource);
 
-fs.writeFile('./result-frag.glsl', result, (err) => {
-    if (err) {
-        console.error('Error writing file:', err);
-    } else {
-        console.log('File saved successfully!');
-    }
+fs.writeFile("./result-frag.glsl", result, (err) => {
+	if (err) {
+		console.error("Error writing file:", err);
+	} else {
+		console.log("File saved successfully!");
+	}
 });
