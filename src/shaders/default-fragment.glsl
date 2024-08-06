@@ -12,6 +12,7 @@ uniform vec3 cameraPosition;
 
 in vec3 vertex;
 in vec3 vNormal;
+in highp vec2 vUv;
 
 out vec4 fragColor;
 
@@ -48,6 +49,7 @@ vec4 linearToOutputTexel(vec4 value) {
 void main() {
     PhysicalMaterial material;
 	material.diffuseColor = diffuse.rgb * (1.0 - metalness);
+	${diffuseMapSample}
 
     ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
 

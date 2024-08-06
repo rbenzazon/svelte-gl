@@ -1,29 +1,38 @@
 <script type="module">
 import { onMount } from "svelte";
-import { get } from "svelte/store";
 import { renderer } from "./store/engine.js";
 //import { createCube } from "./geometries/cube.js";
 import { identity, rotateX, rotateY, rotateZ, translate, scale } from "gl-matrix/esm/mat4.js";
-import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
+import { createPolyhedron, createSmoothShadedNormals, generateUVs } from "./geometries/polyhedron.js";
 import { createPointLight } from "./lights/point-light.js";
 import { createAGXToneMapping } from "./tone-mapping/agx.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import { /*createFlatShadedNormals,*/ distributeCirclePoints, toRadian } from "./geometries/common.js";
 import { createSpecular } from "./material/specular/specular.js";
+import { skyblue } from "./color/color-keywords.js";
+import { createTexture } from "./texture/texture.js";
+
 let canvas;
 let light1;
 let mesh1;
 let camera;
 let once = false;
 const numInstances = 20;
-const radius = 0.7;
-onMount(() => {
+const radius = 1;
+
+onMount(async () => {
+	const diffuseMap = await createTexture({
+		url: "golfball-normal.jpg",
+		type: "diffuse",
+	});
 	renderer.setCanvas(canvas);
 
-	renderer.setBackgroundColor([1, 1, 1, 1.0]);
-	camera = renderer.setCamera([0, 0, -3], [0, 0, 0], 30);
+	renderer.setBackgroundColor(skyblue);
+	renderer.setAmbientLight(0xffffff, 0.5);
+	camera = renderer.setCamera([0, 0, -2], [0, 0, 0], 70);
 
-	const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
+	const sphereGeometry = createPolyhedron(1.5, 7, createSmoothShadedNormals);
+	sphereGeometry.uvs = generateUVs(sphereGeometry);
 
 	let identityMatrix = new Array(16).fill(0);
 	identity(identityMatrix);
@@ -46,15 +55,15 @@ onMount(() => {
 		attributes: sphereGeometry,
 		instances: numInstances,
 		matrices,
-		uniforms: {
-			color: [1, 1, 1],
-		},
 		material: {
+			diffuse: [1, 0.5, 0.5],
 			specular: createSpecular({
+				roughness: 0.3,
+				ior: 1.5,
+				intensity: 1,
 				color: [1, 1, 1],
-				f90: 1,
-				roughness: 0.4,
 			}),
+			diffuseMap,
 		},
 	});
 

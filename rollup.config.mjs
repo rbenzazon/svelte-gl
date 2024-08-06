@@ -5,7 +5,7 @@ import glsl from 'rollup-plugin-glsl';
 import commonjs from '@rollup/plugin-commonjs';
 
 export default {
-    input: 'src/main-test.svelte',
+    input: 'src/main.svelte',
     output: {
         file: 'build/main.svelte.js',
         format: 'esm',

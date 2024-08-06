@@ -3,6 +3,7 @@ precision mediump float;
     
 in vec3 position;
 in vec3 normal;
+in vec2 uv;
 ${instances ?
 `
 in mat4 world;
@@ -20,8 +21,10 @@ out vec3 vertexColor;
 out vec3 vNormal;
 out vec3 vertex;
 out vec3 vViewPosition;
+out highp vec2 vUv;
 
 void main() {
+    vUv = vec3( uv, 1 ).xy;
     // Pass the color down to the fragment shader
     vertexColor = vec3(1.27,1.27,1.27);
     // Pass the vertex down to the fragment shader

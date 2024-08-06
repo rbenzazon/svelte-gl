@@ -39,6 +39,7 @@ precision highp float;
 #define SHADER_NAME 
 #define STANDARD 
 #define PHYSICAL 
+#define USE_MAP
 uniform mat4 viewMatrix;
 uniform vec3 cameraPosition;
 uniform bool isOrthographic;

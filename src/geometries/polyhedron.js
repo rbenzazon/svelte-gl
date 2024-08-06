@@ -1,4 +1,5 @@
 import { lerp as lerpVec3, normalize as normalizeVec3 } from "gl-matrix/esm/vec3.js";
+import { add as addVec2, divide as divideVec2 } from "gl-matrix/esm/vec2.js";
 import { normalizeNormals, createVec3, multiplyScalarVec3 } from "./common";
 
 /**
@@ -128,6 +129,91 @@ export function createSmoothShadedNormals(positions) {
 	const normals = positions.slice();
 	normalizeNormals(normals);
 	return normals;
+}
+
+export function generateUVs({ positions }) {
+	const uvBuffer = [];
+
+	for (let i = 0; i < positions.length; i += 3) {
+		const vertex = [positions[i + 0], positions[i + 1], positions[i + 2]];
+		const u = azimuth(vertex) / 2 / Math.PI + 0.5;
+		const v = inclination(vertex) / Math.PI + 0.5;
+		uvBuffer.push(u, 1 - v);
+	}
+
+	correctUVs(uvBuffer, positions);
+
+	correctSeam(uvBuffer);
+
+	return uvBuffer;
+}
+
+function correctUVs(uvBuffer, positions) {
+	for (let i = 0, j = 0; i < positions.length; i += 9, j += 6) {
+		const a = [positions[i + 0], positions[i + 1], positions[i + 2]];
+		const b = [positions[i + 3], positions[i + 4], positions[i + 5]];
+		const c = [positions[i + 6], positions[i + 7], positions[i + 8]];
+
+		const uvA = [uvBuffer[j + 0], uvBuffer[j + 1]];
+		const uvB = [uvBuffer[j + 2], uvBuffer[j + 3]];
+		const uvC = [uvBuffer[j + 4], uvBuffer[j + 5]];
+
+		const centroid = [...a];
+		addVec2(centroid, centroid, b);
+		addVec2(centroid, centroid, c);
+		divideVec2(centroid, centroid, 3);
+
+		const azi = azimuth(centroid);
+
+		correctUV(uvBuffer, uvA, j + 0, a, azi);
+		correctUV(uvBuffer, uvB, j + 2, b, azi);
+		correctUV(uvBuffer, uvC, j + 4, c, azi);
+	}
+}
+
+function correctUV(uvBuffer, uv, stride, vector, azimuth) {
+	if (azimuth < 0 && uv.x === 1) {
+		uvBuffer[stride] = uv.x - 1;
+	}
+
+	if (vector[0] === 0 && vector[2] === 0) {
+		uvBuffer[stride] = azimuth / 2 / Math.PI + 0.5;
+	}
+}
+
+// Angle around the Y axis, counter-clockwise when looking from above.
+
+function azimuth(vector) {
+	return Math.atan2(vector[2], -vector[0]);
+}
+
+// Angle above the XZ plane.
+
+function inclination(vector) {
+	return Math.atan2(-vector[1], Math.sqrt(vector[0] * vector[0] + vector[2] * vector[2]));
+}
+
+function correctSeam(uvBuffer) {
+	// handle case when face straddles the seam, see #3269
+
+	for (let i = 0; i < uvBuffer.length; i += 6) {
+		// uv data of a single face
+
+		const x0 = uvBuffer[i + 0];
+		const x1 = uvBuffer[i + 2];
+		const x2 = uvBuffer[i + 4];
+
+		const max = Math.max(x0, x1, x2);
+		const min = Math.min(x0, x1, x2);
+
+		// 0.9 is somewhat arbitrary
+
+		if (max > 0.9 && min < 0.1) {
+			if (x0 < 0.2) uvBuffer[i + 0] += 1;
+			if (x1 < 0.2) uvBuffer[i + 2] += 1;
+			if (x2 < 0.2) uvBuffer[i + 4] += 1;
+		}
+	}
 }
 
 const t = (1 + Math.sqrt(5)) / 2;

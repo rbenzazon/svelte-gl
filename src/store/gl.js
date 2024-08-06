@@ -120,6 +120,20 @@ export function createShaders() {
 				specularDeclaration = mesh.material.specular.shader({ declaration: true, irradiance: false });
 				specularIrradiance = mesh.material.specular.shader({ declaration: false, irradiance: true });
 			}
+			let diffuseMapDeclaration = "";
+			let diffuseMapSample = "";
+			if (mesh.material?.diffuseMap) {
+				diffuseMapDeclaration = mesh.material.diffuseMap.shader({
+					declaration: true,
+					diffuseMapSample: false,
+					mapType: mesh.material.diffuseMap.type,
+				});
+				diffuseMapSample = mesh.material.diffuseMap.shader({
+					declaration: false,
+					diffuseMapSample: true,
+					mapType: mesh.material.diffuseMap.type,
+				});
+			}
 			const fragmentShaderSource = templateLiteralRenderer(
 				{
 					defines: objectToDefines({
@@ -135,7 +149,9 @@ export function createShaders() {
 							? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure, color: false }))]
 							: []),
 						...(mesh.material?.specular ? [specularDeclaration] : []),
+						...(mesh.material?.diffuseMap ? [diffuseMapDeclaration] : []),
 					].join("\n"),
+					diffuseMapSample,
 					irradiance: [
 						...(context.numPointLights
 							? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
@@ -422,6 +438,17 @@ export function setupAttributes(context, mesh) {
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
 			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, elementsData, gl.STATIC_DRAW);
 		}
+		if (mesh.attributes.uvs) {
+			const uvsData = new Float32Array(mesh.attributes.uvs);
+			const uvBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, uvsData, gl.STATIC_DRAW);
+			const uvLocation = gl.getAttribLocation(program, "uv");
+			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+			gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
+			gl.enableVertexAttribArray(uvLocation);
+		}
+
 		gl.bindVertexArray(null);
 	};
 }
