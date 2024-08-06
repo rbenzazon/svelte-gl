@@ -40,6 +40,7 @@ precision highp float;
 #define STANDARD 
 #define PHYSICAL 
 #define USE_MAP
+#define USE_NORMALMAP_OBJECTSPACE
 uniform mat4 viewMatrix;
 uniform vec3 cameraPosition;
 uniform bool isOrthographic;

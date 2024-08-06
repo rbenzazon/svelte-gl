@@ -126,12 +126,30 @@ export function createShaders() {
 				diffuseMapDeclaration = mesh.material.diffuseMap.shader({
 					declaration: true,
 					diffuseMapSample: false,
+					normalMapSample: false,
 					mapType: mesh.material.diffuseMap.type,
 				});
 				diffuseMapSample = mesh.material.diffuseMap.shader({
 					declaration: false,
 					diffuseMapSample: true,
+					normalMapSample: false,
 					mapType: mesh.material.diffuseMap.type,
+				});
+			}
+			let normalMapDeclaration = "";
+			let normalMapSample = "";
+			if (mesh.material?.normalMap) {
+				normalMapDeclaration = mesh.material.normalMap.shader({
+					declaration: true,
+					diffuseMapSample: false,
+					normalMapSample: false,
+					mapType: mesh.material.normalMap.type,
+				});
+				normalMapSample = mesh.material.normalMap.shader({
+					declaration: false,
+					diffuseMapSample: false,
+					normalMapSample: true,
+					mapType: mesh.material.normalMap.type,
 				});
 			}
 			const fragmentShaderSource = templateLiteralRenderer(
@@ -150,8 +168,10 @@ export function createShaders() {
 							: []),
 						...(mesh.material?.specular ? [specularDeclaration] : []),
 						...(mesh.material?.diffuseMap ? [diffuseMapDeclaration] : []),
+						...(mesh.material?.normalMap ? [normalMapDeclaration] : []),
 					].join("\n"),
 					diffuseMapSample,
+					normalMapSample,
 					irradiance: [
 						...(context.numPointLights
 							? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]

@@ -7,6 +7,11 @@ const types = {
 	normal: "normalMap",
 };
 
+const id = {
+	diffuse: 0,
+	normal: 1,
+};
+
 /**
  * @typedef TextureProps
  * @property {string} url
@@ -39,7 +44,7 @@ function loadTexture(url) {
 	});
 }
 
-function setupTexture(context, texture, type) {
+function setupTexture(context, texture, type, id) {
 	return function () {
 		context = get(context);
 		/** @type {{gl: WebGL2RenderingContext}} **/
@@ -48,9 +53,9 @@ function setupTexture(context, texture, type) {
 
 		var textureBuffer = gl.createTexture();
 		const textureLocation = gl.getUniformLocation(program, type);
-		gl.activeTexture(gl.TEXTURE0);
+		gl.activeTexture(gl["TEXTURE" + id]);
 		gl.bindTexture(gl.TEXTURE_2D, textureBuffer);
-		gl.uniform1i(textureLocation, 0);
+		gl.uniform1i(textureLocation, id);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture);
 		gl.generateMipmap(gl.TEXTURE_2D);
 

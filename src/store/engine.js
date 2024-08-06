@@ -317,6 +317,7 @@ const webglapp = derived(
 						setupAmbientLight(appContext, $renderer.ambientLightColor),
 						...(program.mesh.material ? [setupMeshColor(appContext, program.mesh.material)] : []),
 						...(program.mesh.material?.diffuseMap ? [program.mesh.material?.diffuseMap.setupTexture(appContext)] : []),
+						...(program.mesh.material?.normalMap ? [program.mesh.material?.normalMap.setupTexture(appContext)] : []),
 						setupAttributes(appContext, program.mesh),
 						setupCamera(appContext, $renderer.camera),
 						...(program.mesh?.material?.specular ? [program.mesh.material.specular.setupSpecular(appContext)] : []),

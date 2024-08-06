@@ -21,9 +21,9 @@ const numInstances = 20;
 const radius = 1;
 
 onMount(async () => {
-	const diffuseMap = await createTexture({
+	const normalMap = await createTexture({
 		url: "golfball-normal.jpg",
-		type: "diffuse",
+		type: "normal",
 	});
 	renderer.setCanvas(canvas);
 
@@ -58,12 +58,12 @@ onMount(async () => {
 		material: {
 			diffuse: [1, 0.5, 0.5],
 			specular: createSpecular({
-				roughness: 0.3,
-				ior: 1.5,
-				intensity: 1,
+				roughness: 0.12,
+				ior: 1,
+				intensity: 2,
 				color: [1, 1, 1],
 			}),
-			diffuseMap,
+			normalMap,
 		},
 	});
 
@@ -71,7 +71,7 @@ onMount(async () => {
 		createPointLight({
 			position: [-2, 2, -4],
 			color: [1, 1, 1],
-			intensity: 0.6,
+			intensity: 1,
 			cutoffDistance: 3,
 			decayExponent: 1,
 		}),

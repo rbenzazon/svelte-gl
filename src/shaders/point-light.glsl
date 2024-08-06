@@ -70,7 +70,7 @@ ${irradiance?
         PointLight pointLight = pointLights[i];
         
 
-        LightParams lightParams = getDirectDiffuse(pointLight, vertex, vNormal, material, reflectedLight);
+        LightParams lightParams = getDirectDiffuse(pointLight, vertex, normal, material, reflectedLight);
         totalIrradiance += reflectedLight.directDiffuse;
         ${specularIrradiance}
     }

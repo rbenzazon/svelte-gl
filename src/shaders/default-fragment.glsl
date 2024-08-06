@@ -9,6 +9,7 @@ uniform vec3 diffuse;
 uniform float metalness;
 uniform vec3 ambientLightColor;
 uniform vec3 cameraPosition;
+uniform mat3 normalMatrix;
 
 in vec3 vertex;
 in vec3 vNormal;
@@ -50,6 +51,10 @@ void main() {
     PhysicalMaterial material;
 	material.diffuseColor = diffuse.rgb * (1.0 - metalness);
 	${diffuseMapSample}
+	
+
+	vec3 normal = normalize( vNormal );
+	${normalMapSample}
 
     ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
 

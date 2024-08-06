@@ -360,6 +360,7 @@ void RE_IndirectSpecular_Physical( const in vec3 radiance, const in vec3 irradia
 float computeSpecularOcclusion( const in float dotNV, const in float ambientOcclusion, const in float roughness ) {
 	return clamp( a, 0.0, 1.0 );
 }
+	uniform mat3 normalMatrix;
 void main() {
 	vec4 diffuseColor = vec4( diffuse, opacity );
 	ReflectedLight reflectedLight = ReflectedLight( vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ), vec3( 0.0 ) );
@@ -371,6 +372,8 @@ float metalnessFactor = metalness;
 float faceDirection = gl_FrontFacing ? 1.0 : - 1.0;
 	vec3 normal = normalize( vNormal );
 vec3 nonPerturbedNormal = normal;
+	normal = texture( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;
+	normal = normalize( normalMatrix * normal );
 PhysicalMaterial material;
 material.diffuseColor = diffuseColor.rgb * ( 1.0 - metalnessFactor );
 vec3 dxy = max( abs( dFdx( nonPerturbedNormal ) ), abs( dFdy( nonPerturbedNormal ) ) );
