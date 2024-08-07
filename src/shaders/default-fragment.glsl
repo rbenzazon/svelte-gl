@@ -14,6 +14,7 @@ uniform mat3 normalMatrix;
 in vec3 vertex;
 in vec3 vNormal;
 in highp vec2 vUv;
+in vec3 vViewPosition;
 
 out vec4 fragColor;
 

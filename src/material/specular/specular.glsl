@@ -6,7 +6,7 @@ uniform float ior;
 uniform float specularIntensity;
 uniform vec3 specularColor;
 
-in vec3 vViewPosition;
+
 
 #define EPSILON 1e-6
 

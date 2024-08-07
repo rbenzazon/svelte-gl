@@ -29,7 +29,7 @@ export const createTexture = async (props) => {
 		type: types[props.type],
 		texture,
 		shader: (segment) => templateLiteralRenderer(segment, textureShader),
-		setupTexture: (context) => setupTexture(context, texture, types[props.type]),
+		setupTexture: (context) => setupTexture(context, texture, types[props.type], id[props.type], props.normalScale),
 	};
 };
 
@@ -44,7 +44,7 @@ function loadTexture(url) {
 	});
 }
 
-function setupTexture(context, texture, type, id) {
+function setupTexture(context, texture, type, id, normalScale) {
 	return function () {
 		context = get(context);
 		/** @type {{gl: WebGL2RenderingContext}} **/
@@ -66,5 +66,9 @@ function setupTexture(context, texture, type, id) {
 		// Prevents t-coordinate wrapping (repeating).
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		if (normalScale != null) {
+			const normalScaleLocation = gl.getUniformLocation(program, "normalScale");
+			gl.uniform1f(normalScaleLocation, normalScale);
+		}
 	};
 }
