@@ -9,7 +9,7 @@ uniform vec3 diffuse;
 uniform float metalness;
 uniform vec3 ambientLightColor;
 uniform vec3 cameraPosition;
-uniform mat3 normalMatrix;
+//uniform mat3 normalMatrix;
 
 in vec3 vertex;
 in vec3 vNormal;

@@ -23,7 +23,7 @@ const radius = 1;
 onMount(async () => {
 	const normalMap = await createTexture({
 		url: "golfball-normal.jpg",
-		normalScale: 4,
+		normalScale: [1, 1],
 		type: "normal",
 	});
 	renderer.setCanvas(canvas);

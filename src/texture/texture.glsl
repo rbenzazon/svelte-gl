@@ -1,7 +1,7 @@
 ${declaration?
 `
 uniform sampler2D ${mapType};
-uniform float normalScale;
+uniform vec2 normalScale;
 
 
 mat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {

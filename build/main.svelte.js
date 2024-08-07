@@ -516,6 +516,181 @@ if (typeof window !== 'undefined')
 	// @ts-ignore
 	(window.__svelte || (window.__svelte = { v: new Set() })).v.add(PUBLIC_VERSION);
 
+const subscriber_queue = [];
+
+/**
+ * Creates a `Readable` store that allows reading by subscription.
+ *
+ * https://svelte.dev/docs/svelte-store#readable
+ * @template T
+ * @param {T} [value] initial value
+ * @param {import('./public.js').StartStopNotifier<T>} [start]
+ * @returns {import('./public.js').Readable<T>}
+ */
+function readable(value, start) {
+	return {
+		subscribe: writable(value, start).subscribe
+	};
+}
+
+/**
+ * Create a `Writable` store that allows both updating and reading by subscription.
+ *
+ * https://svelte.dev/docs/svelte-store#writable
+ * @template T
+ * @param {T} [value] initial value
+ * @param {import('./public.js').StartStopNotifier<T>} [start]
+ * @returns {import('./public.js').Writable<T>}
+ */
+function writable(value, start = noop) {
+	/** @type {import('./public.js').Unsubscriber} */
+	let stop;
+	/** @type {Set<import('./private.js').SubscribeInvalidateTuple<T>>} */
+	const subscribers = new Set();
+	/** @param {T} new_value
+	 * @returns {void}
+	 */
+	function set(new_value) {
+		if (safe_not_equal(value, new_value)) {
+			value = new_value;
+			if (stop) {
+				// store is ready
+				const run_queue = !subscriber_queue.length;
+				for (const subscriber of subscribers) {
+					subscriber[1]();
+					subscriber_queue.push(subscriber, value);
+				}
+				if (run_queue) {
+					for (let i = 0; i < subscriber_queue.length; i += 2) {
+						subscriber_queue[i][0](subscriber_queue[i + 1]);
+					}
+					subscriber_queue.length = 0;
+				}
+			}
+		}
+	}
+
+	/**
+	 * @param {import('./public.js').Updater<T>} fn
+	 * @returns {void}
+	 */
+	function update(fn) {
+		set(fn(value));
+	}
+
+	/**
+	 * @param {import('./public.js').Subscriber<T>} run
+	 * @param {import('./private.js').Invalidator<T>} [invalidate]
+	 * @returns {import('./public.js').Unsubscriber}
+	 */
+	function subscribe(run, invalidate = noop) {
+		/** @type {import('./private.js').SubscribeInvalidateTuple<T>} */
+		const subscriber = [run, invalidate];
+		subscribers.add(subscriber);
+		if (subscribers.size === 1) {
+			stop = start(set, update) || noop;
+		}
+		run(value);
+		return () => {
+			subscribers.delete(subscriber);
+			if (subscribers.size === 0 && stop) {
+				stop();
+				stop = null;
+			}
+		};
+	}
+	return { set, update, subscribe };
+}
+
+/**
+ * Derived value store by synchronizing one or more readable stores and
+ * applying an aggregation function over its input values.
+ *
+ * https://svelte.dev/docs/svelte-store#derived
+ * @template {import('./private.js').Stores} S
+ * @template T
+ * @overload
+ * @param {S} stores - input stores
+ * @param {(values: import('./private.js').StoresValues<S>, set: (value: T) => void, update: (fn: import('./public.js').Updater<T>) => void) => import('./public.js').Unsubscriber | void} fn - function callback that aggregates the values
+ * @param {T} [initial_value] - initial value
+ * @returns {import('./public.js').Readable<T>}
+ */
+
+/**
+ * Derived value store by synchronizing one or more readable stores and
+ * applying an aggregation function over its input values.
+ *
+ * https://svelte.dev/docs/svelte-store#derived
+ * @template {import('./private.js').Stores} S
+ * @template T
+ * @overload
+ * @param {S} stores - input stores
+ * @param {(values: import('./private.js').StoresValues<S>) => T} fn - function callback that aggregates the values
+ * @param {T} [initial_value] - initial value
+ * @returns {import('./public.js').Readable<T>}
+ */
+
+/**
+ * @template {import('./private.js').Stores} S
+ * @template T
+ * @param {S} stores
+ * @param {Function} fn
+ * @param {T} [initial_value]
+ * @returns {import('./public.js').Readable<T>}
+ */
+function derived(stores, fn, initial_value) {
+	const single = !Array.isArray(stores);
+	/** @type {Array<import('./public.js').Readable<any>>} */
+	const stores_array = single ? [stores] : stores;
+	if (!stores_array.every(Boolean)) {
+		throw new Error('derived() expects stores as input, got a falsy value');
+	}
+	const auto = fn.length < 2;
+	return readable(initial_value, (set, update) => {
+		let started = false;
+		const values = [];
+		let pending = 0;
+		let cleanup = noop;
+		const sync = () => {
+			if (pending) {
+				return;
+			}
+			cleanup();
+			const result = fn(single ? values[0] : values, set, update);
+			if (auto) {
+				set(result);
+			} else {
+				cleanup = is_function(result) ? result : noop;
+			}
+		};
+		const unsubscribers = stores_array.map((store, i) =>
+			subscribe(
+				store,
+				(value) => {
+					values[i] = value;
+					pending &= ~(1 << i);
+					if (started) {
+						sync();
+					}
+				},
+				() => {
+					pending |= 1 << i;
+				}
+			)
+		);
+		started = true;
+		sync();
+		return function stop() {
+			run_all(unsubscribers);
+			cleanup();
+			// We need to set this to false because callbacks can still happen despite having unsubscribed:
+			// Callbacks might already be placed in the queue which doesn't know it should no longer
+			// invoke this derived store.
+			started = false;
+		};
+	});
+}
+
 /**
  * Common utilities
  * @module glMatrix
@@ -709,92 +884,6 @@ function invert(out, a) {
   return out;
 }
 /**
- * Translate a mat4 by the given vector
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the matrix to translate
- * @param {ReadonlyVec3} v vector to translate by
- * @returns {mat4} out
- */
-
-function translate(out, a, v) {
-  var x = v[0],
-      y = v[1],
-      z = v[2];
-  var a00, a01, a02, a03;
-  var a10, a11, a12, a13;
-  var a20, a21, a22, a23;
-
-  if (a === out) {
-    out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
-    out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
-    out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
-    out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
-  } else {
-    a00 = a[0];
-    a01 = a[1];
-    a02 = a[2];
-    a03 = a[3];
-    a10 = a[4];
-    a11 = a[5];
-    a12 = a[6];
-    a13 = a[7];
-    a20 = a[8];
-    a21 = a[9];
-    a22 = a[10];
-    a23 = a[11];
-    out[0] = a00;
-    out[1] = a01;
-    out[2] = a02;
-    out[3] = a03;
-    out[4] = a10;
-    out[5] = a11;
-    out[6] = a12;
-    out[7] = a13;
-    out[8] = a20;
-    out[9] = a21;
-    out[10] = a22;
-    out[11] = a23;
-    out[12] = a00 * x + a10 * y + a20 * z + a[12];
-    out[13] = a01 * x + a11 * y + a21 * z + a[13];
-    out[14] = a02 * x + a12 * y + a22 * z + a[14];
-    out[15] = a03 * x + a13 * y + a23 * z + a[15];
-  }
-
-  return out;
-}
-/**
- * Scales the mat4 by the dimensions in the given vec3 not using vectorization
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the matrix to scale
- * @param {ReadonlyVec3} v the vec3 to scale the matrix by
- * @returns {mat4} out
- **/
-
-function scale(out, a, v) {
-  var x = v[0],
-      y = v[1],
-      z = v[2];
-  out[0] = a[0] * x;
-  out[1] = a[1] * x;
-  out[2] = a[2] * x;
-  out[3] = a[3] * x;
-  out[4] = a[4] * y;
-  out[5] = a[5] * y;
-  out[6] = a[6] * y;
-  out[7] = a[7] * y;
-  out[8] = a[8] * z;
-  out[9] = a[9] * z;
-  out[10] = a[10] * z;
-  out[11] = a[11] * z;
-  out[12] = a[12];
-  out[13] = a[13];
-  out[14] = a[14];
-  out[15] = a[15];
-  return out;
-}
-/**
  * Generates a perspective projection matrix with the given bounds.
  * The near/far clip planes correspond to a normalized device coordinate Z range of [-1, 1],
  * which matches WebGL/OpenGL's clip volume.
@@ -928,184 +1017,9 @@ function lookAt(out, eye, center, up) {
   return out;
 }
 
-const subscriber_queue = [];
-
-/**
- * Creates a `Readable` store that allows reading by subscription.
- *
- * https://svelte.dev/docs/svelte-store#readable
- * @template T
- * @param {T} [value] initial value
- * @param {import('./public.js').StartStopNotifier<T>} [start]
- * @returns {import('./public.js').Readable<T>}
- */
-function readable(value, start) {
-	return {
-		subscribe: writable(value, start).subscribe
-	};
-}
-
-/**
- * Create a `Writable` store that allows both updating and reading by subscription.
- *
- * https://svelte.dev/docs/svelte-store#writable
- * @template T
- * @param {T} [value] initial value
- * @param {import('./public.js').StartStopNotifier<T>} [start]
- * @returns {import('./public.js').Writable<T>}
- */
-function writable(value, start = noop) {
-	/** @type {import('./public.js').Unsubscriber} */
-	let stop;
-	/** @type {Set<import('./private.js').SubscribeInvalidateTuple<T>>} */
-	const subscribers = new Set();
-	/** @param {T} new_value
-	 * @returns {void}
-	 */
-	function set(new_value) {
-		if (safe_not_equal(value, new_value)) {
-			value = new_value;
-			if (stop) {
-				// store is ready
-				const run_queue = !subscriber_queue.length;
-				for (const subscriber of subscribers) {
-					subscriber[1]();
-					subscriber_queue.push(subscriber, value);
-				}
-				if (run_queue) {
-					for (let i = 0; i < subscriber_queue.length; i += 2) {
-						subscriber_queue[i][0](subscriber_queue[i + 1]);
-					}
-					subscriber_queue.length = 0;
-				}
-			}
-		}
-	}
-
-	/**
-	 * @param {import('./public.js').Updater<T>} fn
-	 * @returns {void}
-	 */
-	function update(fn) {
-		set(fn(value));
-	}
-
-	/**
-	 * @param {import('./public.js').Subscriber<T>} run
-	 * @param {import('./private.js').Invalidator<T>} [invalidate]
-	 * @returns {import('./public.js').Unsubscriber}
-	 */
-	function subscribe(run, invalidate = noop) {
-		/** @type {import('./private.js').SubscribeInvalidateTuple<T>} */
-		const subscriber = [run, invalidate];
-		subscribers.add(subscriber);
-		if (subscribers.size === 1) {
-			stop = start(set, update) || noop;
-		}
-		run(value);
-		return () => {
-			subscribers.delete(subscriber);
-			if (subscribers.size === 0 && stop) {
-				stop();
-				stop = null;
-			}
-		};
-	}
-	return { set, update, subscribe };
-}
-
-/**
- * Derived value store by synchronizing one or more readable stores and
- * applying an aggregation function over its input values.
- *
- * https://svelte.dev/docs/svelte-store#derived
- * @template {import('./private.js').Stores} S
- * @template T
- * @overload
- * @param {S} stores - input stores
- * @param {(values: import('./private.js').StoresValues<S>, set: (value: T) => void, update: (fn: import('./public.js').Updater<T>) => void) => import('./public.js').Unsubscriber | void} fn - function callback that aggregates the values
- * @param {T} [initial_value] - initial value
- * @returns {import('./public.js').Readable<T>}
- */
-
-/**
- * Derived value store by synchronizing one or more readable stores and
- * applying an aggregation function over its input values.
- *
- * https://svelte.dev/docs/svelte-store#derived
- * @template {import('./private.js').Stores} S
- * @template T
- * @overload
- * @param {S} stores - input stores
- * @param {(values: import('./private.js').StoresValues<S>) => T} fn - function callback that aggregates the values
- * @param {T} [initial_value] - initial value
- * @returns {import('./public.js').Readable<T>}
- */
-
-/**
- * @template {import('./private.js').Stores} S
- * @template T
- * @param {S} stores
- * @param {Function} fn
- * @param {T} [initial_value]
- * @returns {import('./public.js').Readable<T>}
- */
-function derived(stores, fn, initial_value) {
-	const single = !Array.isArray(stores);
-	/** @type {Array<import('./public.js').Readable<any>>} */
-	const stores_array = single ? [stores] : stores;
-	if (!stores_array.every(Boolean)) {
-		throw new Error('derived() expects stores as input, got a falsy value');
-	}
-	const auto = fn.length < 2;
-	return readable(initial_value, (set, update) => {
-		let started = false;
-		const values = [];
-		let pending = 0;
-		let cleanup = noop;
-		const sync = () => {
-			if (pending) {
-				return;
-			}
-			cleanup();
-			const result = fn(single ? values[0] : values, set, update);
-			if (auto) {
-				set(result);
-			} else {
-				cleanup = is_function(result) ? result : noop;
-			}
-		};
-		const unsubscribers = stores_array.map((store, i) =>
-			subscribe(
-				store,
-				(value) => {
-					values[i] = value;
-					pending &= ~(1 << i);
-					if (started) {
-						sync();
-					}
-				},
-				() => {
-					pending |= 1 << i;
-				}
-			)
-		);
-		started = true;
-		sync();
-		return function stop() {
-			run_all(unsubscribers);
-			cleanup();
-			// We need to set this to false because callbacks can still happen despite having unsubscribed:
-			// Callbacks might already be placed in the queue which doesn't know it should no longer
-			// invoke this derived store.
-			started = false;
-		};
-	});
-}
-
 var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\nin vec2 uv;\r\n${instances ?\r\n`\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n` : `\r\nuniform mat4 world;\r\nuniform mat4 normalMatrix;\r\n`}\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\nout vec3 vViewPosition;\r\nout highp vec2 vUv;\r\n\r\nvoid main() {\r\n    vUv = vec3( uv, 1 ).xy;\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n    vViewPosition = -gl_Position.xyz;\r\n}";
 
-var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\nuniform mat3 normalMatrix;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\nin highp vec2 vUv;\r\nin vec3 vViewPosition;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\t${diffuseMapSample}\r\n\t\r\n\r\n\tvec3 normal = normalize( vNormal );\r\n\t${normalMapSample}\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, 1.0f);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
+var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n//uniform mat3 normalMatrix;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\nin highp vec2 vUv;\r\nin vec3 vViewPosition;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\t${diffuseMapSample}\r\n\t\r\n\r\n\tvec3 normal = normalize( vNormal );\r\n\t${normalMapSample}\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, 1.0f);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
 
 const templateGenerator = (props, template) => {
 	return (propsValues) => Function.constructor(...props, `return \`${template}\``)(...propsValues);
@@ -2225,13 +2139,6 @@ function normalizeNormals(normals) {
 		normals[i + 2] *= n;
 	}
 }
-function distributeCirclePoints(radius, index, numberOfPoints) {
-	const angleIncrement = (2 * Math.PI) / numberOfPoints;
-	return {
-		x: radius * Math.cos(index * angleIncrement),
-		y: radius * Math.sin(index * angleIncrement),
-	};
-}
 
 /**
  * @typedef {{
@@ -2624,15 +2531,6 @@ function updateOneLight(context, lights, light) {
 	}
 }
 
-var AGXShader = "${declaration?\r\n`\r\n// tone mapping taken from three.js\r\nfloat toneMappingExposure = ${exposure};\r\n\r\n    // Matrices for rec 2020 <> rec 709 color space conversion\r\n    // matrix provided in row-major order so it has been transposed\r\n    // https://www.itu.int/pub/R-REP-BT.2407-2017\r\nconst mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(vec3(1.6605f, -0.1246f, -0.0182f), vec3(-0.5876f, 1.1329f, -0.1006f), vec3(-0.0728f, -0.0083f, 1.1187f));\r\n\r\nconst mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(vec3(0.6274f, 0.0691f, 0.0164f), vec3(0.3293f, 0.9195f, 0.0880f), vec3(0.0433f, 0.0113f, 0.8956f));\r\n\r\n    // https://iolite-engine.com/blog_posts/minimal_agx_implementation\r\n    // Mean error^2: 3.6705141e-06\r\nvec3 agxDefaultContrastApprox(vec3 x) {\r\n\r\n    vec3 x2 = x * x;\r\n    vec3 x4 = x2 * x2;\r\n\r\n    return +15.5f * x4 * x2 - 40.14f * x4 * x + 31.96f * x4 - 6.868f * x2 * x + 0.4298f * x2 + 0.1191f * x - 0.00232f;\r\n\r\n}\r\n\r\nvec3 AgXToneMapping(vec3 color) {\r\n\r\n        // AgX constants\r\n    const mat3 AgXInsetMatrix = mat3(vec3(0.856627153315983f, 0.137318972929847f, 0.11189821299995f), vec3(0.0951212405381588f, 0.761241990602591f, 0.0767994186031903f), vec3(0.0482516061458583f, 0.101439036467562f, 0.811302368396859f));\r\n\r\n        // explicit AgXOutsetMatrix generated from Filaments AgXOutsetMatrixInv\r\n    const mat3 AgXOutsetMatrix = mat3(vec3(1.1271005818144368f, -0.1413297634984383f, -0.14132976349843826f), vec3(-0.11060664309660323f, 1.157823702216272f, -0.11060664309660294f), vec3(-0.016493938717834573f, -0.016493938717834257f, 1.2519364065950405f));\r\n\r\n        // LOG2_MIN      = -10.0\r\n        // LOG2_MAX      =  +6.5\r\n        // MIDDLE_GRAY   =  0.18\r\n    const float AgxMinEv = -12.47393f;  // log2( pow( 2, LOG2_MIN ) * MIDDLE_GRAY )\r\n    const float AgxMaxEv = 4.026069f;    // log2( pow( 2, LOG2_MAX ) * MIDDLE_GRAY )\r\n\r\n    color *= toneMappingExposure;\r\n\r\n    color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;\r\n\r\n    color = AgXInsetMatrix * color;\r\n\r\n        // Log2 encoding\r\n    color = max(color, 1e-10f); // avoid 0 or negative numbers for log2\r\n    color = log2(color);\r\n    color = (color - AgxMinEv) / (AgxMaxEv - AgxMinEv);\r\n\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n        // Apply sigmoid\r\n    color = agxDefaultContrastApprox(color);\r\n\r\n        // Apply AgX look\r\n        // v = agxLook(v, look);\r\n\r\n    color = AgXOutsetMatrix * color;\r\n\r\n        // Linearize\r\n    color = pow(max(vec3(0.0f), color), vec3(2.2f));\r\n\r\n    color = LINEAR_REC2020_TO_LINEAR_SRGB * color;\r\n\r\n        // Gamut mapping. Simple clamp for now.\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n    return color;\r\n\r\n}\r\n` : ''\r\n}\r\n${color?\r\n`\r\n    fragColor = vec4(AgXToneMapping(fragColor.xyz),1.0f);\r\n` : ''\r\n}";
-
-const createAGXToneMapping = (props) => {
-	return {
-		exposure: `${props.exposure.toLocaleString("en", { minimumFractionDigits: 1 })}f`,
-		shader: (segment) => templateLiteralRenderer(segment, AGXShader),
-	};
-};
-
 function createOrbitControls(canvas, camera) {
 	console.log("Orbit controls");
 	canvas.addEventListener("mousedown", onMouseDown);
@@ -2709,7 +2607,7 @@ function setupSpecular(context, { roughness, ior, intensity, color }) {
 
 const skyblue = 0x87ceeb;
 
-var textureShader = "${declaration?\r\n`\r\nuniform sampler2D ${mapType};\r\nuniform float normalScale;\r\n\r\n\r\nmat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {\r\n    vec3 q0 = dFdx( eye_pos.xyz );\r\n    vec3 q1 = dFdy( eye_pos.xyz );\r\n    vec2 st0 = dFdx( uv.st );\r\n    vec2 st1 = dFdy( uv.st );\r\n    vec3 N = surf_norm;\r\n    vec3 q1perp = cross( q1, N );\r\n    vec3 q0perp = cross( N, q0 );\r\n    vec3 T = q1perp * st0.x + q0perp * st1.x;\r\n    vec3 B = q1perp * st0.y + q0perp * st1.y;\r\n    float det = max( dot( T, T ), dot( B, B ) );\r\n    float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );\r\n    return mat3( T * scale, B * scale, N );\r\n}\r\n` : ''\r\n}\r\n${diffuseMapSample?\r\n`\r\n    material.diffuseColor *= texture( ${mapType}, vUv ).xyz;\r\n` : ''\r\n}\r\n${normalMapSample?\r\n`\r\n    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );\r\n    normal = texture( normalMap, vUv ).xyz * 2.0 - 1.0;\r\n    normal.xy *= normalScale;\r\n    normal = normalize(tbn * normal);\r\n\t//normal = normalize( normalMatrix * normal );\r\n` : ''\r\n}\r\n";
+var textureShader = "${declaration?\r\n`\r\nuniform sampler2D ${mapType};\r\nuniform vec2 normalScale;\r\n\r\n\r\nmat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {\r\n    vec3 q0 = dFdx( eye_pos.xyz );\r\n    vec3 q1 = dFdy( eye_pos.xyz );\r\n    vec2 st0 = dFdx( uv.st );\r\n    vec2 st1 = dFdy( uv.st );\r\n    vec3 N = surf_norm;\r\n    vec3 q1perp = cross( q1, N );\r\n    vec3 q0perp = cross( N, q0 );\r\n    vec3 T = q1perp * st0.x + q0perp * st1.x;\r\n    vec3 B = q1perp * st0.y + q0perp * st1.y;\r\n    float det = max( dot( T, T ), dot( B, B ) );\r\n    float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );\r\n    return mat3( T * scale, B * scale, N );\r\n}\r\n` : ''\r\n}\r\n${diffuseMapSample?\r\n`\r\n    material.diffuseColor *= texture( ${mapType}, vUv ).xyz;\r\n` : ''\r\n}\r\n${normalMapSample?\r\n`\r\n    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );\r\n    normal = texture( normalMap, vUv ).xyz * 2.0 - 1.0;\r\n    normal.xy *= normalScale;\r\n    normal = normalize(tbn * normal);\r\n\t//normal = normalize( normalMatrix * normal );\r\n` : ''\r\n}\r\n";
 
 const types = {
 	diffuse: "diffuseMap",
@@ -2725,6 +2623,7 @@ const id = {
  * @typedef TextureProps
  * @property {string} url
  * @property {"diffuse" | "normal"} type
+ * @property {number[]} [normalScale=[1, 1]]
  */
 
 /**
@@ -2753,7 +2652,7 @@ function loadTexture(url) {
 	});
 }
 
-function setupTexture(context, texture, type, id, normalScale) {
+function setupTexture(context, texture, type, id, normalScale = [1, 1]) {
 	return function () {
 		context = get_store_value(context);
 		/** @type {{gl: WebGL2RenderingContext}} **/
@@ -2766,23 +2665,241 @@ function setupTexture(context, texture, type, id, normalScale) {
 		gl.bindTexture(gl.TEXTURE_2D, textureBuffer);
 		gl.uniform1i(textureLocation, id);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture);
-		gl.generateMipmap(gl.TEXTURE_2D);
 
 		// gl.NEAREST is also allowed, instead of gl.LINEAR, as neither mipmap.
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 		// Prevents s-coordinate wrapping (repeating).
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		// Prevents t-coordinate wrapping (repeating).
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		//gl.getExtension("EXT_texture_filter_anisotropic");
 		if (normalScale != null) {
 			const normalScaleLocation = gl.getUniformLocation(program, "normalScale");
-			gl.uniform1f(normalScaleLocation, normalScale);
+			gl.uniform2fv(normalScaleLocation, normalScale);
 		}
 	};
 }
 
-/* src\main.svelte generated by Svelte v4.2.18 */
+/* eslint-disable camelcase, max-statements */
+// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#glb-file-format-specification
+// https://github.com/KhronosGroup/glTF/tree/master/extensions/1.0/Khronos/KHR_binary_glTF
+
+/**
+ * Calculate new size of an arrayBuffer to be aligned to an n-byte boundary
+ * This function increases `byteLength` by the minimum delta,
+ * allowing the total length to be divided by `padding`
+ * @param byteLength
+ * @param padding
+ */
+function padToNBytes(byteLength, padding) {
+	assert(byteLength >= 0); // `Incorrect 'byteLength' value: ${byteLength}`
+	assert(padding > 0); // `Incorrect 'padding' value: ${padding}`
+	return (byteLength + (padding - 1)) & ~(padding - 1);
+}
+/**
+ * Throws an `Error` with the optional `message` if `condition` is falsy
+ * @note Replacement for the external assert method to reduce bundle size
+ */
+function assert(condition, message) {
+	if (!condition) {
+		throw new Error("loader assertion failed.");
+	}
+}
+
+/** Binary GLTF is little endian. */
+const LITTLE_ENDIAN = true;
+const GLB_FILE_HEADER_SIZE = 12;
+const GLB_CHUNK_HEADER_SIZE = 8;
+const GLB_CHUNK_TYPE_JSON = 0x4e4f534a;
+const GLB_CHUNK_TYPE_BIN = 0x004e4942;
+const GLB_V1_CONTENT_FORMAT_JSON = 0x0;
+
+/** @deprecated - Backward compatibility for old xviz files */
+const GLB_CHUNK_TYPE_JSON_XVIZ_DEPRECATED = 0;
+/** @deprecated - Backward compatibility for old xviz files */
+const GLB_CHUNK_TYPE_BIX_XVIZ_DEPRECATED = 1;
+
+function getMagicString(dataView, byteOffset = 0) {
+	return `\
+${String.fromCharCode(dataView.getUint8(byteOffset + 0))}\
+${String.fromCharCode(dataView.getUint8(byteOffset + 1))}\
+${String.fromCharCode(dataView.getUint8(byteOffset + 2))}\
+${String.fromCharCode(dataView.getUint8(byteOffset + 3))}`;
+}
+
+/**
+ * Synchronously parse a GLB
+ * @param glb - Target, Output is stored there
+ * @param arrayBuffer - Input data
+ * @param byteOffset - Offset into arrayBuffer to start parsing from (for "embedded" GLBs, e.g. in 3D tiles)
+ * @param options
+ * @returns
+ */
+function parseGLBSync(glb, arrayBuffer, byteOffset = 0, options = {}) {
+	// Check that GLB Header starts with the magic number
+	const dataView = new DataView(arrayBuffer);
+
+	// Compare format with GLBLoader documentation
+	const type = getMagicString(dataView, byteOffset + 0);
+	const version = dataView.getUint32(byteOffset + 4, LITTLE_ENDIAN); // Version 2 of binary glTF container format
+	const byteLength = dataView.getUint32(byteOffset + 8, LITTLE_ENDIAN); // Total byte length of binary file
+
+	Object.assign(glb, {
+		// Put less important stuff in a header, to avoid clutter
+		header: {
+			byteOffset, // Byte offset into the initial arrayBuffer
+			byteLength,
+			hasBinChunk: false,
+		},
+
+		type,
+		version,
+
+		json: {},
+		binChunks: [],
+	});
+
+	byteOffset += GLB_FILE_HEADER_SIZE;
+
+	switch (glb.version) {
+		case 1:
+			return parseGLBV1(glb, dataView, byteOffset);
+		case 2:
+			return parseGLBV2(glb, dataView, byteOffset, (options = {}));
+		default:
+			throw new Error(`Invalid GLB version ${glb.version}. Only supports version 1 and 2.`);
+	}
+}
+
+/**
+ * Parse a V1 GLB
+ * @param glb - target, output is stored in this object
+ * @param dataView - Input, memory to be parsed
+ * @param byteOffset - Offset of first byte of GLB data in the data view
+ * @returns Number of bytes parsed (there could be additional non-GLB data after the GLB)
+ */
+function parseGLBV1(glb, dataView, byteOffset) {
+	// Sanity: ensure file is big enough to hold at least the headers
+	assert(glb.header.byteLength > GLB_FILE_HEADER_SIZE + GLB_CHUNK_HEADER_SIZE);
+
+	// Explanation of GLB structure:
+	// https://cloud.githubusercontent.com/assets/3479527/22600725/36b87122-ea55-11e6-9d40-6fd42819fcab.png
+	const contentLength = dataView.getUint32(byteOffset + 0, LITTLE_ENDIAN); // Byte length of chunk
+	const contentFormat = dataView.getUint32(byteOffset + 4, LITTLE_ENDIAN); // Chunk format as uint32
+	byteOffset += GLB_CHUNK_HEADER_SIZE;
+
+	// GLB v1 only supports a single chunk type
+	assert(contentFormat === GLB_V1_CONTENT_FORMAT_JSON);
+
+	parseJSONChunk(glb, dataView, byteOffset, contentLength);
+	// No need to call the function padToBytes() from parseJSONChunk()
+	byteOffset += contentLength;
+	byteOffset += parseBINChunk(glb, dataView, byteOffset, glb.header.byteLength);
+
+	return byteOffset;
+}
+
+/**
+ * Parse a V2 GLB
+ * @param glb - target, output is stored in this object
+ * @param dataView - Input, memory to be parsed
+ * @param byteOffset - Offset of first byte of GLB data in the data view
+ * @returns Number of bytes parsed (there could be additional non-GLB data after the GLB)
+ */
+function parseGLBV2(glb, dataView, byteOffset, options) {
+	// Sanity: ensure file is big enough to hold at least the first chunk header
+	assert(glb.header.byteLength > GLB_FILE_HEADER_SIZE + GLB_CHUNK_HEADER_SIZE);
+
+	parseGLBChunksSync(glb, dataView, byteOffset, options);
+
+	return byteOffset + glb.header.byteLength;
+}
+
+/** Iterate over GLB chunks and parse them */
+function parseGLBChunksSync(glb, dataView, byteOffset, options) {
+	// Per spec we must iterate over chunks, ignoring all except JSON and BIN
+	// Iterate as long as there is space left for another chunk header
+	while (byteOffset + 8 <= glb.header.byteLength) {
+		const chunkLength = dataView.getUint32(byteOffset + 0, LITTLE_ENDIAN); // Byte length of chunk
+		const chunkFormat = dataView.getUint32(byteOffset + 4, LITTLE_ENDIAN); // Chunk format as uint32
+		byteOffset += GLB_CHUNK_HEADER_SIZE;
+
+		// Per spec we must iterate over chunks, ignoring all except JSON and BIN
+		switch (chunkFormat) {
+			case GLB_CHUNK_TYPE_JSON:
+				parseJSONChunk(glb, dataView, byteOffset, chunkLength);
+				break;
+			case GLB_CHUNK_TYPE_BIN:
+				parseBINChunk(glb, dataView, byteOffset, chunkLength);
+				break;
+
+			// Backward compatibility for very old xviz files
+			case GLB_CHUNK_TYPE_JSON_XVIZ_DEPRECATED:
+				if (!options.strict) {
+					parseJSONChunk(glb, dataView, byteOffset, chunkLength);
+				}
+				break;
+			case GLB_CHUNK_TYPE_BIX_XVIZ_DEPRECATED:
+				if (!options.strict) {
+					parseBINChunk(glb, dataView, byteOffset, chunkLength);
+				}
+				break;
+		}
+
+		byteOffset += padToNBytes(chunkLength, 4);
+	}
+
+	return byteOffset;
+}
+
+/* Parse a GLB JSON chunk */
+function parseJSONChunk(glb, dataView, byteOffset, chunkLength) {
+	// 1. Create a "view" of the binary encoded JSON data inside the GLB
+	const jsonChunk = new Uint8Array(dataView.buffer, byteOffset, chunkLength);
+
+	// 2. Decode the JSON binary array into clear text
+	const textDecoder = new TextDecoder("utf8");
+	const jsonText = textDecoder.decode(jsonChunk);
+
+	// 3. Parse the JSON text into a JavaScript data structure
+	glb.json = JSON.parse(jsonText);
+
+	return padToNBytes(chunkLength, 4);
+}
+
+/** Parse a GLB BIN chunk */
+function parseBINChunk(glb, dataView, byteOffset, chunkLength) {
+	// Note: BIN chunk can be optional
+	glb.header.hasBinChunk = true;
+	glb.binChunks.push({
+		byteOffset,
+		byteLength: chunkLength,
+		arrayBuffer: dataView.buffer,
+		// TODO - copy, or create typed array view?
+	});
+
+	return padToNBytes(chunkLength, 4);
+}
+
+async function loadGLBFile(url) {
+	try {
+        let fileArrayBuffer;
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch GLB file: ${response.statusText}`);
+		}
+		fileArrayBuffer = await response.arrayBuffer();
+		const glb = {};
+		parseGLBSync(glb, fileArrayBuffer);
+		console.log("GLB file loaded successfully", glb);
+	} catch (error) {
+		console.error("Error loading GLB file:", error);
+	}
+}
+
+/* src\main-test.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
 	let canvas_1;
@@ -2807,121 +2924,73 @@ function create_fragment(ctx) {
 		}
 	};
 }
-const numInstances = 20;
-const radius = 1;
 
-function instance($$self, $$props, $$invalidate) {
-	let canvas;
-	let light1;
-	let camera;
-
-	onMount(async () => {
-		const normalMap = await createTexture({
-			url: "golfball-normal.jpg",
-			normalScale: 4,
-			type: "normal"
-		});
-
-		renderer.setCanvas(canvas);
-		renderer.setBackgroundColor(skyblue);
-		renderer.setAmbientLight(0xffffff, 0.5);
-		camera = renderer.setCamera([0, 0, -2], [0, 0, 0], 70);
-		const sphereGeometry = createPolyhedron(1.5, 7, createSmoothShadedNormals);
-		sphereGeometry.uvs = generateUVs(sphereGeometry);
-		let identityMatrix = new Array(16).fill(0);
-		identity(identityMatrix);
-
-		let matrices = new Array(numInstances).fill(0).map((_, index) => {
-			let mat = [...identityMatrix];
-
-			//transform the model matrix
-			const scaleFactor = 0.1;
-
-			const { x, y } = distributeCirclePoints(radius, index, numInstances);
-			translate(mat, mat, [x, y, 0]);
-
-			//translate(mat, mat, [count * -2, 0, 0]);
-			//rotateY(mat, mat, toRadian(count * 10));
-			scale(mat, mat, [scaleFactor, scaleFactor, scaleFactor]);
-
-			return new Float32Array(mat);
-		});
-
-		renderer.addMesh({
-			attributes: sphereGeometry,
-			instances: numInstances,
-			matrices,
-			material: {
-				diffuse: [1, 0.5, 0.5],
-				specular: createSpecular({
-					roughness: 0.12,
-					ior: 1,
-					intensity: 2,
-					color: [1, 1, 1]
-				}),
-				normalMap
-			}
-		});
-
-		light1 = renderer.addLight(createPointLight({
-			position: [-2, 2, -4],
-			color: [1, 1, 1],
-			intensity: 1,
-			cutoffDistance: 3,
-			decayExponent: 1
-		}));
-
-		renderer.addLight(createPointLight({
-			position: [1, 1, -2],
-			color: [1, 1, 1],
-			intensity: 2,
-			cutoffDistance: 4,
-			decayExponent: 2
-		}));
-
-		renderer.addLight(createPointLight({
-			position: [-1, 1, -2],
-			color: [1, 1, 1],
-			intensity: 2,
-			cutoffDistance: 4,
-			decayExponent: 2
-		}));
-
-		renderer.addLight(createPointLight({
-			position: [0, 0, -5],
-			color: [1, 1, 1],
-			intensity: 3,
-			cutoffDistance: 10,
-			decayExponent: 2
-		}));
-
-		renderer.addToneMapping(createAGXToneMapping({ exposure: 1 }));
-		renderer.setLoop(animate);
-		renderer.start();
-		createOrbitControls(canvas, camera);
-	});
-
-	function animate() {
-		/*const rotation = 0.001 * Math.PI;
+function animate() {
+	
+} /*const rotation = 0.001 * Math.PI;
 for (let i = 0; i < numInstances; i++) {
 	const tmp = get(mesh1.matrices[i]);
 	rotateY(tmp, tmp, rotation / 2);
 	rotateX(tmp, tmp, rotation);
 	rotateZ(tmp, tmp, rotation / 3);
 	mesh1.matrices[i].set(tmp);
-}*/
-		const lightX = Math.sin(performance.now() / 2000) * 0.5;
+}*/ /*
+const lightX = Math.sin(performance.now() / 2000) * 0.5;
+const lightY = Math.cos(performance.now() / 2000) * 0.5;
+const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;
+const g = Math.cos(performance.now() / 5000) * 0.5 + 0.5;
+const b = Math.sin(performance.now() / 4000) * 0.5 + 0.5;
+light1.set({
+	position: [lightX, lightY, -0.4],
+	color: [r, g, b],
+});*/
 
-		const lightY = Math.cos(performance.now() / 2000) * 0.5;
-		const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;
-		const g = Math.cos(performance.now() / 5000) * 0.5 + 0.5;
-		const b = Math.sin(performance.now() / 4000) * 0.5 + 0.5;
+function instance($$self, $$props, $$invalidate) {
+	let canvas;
+	let camera;
 
-		light1.set({
-			position: [lightX, lightY, -0.4],
-			color: [r, g, b]
+	onMount(async () => {
+		loadGLBFile("md-blend6-mdlvw.glb");
+
+		const normalMap = await createTexture({
+			url: "golfball-normal.jpg",
+			normalScale: [1, 1],
+			type: "normal"
 		});
-	}
+
+		renderer.setCanvas(canvas);
+		renderer.setBackgroundColor(skyblue);
+		renderer.setAmbientLight(0xffffff, 0.3);
+		camera = renderer.setCamera([0, 0, -5], [0, 0, 0], 75);
+		const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
+		sphereGeometry.uvs = generateUVs(sphereGeometry);
+
+		renderer.addMesh({
+			attributes: sphereGeometry,
+			material: {
+				diffuse: [1, 0, 0],
+				specular: createSpecular({
+					roughness: 0.1,
+					ior: 1.5,
+					intensity: 1,
+					color: [1, 1, 1]
+				}),
+				normalMap
+			}
+		});
+
+		renderer.addLight(createPointLight({
+			position: [0, 1, -3],
+			color: [1, 1, 1],
+			intensity: 10,
+			cutoffDistance: 0,
+			decayExponent: 2
+		}));
+
+		renderer.setLoop(animate);
+		renderer.start();
+		createOrbitControls(canvas, camera);
+	});
 
 	function canvas_1_binding($$value) {
 		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
@@ -2933,11 +3002,11 @@ for (let i = 0; i < numInstances; i++) {
 	return [canvas, canvas_1_binding];
 }
 
-class Main extends SvelteComponent {
+class Main_test extends SvelteComponent {
 	constructor(options) {
 		super();
 		init(this, options, instance, create_fragment, safe_not_equal, {});
 	}
 }
 
-export { Main as default };
+export { Main_test as default };
