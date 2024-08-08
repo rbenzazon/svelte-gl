@@ -35,9 +35,15 @@ export function convertHexToVector3(hex) {
 	return [((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255];
 }
 
+export function convertSRGBToLinear3(hex) {
+	hex = Math.floor(hex);
+	console.log("hex", hex);
+	return convertHexToVector3(hex).map(SRGBToLinear);
+}
+
 export function convertSRGBToLinear(hex) {
 	hex = Math.floor(hex);
-	return convertHexToVector4().map(SRGBToLinear);
+	return convertHexToVector4(hex).map(SRGBToLinear);
 }
 
 export function SRGBToLinear(c, index) {

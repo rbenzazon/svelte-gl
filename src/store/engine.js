@@ -19,7 +19,7 @@ import {
 	updateInstanceNormalMatrix,
 	derivateNormalMatrix,
 } from "./gl.js";
-import { convertToVector4, convertToVector3 } from "../color/color-space.js";
+import { convertToVector4, convertToVector3, convertSRGBToLinear3 } from "../color/color-space.js";
 
 function createRenderer() {
 	const { subscribe, set, update } = writable({
@@ -42,7 +42,9 @@ function createRenderer() {
 					updateCamera(...rest);
 					setupCamera(appContext, get(renderer).camera)();
 				},
-				get: () => get(renderer).camera,
+				get: () => {
+					return get(renderer).camera;
+				},
 			};
 			function updateCamera(position = [0, 0, -1], target = [0, 0, 0], fov = 80, near = 0.1, far = 1000, up = [0, 1, 0]) {
 				update((renderer) => {
@@ -149,11 +151,13 @@ function createRenderer() {
 				renderer.canvas = canvas;
 				return renderer;
 			}),
-		setBackgroundColor: (backgroundColor) =>
+		setBackgroundColor: (backgroundColor) => {
+			backgroundColor = [...convertToVector3(backgroundColor), 1];
 			update((renderer) => {
-				renderer.backgroundColor = convertToVector4(backgroundColor);
+				renderer.backgroundColor = backgroundColor;
 				return renderer;
-			}),
+			});
+		},
 		start: () =>
 			update((renderer) => {
 				renderer.enabled = true;

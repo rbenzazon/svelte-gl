@@ -1037,22 +1037,6 @@ const objectToDefines = (obj) => {
 	].join("\n");
 };
 
-function convertToVector4(color) {
-	if (Array.isArray(color)) {
-		if (color.length === 4) {
-			return color;
-		}
-		return [...color, 1];
-	}
-	if (typeof color === "number") {
-		return convertHexToVector4(color);
-	}
-	if (typeof color === "string" && color.startsWith("#")) {
-		return convertHexToVector4(parseInt(color.replace("#", "0x")));
-	}
-	return color;
-}
-
 function convertToVector3(color) {
 	if (Array.isArray(color)) {
 		return [...color];
@@ -1064,10 +1048,6 @@ function convertToVector3(color) {
 		return convertHexToVector3(parseInt(color.replace("#", "0x")));
 	}
 	return color;
-}
-
-function convertHexToVector4(hex) {
-	return [((hex >> 24) & 255) / 255, ((hex >> 16) & 255) / 255, ((hex >> 8) & 255) / 255, (hex & 255) / 255];
 }
 
 function convertHexToVector3(hex) {
@@ -1300,7 +1280,6 @@ function setupCamera(context, camera) {
 		context = get_store_value(context);
 		const gl = context.gl;
 		const program = context.program;
-
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
 
@@ -1568,7 +1547,9 @@ function createRenderer() {
 					updateCamera(...rest);
 					setupCamera(appContext, get_store_value(renderer).camera)();
 				},
-				get: () => get_store_value(renderer).camera,
+				get: () => {
+					return get_store_value(renderer).camera;
+				},
 			};
 			function updateCamera(position = [0, 0, -1], target = [0, 0, 0], fov = 80, near = 0.1, far = 1000, up = [0, 1, 0]) {
 				update((renderer) => {
@@ -1675,11 +1656,13 @@ function createRenderer() {
 				renderer.canvas = canvas;
 				return renderer;
 			}),
-		setBackgroundColor: (backgroundColor) =>
+		setBackgroundColor: (backgroundColor) => {
+			backgroundColor = [...convertToVector3(backgroundColor), 1];
 			update((renderer) => {
-				renderer.backgroundColor = convertToVector4(backgroundColor);
+				renderer.backgroundColor = backgroundColor;
 				return renderer;
-			}),
+			});
+		},
 		start: () =>
 			update((renderer) => {
 				renderer.enabled = true;
@@ -2532,32 +2515,41 @@ function updateOneLight(context, lights, light) {
 }
 
 function createOrbitControls(canvas, camera) {
-	console.log("Orbit controls");
 	canvas.addEventListener("mousedown", onMouseDown);
 	let startX;
 	let startY;
-	let cameraPosition;
 	function onMouseDown(event) {
-		console.log("Mouse down");
 		canvas.addEventListener("mousemove", onMouseMove);
 		startX = event.clientX;
 		startY = event.clientY;
-		cameraPosition = camera.get().position;
 		canvas.addEventListener("mouseup", onMouseUp);
 	}
 	function onMouseMove(event) {
 		const x = event.clientX - startX;
 		const y = event.clientY - startY;
-		console.log("Mouse move", x, y);
-		let cameraValue = camera.get();
-		console.log("cameraValue", cameraValue);
+		const cameraValue = camera.get();
 		const { position, target, fov } = cameraValue;
-		position[0] = cameraPosition[0] + x * 0.001;
-		position[1] = cameraPosition[1] + y * 0.001;
-		camera.set(position, target, fov);
+		const radius = Math.sqrt(
+			Math.pow(position[0] - target[0], 2) + Math.pow(position[1] - target[1], 2) + Math.pow(position[2] - target[2], 2),
+		);
+
+		const polar = Math.acos(Math.max(-1, Math.min(1, (position[1] - target[1]) / radius)));
+		const azimuth = Math.atan2(position[0] - target[0], position[2] - target[2]);
+		const newPosition = getPositionFromPolar(radius, polar - y / 100, azimuth - x / 100);
+		newPosition[0] = newPosition[0] + target[0];
+		newPosition[1] = newPosition[1] + target[1];
+		newPosition[2] = newPosition[2] + target[2];
+
+		camera.set(newPosition, target, fov);
+		startX = event.clientX;
+		startY = event.clientY;
+	}
+
+	function getPositionFromPolar(radius, polar, azimuth) {
+		const sinPhiRadius = Math.sin(polar) * radius;
+		return [sinPhiRadius * Math.sin(azimuth), Math.cos(polar) * radius, sinPhiRadius * Math.cos(azimuth)];
 	}
 	function onMouseUp(event) {
-		console.log("Mouse up");
 		canvas.removeEventListener("mousemove", onMouseMove);
 		canvas.removeEventListener("mouseup", onMouseUp);
 	}
@@ -2682,223 +2674,6 @@ function setupTexture(context, texture, type, id, normalScale = [1, 1]) {
 	};
 }
 
-/* eslint-disable camelcase, max-statements */
-// https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#glb-file-format-specification
-// https://github.com/KhronosGroup/glTF/tree/master/extensions/1.0/Khronos/KHR_binary_glTF
-
-/**
- * Calculate new size of an arrayBuffer to be aligned to an n-byte boundary
- * This function increases `byteLength` by the minimum delta,
- * allowing the total length to be divided by `padding`
- * @param byteLength
- * @param padding
- */
-function padToNBytes(byteLength, padding) {
-	assert(byteLength >= 0); // `Incorrect 'byteLength' value: ${byteLength}`
-	assert(padding > 0); // `Incorrect 'padding' value: ${padding}`
-	return (byteLength + (padding - 1)) & ~(padding - 1);
-}
-/**
- * Throws an `Error` with the optional `message` if `condition` is falsy
- * @note Replacement for the external assert method to reduce bundle size
- */
-function assert(condition, message) {
-	if (!condition) {
-		throw new Error("loader assertion failed.");
-	}
-}
-
-/** Binary GLTF is little endian. */
-const LITTLE_ENDIAN = true;
-const GLB_FILE_HEADER_SIZE = 12;
-const GLB_CHUNK_HEADER_SIZE = 8;
-const GLB_CHUNK_TYPE_JSON = 0x4e4f534a;
-const GLB_CHUNK_TYPE_BIN = 0x004e4942;
-const GLB_V1_CONTENT_FORMAT_JSON = 0x0;
-
-/** @deprecated - Backward compatibility for old xviz files */
-const GLB_CHUNK_TYPE_JSON_XVIZ_DEPRECATED = 0;
-/** @deprecated - Backward compatibility for old xviz files */
-const GLB_CHUNK_TYPE_BIX_XVIZ_DEPRECATED = 1;
-
-function getMagicString(dataView, byteOffset = 0) {
-	return `\
-${String.fromCharCode(dataView.getUint8(byteOffset + 0))}\
-${String.fromCharCode(dataView.getUint8(byteOffset + 1))}\
-${String.fromCharCode(dataView.getUint8(byteOffset + 2))}\
-${String.fromCharCode(dataView.getUint8(byteOffset + 3))}`;
-}
-
-/**
- * Synchronously parse a GLB
- * @param glb - Target, Output is stored there
- * @param arrayBuffer - Input data
- * @param byteOffset - Offset into arrayBuffer to start parsing from (for "embedded" GLBs, e.g. in 3D tiles)
- * @param options
- * @returns
- */
-function parseGLBSync(glb, arrayBuffer, byteOffset = 0, options = {}) {
-	// Check that GLB Header starts with the magic number
-	const dataView = new DataView(arrayBuffer);
-
-	// Compare format with GLBLoader documentation
-	const type = getMagicString(dataView, byteOffset + 0);
-	const version = dataView.getUint32(byteOffset + 4, LITTLE_ENDIAN); // Version 2 of binary glTF container format
-	const byteLength = dataView.getUint32(byteOffset + 8, LITTLE_ENDIAN); // Total byte length of binary file
-
-	Object.assign(glb, {
-		// Put less important stuff in a header, to avoid clutter
-		header: {
-			byteOffset, // Byte offset into the initial arrayBuffer
-			byteLength,
-			hasBinChunk: false,
-		},
-
-		type,
-		version,
-
-		json: {},
-		binChunks: [],
-	});
-
-	byteOffset += GLB_FILE_HEADER_SIZE;
-
-	switch (glb.version) {
-		case 1:
-			return parseGLBV1(glb, dataView, byteOffset);
-		case 2:
-			return parseGLBV2(glb, dataView, byteOffset, (options = {}));
-		default:
-			throw new Error(`Invalid GLB version ${glb.version}. Only supports version 1 and 2.`);
-	}
-}
-
-/**
- * Parse a V1 GLB
- * @param glb - target, output is stored in this object
- * @param dataView - Input, memory to be parsed
- * @param byteOffset - Offset of first byte of GLB data in the data view
- * @returns Number of bytes parsed (there could be additional non-GLB data after the GLB)
- */
-function parseGLBV1(glb, dataView, byteOffset) {
-	// Sanity: ensure file is big enough to hold at least the headers
-	assert(glb.header.byteLength > GLB_FILE_HEADER_SIZE + GLB_CHUNK_HEADER_SIZE);
-
-	// Explanation of GLB structure:
-	// https://cloud.githubusercontent.com/assets/3479527/22600725/36b87122-ea55-11e6-9d40-6fd42819fcab.png
-	const contentLength = dataView.getUint32(byteOffset + 0, LITTLE_ENDIAN); // Byte length of chunk
-	const contentFormat = dataView.getUint32(byteOffset + 4, LITTLE_ENDIAN); // Chunk format as uint32
-	byteOffset += GLB_CHUNK_HEADER_SIZE;
-
-	// GLB v1 only supports a single chunk type
-	assert(contentFormat === GLB_V1_CONTENT_FORMAT_JSON);
-
-	parseJSONChunk(glb, dataView, byteOffset, contentLength);
-	// No need to call the function padToBytes() from parseJSONChunk()
-	byteOffset += contentLength;
-	byteOffset += parseBINChunk(glb, dataView, byteOffset, glb.header.byteLength);
-
-	return byteOffset;
-}
-
-/**
- * Parse a V2 GLB
- * @param glb - target, output is stored in this object
- * @param dataView - Input, memory to be parsed
- * @param byteOffset - Offset of first byte of GLB data in the data view
- * @returns Number of bytes parsed (there could be additional non-GLB data after the GLB)
- */
-function parseGLBV2(glb, dataView, byteOffset, options) {
-	// Sanity: ensure file is big enough to hold at least the first chunk header
-	assert(glb.header.byteLength > GLB_FILE_HEADER_SIZE + GLB_CHUNK_HEADER_SIZE);
-
-	parseGLBChunksSync(glb, dataView, byteOffset, options);
-
-	return byteOffset + glb.header.byteLength;
-}
-
-/** Iterate over GLB chunks and parse them */
-function parseGLBChunksSync(glb, dataView, byteOffset, options) {
-	// Per spec we must iterate over chunks, ignoring all except JSON and BIN
-	// Iterate as long as there is space left for another chunk header
-	while (byteOffset + 8 <= glb.header.byteLength) {
-		const chunkLength = dataView.getUint32(byteOffset + 0, LITTLE_ENDIAN); // Byte length of chunk
-		const chunkFormat = dataView.getUint32(byteOffset + 4, LITTLE_ENDIAN); // Chunk format as uint32
-		byteOffset += GLB_CHUNK_HEADER_SIZE;
-
-		// Per spec we must iterate over chunks, ignoring all except JSON and BIN
-		switch (chunkFormat) {
-			case GLB_CHUNK_TYPE_JSON:
-				parseJSONChunk(glb, dataView, byteOffset, chunkLength);
-				break;
-			case GLB_CHUNK_TYPE_BIN:
-				parseBINChunk(glb, dataView, byteOffset, chunkLength);
-				break;
-
-			// Backward compatibility for very old xviz files
-			case GLB_CHUNK_TYPE_JSON_XVIZ_DEPRECATED:
-				if (!options.strict) {
-					parseJSONChunk(glb, dataView, byteOffset, chunkLength);
-				}
-				break;
-			case GLB_CHUNK_TYPE_BIX_XVIZ_DEPRECATED:
-				if (!options.strict) {
-					parseBINChunk(glb, dataView, byteOffset, chunkLength);
-				}
-				break;
-		}
-
-		byteOffset += padToNBytes(chunkLength, 4);
-	}
-
-	return byteOffset;
-}
-
-/* Parse a GLB JSON chunk */
-function parseJSONChunk(glb, dataView, byteOffset, chunkLength) {
-	// 1. Create a "view" of the binary encoded JSON data inside the GLB
-	const jsonChunk = new Uint8Array(dataView.buffer, byteOffset, chunkLength);
-
-	// 2. Decode the JSON binary array into clear text
-	const textDecoder = new TextDecoder("utf8");
-	const jsonText = textDecoder.decode(jsonChunk);
-
-	// 3. Parse the JSON text into a JavaScript data structure
-	glb.json = JSON.parse(jsonText);
-
-	return padToNBytes(chunkLength, 4);
-}
-
-/** Parse a GLB BIN chunk */
-function parseBINChunk(glb, dataView, byteOffset, chunkLength) {
-	// Note: BIN chunk can be optional
-	glb.header.hasBinChunk = true;
-	glb.binChunks.push({
-		byteOffset,
-		byteLength: chunkLength,
-		arrayBuffer: dataView.buffer,
-		// TODO - copy, or create typed array view?
-	});
-
-	return padToNBytes(chunkLength, 4);
-}
-
-async function loadGLBFile(url) {
-	try {
-        let fileArrayBuffer;
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`Failed to fetch GLB file: ${response.statusText}`);
-		}
-		fileArrayBuffer = await response.arrayBuffer();
-		const glb = {};
-		parseGLBSync(glb, fileArrayBuffer);
-		console.log("GLB file loaded successfully", glb);
-	} catch (error) {
-		console.error("Error loading GLB file:", error);
-	}
-}
-
 /* src\main-test.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
@@ -2950,8 +2725,7 @@ function instance($$self, $$props, $$invalidate) {
 	let camera;
 
 	onMount(async () => {
-		loadGLBFile("md-blend6-mdlvw.glb");
-
+		//loadGLBFile("md-blend6-mdlvw.glb");
 		const normalMap = await createTexture({
 			url: "golfball-normal.jpg",
 			normalScale: [1, 1],
@@ -2970,19 +2744,20 @@ function instance($$self, $$props, $$invalidate) {
 			material: {
 				diffuse: [1, 0, 0],
 				specular: createSpecular({
-					roughness: 0.1,
+					roughness: 0.2,
 					ior: 1.5,
 					intensity: 1,
 					color: [1, 1, 1]
 				}),
-				normalMap
+				normalMap,
+				normalMapScale: [1, 1]
 			}
 		});
 
 		renderer.addLight(createPointLight({
 			position: [0, 1, -3],
 			color: [1, 1, 1],
-			intensity: 10,
+			intensity: 2,
 			cutoffDistance: 0,
 			decayExponent: 2
 		}));

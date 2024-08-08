@@ -12,14 +12,15 @@ import { /*createFlatShadedNormals,*/ distributeCirclePoints, toRadian } from ".
 import { createSpecular } from "./material/specular/specular.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createTexture } from "./texture/texture.js";
-import {loadGLBFile } from "./loaders/glb-loader.js";
+//import {loadGLBFile } from "./loaders/glb-loader.js";
+//import {loadGLTFFile } from "./loaders/gltf-loader.js";
 
 let canvas;
 let light1;
 let mesh1;
 let camera;
 onMount(async () => {
-	loadGLBFile("md-blend6-mdlvw.glb");
+	//loadGLBFile("md-blend6-mdlvw.glb");
 
 	const normalMap = await createTexture({
 		url: "golfball-normal.jpg",
@@ -39,12 +40,13 @@ onMount(async () => {
 		material: {
 			diffuse: [1, 0, 0],
 			specular: createSpecular({
-				roughness: 0.1,
+				roughness: 0.2,
 				ior: 1.5,
 				intensity: 1,
 				color: [1, 1, 1],
 			}),
 			normalMap,
+			normalMapScale: [1, 1],
 		},
 	});
 
@@ -52,7 +54,7 @@ onMount(async () => {
 		createPointLight({
 			position: [0, 1, -3],
 			color: [1, 1, 1],
-			intensity: 10,
+			intensity: 2,
 			cutoffDistance: 0,
 			decayExponent: 2,
 		}),

@@ -226,7 +226,6 @@ export function setupCamera(context, camera) {
 		context = get(context);
 		const gl = context.gl;
 		const program = context.program;
-
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
 
