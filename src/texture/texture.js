@@ -29,7 +29,12 @@ export const createTexture = async (props) => {
 	return {
 		type: types[props.type],
 		texture,
-		shader: (segment) => templateLiteralRenderer(segment, textureShader),
+		shader: templateLiteralRenderer(textureShader, {
+			declaration: false,
+			diffuseMapSample: false,
+			normalMapSample: false,
+			mapType: undefined,
+		}),
 		setupTexture: (context) => setupTexture(context, texture, types[props.type], id[props.type], props.normalScale),
 	};
 };

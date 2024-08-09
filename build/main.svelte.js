@@ -1021,11 +1021,18 @@ var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin v
 
 var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n//uniform mat3 normalMatrix;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\nin highp vec2 vUv;\r\nin vec3 vViewPosition;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\t${diffuseMapSample}\r\n\t\r\n\r\n\tvec3 normal = normalize( vNormal );\r\n\t${normalMapSample}\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, 1.0f);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
 
-const templateGenerator = (props, template) => {
-	return (propsValues) => Function.constructor(...props, `return \`${template}\``)(...propsValues);
-};
-const templateLiteralRenderer = (props, template) => {
-	return templateGenerator(Object.keys(props), template)(Object.values(props));
+const templateLiteralRenderer = (template, parameters) => {
+	const fn = Function.constructor(
+		...Object.entries(parameters).map(([key, defaultValue]) => {
+			if (defaultValue === "") {
+				defaultValue = '""';
+			}
+			return `${key}${defaultValue != null ? `=${defaultValue}` : ""}`;
+		}),
+		`return \`${template}\``,
+	);
+	return (propsWithValues) =>
+		fn(...Object.keys(parameters).map((key) => (propsWithValues[key] != null ? propsWithValues[key] : undefined)));
 };
 
 const objectToDefines = (obj) => {
@@ -1155,12 +1162,11 @@ function createShaders() {
 			const gl = context.gl;
 			const program = context.program;
 
-			const vertexShaderSource = templateLiteralRenderer(
-				{
-					instances: mesh.instances > 1,
-				},
-				defaultVertex,
-			);
+			const vertexShaderSource = templateLiteralRenderer(defaultVertex, {
+				instances: false,
+			})({
+				instances: mesh.instances > 1,
+			});
 			console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
@@ -1171,22 +1177,18 @@ function createShaders() {
 			let specularIrradiance = "";
 			let specularDeclaration = "";
 			if (mesh.material?.specular) {
-				specularDeclaration = mesh.material.specular.shader({ declaration: true, irradiance: false });
-				specularIrradiance = mesh.material.specular.shader({ declaration: false, irradiance: true });
+				specularDeclaration = mesh.material.specular.shader({ declaration: true });
+				specularIrradiance = mesh.material.specular.shader({ irradiance: true });
 			}
 			let diffuseMapDeclaration = "";
 			let diffuseMapSample = "";
 			if (mesh.material?.diffuseMap) {
 				diffuseMapDeclaration = mesh.material.diffuseMap.shader({
 					declaration: true,
-					diffuseMapSample: false,
-					normalMapSample: false,
 					mapType: mesh.material.diffuseMap.type,
 				});
 				diffuseMapSample = mesh.material.diffuseMap.shader({
-					declaration: false,
 					diffuseMapSample: true,
-					normalMapSample: false,
 					mapType: mesh.material.diffuseMap.type,
 				});
 			}
@@ -1195,52 +1197,51 @@ function createShaders() {
 			if (mesh.material?.normalMap) {
 				normalMapDeclaration = mesh.material.normalMap.shader({
 					declaration: true,
-					diffuseMapSample: false,
-					normalMapSample: false,
 					mapType: mesh.material.normalMap.type,
 				});
 				normalMapSample = mesh.material.normalMap.shader({
-					declaration: false,
-					diffuseMapSample: false,
 					normalMapSample: true,
 					mapType: mesh.material.normalMap.type,
 				});
 			}
-			const fragmentShaderSource = templateLiteralRenderer(
-				{
-					defines: objectToDefines({
-						...(context.numPointLights
-							? {
-									NUM_POINT_LIGHTS: context.numPointLights,
-								}
-							: undefined),
-					}),
-					declarations: [
-						...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : []),
-						...(context.toneMappings?.length > 0
-							? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure, color: false }))]
-							: []),
-						...(mesh.material?.specular ? [specularDeclaration] : []),
-						...(mesh.material?.diffuseMap ? [diffuseMapDeclaration] : []),
-						...(mesh.material?.normalMap ? [normalMapDeclaration] : []),
-					].join("\n"),
-					diffuseMapSample,
-					normalMapSample,
-					irradiance: [
-						...(context.numPointLights
-							? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
-							: []),
-					].join("\n"),
-					toneMapping: [
-						...(context.toneMappings?.length > 0
-							? [...context.toneMappings.map((tm) => tm.shader({ declaration: false, exposure: false, color: true }))]
-							: []),
-					].join("\n"),
-					//todo, remove this after decoupling the point light shader
-					numPointLights: context.numPointLights,
-				},
-				defaultFragment,
-			);
+			const fragmentShaderSource = templateLiteralRenderer(defaultFragment, {
+				defines: "",
+				declarations: "",
+				diffuseMapSample: "",
+				normalMapSample: "",
+				irradiance: "",
+				toneMapping: "",
+				numPointLights: 0,
+			})({
+				defines: objectToDefines({
+					...(context.numPointLights
+						? {
+								NUM_POINT_LIGHTS: context.numPointLights,
+							}
+						: undefined),
+				}),
+				declarations: [
+					...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : []),
+					...(context.toneMappings?.length > 0
+						? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
+						: []),
+					...(mesh.material?.specular ? [specularDeclaration] : []),
+					...(mesh.material?.diffuseMap ? [diffuseMapDeclaration] : []),
+					...(mesh.material?.normalMap ? [normalMapDeclaration] : []),
+				].join("\n"),
+				diffuseMapSample,
+				normalMapSample,
+				irradiance: [
+					...(context.numPointLights
+						? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
+						: []),
+				].join("\n"),
+				toneMapping: [
+					...(context.toneMappings?.length > 0 ? [...context.toneMappings.map((tm) => tm.shader({ color: true }))] : []),
+				].join("\n"),
+				//todo, remove this after decoupling the point light shader
+				numPointLights: context.numPointLights,
+			});
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
 			console.log(fragmentShaderSource);
@@ -2428,7 +2429,11 @@ const createPointLight = (props) => {
 		cutoffDistance: 5,
 		decayExponent: 1,
 		...props,
-		shader: (segment) => templateLiteralRenderer(segment, pointLightShader),
+		shader: templateLiteralRenderer(pointLightShader, {
+			declaration: false,
+			irradiance: false,
+			specularIrradiance: "",
+		}),
 		setupLights,
 		updateOneLight,
 	};
@@ -2574,7 +2579,10 @@ var specularShader = "${declaration?\r\n`\r\n\r\nuniform float roughness;\r\nuni
 const createSpecular = (props) => {
 	return {
 		...props,
-		shader: (segment) => templateLiteralRenderer(segment, specularShader),
+		shader: templateLiteralRenderer(specularShader, {
+			declaration: false,
+			irradiance: false,
+		}),
 		setupSpecular: (context) => setupSpecular(context, props),
 	};
 };
@@ -2628,7 +2636,12 @@ const createTexture = async (props) => {
 	return {
 		type: types[props.type],
 		texture,
-		shader: (segment) => templateLiteralRenderer(segment, textureShader),
+		shader: templateLiteralRenderer(textureShader, {
+			declaration: false,
+			diffuseMapSample: false,
+			normalMapSample: false,
+			mapType: undefined,
+		}),
 		setupTexture: (context) => setupTexture(context, texture, types[props.type], id[props.type], props.normalScale),
 	};
 };
@@ -2757,7 +2770,7 @@ function instance($$self, $$props, $$invalidate) {
 		renderer.addLight(createPointLight({
 			position: [0, 1, -3],
 			color: [1, 1, 1],
-			intensity: 2,
+			intensity: 5,
 			cutoffDistance: 0,
 			decayExponent: 2
 		}));

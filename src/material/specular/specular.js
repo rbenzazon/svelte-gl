@@ -18,7 +18,10 @@ import { get } from "svelte/store";
 export const createSpecular = (props) => {
 	return {
 		...props,
-		shader: (segment) => templateLiteralRenderer(segment, specularShader),
+		shader: templateLiteralRenderer(specularShader, {
+			declaration: false,
+			irradiance: false,
+		}),
 		setupSpecular: (context) => setupSpecular(context, props),
 	};
 };

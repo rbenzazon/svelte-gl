@@ -1,8 +1,15 @@
-const templateGenerator = (props, template) => {
-	return (propsValues) => Function.constructor(...props, `return \`${template}\``)(...propsValues);
-};
-export const templateLiteralRenderer = (props, template) => {
-	return templateGenerator(Object.keys(props), template)(Object.values(props));
+export const templateLiteralRenderer = (template, parameters) => {
+	const fn = Function.constructor(
+		...Object.entries(parameters).map(([key, defaultValue]) => {
+			if (defaultValue === "") {
+				defaultValue = '""';
+			}
+			return `${key}${defaultValue != null ? `=${defaultValue}` : ""}`;
+		}),
+		`return \`${template}\``,
+	);
+	return (propsWithValues) =>
+		fn(...Object.keys(parameters).map((key) => (propsWithValues[key] != null ? propsWithValues[key] : undefined)));
 };
 
 export const objectToDefines = (obj) => {

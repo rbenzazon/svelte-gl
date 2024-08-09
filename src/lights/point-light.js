@@ -1,4 +1,4 @@
-import pointLightShader from "../shaders/point-light.glsl";
+import pointLightShader from "./point-light.glsl";
 import { templateLiteralRenderer } from "../shaders/template.js";
 import { get } from "svelte/store";
 import { multiplyScalarVec3 } from "../geometries/common.js";
@@ -13,7 +13,11 @@ export const createPointLight = (props) => {
 		cutoffDistance: 5,
 		decayExponent: 1,
 		...props,
-		shader: (segment) => templateLiteralRenderer(segment, pointLightShader),
+		shader: templateLiteralRenderer(pointLightShader, {
+			declaration: false,
+			irradiance: false,
+			specularIrradiance: "",
+		}),
 		setupLights,
 		updateOneLight,
 	};

@@ -54,7 +54,7 @@ onMount(async () => {
 		createPointLight({
 			position: [0, 1, -3],
 			color: [1, 1, 1],
-			intensity: 2,
+			intensity: 5,
 			cutoffDistance: 0,
 			decayExponent: 2,
 		}),

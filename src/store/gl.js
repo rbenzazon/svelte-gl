@@ -101,12 +101,11 @@ export function createShaders() {
 			const gl = context.gl;
 			const program = context.program;
 
-			const vertexShaderSource = templateLiteralRenderer(
-				{
-					instances: mesh.instances > 1,
-				},
-				defaultVertex,
-			);
+			const vertexShaderSource = templateLiteralRenderer(defaultVertex, {
+				instances: false,
+			})({
+				instances: mesh.instances > 1,
+			});
 			console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
@@ -117,22 +116,18 @@ export function createShaders() {
 			let specularIrradiance = "";
 			let specularDeclaration = "";
 			if (mesh.material?.specular) {
-				specularDeclaration = mesh.material.specular.shader({ declaration: true, irradiance: false });
-				specularIrradiance = mesh.material.specular.shader({ declaration: false, irradiance: true });
+				specularDeclaration = mesh.material.specular.shader({ declaration: true });
+				specularIrradiance = mesh.material.specular.shader({ irradiance: true });
 			}
 			let diffuseMapDeclaration = "";
 			let diffuseMapSample = "";
 			if (mesh.material?.diffuseMap) {
 				diffuseMapDeclaration = mesh.material.diffuseMap.shader({
 					declaration: true,
-					diffuseMapSample: false,
-					normalMapSample: false,
 					mapType: mesh.material.diffuseMap.type,
 				});
 				diffuseMapSample = mesh.material.diffuseMap.shader({
-					declaration: false,
 					diffuseMapSample: true,
-					normalMapSample: false,
 					mapType: mesh.material.diffuseMap.type,
 				});
 			}
@@ -141,52 +136,51 @@ export function createShaders() {
 			if (mesh.material?.normalMap) {
 				normalMapDeclaration = mesh.material.normalMap.shader({
 					declaration: true,
-					diffuseMapSample: false,
-					normalMapSample: false,
 					mapType: mesh.material.normalMap.type,
 				});
 				normalMapSample = mesh.material.normalMap.shader({
-					declaration: false,
-					diffuseMapSample: false,
 					normalMapSample: true,
 					mapType: mesh.material.normalMap.type,
 				});
 			}
-			const fragmentShaderSource = templateLiteralRenderer(
-				{
-					defines: objectToDefines({
-						...(context.numPointLights
-							? {
-									NUM_POINT_LIGHTS: context.numPointLights,
-								}
-							: undefined),
-					}),
-					declarations: [
-						...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : []),
-						...(context.toneMappings?.length > 0
-							? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure, color: false }))]
-							: []),
-						...(mesh.material?.specular ? [specularDeclaration] : []),
-						...(mesh.material?.diffuseMap ? [diffuseMapDeclaration] : []),
-						...(mesh.material?.normalMap ? [normalMapDeclaration] : []),
-					].join("\n"),
-					diffuseMapSample,
-					normalMapSample,
-					irradiance: [
-						...(context.numPointLights
-							? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
-							: []),
-					].join("\n"),
-					toneMapping: [
-						...(context.toneMappings?.length > 0
-							? [...context.toneMappings.map((tm) => tm.shader({ declaration: false, exposure: false, color: true }))]
-							: []),
-					].join("\n"),
-					//todo, remove this after decoupling the point light shader
-					numPointLights: context.numPointLights,
-				},
-				defaultFragment,
-			);
+			const fragmentShaderSource = templateLiteralRenderer(defaultFragment, {
+				defines: "",
+				declarations: "",
+				diffuseMapSample: "",
+				normalMapSample: "",
+				irradiance: "",
+				toneMapping: "",
+				numPointLights: 0,
+			})({
+				defines: objectToDefines({
+					...(context.numPointLights
+						? {
+								NUM_POINT_LIGHTS: context.numPointLights,
+							}
+						: undefined),
+				}),
+				declarations: [
+					...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : []),
+					...(context.toneMappings?.length > 0
+						? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
+						: []),
+					...(mesh.material?.specular ? [specularDeclaration] : []),
+					...(mesh.material?.diffuseMap ? [diffuseMapDeclaration] : []),
+					...(mesh.material?.normalMap ? [normalMapDeclaration] : []),
+				].join("\n"),
+				diffuseMapSample,
+				normalMapSample,
+				irradiance: [
+					...(context.numPointLights
+						? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
+						: []),
+				].join("\n"),
+				toneMapping: [
+					...(context.toneMappings?.length > 0 ? [...context.toneMappings.map((tm) => tm.shader({ color: true }))] : []),
+				].join("\n"),
+				//todo, remove this after decoupling the point light shader
+				numPointLights: context.numPointLights,
+			});
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
 			console.log(fragmentShaderSource);
