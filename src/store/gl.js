@@ -45,6 +45,16 @@ export function initRenderer(rendererContext, appContext) {
 	};
 }
 
+export function setupTime(context) {
+	return function () {
+		const contextValue = get(context);
+		const gl = contextValue.gl;
+		const program = contextValue.program;
+		const timeLocation = gl.getUniformLocation(program, "time");
+		gl.uniform1f(timeLocation, performance.now());
+	};
+}
+
 export function render(context, instances) {
 	return function () {
 		const contextValue = get(context);
@@ -101,10 +111,30 @@ export function createShaders() {
 			const gl = context.gl;
 			const program = context.program;
 
+			let vertexDeclarations = "";
+			let vertexPositionModifiers = "";
+
+			let vertexAnimationsDeclaration = "";
+			let vertexAnimationsModifier = "";
+			const vertexAnimationComponents = mesh.animations?.filter(({ type }) => type === "vertex");
+			if (vertexAnimationComponents.length > 0) {
+				vertexAnimationsDeclaration += vertexAnimationComponents.reduce((acc, component) => {
+					return acc + component.shader({ declaration: true });
+				}, "");
+				vertexAnimationsModifier += vertexAnimationComponents.reduce((acc, component) => {
+					return acc + component.shader({ position: true });
+				}, "");
+				vertexDeclarations += vertexAnimationsDeclaration;
+				vertexPositionModifiers += vertexAnimationsModifier;
+			}
 			const vertexShaderSource = templateLiteralRenderer(defaultVertex, {
 				instances: false,
+				declarations: "",
+				positionModifier: "",
 			})({
 				instances: mesh.instances > 1,
+				declarations: vertexDeclarations,
+				positionModifier: vertexPositionModifiers,
 			});
 			console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);

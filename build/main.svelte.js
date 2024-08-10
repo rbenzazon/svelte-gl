@@ -1017,7 +1017,7 @@ function lookAt(out, eye, center, up) {
   return out;
 }
 
-var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\nin vec2 uv;\r\n${instances ?\r\n`\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n` : `\r\nuniform mat4 world;\r\nuniform mat4 normalMatrix;\r\n`}\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\nout vec3 vViewPosition;\r\nout highp vec2 vUv;\r\n\r\nvoid main() {\r\n    vUv = vec3( uv, 1 ).xy;\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(position, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(position, 1.0);\r\n    vViewPosition = -gl_Position.xyz;\r\n}";
+var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\nin vec2 uv;\r\n${instances ?\r\n`\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n` : `\r\nuniform mat4 world;\r\nuniform mat4 normalMatrix;\r\n`}\r\n\r\n\r\nuniform float time;\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\nout vec3 vViewPosition;\r\nout highp vec2 vUv;\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n\r\n    // Add wave animation to vertex position\r\n    float frequency = 0.004; // Adjust the frequency of the wave\r\n    float amplitude = 1.0; // Adjust the amplitude of the wave\r\n    vec3 animatedPosition = position;\r\n    ${positionModifier}\r\n\r\n    vUv = vec3( uv, 1 ).xy;\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(animatedPosition, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    vNormal = vec3(normalMatrix * vec4(normal, 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(animatedPosition, 1.0);\r\n    vViewPosition = -gl_Position.xyz;\r\n}";
 
 var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n//uniform mat3 normalMatrix;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\nin highp vec2 vUv;\r\nin vec3 vViewPosition;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\t${diffuseMapSample}\r\n\t\r\n\r\n\tvec3 normal = normalize( vNormal );\r\n\t${normalMapSample}\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, 1.0f);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
 
@@ -1106,6 +1106,16 @@ function initRenderer(rendererContext, appContext) {
 	};
 }
 
+function setupTime(context) {
+	return function () {
+		const contextValue = get_store_value(context);
+		const gl = contextValue.gl;
+		const program = contextValue.program;
+		const timeLocation = gl.getUniformLocation(program, "time");
+		gl.uniform1f(timeLocation, performance.now());
+	};
+}
+
 function render(context, instances) {
 	return function () {
 		const contextValue = get_store_value(context);
@@ -1162,10 +1172,30 @@ function createShaders() {
 			const gl = context.gl;
 			const program = context.program;
 
+			let vertexDeclarations = "";
+			let vertexPositionModifiers = "";
+
+			let vertexAnimationsDeclaration = "";
+			let vertexAnimationsModifier = "";
+			const vertexAnimationComponents = mesh.animations?.filter(({ type }) => type === "vertex");
+			if (vertexAnimationComponents.length > 0) {
+				vertexAnimationsDeclaration += vertexAnimationComponents.reduce((acc, component) => {
+					return acc + component.shader({ declaration: true });
+				}, "");
+				vertexAnimationsModifier += vertexAnimationComponents.reduce((acc, component) => {
+					return acc + component.shader({ position: true });
+				}, "");
+				vertexDeclarations += vertexAnimationsDeclaration;
+				vertexPositionModifiers += vertexAnimationsModifier;
+			}
 			const vertexShaderSource = templateLiteralRenderer(defaultVertex, {
 				instances: false,
+				declarations: "",
+				positionModifier: "",
 			})({
 				instances: mesh.instances > 1,
+				declarations: vertexDeclarations,
+				positionModifier: vertexPositionModifiers,
 			});
 			console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
@@ -1595,30 +1625,27 @@ function createRenderer() {
 			const meshWithMatrix = {
 				...mesh,
 				...(matrices ? { matrices, unsubs } : { transformMatrix }),
+				unsub: () => {
+					if (matrices) {
+						unsubs.forEach((unsub) => unsub());
+					} else {
+						unsubNormalMatrix();
+					}
+				},
+				animations: [],
 			};
 			update((renderer) => {
 				renderer.meshes = [...renderer.meshes, meshWithMatrix];
 				return renderer;
 			});
-			return {
-				remove: matrices
-					? () => {
-							update((renderer) => {
-								renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
-								return renderer;
-							});
-							unsubNormalMatrix();
-						}
-					: () => {
-							update((renderer) => {
-								renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
-								return renderer;
-							});
-							meshWithMatrix.unsubs.forEach((unsub) => unsub());
-						},
-				...(matrices ? { matrices } : { transformMatrix }),
-				material: mesh.material,
-			};
+			return meshWithMatrix;
+		},
+		removeMesh: (mesh) => {
+			update((renderer) => {
+				renderer.meshes = renderer.meshes.filter((m) => m !== mesh);
+				return renderer;
+			});
+			mesh.unsub();
 		},
 		setAmbientLight: (color, intensity) => {
 			update((renderer) => {
@@ -1645,6 +1672,16 @@ function createRenderer() {
 		addToneMapping: (toneMapping) =>
 			update((renderer) => {
 				renderer.toneMappings = [...renderer.toneMappings, toneMapping];
+				return renderer;
+			}),
+		addAnimation: (mesh, animation) =>
+			update((renderer) => {
+				renderer.meshes = renderer.meshes.map((m) => {
+					if (m === mesh) {
+						m.animations.push(animation);
+					}
+					return m;
+				});
 				return renderer;
 			}),
 		setLoop: (loop) =>
@@ -1791,6 +1828,7 @@ const webglapp = derived(
 
 		const numPointLights = $renderer.lights.filter((l) => get_store_value(l).type === "point").length;
 		const pointLightShader = get_store_value($renderer.lights.find((l) => get_store_value(l).type === "point")).shader;
+		const requireTime = $programs.some((program) => program.mesh.animations?.some((animation) => animation.requireTime));
 
 		let rendererContext = {
 			canvas: $renderer.canvas,
@@ -1819,6 +1857,7 @@ const webglapp = derived(
 			list.push(
 				...$programs.reduce((acc, program) => {
 					lastProgramRendered.set(program);
+					const animationsSetups = program.mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || [];
 					return [
 						...acc,
 						program.createProgram(appContext),
@@ -1836,6 +1875,7 @@ const webglapp = derived(
 							program.mesh.instances == null ? get_store_value(program.mesh.transformMatrix) : program.mesh.matrices,
 							program.mesh.instances,
 						),
+						...animationsSetups,
 						setupNormalMatrix(appContext, program.mesh.instances),
 						// reduce by type to setup lights once per type
 						...[
@@ -1849,7 +1889,7 @@ const webglapp = derived(
 				}, []),
 			);
 
-		list.push(render(appContext, $programs[0].mesh.instances));
+		list.push(...(requireTime ? [setupTime(appContext)] : []), render(appContext, $programs[0].mesh.instances));
 		return list;
 	},
 	emptyApp,
@@ -2687,6 +2727,89 @@ function setupTexture(context, texture, type, id, normalScale = [1, 1]) {
 	};
 }
 
+var wobblyShader = "${declaration ? `\r\n// Adjust the frequency of the wave\r\nuniform float wobblyFrequency;\r\n// Adjust the amplitude of the wave\r\nuniform float wobblyAmplitude;\r\n\r\nvec3 getWobblyPosition(vec3 position) {\r\n    return position + vec3(sin((time+position.y*1.0/wobblyFrequency) * wobblyFrequency) * wobblyAmplitude,0.0, 0.0);\r\n}\r\n` : ''}\r\n${position ? `\r\n    animatedPosition = getWobblyPosition(animatedPosition);\r\n` : ''}";
+
+/**
+ * @typedef WobblyProps
+ * @property {number} [frequency=0.04]
+ * @property {number} [amplitude=1]
+ */
+
+/**
+ *
+ * @param {WobblyProps} props
+ * @returns
+ */
+const createWobblyAnimation = (props) => {
+	return {
+		...props,
+		type: "vertex",
+		requireTime: true,
+		shader: templateLiteralRenderer(wobblyShader, {
+			declaration: false,
+			position: false,
+		}),
+		setupAnimation: (context) => setupWobbly(context, props),
+	};
+};
+
+function setupWobbly(context, { frequency, amplitude }) {
+	return function () {
+		context = get_store_value(context);
+		/** @type {{gl: WebGL2RenderingContext}} **/
+		const { gl, program } = context;
+
+		const frequencyLocation = gl.getUniformLocation(program, "wobblyFrequency");
+		const amplitudeLocation = gl.getUniformLocation(program, "wobblyAmplitude");
+
+		gl.uniform1f(frequencyLocation, frequency);
+		gl.uniform1f(amplitudeLocation, amplitude);
+	};
+}
+
+var pulsatingScaleShader = "${declaration ? `\r\n// Adjust the frequency of the pulsating scale\r\nuniform float pScaleFrequency;\r\n// Adjust the minimum scale of the pulsating scale\r\nuniform float pScaleMinScale;\r\n// Adjust the maximum scale of the pulsating scale\r\nuniform float pScaleMaxScale;\r\n\r\nvec3 getPulsatingScale(vec3 position) {\r\n    return position * vec3(1.0+pScaleMinScale+(sin(time* pScaleFrequency) ) * pScaleMaxScale/2.0 );\r\n}\r\n` : ''}\r\n${position ? `\r\n    animatedPosition = getPulsatingScale(animatedPosition);\r\n` : ''}";
+
+/**
+ * @typedef PulsatingScaleProps
+ * @property {number} [frequency=0.04]
+ * @property {number} [minScale=0.8]
+ * @property {number} [maxScale=1.2]
+ */
+
+/**
+ *
+ * @param {PulsatingScaleProps} props
+ * @returns
+ */
+const createPulsatingScaleAnimation = (props) => {
+	return {
+		...props,
+		type: "vertex",
+		requireTime: true,
+		shader: templateLiteralRenderer(pulsatingScaleShader, {
+			declaration: false,
+			position: false,
+		}),
+		setupAnimation: (context) => setupPulsatingScale(context, props),
+	};
+};
+
+function setupPulsatingScale(context, { frequency, minScale, maxScale }) {
+	return function () {
+		context = get_store_value(context);
+		/** @type {{gl: WebGL2RenderingContext}} **/
+		const { gl, program } = context;
+
+		const frequencyLocation = gl.getUniformLocation(program, "pScaleFrequency");
+		const minScaleLocation = gl.getUniformLocation(program, "pScaleMinScale");
+		const maxScaleLocation = gl.getUniformLocation(program, "pScaleMaxScale");
+
+		gl.uniform1f(frequencyLocation, frequency);
+		gl.uniform1f(minScaleLocation, minScale);
+		gl.uniform1f(maxScaleLocation, maxScale);
+	};
+}
+
 /* src\main-test.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
@@ -2735,6 +2858,7 @@ light1.set({
 
 function instance($$self, $$props, $$invalidate) {
 	let canvas;
+	let mesh1;
 	let camera;
 
 	onMount(async () => {
@@ -2752,7 +2876,7 @@ function instance($$self, $$props, $$invalidate) {
 		const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
 		sphereGeometry.uvs = generateUVs(sphereGeometry);
 
-		renderer.addMesh({
+		mesh1 = renderer.addMesh({
 			attributes: sphereGeometry,
 			material: {
 				diffuse: [1, 0, 0],
@@ -2766,6 +2890,14 @@ function instance($$self, $$props, $$invalidate) {
 				normalMapScale: [1, 1]
 			}
 		});
+
+		renderer.addAnimation(mesh1, createPulsatingScaleAnimation({
+			minScale: 1,
+			maxScale: 1.5,
+			frequency: 0.002
+		}));
+
+		renderer.addAnimation(mesh1, createWobblyAnimation({ amplitude: 1, frequency: 0.004 }));
 
 		renderer.addLight(createPointLight({
 			position: [0, 1, -3],

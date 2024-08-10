@@ -13,6 +13,8 @@ uniform mat4 world;
 uniform mat4 normalMatrix;
 `}
 
+
+uniform float time;
 uniform mat4 view;
 uniform mat4 projection;
 
@@ -23,18 +25,27 @@ out vec3 vertex;
 out vec3 vViewPosition;
 out highp vec2 vUv;
 
+${declarations}
+
 void main() {
+
+    // Add wave animation to vertex position
+    float frequency = 0.004; // Adjust the frequency of the wave
+    float amplitude = 1.0; // Adjust the amplitude of the wave
+    vec3 animatedPosition = position;
+    ${positionModifier}
+
     vUv = vec3( uv, 1 ).xy;
     // Pass the color down to the fragment shader
     vertexColor = vec3(1.27,1.27,1.27);
     // Pass the vertex down to the fragment shader
     //vertex = vec3(world * vec4(position, 1.0));
-    vertex = vec3(world * vec4(position, 1.0));
+    vertex = vec3(world * vec4(animatedPosition, 1.0));
     // Pass the normal down to the fragment shader
     vNormal = vec3(normalMatrix * vec4(normal, 1.0));
     //vNormal = normal;
     
     // Pass the position down to the fragment shader
-    gl_Position = projection * view * world * vec4(position, 1.0);
+    gl_Position = projection * view * world * vec4(animatedPosition, 1.0);
     vViewPosition = -gl_Position.xyz;
 }

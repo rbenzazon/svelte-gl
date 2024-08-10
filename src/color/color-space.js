@@ -37,7 +37,6 @@ export function convertHexToVector3(hex) {
 
 export function convertSRGBToLinear3(hex) {
 	hex = Math.floor(hex);
-	console.log("hex", hex);
 	return convertHexToVector3(hex).map(SRGBToLinear);
 }
 

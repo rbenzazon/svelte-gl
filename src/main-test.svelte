@@ -14,6 +14,8 @@ import { skyblue } from "./color/color-keywords.js";
 import { createTexture } from "./texture/texture.js";
 //import {loadGLBFile } from "./loaders/glb-loader.js";
 //import {loadGLTFFile } from "./loaders/gltf-loader.js";
+import { createWobblyAnimation } from "./animation/wobbly/wobbly.js";
+import { createPulsatingScaleAnimation } from "./animation/pulsating-scale/pulsating-scale.js";
 
 let canvas;
 let light1;
@@ -49,6 +51,22 @@ onMount(async () => {
 			normalMapScale: [1, 1],
 		},
 	});
+	renderer.addAnimation(
+		mesh1,
+		createPulsatingScaleAnimation({
+			minScale: 1,
+			maxScale: 1.5,
+			frequency: 0.002,
+		}),
+	);
+
+	renderer.addAnimation(
+		mesh1,
+		createWobblyAnimation({
+			amplitude: 1,
+			frequency: 0.004,
+		}),
+	);
 
 	light1 = renderer.addLight(
 		createPointLight({

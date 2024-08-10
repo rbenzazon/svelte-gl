@@ -18,6 +18,7 @@ import {
 	updateNormalMatrix,
 	updateInstanceNormalMatrix,
 	derivateNormalMatrix,
+	setupTime,
 } from "./gl.js";
 import { convertToVector4, convertToVector3, convertSRGBToLinear3 } from "../color/color-space.js";
 
@@ -89,30 +90,27 @@ function createRenderer() {
 			const meshWithMatrix = {
 				...mesh,
 				...(matrices ? { matrices, unsubs } : { transformMatrix }),
+				unsub: () => {
+					if (matrices) {
+						unsubs.forEach((unsub) => unsub());
+					} else {
+						unsubNormalMatrix();
+					}
+				},
+				animations: [],
 			};
 			update((renderer) => {
 				renderer.meshes = [...renderer.meshes, meshWithMatrix];
 				return renderer;
 			});
-			return {
-				remove: matrices
-					? () => {
-							update((renderer) => {
-								renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
-								return renderer;
-							});
-							unsubNormalMatrix();
-						}
-					: () => {
-							update((renderer) => {
-								renderer.meshes = renderer.meshes.filter((m) => m !== meshWithMatrix);
-								return renderer;
-							});
-							meshWithMatrix.unsubs.forEach((unsub) => unsub());
-						},
-				...(matrices ? { matrices } : { transformMatrix }),
-				material: mesh.material,
-			};
+			return meshWithMatrix;
+		},
+		removeMesh: (mesh) => {
+			update((renderer) => {
+				renderer.meshes = renderer.meshes.filter((m) => m !== mesh);
+				return renderer;
+			});
+			mesh.unsub();
 		},
 		setAmbientLight: (color, intensity) => {
 			update((renderer) => {
@@ -139,6 +137,16 @@ function createRenderer() {
 		addToneMapping: (toneMapping) =>
 			update((renderer) => {
 				renderer.toneMappings = [...renderer.toneMappings, toneMapping];
+				return renderer;
+			}),
+		addAnimation: (mesh, animation) =>
+			update((renderer) => {
+				renderer.meshes = renderer.meshes.map((m) => {
+					if (m === mesh) {
+						m.animations.push(animation);
+					}
+					return m;
+				});
 				return renderer;
 			}),
 		setLoop: (loop) =>
@@ -285,6 +293,7 @@ const webglapp = derived(
 
 		const numPointLights = $renderer.lights.filter((l) => get(l).type === "point").length;
 		const pointLightShader = get($renderer.lights.find((l) => get(l).type === "point")).shader;
+		const requireTime = $programs.some((program) => program.mesh.animations?.some((animation) => animation.requireTime));
 
 		let rendererContext = {
 			canvas: $renderer.canvas,
@@ -313,6 +322,7 @@ const webglapp = derived(
 			list.push(
 				...$programs.reduce((acc, program) => {
 					lastProgramRendered.set(program);
+					const animationsSetups = program.mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || [];
 					return [
 						...acc,
 						program.createProgram(appContext),
@@ -330,6 +340,7 @@ const webglapp = derived(
 							program.mesh.instances == null ? get(program.mesh.transformMatrix) : program.mesh.matrices,
 							program.mesh.instances,
 						),
+						...animationsSetups,
 						setupNormalMatrix(appContext, program.mesh.instances),
 						// reduce by type to setup lights once per type
 						...[
@@ -343,7 +354,7 @@ const webglapp = derived(
 				}, []),
 			);
 
-		list.push(render(appContext, $programs[0].mesh.instances));
+		list.push(...(requireTime ? [setupTime(appContext)] : []), render(appContext, $programs[0].mesh.instances));
 		return list;
 	},
 	emptyApp,
