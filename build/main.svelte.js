@@ -2727,86 +2727,43 @@ function setupTexture(context, texture, type, id, normalScale = [1, 1]) {
 	};
 }
 
-var wobblyShader = "${declaration ? `\r\n// Adjust the frequency of the wave\r\nuniform float wobblyFrequency;\r\n// Adjust the amplitude of the wave\r\nuniform float wobblyAmplitude;\r\n\r\nvec3 getWobblyPosition(vec3 position) {\r\n    return position + vec3(sin((time+position.y*1.0/wobblyFrequency) * wobblyFrequency) * wobblyAmplitude,0.0, 0.0);\r\n}\r\n` : ''}\r\n${position ? `\r\n    animatedPosition = getWobblyPosition(animatedPosition);\r\n` : ''}";
+var noiseShader = "${declaration ? `\r\n\r\nuniform float noiseDistortionFrequency;\r\nuniform float noiseDistortionAmplitude;\r\n\r\nvec3 mod289(vec3 x)\r\n{\r\n  return x - floor(x * (1.0 / 289.0)) * 289.0;\r\n}\r\n\r\nvec4 mod289(vec4 x)\r\n{\r\n  return x - floor(x * (1.0 / 289.0)) * 289.0;\r\n}\r\n\r\nvec4 permute(vec4 x)\r\n{\r\n  return mod289(((x*34.0)+10.0)*x);\r\n}\r\n\r\nvec4 taylorInvSqrt(vec4 r)\r\n{\r\n  return 1.79284291400159 - 0.85373472095314 * r;\r\n}\r\n\r\nvec3 fade(vec3 t) {\r\n  return t*t*t*(t*(t*6.0-15.0)+10.0);\r\n}\r\n\r\n// Classic Perlin noise, periodic variant\r\nfloat pnoise(vec3 P, vec3 rep)\r\n{\r\n  vec3 Pi0 = mod(floor(P), rep); // Integer part, modulo period\r\n  vec3 Pi1 = mod(Pi0 + vec3(1.0), rep); // Integer part + 1, mod period\r\n  Pi0 = mod289(Pi0);\r\n  Pi1 = mod289(Pi1);\r\n  vec3 Pf0 = fract(P); // Fractional part for interpolation\r\n  vec3 Pf1 = Pf0 - vec3(1.0); // Fractional part - 1.0\r\n  vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);\r\n  vec4 iy = vec4(Pi0.yy, Pi1.yy);\r\n  vec4 iz0 = Pi0.zzzz;\r\n  vec4 iz1 = Pi1.zzzz;\r\n\r\n  vec4 ixy = permute(permute(ix) + iy);\r\n  vec4 ixy0 = permute(ixy + iz0);\r\n  vec4 ixy1 = permute(ixy + iz1);\r\n\r\n  vec4 gx0 = ixy0 * (1.0 / 7.0);\r\n  vec4 gy0 = fract(floor(gx0) * (1.0 / 7.0)) - 0.5;\r\n  gx0 = fract(gx0);\r\n  vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);\r\n  vec4 sz0 = step(gz0, vec4(0.0));\r\n  gx0 -= sz0 * (step(0.0, gx0) - 0.5);\r\n  gy0 -= sz0 * (step(0.0, gy0) - 0.5);\r\n\r\n  vec4 gx1 = ixy1 * (1.0 / 7.0);\r\n  vec4 gy1 = fract(floor(gx1) * (1.0 / 7.0)) - 0.5;\r\n  gx1 = fract(gx1);\r\n  vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);\r\n  vec4 sz1 = step(gz1, vec4(0.0));\r\n  gx1 -= sz1 * (step(0.0, gx1) - 0.5);\r\n  gy1 -= sz1 * (step(0.0, gy1) - 0.5);\r\n\r\n  vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);\r\n  vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);\r\n  vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);\r\n  vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);\r\n  vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);\r\n  vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);\r\n  vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);\r\n  vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);\r\n\r\n  vec4 norm0 = taylorInvSqrt(vec4(dot(g000, g000), dot(g010, g010), dot(g100, g100), dot(g110, g110)));\r\n  g000 *= norm0.x;\r\n  g010 *= norm0.y;\r\n  g100 *= norm0.z;\r\n  g110 *= norm0.w;\r\n  vec4 norm1 = taylorInvSqrt(vec4(dot(g001, g001), dot(g011, g011), dot(g101, g101), dot(g111, g111)));\r\n  g001 *= norm1.x;\r\n  g011 *= norm1.y;\r\n  g101 *= norm1.z;\r\n  g111 *= norm1.w;\r\n\r\n  float n000 = dot(g000, Pf0);\r\n  float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));\r\n  float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));\r\n  float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));\r\n  float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));\r\n  float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));\r\n  float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));\r\n  float n111 = dot(g111, Pf1);\r\n\r\n  vec3 fade_xyz = fade(Pf0);\r\n  vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);\r\n  vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);\r\n  float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x); \r\n  return 2.2 * n_xyz;\r\n}\r\n\r\nfloat turbulence( vec3 p ) {\r\n\r\n  float w = 100.0;\r\n  float t = -.5;\r\n\r\n  for (float f = 1.0 ; f <= 10.0 ; f++ ){\r\n    float power = pow( 2.0, f );\r\n    t += abs( pnoise( vec3( power * p ), vec3( 10.0, 10.0, 10.0 ) ) / power );\r\n  }\r\n\r\n  return t;\r\n\r\n}\r\n` : ''}\r\n${position ? `\r\n    \r\n    // get a turbulent 3d noise using the normal, normal to high freq\r\n    float noise = noiseDistortionAmplitude *  -.10 * turbulence( .5 * normal + (time * noiseDistortionFrequency) );\r\n    // get a 3d noise using the position, low frequency\r\n    float b = noiseDistortionAmplitude * pnoise( 0.05 * animatedPosition + vec3( noiseDistortionFrequency * time ), vec3( 100.0 ) );\r\n    // compose both noises\r\n    float displacement = - 10. * noise + b;\r\n    animatedPosition = animatedPosition + normal * displacement;\r\n` : ''}";
 
 /**
- * @typedef WobblyProps
+ * @typedef NoiseProps
  * @property {number} [frequency=0.04]
  * @property {number} [amplitude=1]
  */
 
 /**
  *
- * @param {WobblyProps} props
+ * @param {NoiseProps} props
  * @returns
  */
-const createWobblyAnimation = (props) => {
+const createNoiseDistortionAnimation = (props) => {
 	return {
 		...props,
 		type: "vertex",
 		requireTime: true,
-		shader: templateLiteralRenderer(wobblyShader, {
+		shader: templateLiteralRenderer(noiseShader, {
 			declaration: false,
 			position: false,
 		}),
-		setupAnimation: (context) => setupWobbly(context, props),
+		setupAnimation: (context) => setupNoise(context, props),
 	};
 };
 
-function setupWobbly(context, { frequency, amplitude }) {
+function setupNoise(context, { frequency, amplitude }) {
 	return function () {
 		context = get_store_value(context);
 		/** @type {{gl: WebGL2RenderingContext}} **/
 		const { gl, program } = context;
 
-		const frequencyLocation = gl.getUniformLocation(program, "wobblyFrequency");
-		const amplitudeLocation = gl.getUniformLocation(program, "wobblyAmplitude");
+		const frequencyLocation = gl.getUniformLocation(program, "noiseDistortionFrequency");
+		const amplitudeLocation = gl.getUniformLocation(program, "noiseDistortionAmplitude");
 
 		gl.uniform1f(frequencyLocation, frequency);
 		gl.uniform1f(amplitudeLocation, amplitude);
-	};
-}
-
-var pulsatingScaleShader = "${declaration ? `\r\n// Adjust the frequency of the pulsating scale\r\nuniform float pScaleFrequency;\r\n// Adjust the minimum scale of the pulsating scale\r\nuniform float pScaleMinScale;\r\n// Adjust the maximum scale of the pulsating scale\r\nuniform float pScaleMaxScale;\r\n\r\nvec3 getPulsatingScale(vec3 position) {\r\n    return position * vec3(1.0+pScaleMinScale+(sin(time* pScaleFrequency) ) * pScaleMaxScale/2.0 );\r\n}\r\n` : ''}\r\n${position ? `\r\n    animatedPosition = getPulsatingScale(animatedPosition);\r\n` : ''}";
-
-/**
- * @typedef PulsatingScaleProps
- * @property {number} [frequency=0.04]
- * @property {number} [minScale=0.8]
- * @property {number} [maxScale=1.2]
- */
-
-/**
- *
- * @param {PulsatingScaleProps} props
- * @returns
- */
-const createPulsatingScaleAnimation = (props) => {
-	return {
-		...props,
-		type: "vertex",
-		requireTime: true,
-		shader: templateLiteralRenderer(pulsatingScaleShader, {
-			declaration: false,
-			position: false,
-		}),
-		setupAnimation: (context) => setupPulsatingScale(context, props),
-	};
-};
-
-function setupPulsatingScale(context, { frequency, minScale, maxScale }) {
-	return function () {
-		context = get_store_value(context);
-		/** @type {{gl: WebGL2RenderingContext}} **/
-		const { gl, program } = context;
-
-		const frequencyLocation = gl.getUniformLocation(program, "pScaleFrequency");
-		const minScaleLocation = gl.getUniformLocation(program, "pScaleMinScale");
-		const maxScaleLocation = gl.getUniformLocation(program, "pScaleMaxScale");
-
-		gl.uniform1f(frequencyLocation, frequency);
-		gl.uniform1f(minScaleLocation, minScale);
-		gl.uniform1f(maxScaleLocation, maxScale);
 	};
 }
 
@@ -2891,13 +2848,15 @@ function instance($$self, $$props, $$invalidate) {
 			}
 		});
 
-		renderer.addAnimation(mesh1, createPulsatingScaleAnimation({
-			minScale: 1,
-			maxScale: 1.5,
-			frequency: 0.002
-		}));
-
-		renderer.addAnimation(mesh1, createWobblyAnimation({ amplitude: 1, frequency: 0.004 }));
+		/*renderer.addAnimation(
+	mesh1,
+	createPulsatingScaleAnimation({
+		minScale: 1,
+		maxScale: 1.5,
+		frequency: 0.002,
+	}),
+);*/
+		renderer.addAnimation(mesh1, createNoiseDistortionAnimation({ amplitude: 0.1, frequency: 0.0004 }));
 
 		renderer.addLight(createPointLight({
 			position: [0, 1, -3],

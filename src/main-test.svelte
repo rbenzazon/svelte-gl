@@ -16,6 +16,7 @@ import { createTexture } from "./texture/texture.js";
 //import {loadGLTFFile } from "./loaders/gltf-loader.js";
 import { createWobblyAnimation } from "./animation/wobbly/wobbly.js";
 import { createPulsatingScaleAnimation } from "./animation/pulsating-scale/pulsating-scale.js";
+import { createNoiseDistortionAnimation } from "./animation/noise-distortion/noise-distortion.js";
 
 let canvas;
 let light1;
@@ -51,20 +52,20 @@ onMount(async () => {
 			normalMapScale: [1, 1],
 		},
 	});
-	renderer.addAnimation(
+	/*renderer.addAnimation(
 		mesh1,
 		createPulsatingScaleAnimation({
 			minScale: 1,
 			maxScale: 1.5,
 			frequency: 0.002,
 		}),
-	);
+	);*/
 
 	renderer.addAnimation(
 		mesh1,
-		createWobblyAnimation({
-			amplitude: 1,
-			frequency: 0.004,
+		createNoiseDistortionAnimation({
+			amplitude: 0.1,
+			frequency: 0.0004,
 		}),
 	);
 
