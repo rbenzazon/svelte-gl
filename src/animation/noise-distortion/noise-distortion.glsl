@@ -1,7 +1,9 @@
 ${declaration ? `
 
 uniform float noiseDistortionFrequency;
+uniform float noiseDistortionSpeed;
 uniform float noiseDistortionAmplitude;
+uniform float noiseDistortionTangentLength;
 
 vec3 mod289(vec3 x)
 {
@@ -97,27 +99,27 @@ float pnoise(vec3 P, vec3 rep)
   return 2.2 * n_xyz;
 }
 
-float turbulence( vec3 p ) {
+vec3 orthogonal(vec3 v) {
+    return normalize(abs(v.x) > abs(v.z) ? vec3(-v.y, v.x, 0.0)
+    : vec3(0.0, -v.z, v.y));
+}
 
-  float w = 100.0;
-  float t = -.5;
-
-  for (float f = 1.0 ; f <= 10.0 ; f++ ){
-    float power = pow( 2.0, f );
-    t += abs( pnoise( vec3( power * p ), vec3( 10.0, 10.0, 10.0 ) ) / power );
-  }
-
-  return t;
-
+float getDisplacement(vec3 position) {
+    float b = -noiseDistortionAmplitude * pnoise( position*noiseDistortionFrequency + vec3( noiseDistortionSpeed * time), vec3( 10.0 ) );
+    return  b - noiseDistortionAmplitude;
 }
 ` : ''}
 ${position ? `
-    
-    // get a turbulent 3d noise using the normal, normal to high freq
-    float noise = noiseDistortionAmplitude *  -.10 * turbulence( .5 * normal + (time * noiseDistortionFrequency) );
-    // get a 3d noise using the position, low frequency
-    float b = noiseDistortionAmplitude * pnoise( 0.05 * animatedPosition + vec3( noiseDistortionFrequency * time ), vec3( 100.0 ) );
-    // compose both noises
-    float displacement = - 10. * noise + b;
-    animatedPosition = animatedPosition + normal * displacement;
+    float displacement = getDisplacement(position);
+    animatedPosition = animatedPosition + displacement * normal;
+    vec3 tangent1 = orthogonal(normal);
+    vec3 tangent2 = normalize(cross(normal, tangent1));
+    vec3 nearby1 = position + tangent1 * noiseDistortionTangentLength;
+    vec3 nearby2 = position + tangent2 * noiseDistortionTangentLength;
+
+    float displacementTangent = getDisplacement(nearby1);
+    vec3 modifiedPositionTangent = nearby1 + displacementTangent * normal;
+    float displacementBitangent = getDisplacement(nearby2);
+    vec3 modifiedPositionBitangent = nearby2 + displacementBitangent * normal;
+    modifiedNormal = normalize(cross(modifiedPositionTangent - animatedPosition, modifiedPositionBitangent - animatedPosition));
 ` : ''}

@@ -9,7 +9,7 @@
     "watch": "rollup -c rollup.config.mjs -w",
     "build2": "vite build",
     "format": "pnpm biome format --write ./src",
-    "test": "watch-http-server build -p 8080 -a 127.0.0.1"
+    "test": "watch-http-server build -p 8080 -a 127.0.0.1 -c-1"
   },
   "keywords": [],
   "author": "",

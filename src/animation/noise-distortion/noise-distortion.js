@@ -4,8 +4,10 @@ import { get } from "svelte/store";
 
 /**
  * @typedef NoiseProps
- * @property {number} [frequency=0.04]
+ * @property {number} [frequency=1]
+ * @property {number} [speed=1]
  * @property {number} [amplitude=1]
+ * @property {number} [normalTangentLength=0.01]
  */
 
 /**
@@ -13,29 +15,41 @@ import { get } from "svelte/store";
  * @param {NoiseProps} props
  * @returns
  */
-export const createNoiseDistortionAnimation = (props) => {
+export const createNoiseDistortionAnimation = ({
+	frequency = 1,
+	speed = 1,
+	amplitude = 1,
+	normalTangentLength = 0.01,
+}) => {
 	return {
-		...props,
+		frequency,
+		speed,
+		amplitude,
+		normalTangentLength,
 		type: "vertex",
 		requireTime: true,
 		shader: templateLiteralRenderer(noiseShader, {
 			declaration: false,
 			position: false,
 		}),
-		setupAnimation: (context) => setupNoise(context, props),
+		setupAnimation: (context) => setupNoise(context, { frequency, speed, amplitude, normalTangentLength }),
 	};
 };
 
-function setupNoise(context, { frequency, amplitude }) {
+function setupNoise(context, { frequency, speed, amplitude, normalTangentLength }) {
 	return function () {
 		context = get(context);
 		/** @type {{gl: WebGL2RenderingContext}} **/
 		const { gl, program } = context;
 
 		const frequencyLocation = gl.getUniformLocation(program, "noiseDistortionFrequency");
+		const speedLocation = gl.getUniformLocation(program, "noiseDistortionSpeed");
 		const amplitudeLocation = gl.getUniformLocation(program, "noiseDistortionAmplitude");
+		const normalTangentLengthLocation = gl.getUniformLocation(program, "noiseDistortionTangentLength");
 
-		gl.uniform1f(frequencyLocation, frequency);
-		gl.uniform1f(amplitudeLocation, amplitude);
+		gl.uniform1f(frequencyLocation, frequency * 2);
+		gl.uniform1f(speedLocation, speed * 0.001);
+		gl.uniform1f(amplitudeLocation, amplitude * 0.07);
+		gl.uniform1f(normalTangentLengthLocation, normalTangentLength);
 	};
 }

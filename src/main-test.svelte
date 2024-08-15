@@ -35,7 +35,7 @@ onMount(async () => {
 	renderer.setAmbientLight(0xffffff, 0.3);
 	camera = renderer.setCamera([0, 0, -5], [0, 0, 0], 75);
 
-	const sphereGeometry = createPolyhedron(1, 7, createSmoothShadedNormals);
+	const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 	sphereGeometry.uvs = generateUVs(sphereGeometry);
 
 	mesh1 = renderer.addMesh({
@@ -64,8 +64,9 @@ onMount(async () => {
 	renderer.addAnimation(
 		mesh1,
 		createNoiseDistortionAnimation({
-			amplitude: 0.1,
-			frequency: 0.0004,
+			frequency: 2,
+			speed: 1.5,
+			amplitude: 0.5,
 		}),
 	);
 
