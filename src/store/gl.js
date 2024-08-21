@@ -70,7 +70,10 @@ export function render(context, instances) {
 			if (contextValue.hasElements) {
 				gl.drawElements(gl.TRIANGLES, contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
+				
 				gl.drawArrays(gl.TRIANGLES, 0, contextValue.attributeLength);
+				//add mesh visualization (lines)
+				//gl.drawArrays(gl.LINE_STRIP, 0, contextValue.attributeLength);
 			}
 		}
 		// when binding vertex array objects you must unbind it after rendering

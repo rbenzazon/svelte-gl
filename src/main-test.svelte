@@ -5,6 +5,8 @@ import { renderer } from "./store/engine.js";
 //import { createCube } from "./geometries/cube.js";
 import { identity, rotateX, rotateY, rotateZ, translate, scale } from "gl-matrix/esm/mat4.js";
 import { createPolyhedron, createSmoothShadedNormals, generateUVs } from "./geometries/polyhedron.js";
+//import { createPlane } from "./geometries/plane.js";
+import { createCone } from "./geometries/cone.js";
 import { createPointLight } from "./lights/point-light.js";
 import { createAGXToneMapping } from "./tone-mapping/agx.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
@@ -37,19 +39,22 @@ onMount(async () => {
 
 	const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 	sphereGeometry.uvs = generateUVs(sphereGeometry);
+	//const planeGeometry = createPlane(3, 3, 100, 100);
+	const coneGeometry = createCone(3, 3,100);
+	console.log(coneGeometry);
 
 	mesh1 = renderer.addMesh({
-		attributes: sphereGeometry,
+		attributes: coneGeometry,
 		material: {
 			diffuse: [1, 0, 0],
 			specular: createSpecular({
-				roughness: 0.2,
+				roughness: 0.3,
 				ior: 1.5,
 				intensity: 1,
 				color: [1, 1, 1],
 			}),
-			normalMap,
-			normalMapScale: [1, 1],
+			/*normalMap,
+			normalMapScale: [1, 1],*/
 		},
 	});
 	/*renderer.addAnimation(
@@ -61,24 +66,34 @@ onMount(async () => {
 		}),
 	);*/
 
-	renderer.addAnimation(
+	/*renderer.addAnimation(
 		mesh1,
 		createNoiseDistortionAnimation({
 			frequency: 2,
 			speed: 1.5,
 			amplitude: 0.5,
 		}),
-	);
+	);*/
 
 	light1 = renderer.addLight(
 		createPointLight({
-			position: [0, 1, -3],
+			position: [0, 5, -5],
 			color: [1, 1, 1],
-			intensity: 5,
+			intensity: 10,
 			cutoffDistance: 0,
 			decayExponent: 2,
 		}),
 	);
+
+	/*renderer.addLight(
+		createPointLight({
+			position: [-0, 5, 0],
+			color: [1, 1, 1],
+			intensity: 4,
+			cutoffDistance: 0,
+			decayExponent: 2,
+		}),
+	);*/
 
 	renderer.setLoop(animate);
 	renderer.start();

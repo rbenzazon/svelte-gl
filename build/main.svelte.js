@@ -1131,7 +1131,10 @@ function render(context, instances) {
 			if (contextValue.hasElements) {
 				gl.drawElements(gl.TRIANGLES, contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
+				
 				gl.drawArrays(gl.TRIANGLES, 0, contextValue.attributeLength);
+				//add mesh visualization (lines)
+				//gl.drawArrays(gl.LINE_STRIP, 0, contextValue.attributeLength);
 			}
 		}
 		// when binding vertex array objects you must unbind it after rendering
@@ -1958,6 +1961,21 @@ function create$1() {
   return out;
 }
 /**
+ * Adds two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+
+function add$1(out, a, b) {
+  out[0] = a[0] + b[0];
+  out[1] = a[1] + b[1];
+  out[2] = a[2] + b[2];
+  return out;
+}
+/**
  * Normalize a vec3
  *
  * @param {vec3} out the receiving vector
@@ -2458,6 +2476,121 @@ const initialIndices = [
 	14, 5, 1, 5, 9,
 ];
 
+function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1){
+
+    radialSegment = Math.max(radialSegment,3);
+    heightSegment = Math.max(heightSegment,1);
+    const positions = [];
+    const normals = [];
+    //const elements = [];
+    const uvs = [];
+
+    const angle = Math.PI*2/radialSegment;
+    const heightIncrement = height/heightSegment;
+    let iy = 1;
+    const slope = radius/height;
+    // apex segment, no quads, no shared
+    
+    const loopPositions = [];
+    const apexLoopNormals = [];
+    for(let ir = 0;ir<radialSegment;ir++){
+        const radialAngle = angle * ir;
+        const sinRadial = Math.sin(radialAngle);
+        const cosRadial = Math.cos(radialAngle);
+        loopPositions.push([
+            Math.cos(radialAngle) * radius,
+            height - heightIncrement * iy,
+            Math.sin(radialAngle) * radius,
+        ]);
+        console.log("theta",radialAngle);
+        console.log("sinTheta",sinRadial);
+        console.log("slope",slope);
+        console.log("cosTheta",cosRadial);
+        const normal = [sinRadial,slope,cosRadial];
+        apexLoopNormals.push(normalize(normal,normal));
+    }
+    console.log("apexLoopPositions",loopPositions);
+    console.log("apexLoopNormals",apexLoopNormals);
+    for(let ir = 0;ir<radialSegment;ir++){
+        const nextIndex = ir === radialSegment-1 ? 0 : (ir+1);
+        //draw two triangles so the apex is used twice with different normals
+        //must create a point between corrent and next point
+        const middlePoint = [];
+        lerp(middlePoint,loopPositions[ir],loopPositions[nextIndex],0.5);
+        positions.push(
+            [0,height,0],
+            middlePoint,
+            loopPositions[ir],
+        );
+        positions.push(
+            [0,height,0],
+            loopPositions[nextIndex],
+            middlePoint,
+        );
+        const middleNormal = [];
+        add$1(middleNormal,apexLoopNormals[ir],apexLoopNormals[nextIndex]);
+        normalize(middleNormal,middleNormal);
+        normals.push(
+            apexLoopNormals[ir],
+            middleNormal,
+            apexLoopNormals[ir],
+        );
+        normals.push(
+            apexLoopNormals[nextIndex],
+            apexLoopNormals[nextIndex],
+            middleNormal,
+        );
+        console.log("normals",apexLoopNormals[ir],middleNormal,apexLoopNormals[nextIndex]);
+        const halfIndex = ir+0.5;
+        const unsafeNextIndex = ir+1;
+        uvs.push(
+            [ir/radialSegment,0],
+            [halfIndex/radialSegment,heightIncrement*iy/height],
+            [ir/radialSegment,heightIncrement*iy/height],
+        );
+        uvs.push(
+            [nextIndex/radialSegment,0],
+            [unsafeNextIndex/radialSegment,heightIncrement*iy/height],
+            [halfIndex/radialSegment,heightIncrement*iy/height],
+        );
+        //console.log("uvs",ir/radialSegment,halfIndex/radialSegment,unsafeNextIndex/radialSegment);
+        /*positions.push(
+            [0,0,0],
+            loopPositions[ir],
+            loopPositions[nextIndex],
+        );
+        normals.push(
+            downNormal,
+            downNormal,
+            downNormal,
+        );
+        uvs.push(
+            [halfIndex/radialSegment,1],
+            [halfIndex/radialSegment,1],
+            [nextIndex/radialSegment,1],
+        );*/
+    }
+    
+
+
+    /*for(let ir = 0;ir<radialSegment;ir++){
+        elements.push(
+            ir*3,
+            ir === radialSegment-1 ? 1 : ((ir+1)*3+1),
+            ir*3+1,
+        );
+    }*/
+
+    //for(let iy = 1;iy<heightSegment;iy++){
+    console.log("positions",positions);
+    return {
+        positions:new Float32Array(positions.flatMap(p=>p)),
+        normals:new Float32Array(normals.flatMap(p=>p)),
+        //elements:new Uint16Array(elements),
+        uvs:new Float32Array(uvs.flatMap(p=>p)),
+    }
+}
+
 var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct LightParams {\r\n    vec3 irradiance;\r\n    vec3 direction;\r\n    vec3 color;\r\n    float distance;\r\n};\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nLightParams getDirectDiffuse(const in PointLight pointLight,const in vec3 vertexPosition, const in vec3 normal,const in PhysicalMaterial material, inout ReflectedLight reflectedLight) {\r\n    LightParams lightParams = LightParams(vec3(0.0f), vec3(0.0f), vec3(0.0f), 0.0f);\r\n    vec3 lVector = pointLight.position - vertexPosition;\r\n    lightParams.distance = length(lVector);\r\n    lightParams.direction = normalize(lVector);\r\n    float dotNL = saturate(dot(normal, lightParams.direction));\r\n    lightParams.color = pointLight.color;\r\n    lightParams.color *= getDistanceAttenuation(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);\r\n    lightParams.irradiance = dotNL * lightParams.color;\r\n    \r\n    reflectedLight.directDiffuse += lightParams.irradiance * BRDF_Lambert(material.diffuseColor);\r\n    return lightParams;\r\n}\r\n\r\nfloat calculatePointLightBrightness(float lightDistance, float cutoffDistance, float decayExponent) {\r\n    return getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    vec3 irradiance = vec3(0.0f);\r\n    vec3 direction = vec3(0.0f);\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        \r\n\r\n        LightParams lightParams = getDirectDiffuse(pointLight, vertex, normal, material, reflectedLight);\r\n        totalIrradiance += reflectedLight.directDiffuse;\r\n        ${specularIrradiance}\r\n    }\r\n` : ''\r\n}\r\n";
 
 const createPointLight = (props) => {
@@ -2561,6 +2694,7 @@ function updateOneLight(context, lights, light) {
 
 function createOrbitControls(canvas, camera) {
 	canvas.addEventListener("mousedown", onMouseDown);
+	canvas.addEventListener("wheel",onMouseWheel);
 	let startX;
 	let startY;
 	function onMouseDown(event) {
@@ -2569,17 +2703,30 @@ function createOrbitControls(canvas, camera) {
 		startY = event.clientY;
 		canvas.addEventListener("mouseup", onMouseUp);
 	}
-	function onMouseMove(event) {
-		const x = event.clientX - startX;
-		const y = event.clientY - startY;
-		const cameraValue = camera.get();
-		const { position, target, fov } = cameraValue;
+	function getCoordinates(position, target){
 		const radius = Math.sqrt(
 			Math.pow(position[0] - target[0], 2) + Math.pow(position[1] - target[1], 2) + Math.pow(position[2] - target[2], 2),
 		);
 
 		const polar = Math.acos(Math.max(-1, Math.min(1, (position[1] - target[1]) / radius)));
 		const azimuth = Math.atan2(position[0] - target[0], position[2] - target[2]);
+		return {
+			radius,
+			polar,
+			azimuth,
+		}
+	}
+	function onMouseMove(event) {
+		const x = event.clientX - startX;
+		const y = event.clientY - startY;
+		const cameraValue = camera.get();
+		const { position, target, fov } = cameraValue;
+		const {
+			radius,
+			polar,
+			azimuth,
+		} = getCoordinates(position, target);
+		
 		const newPosition = getPositionFromPolar(radius, polar - y / 100, azimuth - x / 100);
 		newPosition[0] = newPosition[0] + target[0];
 		newPosition[1] = newPosition[1] + target[1];
@@ -2588,6 +2735,22 @@ function createOrbitControls(canvas, camera) {
 		camera.set(newPosition, target, fov);
 		startX = event.clientX;
 		startY = event.clientY;
+	}
+	function onMouseWheel(event){
+		const cameraValue = camera.get();
+		const { position, target, fov } = cameraValue;
+		const {
+			radius,
+			polar,
+			azimuth,
+		} = getCoordinates(position, target);
+
+		const newPosition = getPositionFromPolar(radius+event.deltaY/300, polar, azimuth);
+		newPosition[0] = newPosition[0] + target[0];
+		newPosition[1] = newPosition[1] + target[1];
+		newPosition[2] = newPosition[2] + target[2];
+
+		camera.set(newPosition, target, fov);
 	}
 
 	function getPositionFromPolar(radius, polar, azimuth) {
@@ -2727,60 +2890,6 @@ function setupTexture(context, texture, type, id, normalScale = [1, 1]) {
 	};
 }
 
-var noiseShader = "${declaration ? `\r\n\r\nuniform float noiseDistortionFrequency;\r\nuniform float noiseDistortionSpeed;\r\nuniform float noiseDistortionAmplitude;\r\nuniform float noiseDistortionTangentLength;\r\n\r\nvec3 mod289(vec3 x)\r\n{\r\n  return x - floor(x * (1.0 / 289.0)) * 289.0;\r\n}\r\n\r\nvec4 mod289(vec4 x)\r\n{\r\n  return x - floor(x * (1.0 / 289.0)) * 289.0;\r\n}\r\n\r\nvec4 permute(vec4 x)\r\n{\r\n  return mod289(((x*34.0)+10.0)*x);\r\n}\r\n\r\nvec4 taylorInvSqrt(vec4 r)\r\n{\r\n  return 1.79284291400159 - 0.85373472095314 * r;\r\n}\r\n\r\nvec3 fade(vec3 t) {\r\n  return t*t*t*(t*(t*6.0-15.0)+10.0);\r\n}\r\n\r\n// Classic Perlin noise, periodic variant\r\nfloat pnoise(vec3 P, vec3 rep)\r\n{\r\n  vec3 Pi0 = mod(floor(P), rep); // Integer part, modulo period\r\n  vec3 Pi1 = mod(Pi0 + vec3(1.0), rep); // Integer part + 1, mod period\r\n  Pi0 = mod289(Pi0);\r\n  Pi1 = mod289(Pi1);\r\n  vec3 Pf0 = fract(P); // Fractional part for interpolation\r\n  vec3 Pf1 = Pf0 - vec3(1.0); // Fractional part - 1.0\r\n  vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);\r\n  vec4 iy = vec4(Pi0.yy, Pi1.yy);\r\n  vec4 iz0 = Pi0.zzzz;\r\n  vec4 iz1 = Pi1.zzzz;\r\n\r\n  vec4 ixy = permute(permute(ix) + iy);\r\n  vec4 ixy0 = permute(ixy + iz0);\r\n  vec4 ixy1 = permute(ixy + iz1);\r\n\r\n  vec4 gx0 = ixy0 * (1.0 / 7.0);\r\n  vec4 gy0 = fract(floor(gx0) * (1.0 / 7.0)) - 0.5;\r\n  gx0 = fract(gx0);\r\n  vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);\r\n  vec4 sz0 = step(gz0, vec4(0.0));\r\n  gx0 -= sz0 * (step(0.0, gx0) - 0.5);\r\n  gy0 -= sz0 * (step(0.0, gy0) - 0.5);\r\n\r\n  vec4 gx1 = ixy1 * (1.0 / 7.0);\r\n  vec4 gy1 = fract(floor(gx1) * (1.0 / 7.0)) - 0.5;\r\n  gx1 = fract(gx1);\r\n  vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);\r\n  vec4 sz1 = step(gz1, vec4(0.0));\r\n  gx1 -= sz1 * (step(0.0, gx1) - 0.5);\r\n  gy1 -= sz1 * (step(0.0, gy1) - 0.5);\r\n\r\n  vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);\r\n  vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);\r\n  vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);\r\n  vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);\r\n  vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);\r\n  vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);\r\n  vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);\r\n  vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);\r\n\r\n  vec4 norm0 = taylorInvSqrt(vec4(dot(g000, g000), dot(g010, g010), dot(g100, g100), dot(g110, g110)));\r\n  g000 *= norm0.x;\r\n  g010 *= norm0.y;\r\n  g100 *= norm0.z;\r\n  g110 *= norm0.w;\r\n  vec4 norm1 = taylorInvSqrt(vec4(dot(g001, g001), dot(g011, g011), dot(g101, g101), dot(g111, g111)));\r\n  g001 *= norm1.x;\r\n  g011 *= norm1.y;\r\n  g101 *= norm1.z;\r\n  g111 *= norm1.w;\r\n\r\n  float n000 = dot(g000, Pf0);\r\n  float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));\r\n  float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));\r\n  float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));\r\n  float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));\r\n  float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));\r\n  float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));\r\n  float n111 = dot(g111, Pf1);\r\n\r\n  vec3 fade_xyz = fade(Pf0);\r\n  vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);\r\n  vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);\r\n  float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x); \r\n  return 2.2 * n_xyz;\r\n}\r\n\r\nvec3 orthogonal(vec3 v) {\r\n    return normalize(abs(v.x) > abs(v.z) ? vec3(-v.y, v.x, 0.0)\r\n    : vec3(0.0, -v.z, v.y));\r\n}\r\n\r\nfloat getDisplacement(vec3 position) {\r\n    float b = -noiseDistortionAmplitude * pnoise( position*noiseDistortionFrequency + vec3( noiseDistortionSpeed * time), vec3( 10.0 ) );\r\n    return  b - noiseDistortionAmplitude;\r\n}\r\n` : ''}\r\n${position ? `\r\n    float displacement = getDisplacement(position);\r\n    animatedPosition = animatedPosition + displacement * normal;\r\n    vec3 tangent1 = orthogonal(normal);\r\n    vec3 tangent2 = normalize(cross(normal, tangent1));\r\n    vec3 nearby1 = position + tangent1 * noiseDistortionTangentLength;\r\n    vec3 nearby2 = position + tangent2 * noiseDistortionTangentLength;\r\n\r\n    float displacementTangent = getDisplacement(nearby1);\r\n    vec3 modifiedPositionTangent = nearby1 + displacementTangent * normal;\r\n    float displacementBitangent = getDisplacement(nearby2);\r\n    vec3 modifiedPositionBitangent = nearby2 + displacementBitangent * normal;\r\n    modifiedNormal = normalize(cross(modifiedPositionTangent - animatedPosition, modifiedPositionBitangent - animatedPosition));\r\n` : ''}";
-
-/**
- * @typedef NoiseProps
- * @property {number} [frequency=1]
- * @property {number} [speed=1]
- * @property {number} [amplitude=1]
- * @property {number} [normalTangentLength=0.01]
- */
-
-/**
- *
- * @param {NoiseProps} props
- * @returns
- */
-const createNoiseDistortionAnimation = ({
-	frequency = 1,
-	speed = 1,
-	amplitude = 1,
-	normalTangentLength = 0.01,
-}) => {
-	return {
-		frequency,
-		speed,
-		amplitude,
-		normalTangentLength,
-		type: "vertex",
-		requireTime: true,
-		shader: templateLiteralRenderer(noiseShader, {
-			declaration: false,
-			position: false,
-		}),
-		setupAnimation: (context) => setupNoise(context, { frequency, speed, amplitude, normalTangentLength }),
-	};
-};
-
-function setupNoise(context, { frequency, speed, amplitude, normalTangentLength }) {
-	return function () {
-		context = get_store_value(context);
-		/** @type {{gl: WebGL2RenderingContext}} **/
-		const { gl, program } = context;
-
-		const frequencyLocation = gl.getUniformLocation(program, "noiseDistortionFrequency");
-		const speedLocation = gl.getUniformLocation(program, "noiseDistortionSpeed");
-		const amplitudeLocation = gl.getUniformLocation(program, "noiseDistortionAmplitude");
-		const normalTangentLengthLocation = gl.getUniformLocation(program, "noiseDistortionTangentLength");
-
-		gl.uniform1f(frequencyLocation, frequency * 2);
-		gl.uniform1f(speedLocation, speed * 0.001);
-		gl.uniform1f(amplitudeLocation, amplitude * 0.07);
-		gl.uniform1f(normalTangentLengthLocation, normalTangentLength);
-	};
-}
-
 /* src\main-test.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
@@ -2829,12 +2938,11 @@ light1.set({
 
 function instance($$self, $$props, $$invalidate) {
 	let canvas;
-	let mesh1;
 	let camera;
 
 	onMount(async () => {
 		//loadGLBFile("md-blend6-mdlvw.glb");
-		const normalMap = await createTexture({
+		await createTexture({
 			url: "golfball-normal.jpg",
 			normalScale: [1, 1],
 			type: "normal"
@@ -2847,19 +2955,24 @@ function instance($$self, $$props, $$invalidate) {
 		const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 		sphereGeometry.uvs = generateUVs(sphereGeometry);
 
-		mesh1 = renderer.addMesh({
-			attributes: sphereGeometry,
+		//const planeGeometry = createPlane(3, 3, 100, 100);
+		const coneGeometry = createCone(3, 3, 100);
+
+		console.log(coneGeometry);
+
+		renderer.addMesh({
+			attributes: coneGeometry,
 			material: {
 				diffuse: [1, 0, 0],
 				specular: createSpecular({
-					roughness: 0.2,
+					roughness: 0.3,
 					ior: 1.5,
 					intensity: 1,
 					color: [1, 1, 1]
-				}),
-				normalMap,
-				normalMapScale: [1, 1]
-			}
+				})
+			}, /*normalMap,
+normalMapScale: [1, 1],*/
+			
 		});
 
 		/*renderer.addAnimation(
@@ -2870,17 +2983,33 @@ function instance($$self, $$props, $$invalidate) {
 		frequency: 0.002,
 	}),
 );*/
-		renderer.addAnimation(mesh1, createNoiseDistortionAnimation({ frequency: 2, speed: 1.5, amplitude: 0.5 }));
-
+		/*renderer.addAnimation(
+	mesh1,
+	createNoiseDistortionAnimation({
+		frequency: 2,
+		speed: 1.5,
+		amplitude: 0.5,
+	}),
+);*/
 		renderer.addLight(createPointLight({
-			position: [0, 1, -3],
+			position: [0, 5, -5],
 			color: [1, 1, 1],
-			intensity: 5,
+			intensity: 10,
 			cutoffDistance: 0,
 			decayExponent: 2
 		}));
 
+		/*renderer.addLight(
+	createPointLight({
+		position: [-0, 5, 0],
+		color: [1, 1, 1],
+		intensity: 4,
+		cutoffDistance: 0,
+		decayExponent: 2,
+	}),
+);*/
 		renderer.setLoop(animate);
+
 		renderer.start();
 		createOrbitControls(canvas, camera);
 	});
