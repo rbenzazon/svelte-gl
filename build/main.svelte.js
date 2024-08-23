@@ -1223,6 +1223,7 @@ function createShaders() {
 				diffuseMapSample = mesh.material.diffuseMap.shader({
 					diffuseMapSample: true,
 					mapType: mesh.material.diffuseMap.type,
+					coordinateSpace: mesh.material.diffuseMap.coordinateSpace,
 				});
 			}
 			let normalMapDeclaration = "";
@@ -1961,21 +1962,6 @@ function create$1() {
   return out;
 }
 /**
- * Adds two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-
-function add$1(out, a, b) {
-  out[0] = a[0] + b[0];
-  out[1] = a[1] + b[1];
-  out[2] = a[2] + b[2];
-  return out;
-}
-/**
  * Normalize a vec3
  *
  * @param {vec3} out the receiving vector
@@ -2476,119 +2462,49 @@ const initialIndices = [
 	14, 5, 1, 5, 9,
 ];
 
-function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1){
+function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1) {
+	radialSegment = Math.max(radialSegment, 3);
+	heightSegment = Math.max(heightSegment, 1);
+	const positions = [];
+	const normals = [];
+	const uvs = [];
 
-    radialSegment = Math.max(radialSegment,3);
-    heightSegment = Math.max(heightSegment,1);
-    const positions = [];
-    const normals = [];
-    //const elements = [];
-    const uvs = [];
+	const heightIncrement = height / heightSegment;
+	let iy = 1;
+	const slope = radius / height;
+	const loopPositions = [];
+	const apexLoopNormals = [];
 
-    const angle = Math.PI*2/radialSegment;
-    const heightIncrement = height/heightSegment;
-    let iy = 1;
-    const slope = radius/height;
-    // apex segment, no quads, no shared
-    
-    const loopPositions = [];
-    const apexLoopNormals = [];
-    for(let ir = 0;ir<radialSegment;ir++){
-        const radialAngle = angle * ir;
-        const sinRadial = Math.sin(radialAngle);
-        const cosRadial = Math.cos(radialAngle);
-        loopPositions.push([
-            Math.cos(radialAngle) * radius,
-            height - heightIncrement * iy,
-            Math.sin(radialAngle) * radius,
-        ]);
-        console.log("theta",radialAngle);
-        console.log("sinTheta",sinRadial);
-        console.log("slope",slope);
-        console.log("cosTheta",cosRadial);
-        const normal = [sinRadial,slope,cosRadial];
-        apexLoopNormals.push(normalize(normal,normal));
-    }
-    console.log("apexLoopPositions",loopPositions);
-    console.log("apexLoopNormals",apexLoopNormals);
-    for(let ir = 0;ir<radialSegment;ir++){
-        const nextIndex = ir === radialSegment-1 ? 0 : (ir+1);
-        //draw two triangles so the apex is used twice with different normals
-        //must create a point between corrent and next point
-        const middlePoint = [];
-        lerp(middlePoint,loopPositions[ir],loopPositions[nextIndex],0.5);
-        positions.push(
-            [0,height,0],
-            middlePoint,
-            loopPositions[ir],
-        );
-        positions.push(
-            [0,height,0],
-            loopPositions[nextIndex],
-            middlePoint,
-        );
-        const middleNormal = [];
-        add$1(middleNormal,apexLoopNormals[ir],apexLoopNormals[nextIndex]);
-        normalize(middleNormal,middleNormal);
-        normals.push(
-            apexLoopNormals[ir],
-            middleNormal,
-            apexLoopNormals[ir],
-        );
-        normals.push(
-            apexLoopNormals[nextIndex],
-            apexLoopNormals[nextIndex],
-            middleNormal,
-        );
-        console.log("normals",apexLoopNormals[ir],middleNormal,apexLoopNormals[nextIndex]);
-        const halfIndex = ir+0.5;
-        const unsafeNextIndex = ir+1;
-        uvs.push(
-            [ir/radialSegment,0],
-            [halfIndex/radialSegment,heightIncrement*iy/height],
-            [ir/radialSegment,heightIncrement*iy/height],
-        );
-        uvs.push(
-            [nextIndex/radialSegment,0],
-            [unsafeNextIndex/radialSegment,heightIncrement*iy/height],
-            [halfIndex/radialSegment,heightIncrement*iy/height],
-        );
-        //console.log("uvs",ir/radialSegment,halfIndex/radialSegment,unsafeNextIndex/radialSegment);
-        /*positions.push(
-            [0,0,0],
-            loopPositions[ir],
-            loopPositions[nextIndex],
-        );
-        normals.push(
-            downNormal,
-            downNormal,
-            downNormal,
-        );
-        uvs.push(
-            [halfIndex/radialSegment,1],
-            [halfIndex/radialSegment,1],
-            [nextIndex/radialSegment,1],
-        );*/
-    }
-    
+	const angle = (Math.PI * 2) / radialSegment;
+	for (let ir = 0; ir < radialSegment; ir++) {
+		const radialAngle = angle * ir;
+		const sinRadial = Math.sin(radialAngle);
+		const cosRadial = Math.cos(radialAngle);
+		loopPositions.push([Math.cos(radialAngle) * radius, height - heightIncrement * iy, Math.sin(radialAngle) * radius]);
+		const normal = [sinRadial, slope, cosRadial];
+		apexLoopNormals.push(normalize(normal, normal));
+	}
 
+	const downNormal = [0, -1, 0];
+	for (let ir = 0; ir < radialSegment; ir++) {
+		const nextIndex = ir === radialSegment - 1 ? 0 : ir + 1;
+		positions.push([0, height, 0], loopPositions[nextIndex], loopPositions[ir]);
+		// 0,0,0 at the apex is a "hack" to have a smooth shading
+		normals.push([0, 0, 0], apexLoopNormals[nextIndex], apexLoopNormals[ir]);
+		const unsafeNextIndex = ir + 1;
+		const uvX = 1 - ir / radialSegment;
+		const uvXNext = 1 - unsafeNextIndex / radialSegment;
+		uvs.push([0, 0], [uvXNext, (heightIncrement * iy) / height], [uvX, (heightIncrement * iy) / height]);
 
-    /*for(let ir = 0;ir<radialSegment;ir++){
-        elements.push(
-            ir*3,
-            ir === radialSegment-1 ? 1 : ((ir+1)*3+1),
-            ir*3+1,
-        );
-    }*/
-
-    //for(let iy = 1;iy<heightSegment;iy++){
-    console.log("positions",positions);
-    return {
-        positions:new Float32Array(positions.flatMap(p=>p)),
-        normals:new Float32Array(normals.flatMap(p=>p)),
-        //elements:new Uint16Array(elements),
-        uvs:new Float32Array(uvs.flatMap(p=>p)),
-    }
+		positions.push([0, 0, 0], loopPositions[ir], loopPositions[nextIndex]);
+		normals.push(downNormal, downNormal, downNormal);
+		uvs.push([0, 0], [1 - uvX, 1], [1 - uvXNext, 1]);
+	}
+	return {
+		positions: new Float32Array(positions.flatMap((p) => p)),
+		normals: new Float32Array(normals.flatMap((p) => p)),
+		uvs: new Float32Array(uvs.flatMap((p) => p)),
+	};
 }
 
 var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct LightParams {\r\n    vec3 irradiance;\r\n    vec3 direction;\r\n    vec3 color;\r\n    float distance;\r\n};\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nLightParams getDirectDiffuse(const in PointLight pointLight,const in vec3 vertexPosition, const in vec3 normal,const in PhysicalMaterial material, inout ReflectedLight reflectedLight) {\r\n    LightParams lightParams = LightParams(vec3(0.0f), vec3(0.0f), vec3(0.0f), 0.0f);\r\n    vec3 lVector = pointLight.position - vertexPosition;\r\n    lightParams.distance = length(lVector);\r\n    lightParams.direction = normalize(lVector);\r\n    float dotNL = saturate(dot(normal, lightParams.direction));\r\n    lightParams.color = pointLight.color;\r\n    lightParams.color *= getDistanceAttenuation(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);\r\n    lightParams.irradiance = dotNL * lightParams.color;\r\n    \r\n    reflectedLight.directDiffuse += lightParams.irradiance * BRDF_Lambert(material.diffuseColor);\r\n    return lightParams;\r\n}\r\n\r\nfloat calculatePointLightBrightness(float lightDistance, float cutoffDistance, float decayExponent) {\r\n    return getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    vec3 irradiance = vec3(0.0f);\r\n    vec3 direction = vec3(0.0f);\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        \r\n\r\n        LightParams lightParams = getDirectDiffuse(pointLight, vertex, normal, material, reflectedLight);\r\n        totalIrradiance += reflectedLight.directDiffuse;\r\n        ${specularIrradiance}\r\n    }\r\n` : ''\r\n}\r\n";
@@ -2694,7 +2610,7 @@ function updateOneLight(context, lights, light) {
 
 function createOrbitControls(canvas, camera) {
 	canvas.addEventListener("mousedown", onMouseDown);
-	canvas.addEventListener("wheel",onMouseWheel);
+	canvas.addEventListener("wheel", onMouseWheel);
 	let startX;
 	let startY;
 	function onMouseDown(event) {
@@ -2703,7 +2619,7 @@ function createOrbitControls(canvas, camera) {
 		startY = event.clientY;
 		canvas.addEventListener("mouseup", onMouseUp);
 	}
-	function getCoordinates(position, target){
+	function getCoordinates(position, target) {
 		const radius = Math.sqrt(
 			Math.pow(position[0] - target[0], 2) + Math.pow(position[1] - target[1], 2) + Math.pow(position[2] - target[2], 2),
 		);
@@ -2714,19 +2630,15 @@ function createOrbitControls(canvas, camera) {
 			radius,
 			polar,
 			azimuth,
-		}
+		};
 	}
 	function onMouseMove(event) {
 		const x = event.clientX - startX;
 		const y = event.clientY - startY;
 		const cameraValue = camera.get();
 		const { position, target, fov } = cameraValue;
-		const {
-			radius,
-			polar,
-			azimuth,
-		} = getCoordinates(position, target);
-		
+		const { radius, polar, azimuth } = getCoordinates(position, target);
+
 		const newPosition = getPositionFromPolar(radius, polar - y / 100, azimuth - x / 100);
 		newPosition[0] = newPosition[0] + target[0];
 		newPosition[1] = newPosition[1] + target[1];
@@ -2736,16 +2648,12 @@ function createOrbitControls(canvas, camera) {
 		startX = event.clientX;
 		startY = event.clientY;
 	}
-	function onMouseWheel(event){
+	function onMouseWheel(event) {
 		const cameraValue = camera.get();
 		const { position, target, fov } = cameraValue;
-		const {
-			radius,
-			polar,
-			azimuth,
-		} = getCoordinates(position, target);
+		const { radius, polar, azimuth } = getCoordinates(position, target);
 
-		const newPosition = getPositionFromPolar(radius+event.deltaY/300, polar, azimuth);
+		const newPosition = getPositionFromPolar(radius + event.deltaY / 300, polar, azimuth);
 		newPosition[0] = newPosition[0] + target[0];
 		newPosition[1] = newPosition[1] + target[1];
 		newPosition[2] = newPosition[2] + target[2];
@@ -2810,7 +2718,7 @@ function setupSpecular(context, { roughness, ior, intensity, color }) {
 
 const skyblue = 0x87ceeb;
 
-var textureShader = "${declaration?\r\n`\r\nuniform sampler2D ${mapType};\r\nuniform vec2 normalScale;\r\n\r\n\r\nmat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {\r\n    vec3 q0 = dFdx( eye_pos.xyz );\r\n    vec3 q1 = dFdy( eye_pos.xyz );\r\n    vec2 st0 = dFdx( uv.st );\r\n    vec2 st1 = dFdy( uv.st );\r\n    vec3 N = surf_norm;\r\n    vec3 q1perp = cross( q1, N );\r\n    vec3 q0perp = cross( N, q0 );\r\n    vec3 T = q1perp * st0.x + q0perp * st1.x;\r\n    vec3 B = q1perp * st0.y + q0perp * st1.y;\r\n    float det = max( dot( T, T ), dot( B, B ) );\r\n    float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );\r\n    return mat3( T * scale, B * scale, N );\r\n}\r\n` : ''\r\n}\r\n${diffuseMapSample?\r\n`\r\n    material.diffuseColor *= texture( ${mapType}, vUv ).xyz;\r\n` : ''\r\n}\r\n${normalMapSample?\r\n`\r\n    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );\r\n    normal = texture( normalMap, vUv ).xyz * 2.0 - 1.0;\r\n    normal.xy *= normalScale;\r\n    normal = normalize(tbn * normal);\r\n\t//normal = normalize( normalMatrix * normal );\r\n` : ''\r\n}\r\n";
+var textureShader = "${declaration?\r\n`\r\nuniform sampler2D ${mapType};\r\nuniform vec2 normalScale;\r\n\r\n\r\nmat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {\r\n    vec3 q0 = dFdx( eye_pos.xyz );\r\n    vec3 q1 = dFdy( eye_pos.xyz );\r\n    vec2 st0 = dFdx( uv.st );\r\n    vec2 st1 = dFdy( uv.st );\r\n    vec3 N = surf_norm;\r\n    vec3 q1perp = cross( q1, N );\r\n    vec3 q0perp = cross( N, q0 );\r\n    vec3 T = q1perp * st0.x + q0perp * st1.x;\r\n    vec3 B = q1perp * st0.y + q0perp * st1.y;\r\n    float det = max( dot( T, T ), dot( B, B ) );\r\n    float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );\r\n    return mat3( T * scale, B * scale, N );\r\n}\r\n` : ''\r\n}\r\n${diffuseMapSample?\r\n`\r\n    //atan(uv.y, uv.x)\r\n    ${coordinateSpace === 'circular' ?\r\n`   vec2 uv = vec2(vUv.x/vUv.y, vUv.y);\r\n` :\r\n`   vec2 uv = vUv;\r\n`}\r\n    material.diffuseColor *= texture( ${mapType}, uv ).xyz;\r\n` : ''\r\n}\r\n${normalMapSample?\r\n`\r\n    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );\r\n    normal = texture( normalMap, vUv ).xyz * 2.0 - 1.0;\r\n    normal.xy *= normalScale;\r\n    normal = normalize(tbn * normal);\r\n\t//normal = normalize( normalMatrix * normal );\r\n` : ''\r\n}\r\n";
 
 const types = {
 	diffuse: "diffuseMap",
@@ -2827,6 +2735,7 @@ const id = {
  * @property {string} url
  * @property {"diffuse" | "normal"} type
  * @property {number[]} [normalScale=[1, 1]]
+ * @property {"square" | "circular"} [coordinateSpace="square"]
  */
 
 /**
@@ -2838,12 +2747,14 @@ const createTexture = async (props) => {
 	const texture = await loadTexture(props.url);
 	return {
 		type: types[props.type],
+		coordinateSpace: props.coordinateSpace,
 		texture,
 		shader: templateLiteralRenderer(textureShader, {
 			declaration: false,
 			diffuseMapSample: false,
 			normalMapSample: false,
 			mapType: undefined,
+			coordinateSpace: undefined,
 		}),
 		setupTexture: (context) => setupTexture(context, texture, types[props.type], id[props.type], props.normalScale),
 	};
@@ -2942,36 +2853,37 @@ function instance($$self, $$props, $$invalidate) {
 
 	onMount(async () => {
 		//loadGLBFile("md-blend6-mdlvw.glb");
-		await createTexture({
-			url: "golfball-normal.jpg",
-			normalScale: [1, 1],
-			type: "normal"
+		const diffuseMap = await createTexture({
+			url: "checker-map_tho.png",
+			/*normalScale: [1, 1],*/
+			type: "diffuse",
+			coordinateSpace: "circular"
 		});
 
 		renderer.setCanvas(canvas);
 		renderer.setBackgroundColor(skyblue);
-		renderer.setAmbientLight(0xffffff, 0.3);
-		camera = renderer.setCamera([0, 0, -5], [0, 0, 0], 75);
+		renderer.setAmbientLight(0xffffff, 0.5);
+		camera = renderer.setCamera([-3, 4.5, 1], [0, 0, 0], 75);
 		const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 		sphereGeometry.uvs = generateUVs(sphereGeometry);
 
 		//const planeGeometry = createPlane(3, 3, 100, 100);
-		const coneGeometry = createCone(3, 3, 100);
+		const coneGeometry = createCone(3, 3, 50);
 
 		console.log(coneGeometry);
 
 		renderer.addMesh({
 			attributes: coneGeometry,
 			material: {
-				diffuse: [1, 0, 0],
+				diffuse: [1, 1, 1],
 				specular: createSpecular({
 					roughness: 0.3,
 					ior: 1.5,
 					intensity: 1,
 					color: [1, 1, 1]
-				})
-			}, /*normalMap,
-normalMapScale: [1, 1],*/
+				}),
+				diffuseMap
+			}, /*normalMapScale: [1, 1],*/
 			
 		});
 
@@ -2992,16 +2904,16 @@ normalMapScale: [1, 1],*/
 	}),
 );*/
 		renderer.addLight(createPointLight({
-			position: [0, 5, -5],
+			position: [3, 3, -3],
 			color: [1, 1, 1],
-			intensity: 10,
+			intensity: 20,
 			cutoffDistance: 0,
 			decayExponent: 2
 		}));
 
 		/*renderer.addLight(
 	createPointLight({
-		position: [-0, 5, 0],
+		position: [0, 5, 5],
 		color: [1, 1, 1],
 		intensity: 4,
 		cutoffDistance: 0,

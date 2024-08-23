@@ -162,6 +162,7 @@ export function createShaders() {
 				diffuseMapSample = mesh.material.diffuseMap.shader({
 					diffuseMapSample: true,
 					mapType: mesh.material.diffuseMap.type,
+					coordinateSpace: mesh.material.diffuseMap.coordinateSpace,
 				});
 			}
 			let normalMapDeclaration = "";

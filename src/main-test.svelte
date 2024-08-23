@@ -27,34 +27,35 @@ let camera;
 onMount(async () => {
 	//loadGLBFile("md-blend6-mdlvw.glb");
 
-	const normalMap = await createTexture({
-		url: "golfball-normal.jpg",
-		normalScale: [1, 1],
-		type: "normal",
+	const diffuseMap = await createTexture({
+		url: "checker-map_tho.png",
+		/*normalScale: [1, 1],*/
+		type: "diffuse",
+		coordinateSpace: "circular",
 	});
 	renderer.setCanvas(canvas);
 	renderer.setBackgroundColor(skyblue);
-	renderer.setAmbientLight(0xffffff, 0.3);
-	camera = renderer.setCamera([0, 0, -5], [0, 0, 0], 75);
+	renderer.setAmbientLight(0xffffff, 0.5);
+	camera = renderer.setCamera([-3, 4.5, 1], [0, 0, 0], 75);
 
 	const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 	sphereGeometry.uvs = generateUVs(sphereGeometry);
 	//const planeGeometry = createPlane(3, 3, 100, 100);
-	const coneGeometry = createCone(3, 3,100);
+	const coneGeometry = createCone(3, 3, 50);
 	console.log(coneGeometry);
 
 	mesh1 = renderer.addMesh({
 		attributes: coneGeometry,
 		material: {
-			diffuse: [1, 0, 0],
+			diffuse: [1, 1, 1],
 			specular: createSpecular({
 				roughness: 0.3,
 				ior: 1.5,
 				intensity: 1,
 				color: [1, 1, 1],
 			}),
-			/*normalMap,
-			normalMapScale: [1, 1],*/
+			diffuseMap,
+			/*normalMapScale: [1, 1],*/
 		},
 	});
 	/*renderer.addAnimation(
@@ -77,9 +78,9 @@ onMount(async () => {
 
 	light1 = renderer.addLight(
 		createPointLight({
-			position: [0, 5, -5],
+			position: [3, 3, -3],
 			color: [1, 1, 1],
-			intensity: 10,
+			intensity: 20,
 			cutoffDistance: 0,
 			decayExponent: 2,
 		}),
@@ -87,7 +88,7 @@ onMount(async () => {
 
 	/*renderer.addLight(
 		createPointLight({
-			position: [-0, 5, 0],
+			position: [0, 5, 5],
 			color: [1, 1, 1],
 			intensity: 4,
 			cutoffDistance: 0,

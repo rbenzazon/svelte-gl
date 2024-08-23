@@ -17,6 +17,7 @@ const id = {
  * @property {string} url
  * @property {"diffuse" | "normal"} type
  * @property {number[]} [normalScale=[1, 1]]
+ * @property {"square" | "circular"} [coordinateSpace="square"]
  */
 
 /**
@@ -28,12 +29,14 @@ export const createTexture = async (props) => {
 	const texture = await loadTexture(props.url);
 	return {
 		type: types[props.type],
+		coordinateSpace: props.coordinateSpace,
 		texture,
 		shader: templateLiteralRenderer(textureShader, {
 			declaration: false,
 			diffuseMapSample: false,
 			normalMapSample: false,
 			mapType: undefined,
+			coordinateSpace: undefined,
 		}),
 		setupTexture: (context) => setupTexture(context, texture, types[props.type], id[props.type], props.normalScale),
 	};

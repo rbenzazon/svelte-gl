@@ -1,6 +1,6 @@
 export function createOrbitControls(canvas, camera) {
 	canvas.addEventListener("mousedown", onMouseDown);
-	canvas.addEventListener("wheel",onMouseWheel)
+	canvas.addEventListener("wheel", onMouseWheel);
 	let startX;
 	let startY;
 	function onMouseDown(event) {
@@ -9,7 +9,7 @@ export function createOrbitControls(canvas, camera) {
 		startY = event.clientY;
 		canvas.addEventListener("mouseup", onMouseUp);
 	}
-	function getCoordinates(position, target){
+	function getCoordinates(position, target) {
 		const radius = Math.sqrt(
 			Math.pow(position[0] - target[0], 2) + Math.pow(position[1] - target[1], 2) + Math.pow(position[2] - target[2], 2),
 		);
@@ -20,19 +20,15 @@ export function createOrbitControls(canvas, camera) {
 			radius,
 			polar,
 			azimuth,
-		}
+		};
 	}
 	function onMouseMove(event) {
 		const x = event.clientX - startX;
 		const y = event.clientY - startY;
 		const cameraValue = camera.get();
 		const { position, target, fov } = cameraValue;
-		const {
-			radius,
-			polar,
-			azimuth,
-		} = getCoordinates(position, target);
-		
+		const { radius, polar, azimuth } = getCoordinates(position, target);
+
 		const newPosition = getPositionFromPolar(radius, polar - y / 100, azimuth - x / 100);
 		newPosition[0] = newPosition[0] + target[0];
 		newPosition[1] = newPosition[1] + target[1];
@@ -42,16 +38,12 @@ export function createOrbitControls(canvas, camera) {
 		startX = event.clientX;
 		startY = event.clientY;
 	}
-	function onMouseWheel(event){
+	function onMouseWheel(event) {
 		const cameraValue = camera.get();
 		const { position, target, fov } = cameraValue;
-		const {
-			radius,
-			polar,
-			azimuth,
-		} = getCoordinates(position, target);
+		const { radius, polar, azimuth } = getCoordinates(position, target);
 
-		const newPosition = getPositionFromPolar(radius+event.deltaY/300, polar, azimuth);
+		const newPosition = getPositionFromPolar(radius + event.deltaY / 300, polar, azimuth);
 		newPosition[0] = newPosition[0] + target[0];
 		newPosition[1] = newPosition[1] + target[1];
 		newPosition[2] = newPosition[2] + target[2];

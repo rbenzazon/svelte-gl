@@ -22,7 +22,13 @@ mat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {
 }
 ${diffuseMapSample?
 `
-    material.diffuseColor *= texture( ${mapType}, vUv ).xyz;
+    //atan(uv.y, uv.x)
+    ${coordinateSpace === 'circular' ?
+`   vec2 uv = vec2(vUv.x/vUv.y, vUv.y);
+` :
+`   vec2 uv = vUv;
+`}
+    material.diffuseColor *= texture( ${mapType}, uv ).xyz;
 ` : ''
 }
 ${normalMapSample?
