@@ -2168,6 +2168,11 @@ function normalizeNormals(normals) {
 	}
 }
 
+function getPositionFromPolar(radius, polar, azimuth) {
+	const sinPhiRadius = Math.sin(polar) * radius;
+	return [sinPhiRadius * Math.sin(azimuth), Math.cos(polar) * radius, sinPhiRadius * Math.cos(azimuth)];
+}
+
 /**
  * @typedef {{
  *	positions: Float32Array,
@@ -2463,6 +2468,7 @@ const initialIndices = [
 ];
 
 function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1) {
+	height = 0.2;
 	radialSegment = Math.max(radialSegment, 3);
 	heightSegment = Math.max(heightSegment, 1);
 	const positions = [];
@@ -2471,17 +2477,15 @@ function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1
 
 	const heightIncrement = height / heightSegment;
 	let iy = 1;
-	const slope = radius / height;
 	const loopPositions = [];
 	const apexLoopNormals = [];
+	const slopeAngle = Math.atan(height / radius) * -1;
 
 	const angle = (Math.PI * 2) / radialSegment;
 	for (let ir = 0; ir < radialSegment; ir++) {
 		const radialAngle = angle * ir;
-		const sinRadial = Math.sin(radialAngle);
-		const cosRadial = Math.cos(radialAngle);
+		const normal = getPositionFromPolar(radius, slopeAngle, radialAngle);
 		loopPositions.push([Math.cos(radialAngle) * radius, height - heightIncrement * iy, Math.sin(radialAngle) * radius]);
-		const normal = [sinRadial, slope, cosRadial];
 		apexLoopNormals.push(normalize(normal, normal));
 	}
 
@@ -2490,6 +2494,7 @@ function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1
 		const nextIndex = ir === radialSegment - 1 ? 0 : ir + 1;
 		positions.push([0, height, 0], loopPositions[nextIndex], loopPositions[ir]);
 		// 0,0,0 at the apex is a "hack" to have a smooth shading
+
 		normals.push([0, 0, 0], apexLoopNormals[nextIndex], apexLoopNormals[ir]);
 		const unsafeNextIndex = ir + 1;
 		const uvX = 1 - ir / radialSegment;
@@ -2498,6 +2503,7 @@ function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1
 
 		positions.push([0, 0, 0], loopPositions[ir], loopPositions[nextIndex]);
 		normals.push(downNormal, downNormal, downNormal);
+
 		uvs.push([0, 0], [1 - uvX, 1], [1 - uvXNext, 1]);
 	}
 	return {
@@ -2863,7 +2869,7 @@ function instance($$self, $$props, $$invalidate) {
 		renderer.setCanvas(canvas);
 		renderer.setBackgroundColor(skyblue);
 		renderer.setAmbientLight(0xffffff, 0.5);
-		camera = renderer.setCamera([-3, 4.5, 1], [0, 0, 0], 75);
+		camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75);
 		const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 		sphereGeometry.uvs = generateUVs(sphereGeometry);
 
@@ -2904,7 +2910,7 @@ function instance($$self, $$props, $$invalidate) {
 	}),
 );*/
 		renderer.addLight(createPointLight({
-			position: [3, 3, -3],
+			position: [0, 3, 0],
 			color: [1, 1, 1],
 			intensity: 20,
 			cutoffDistance: 0,

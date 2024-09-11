@@ -97,3 +97,8 @@ export function distributeCirclePoints(radius, index, numberOfPoints) {
 		y: radius * Math.sin(index * angleIncrement),
 	};
 }
+
+export function getPositionFromPolar(radius, polar, azimuth) {
+	const sinPhiRadius = Math.sin(polar) * radius;
+	return [sinPhiRadius * Math.sin(azimuth), Math.cos(polar) * radius, sinPhiRadius * Math.cos(azimuth)];
+}

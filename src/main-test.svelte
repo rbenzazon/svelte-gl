@@ -36,7 +36,7 @@ onMount(async () => {
 	renderer.setCanvas(canvas);
 	renderer.setBackgroundColor(skyblue);
 	renderer.setAmbientLight(0xffffff, 0.5);
-	camera = renderer.setCamera([-3, 4.5, 1], [0, 0, 0], 75);
+	camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75);
 
 	const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 	sphereGeometry.uvs = generateUVs(sphereGeometry);
@@ -78,7 +78,7 @@ onMount(async () => {
 
 	light1 = renderer.addLight(
 		createPointLight({
-			position: [3, 3, -3],
+			position: [0, 3, 0],
 			color: [1, 1, 1],
 			intensity: 20,
 			cutoffDistance: 0,
