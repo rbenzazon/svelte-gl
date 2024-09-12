@@ -2,7 +2,6 @@ import { normalize, add, lerp } from "gl-matrix/esm/vec3.js";
 import { getPositionFromPolar } from "./common";
 
 export function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1) {
-	height = 0.2;
 	radialSegment = Math.max(radialSegment, 3);
 	heightSegment = Math.max(heightSegment, 1);
 	const positions = [];

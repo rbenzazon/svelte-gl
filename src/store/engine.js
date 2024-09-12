@@ -81,7 +81,7 @@ function createRenderer() {
 					{ matrices: [], unsubs: [] },
 				);
 			} else {
-				var { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index);
+				var { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index, null, mesh.transformMatrix);
 			}
 			mesh.material = {
 				metalness: 0,

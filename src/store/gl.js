@@ -70,7 +70,6 @@ export function render(context, instances) {
 			if (contextValue.hasElements) {
 				gl.drawElements(gl.TRIANGLES, contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
-				
 				gl.drawArrays(gl.TRIANGLES, 0, contextValue.attributeLength);
 				//add mesh visualization (lines)
 				//gl.drawArrays(gl.LINE_STRIP, 0, contextValue.attributeLength);
@@ -139,7 +138,7 @@ export function createShaders() {
 				declarations: vertexDeclarations,
 				positionModifier: vertexPositionModifiers,
 			});
-			console.log(vertexShaderSource);
+			//console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
@@ -217,7 +216,7 @@ export function createShaders() {
 			});
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
-			console.log(fragmentShaderSource);
+			//console.log(fragmentShaderSource);
 			gl.compileShader(fragmentShader);
 			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
 				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));

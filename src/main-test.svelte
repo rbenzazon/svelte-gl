@@ -15,17 +15,22 @@ import { createSpecular } from "./material/specular/specular.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createTexture } from "./texture/texture.js";
 //import {loadGLBFile } from "./loaders/glb-loader.js";
-//import {loadGLTFFile } from "./loaders/gltf-loader.js";
 import { createWobblyAnimation } from "./animation/wobbly/wobbly.js";
 import { createPulsatingScaleAnimation } from "./animation/pulsating-scale/pulsating-scale.js";
 import { createNoiseDistortionAnimation } from "./animation/noise-distortion/noise-distortion.js";
+import { loadGLTFFile, createMeshFromGLTF } from "./loaders/gltf-loader.js";
 
 let canvas;
 let light1;
 let mesh1;
 let camera;
 onMount(async () => {
-	//loadGLBFile("md-blend6-mdlvw.glb");
+
+	const file = await loadGLTFFile("output.gltf");
+	console.log(file);
+	const object = file.scenes[0].nodes[0]
+	const loadedMesh = createMeshFromGLTF(file,object);
+	console.log(loadedMesh);
 
 	const diffuseMap = await createTexture({
 		url: "checker-map_tho.png",
@@ -43,7 +48,8 @@ onMount(async () => {
 	//const planeGeometry = createPlane(3, 3, 100, 100);
 	const coneGeometry = createCone(3, 3, 50);
 	console.log(coneGeometry);
-
+	const initialMatrix = identity(new Float32Array(16));
+	rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));
 	mesh1 = renderer.addMesh({
 		attributes: coneGeometry,
 		material: {
@@ -57,6 +63,7 @@ onMount(async () => {
 			diffuseMap,
 			/*normalMapScale: [1, 1],*/
 		},
+		transformMatrix:initialMatrix,
 	});
 	/*renderer.addAnimation(
 		mesh1,

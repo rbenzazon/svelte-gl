@@ -884,6 +884,107 @@ function invert(out, a) {
   return out;
 }
 /**
+ * Rotates a matrix by the given angle around the X axis
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the matrix to rotate
+ * @param {Number} rad the angle to rotate the matrix by
+ * @returns {mat4} out
+ */
+
+function rotateX(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a10 = a[4];
+  var a11 = a[5];
+  var a12 = a[6];
+  var a13 = a[7];
+  var a20 = a[8];
+  var a21 = a[9];
+  var a22 = a[10];
+  var a23 = a[11];
+
+  if (a !== out) {
+    // If the source and destination differ, copy the unchanged rows
+    out[0] = a[0];
+    out[1] = a[1];
+    out[2] = a[2];
+    out[3] = a[3];
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+  } // Perform axis-specific matrix multiplication
+
+
+  out[4] = a10 * c + a20 * s;
+  out[5] = a11 * c + a21 * s;
+  out[6] = a12 * c + a22 * s;
+  out[7] = a13 * c + a23 * s;
+  out[8] = a20 * c - a10 * s;
+  out[9] = a21 * c - a11 * s;
+  out[10] = a22 * c - a12 * s;
+  out[11] = a23 * c - a13 * s;
+  return out;
+}
+/**
+ * Creates a matrix from a quaternion rotation, vector translation and vector scale
+ * This is equivalent to (but much faster than):
+ *
+ *     mat4.identity(dest);
+ *     mat4.translate(dest, vec);
+ *     let quatMat = mat4.create();
+ *     quat4.toMat4(quat, quatMat);
+ *     mat4.multiply(dest, quatMat);
+ *     mat4.scale(dest, scale)
+ *
+ * @param {mat4} out mat4 receiving operation result
+ * @param {quat4} q Rotation quaternion
+ * @param {ReadonlyVec3} v Translation vector
+ * @param {ReadonlyVec3} s Scaling vector
+ * @returns {mat4} out
+ */
+
+function fromRotationTranslationScale(out, q, v, s) {
+  // Quaternion math
+  var x = q[0],
+      y = q[1],
+      z = q[2],
+      w = q[3];
+  var x2 = x + x;
+  var y2 = y + y;
+  var z2 = z + z;
+  var xx = x * x2;
+  var xy = x * y2;
+  var xz = x * z2;
+  var yy = y * y2;
+  var yz = y * z2;
+  var zz = z * z2;
+  var wx = w * x2;
+  var wy = w * y2;
+  var wz = w * z2;
+  var sx = s[0];
+  var sy = s[1];
+  var sz = s[2];
+  out[0] = (1 - (yy + zz)) * sx;
+  out[1] = (xy + wz) * sx;
+  out[2] = (xz - wy) * sx;
+  out[3] = 0;
+  out[4] = (xy - wz) * sy;
+  out[5] = (1 - (xx + zz)) * sy;
+  out[6] = (yz + wx) * sy;
+  out[7] = 0;
+  out[8] = (xz + wy) * sz;
+  out[9] = (yz - wx) * sz;
+  out[10] = (1 - (xx + yy)) * sz;
+  out[11] = 0;
+  out[12] = v[0];
+  out[13] = v[1];
+  out[14] = v[2];
+  out[15] = 1;
+  return out;
+}
+/**
  * Generates a perspective projection matrix with the given bounds.
  * The near/far clip planes correspond to a normalized device coordinate Z range of [-1, 1],
  * which matches WebGL/OpenGL's clip volume.
@@ -1131,7 +1232,6 @@ function render(context, instances) {
 			if (contextValue.hasElements) {
 				gl.drawElements(gl.TRIANGLES, contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
-				
 				gl.drawArrays(gl.TRIANGLES, 0, contextValue.attributeLength);
 				//add mesh visualization (lines)
 				//gl.drawArrays(gl.LINE_STRIP, 0, contextValue.attributeLength);
@@ -1200,7 +1300,7 @@ function createShaders() {
 				declarations: vertexDeclarations,
 				positionModifier: vertexPositionModifiers,
 			});
-			console.log(vertexShaderSource);
+			//console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
@@ -1278,7 +1378,7 @@ function createShaders() {
 			});
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
-			console.log(fragmentShaderSource);
+			//console.log(fragmentShaderSource);
 			gl.compileShader(fragmentShader);
 			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
 				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
@@ -1620,7 +1720,7 @@ function createRenderer() {
 					{ matrices: [], unsubs: [] },
 				);
 			} else {
-				var { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index);
+				var { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index, null, mesh.transformMatrix);
 			}
 			mesh.material = {
 				metalness: 0,
@@ -2468,7 +2568,6 @@ const initialIndices = [
 ];
 
 function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1) {
-	height = 0.2;
 	radialSegment = Math.max(radialSegment, 3);
 	heightSegment = Math.max(heightSegment, 1);
 	const positions = [];
@@ -2807,6 +2906,136 @@ function setupTexture(context, texture, type, id, normalScale = [1, 1]) {
 	};
 }
 
+const WEBGL_COMPONENT_TYPES = {
+	5120: Int8Array,
+	5121: Uint8Array,
+	5122: Int16Array,
+	5123: Uint16Array,
+	5125: Uint32Array,
+	5126: Float32Array,
+};
+
+async function loadGLTFFile(url) {
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch GLB file: ${response.statusText}`);
+		}
+		const content = await response.json();
+		return await parseGLTF(content, url);
+	} catch (error) {
+		console.error("Error loading GLTF file:", error);
+	}
+}
+
+async function parseGLTF(content, url) {
+	const baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
+	const { buffers, bufferViews, accessors, scenes, nodes, meshes, cameras, materials } = content;
+	console.log(content);
+
+	const buffersData = await Promise.all(
+		buffers.map(async (buffer) => {
+			const { uri } = buffer;
+			const response = await fetch(baseUrl + uri);
+			if (!response.ok) {
+				throw new Error(`Failed to fetch buffer: ${response.statusText}`);
+			}
+			return await response.arrayBuffer();
+		}),
+	);
+
+	const dataViews = await Promise.all(
+		bufferViews.map(async (bufferView) => {
+			const { buffer } = bufferView;
+			const bufferData = buffersData[buffer];
+			const { byteOffset, byteLength } = bufferView;
+			return bufferData.slice(byteOffset, byteOffset + byteLength);
+		}),
+	);
+
+	const accessorsData = accessors.map((accessor) => {
+		const { bufferView } = accessor;
+		const dataView = dataViews[bufferView];
+		const { type, componentType, count, min, max } = accessor;
+		return {
+			type,
+			componentType,
+			count,
+			min,
+			max,
+			data: new WEBGL_COMPONENT_TYPES[componentType](dataView),
+		};
+	});
+
+	const scenesData = scenes.map((scene) => {
+		const { nodes: nodesID } = scene;
+		const nodesData = nodesID.map((nodeID) => {
+			const nodeData = nodes[nodeID];
+			if (nodeData.mesh != null) {
+				const { mesh } = nodeData;
+				const meshData = meshes[mesh];
+				const { primitives } = meshData;
+				const primitivesData = primitives.map((primitive) => {
+					const { attributes } = primitive;
+					const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
+					const positionAccessor = accessorsData[POSITION];
+					const normalAccessor = accessorsData[NORMAL];
+					const uvAccessor = accessorsData[TEXCOORD_0];
+					return {
+						position: positionAccessor,
+						normal: normalAccessor,
+						uv: uvAccessor,
+						material: primitive.material,
+					};
+				});
+				return {
+					...nodeData,
+					mesh: primitivesData,
+				};
+			} else if (nodeData.camera != null) {
+				const { camera } = nodeData;
+				const cameraData = cameras[camera];
+				return {
+					...nodeData,
+					camera: cameraData,
+				};
+			}
+		});
+		return {
+			nodes: nodesData,
+		};
+	});
+	return {
+		materials,
+		scenes: scenesData,
+	};
+}
+
+function createMeshFromGLTF(gltfScene, gltfObject) {
+	const transformMatrix = createMatrixFromGLTFTransform(gltfObject);
+	const gltfMaterial = gltfScene.materials[gltfObject.mesh[0].material];
+	const material = {};
+	if (gltfMaterial.pbrMetallicRoughness) {
+		const { baseColorFactor, metallicFactor, roughnessFactor } = gltfMaterial.pbrMetallicRoughness;
+		material.diffuse = baseColorFactor.slice(0, 3);
+	}
+	return {
+		attributes: {
+			positions: gltfObject.mesh[0].position.data,
+			normals: gltfObject.mesh[0].normal.data,
+		},
+		material,
+		transformMatrix,
+	};
+}
+
+function createMatrixFromGLTFTransform(object) {
+	const { translation, rotation, scale } = object;
+	const matrix = identity(new Float32Array(16));
+	fromRotationTranslationScale(matrix, rotation || [0, 0, 0, 0], translation || [0, 0, 0], scale || [1, 1, 1]);
+	return matrix;
+}
+
 /* src\main-test.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
@@ -2858,7 +3087,12 @@ function instance($$self, $$props, $$invalidate) {
 	let camera;
 
 	onMount(async () => {
-		//loadGLBFile("md-blend6-mdlvw.glb");
+		const file = await loadGLTFFile("output.gltf");
+		console.log(file);
+		const object = file.scenes[0].nodes[0];
+		const loadedMesh = createMeshFromGLTF(file, object);
+		console.log(loadedMesh);
+
 		const diffuseMap = await createTexture({
 			url: "checker-map_tho.png",
 			/*normalScale: [1, 1],*/
@@ -2877,6 +3111,8 @@ function instance($$self, $$props, $$invalidate) {
 		const coneGeometry = createCone(3, 3, 50);
 
 		console.log(coneGeometry);
+		const initialMatrix = identity(new Float32Array(16));
+		rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));
 
 		renderer.addMesh({
 			attributes: coneGeometry,
@@ -2890,7 +3126,7 @@ function instance($$self, $$props, $$invalidate) {
 				}),
 				diffuseMap
 			}, /*normalMapScale: [1, 1],*/
-			
+			transformMatrix: initialMatrix
 		});
 
 		/*renderer.addAnimation(
