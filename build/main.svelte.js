@@ -1217,7 +1217,7 @@ function setupTime(context) {
 	};
 }
 
-function render(context, instances) {
+function render(context, instances, drawMode) {
 	return function () {
 		const contextValue = get_store_value(context);
 		/** @type {WebGL2RenderingContext} **/
@@ -1232,7 +1232,7 @@ function render(context, instances) {
 			if (contextValue.hasElements) {
 				gl.drawElements(gl.TRIANGLES, contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
-				gl.drawArrays(gl.TRIANGLES, 0, contextValue.attributeLength);
+				gl.drawArrays(gl[drawMode], 0, contextValue.attributeLength);
 				//add mesh visualization (lines)
 				//gl.drawArrays(gl.LINE_STRIP, 0, contextValue.attributeLength);
 			}
@@ -1992,8 +1992,10 @@ const webglapp = derived(
 					];
 				}, []),
 			);
-
-		list.push(...(requireTime ? [setupTime(appContext)] : []), render(appContext, $programs[0].mesh.instances));
+		list.push(
+			...(requireTime ? [setupTime(appContext)] : []),
+			render(appContext, $programs[0].mesh.instances, $programs[0].mesh.drawMode),
+		);
 		return list;
 	},
 	emptyApp,
@@ -2776,51 +2778,6 @@ function createOrbitControls(canvas, camera) {
 	}
 }
 
-var specularShader = "${declaration?\r\n`\r\n\r\nuniform float roughness;\r\nuniform float ior;\r\nuniform float specularIntensity;\r\nuniform vec3 specularColor;\r\n\r\n\r\n\r\n#define EPSILON 1e-6\r\n\r\nvec3 F_Schlick( const in vec3 f0, const in float f90, const in float dotVH ) {\r\n\r\n\t// Original approximation by Christophe Schlick '94\r\n\t// float fresnel = pow( 1.0 - dotVH, 5.0 );\r\n\r\n\t// Optimized variant (presented by Epic at SIGGRAPH '13)\r\n\t// https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf\r\n\tfloat fresnel = exp2( ( - 5.55473 * dotVH - 6.98316 ) * dotVH );\r\n\r\n\treturn f0 * ( 1.0 - fresnel ) + ( f90 * fresnel );\r\n\r\n} \r\n\r\n// Moving Frostbite to Physically Based Rendering 3.0 - page 12, listing 2\r\n// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\nfloat V_GGX_SmithCorrelated( const in float alpha, const in float dotNL, const in float dotNV ) {\r\n\r\n\tfloat a2 = pow2( alpha );\r\n\r\n\tfloat gv = dotNL * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNV ) );\r\n\tfloat gl = dotNV * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNL ) );\r\n\r\n\treturn 0.5 / max( gv + gl, EPSILON );\r\n\r\n}\r\n\r\n// Microfacet Models for Refraction through Rough Surfaces - equation (33)\r\n// http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html\r\n// alpha is \"roughness squared\" in Disney’s reparameterization\r\nfloat D_GGX( const in float alpha, const in float dotNH ) {\r\n\r\n\tfloat a2 = pow2( alpha );\r\n\r\n\tfloat denom = pow2( dotNH ) * ( a2 - 1.0 ) + 1.0; // avoid alpha = 0 with dotNH = 1\r\n\r\n\treturn RECIPROCAL_PI * a2 / pow2( denom );\r\n\r\n}\r\n\r\nvec3 BRDF_GGX( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in vec3 specularColor, const in float specularF90, const in float roughness) {\r\n\r\n\tfloat alpha = pow2( roughness ); // UE4's roughness\r\n\r\n\tvec3 halfDir = normalize( lightDir + viewDir );\r\n\r\n\tfloat dotNL = saturate( dot( normal, lightDir ) );\r\n\tfloat dotNV = saturate( dot( normal, viewDir ) );\r\n\tfloat dotNH = saturate( dot( normal, halfDir ) );\r\n\tfloat dotVH = saturate( dot( viewDir, halfDir ) );\r\n\r\n\tvec3 F = F_Schlick( specularColor, specularF90, dotVH );\r\n\r\n\tfloat V = V_GGX_SmithCorrelated( alpha, dotNL, dotNV );\r\n\r\n\tfloat D = D_GGX( alpha, dotNH );\r\n\r\n\treturn F * ( V * D );\r\n\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n\tmaterial.roughness = clamp(roughness, 0.0525, 1.0);\r\n\tmaterial.ior = ior;\r\n\tmaterial.specularF90 = mix(specularIntensity, 1.0, metalness);\r\n\tmaterial.specularColor = mix(min(pow2((material.ior - 1.0) / (material.ior + 1.0)) * specularColor, vec3(1.0)) * specularIntensity, diffuse.rgb, metalness);\r\n\r\n        vec3 geometryViewDir = normalize( cameraPosition - vertex );\r\n        reflectedLight.directSpecular += lightParams.irradiance * BRDF_GGX( lightParams.direction, geometryViewDir, normal, material.specularColor, material.specularF90, material.roughness);//lightParams.irradiance; //* \r\n        //totalIrradiance = -vec3(geometryViewDir.z,geometryViewDir.z,geometryViewDir.z);//BRDF_GGX( lightParams.direction, geometryViewDir, normalize(vNormal), specularColor, specularF90, roughness);\r\n\t\t//totalIrradiance = lightParams.irradiance;//vec3(-lightParams.direction.z,-lightParams.direction.z,-lightParams.direction.z);\r\n` : ''\r\n}";
-
-//{ roughness = 0, ior = 1.5, intensity = 1, color = [1, 1, 1] } =
-/**
- * @typedef SpecularProps
- * @property {number} [roughness=0]
- * @property {number} [ior=1.5]
- * @property {number} [intensity=1]
- * @property {number[]} [color=[1, 1, 1]]
- */
-
-/**
- *
- * @param {SpecularProps} props
- * @returns
- */
-const createSpecular = (props) => {
-	return {
-		...props,
-		shader: templateLiteralRenderer(specularShader, {
-			declaration: false,
-			irradiance: false,
-		}),
-		setupSpecular: (context) => setupSpecular(context, props),
-	};
-};
-
-function setupSpecular(context, { roughness, ior, intensity, color }) {
-	return function () {
-		context = get_store_value(context);
-		/** @type {{gl: WebGL2RenderingContext}} **/
-		const { gl, program } = context;
-
-		const colorLocation = gl.getUniformLocation(program, "specularColor");
-		const roughnessLocation = gl.getUniformLocation(program, "roughness");
-		const iorLocation = gl.getUniformLocation(program, "ior");
-		const specularIntensityLocation = gl.getUniformLocation(program, "specularIntensity");
-
-		gl.uniform3fv(colorLocation, color);
-		gl.uniform1f(roughnessLocation, roughness);
-		gl.uniform1f(iorLocation, ior);
-		gl.uniform1f(specularIntensityLocation, intensity);
-	};
-}
-
 const skyblue = 0x87ceeb;
 
 var textureShader = "${declaration?\r\n`\r\nuniform sampler2D ${mapType};\r\nuniform vec2 normalScale;\r\n\r\n\r\nmat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {\r\n    vec3 q0 = dFdx( eye_pos.xyz );\r\n    vec3 q1 = dFdy( eye_pos.xyz );\r\n    vec2 st0 = dFdx( uv.st );\r\n    vec2 st1 = dFdy( uv.st );\r\n    vec3 N = surf_norm;\r\n    vec3 q1perp = cross( q1, N );\r\n    vec3 q0perp = cross( N, q0 );\r\n    vec3 T = q1perp * st0.x + q0perp * st1.x;\r\n    vec3 B = q1perp * st0.y + q0perp * st1.y;\r\n    float det = max( dot( T, T ), dot( B, B ) );\r\n    float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );\r\n    return mat3( T * scale, B * scale, N );\r\n}\r\n` : ''\r\n}\r\n${diffuseMapSample?\r\n`\r\n    //atan(uv.y, uv.x)\r\n    ${coordinateSpace === 'circular' ?\r\n`   vec2 uv = vec2(vUv.x/vUv.y, vUv.y);\r\n` :\r\n`   vec2 uv = vUv;\r\n`}\r\n    material.diffuseColor *= texture( ${mapType}, uv ).xyz;\r\n` : ''\r\n}\r\n${normalMapSample?\r\n`\r\n    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );\r\n    normal = texture( normalMap, vUv ).xyz * 2.0 - 1.0;\r\n    normal.xy *= normalScale;\r\n    normal = normalize(tbn * normal);\r\n\t//normal = normalize( normalMatrix * normal );\r\n` : ''\r\n}\r\n";
@@ -2914,6 +2871,24 @@ const WEBGL_COMPONENT_TYPES = {
 	5125: Uint32Array,
 	5126: Float32Array,
 };
+const WEBGL_TYPE_SIZES = {
+	MAT2: 4,
+	MAT3: 9,
+	MAT4: 16,
+	SCALAR: 1,
+	VEC2: 2,
+	VEC3: 3,
+	VEC4: 4,
+};
+const drawModes = {
+	0: "POINTS",
+	1: "LINES",
+	2: "LINE_LOOP",
+	3: "LINE_STRIP",
+	4: "TRIANGLES",
+	5: "TRIANGLE_STRIP",
+	6: "TRIANGLE_FAN",
+};
 
 async function loadGLTFFile(url) {
 	try {
@@ -2931,7 +2906,6 @@ async function loadGLTFFile(url) {
 async function parseGLTF(content, url) {
 	const baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
 	const { buffers, bufferViews, accessors, scenes, nodes, meshes, cameras, materials } = content;
-	console.log(content);
 
 	const buffersData = await Promise.all(
 		buffers.map(async (buffer) => {
@@ -2946,58 +2920,73 @@ async function parseGLTF(content, url) {
 
 	const dataViews = await Promise.all(
 		bufferViews.map(async (bufferView) => {
-			const { buffer } = bufferView;
+			const { buffer, byteOffset, byteLength } = bufferView;
 			const bufferData = buffersData[buffer];
-			const { byteOffset, byteLength } = bufferView;
 			return bufferData.slice(byteOffset, byteOffset + byteLength);
 		}),
 	);
 
 	const accessorsData = accessors.map((accessor) => {
-		const { bufferView } = accessor;
+		const { bufferView, byteOffset } = accessor;
+
 		const dataView = dataViews[bufferView];
 		const { type, componentType, count, min, max } = accessor;
+		const itemSize = WEBGL_TYPE_SIZES[type];
 		return {
 			type,
 			componentType,
 			count,
 			min,
 			max,
-			data: new WEBGL_COMPONENT_TYPES[componentType](dataView),
+			data: new WEBGL_COMPONENT_TYPES[componentType](dataView, byteOffset, count * itemSize),
 		};
 	});
+
+	function parseChildren(nodeData) {
+		const { mesh } = nodeData;
+		const meshData = meshes[mesh];
+		const { primitives } = meshData;
+		const primitivesData = primitives.map((primitive) => {
+			const { attributes, indices } = primitive;
+			const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
+			const positionAccessor = accessorsData[POSITION];
+			const normalAccessor = accessorsData[NORMAL];
+			const uvAccessor = accessorsData[TEXCOORD_0];
+			const indexAccessor = accessorsData[indices];
+			return {
+				position: positionAccessor,
+				normal: normalAccessor,
+				indices: indexAccessor,
+				uv: uvAccessor,
+				material: primitive.material,
+				drawMode: drawModes[primitive.mode],
+			};
+		});
+		return {
+			...nodeData,
+			mesh: primitivesData,
+		};
+	}
 
 	const scenesData = scenes.map((scene) => {
 		const { nodes: nodesID } = scene;
 		const nodesData = nodesID.map((nodeID) => {
 			const nodeData = nodes[nodeID];
 			if (nodeData.mesh != null) {
-				const { mesh } = nodeData;
-				const meshData = meshes[mesh];
-				const { primitives } = meshData;
-				const primitivesData = primitives.map((primitive) => {
-					const { attributes } = primitive;
-					const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
-					const positionAccessor = accessorsData[POSITION];
-					const normalAccessor = accessorsData[NORMAL];
-					const uvAccessor = accessorsData[TEXCOORD_0];
-					return {
-						position: positionAccessor,
-						normal: normalAccessor,
-						uv: uvAccessor,
-						material: primitive.material,
-					};
-				});
-				return {
-					...nodeData,
-					mesh: primitivesData,
-				};
+				return parseChildren(nodeData);
 			} else if (nodeData.camera != null) {
 				const { camera } = nodeData;
 				const cameraData = cameras[camera];
 				return {
 					...nodeData,
 					camera: cameraData,
+				};
+			} else if (nodeData.children != null) {
+				const { children, matrix } = nodeData;
+				return {
+					...nodeData,
+					getChildren: () => parseChildren(nodes[children]),
+					matrix,
 				};
 			}
 		});
@@ -3023,7 +3012,9 @@ function createMeshFromGLTF(gltfScene, gltfObject) {
 		attributes: {
 			positions: gltfObject.mesh[0].position.data,
 			normals: gltfObject.mesh[0].normal.data,
+			elements: gltfObject.mesh[0].indices.data,
 		},
+		drawMode: gltfObject.mesh[0].drawMode,
 		material,
 		transformMatrix,
 	};
@@ -3087,13 +3078,11 @@ function instance($$self, $$props, $$invalidate) {
 	let camera;
 
 	onMount(async () => {
-		const file = await loadGLTFFile("output.gltf");
-		console.log(file);
-		const object = file.scenes[0].nodes[0];
+		const file = await loadGLTFFile("box.gltf");
+		const object = file.scenes[0].nodes.find(o => o.children != null).getChildren();
 		const loadedMesh = createMeshFromGLTF(file, object);
-		console.log(loadedMesh);
 
-		const diffuseMap = await createTexture({
+		await createTexture({
 			url: "checker-map_tho.png",
 			/*normalScale: [1, 1],*/
 			type: "diffuse",
@@ -3108,26 +3097,11 @@ function instance($$self, $$props, $$invalidate) {
 		sphereGeometry.uvs = generateUVs(sphereGeometry);
 
 		//const planeGeometry = createPlane(3, 3, 100, 100);
-		const coneGeometry = createCone(3, 3, 50);
+		createCone(3, 3, 50);
 
-		console.log(coneGeometry);
 		const initialMatrix = identity(new Float32Array(16));
 		rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));
-
-		renderer.addMesh({
-			attributes: coneGeometry,
-			material: {
-				diffuse: [1, 1, 1],
-				specular: createSpecular({
-					roughness: 0.3,
-					ior: 1.5,
-					intensity: 1,
-					color: [1, 1, 1]
-				}),
-				diffuseMap
-			}, /*normalMapScale: [1, 1],*/
-			transformMatrix: initialMatrix
-		});
+		renderer.addMesh(loadedMesh);
 
 		/*renderer.addAnimation(
 	mesh1,
@@ -3146,7 +3120,7 @@ function instance($$self, $$props, $$invalidate) {
 	}),
 );*/
 		renderer.addLight(createPointLight({
-			position: [0, 3, 0],
+			position: [-2, 3, 0],
 			color: [1, 1, 1],
 			intensity: 20,
 			cutoffDistance: 0,

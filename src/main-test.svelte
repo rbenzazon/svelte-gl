@@ -25,13 +25,9 @@ let light1;
 let mesh1;
 let camera;
 onMount(async () => {
-
-	const file = await loadGLTFFile("output.gltf");
-	console.log(file);
-	const object = file.scenes[0].nodes[0]
-	const loadedMesh = createMeshFromGLTF(file,object);
-	console.log(loadedMesh);
-
+	const file = await loadGLTFFile("box.gltf");
+	const object = file.scenes[0].nodes.find((o) => o.children != null).getChildren();
+	const loadedMesh = createMeshFromGLTF(file, object);
 	const diffuseMap = await createTexture({
 		url: "checker-map_tho.png",
 		/*normalScale: [1, 1],*/
@@ -47,24 +43,9 @@ onMount(async () => {
 	sphereGeometry.uvs = generateUVs(sphereGeometry);
 	//const planeGeometry = createPlane(3, 3, 100, 100);
 	const coneGeometry = createCone(3, 3, 50);
-	console.log(coneGeometry);
 	const initialMatrix = identity(new Float32Array(16));
 	rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));
-	mesh1 = renderer.addMesh({
-		attributes: coneGeometry,
-		material: {
-			diffuse: [1, 1, 1],
-			specular: createSpecular({
-				roughness: 0.3,
-				ior: 1.5,
-				intensity: 1,
-				color: [1, 1, 1],
-			}),
-			diffuseMap,
-			/*normalMapScale: [1, 1],*/
-		},
-		transformMatrix:initialMatrix,
-	});
+	mesh1 = renderer.addMesh(loadedMesh);
 	/*renderer.addAnimation(
 		mesh1,
 		createPulsatingScaleAnimation({
@@ -85,7 +66,7 @@ onMount(async () => {
 
 	light1 = renderer.addLight(
 		createPointLight({
-			position: [0, 3, 0],
+			position: [-2, 3, 0],
 			color: [1, 1, 1],
 			intensity: 20,
 			cutoffDistance: 0,

@@ -353,8 +353,10 @@ const webglapp = derived(
 					];
 				}, []),
 			);
-
-		list.push(...(requireTime ? [setupTime(appContext)] : []), render(appContext, $programs[0].mesh.instances));
+		list.push(
+			...(requireTime ? [setupTime(appContext)] : []),
+			render(appContext, $programs[0].mesh.instances, $programs[0].mesh.drawMode),
+		);
 		return list;
 	},
 	emptyApp,
