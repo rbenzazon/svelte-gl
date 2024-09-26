@@ -26,7 +26,7 @@ let mesh1;
 let camera;
 onMount(async () => {
 	const file = await loadGLTFFile("box.gltf");
-	const object = file.scenes[0].nodes.find((o) => o.children != null).getChildren();
+	const object = file.scene.find((o) => o.children != null).children[0];
 	const loadedMesh = createMeshFromGLTF(file, object);
 	const diffuseMap = await createTexture({
 		url: "checker-map_tho.png",

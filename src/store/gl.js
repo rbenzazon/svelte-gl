@@ -65,10 +65,10 @@ export function render(context, instances, drawMode) {
 		// when using vertex array objects, you must bind it before rendering
 		gl.bindVertexArray(contextValue.vao);
 		if (instances) {
-			gl.drawArraysInstanced(gl.TRIANGLES, 0, contextValue.attributeLength, instances);
+			gl.drawArraysInstanced(gl[drawMode], 0, contextValue.attributeLength, instances);
 		} else {
 			if (contextValue.hasElements) {
-				gl.drawElements(gl.TRIANGLES, contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
+				gl.drawElements(gl[drawMode], contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
 				gl.drawArrays(gl[drawMode], 0, contextValue.attributeLength);
 				//add mesh visualization (lines)
