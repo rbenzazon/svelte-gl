@@ -447,6 +447,23 @@ export function derivateNormalMatrix(transformMatrix) {
 	return normalMatrix;
 }
 
+function getBuffer(variable) {
+	let dataSource;
+	let interleaved;
+	if (variable.data) {
+		dataSource = variable.data;
+		interleaved = variable.interleaved;
+	} else {
+		dataSource = variable;
+	}
+	const data = dataSource.buffer && dataSource.buffer instanceof ArrayBuffer ? dataSource : new Float32Array(dataSource);
+	return {
+		data,
+		interleaved,
+		...(interleaved ? { byteStride: variable.byteStride, byteOffset: variable.byteOffset } : {}),
+	};
+}
+
 export function setupAttributes(context, mesh) {
 	return function () {
 		context = get(context);
@@ -457,25 +474,41 @@ export function setupAttributes(context, mesh) {
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / 3;
 
+		const { positions, normals, elements, uvs } = mesh.attributes;
 		const vao = (context.vao = gl.createVertexArray());
 		gl.bindVertexArray(vao);
-		const positionsData = new Float32Array(mesh.attributes.positions);
+
+		console.log("setupAttributes", mesh.attributes);
+
+		const {
+			data: positionsData,
+			interleaved: positionsInterleaved,
+			byteStride: positionsByteStride,
+			byteOffset: positionsByteOffset,
+		} = getBuffer(positions);
 		//position
 		const positionBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, positionsData, gl.STATIC_DRAW);
 		const positionLocation = gl.getAttribLocation(program, "position");
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer); //todo check if redundant
-		gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+		gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, positionsByteStride, positionsByteOffset);
 		gl.enableVertexAttribArray(positionLocation);
 		//normal
-		const normalsData = new Float32Array(mesh.attributes.normals);
-		const normalBuffer = gl.createBuffer();
-		gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, normalsData, gl.STATIC_DRAW);
+		const {
+			data: normalsData,
+			interleaved: normalsInterleaved,
+			byteStride: normalsByteStride,
+			byteOffset: normalsByteOffset,
+		} = getBuffer(normals);
+		if (!normalsInterleaved) {
+			const normalBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, normalsData, gl.STATIC_DRAW);
+			gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
+		}
 		const normalLocation = gl.getAttribLocation(program, "normal");
-		gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
-		gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, 0, 0);
+		gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
 		gl.enableVertexAttribArray(normalLocation);
 		if (mesh.attributes.elements) {
 			context.hasElements = true;

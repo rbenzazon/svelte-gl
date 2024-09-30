@@ -1609,6 +1609,23 @@ function derivateNormalMatrix(transformMatrix) {
 	return normalMatrix;
 }
 
+function getBuffer(variable) {
+	let dataSource;
+	let interleaved;
+	if (variable.data) {
+		dataSource = variable.data;
+		interleaved = variable.interleaved;
+	} else {
+		dataSource = variable;
+	}
+	const data = dataSource.buffer && dataSource.buffer instanceof ArrayBuffer ? dataSource : new Float32Array(dataSource);
+	return {
+		data,
+		interleaved,
+		...(interleaved ? { byteStride: variable.byteStride, byteOffset: variable.byteOffset } : {}),
+	};
+}
+
 function setupAttributes(context, mesh) {
 	return function () {
 		context = get_store_value(context);
@@ -1619,25 +1636,41 @@ function setupAttributes(context, mesh) {
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / 3;
 
+		const { positions, normals, elements, uvs } = mesh.attributes;
 		const vao = (context.vao = gl.createVertexArray());
 		gl.bindVertexArray(vao);
-		const positionsData = new Float32Array(mesh.attributes.positions);
+
+		console.log("setupAttributes", mesh.attributes);
+
+		const {
+			data: positionsData,
+			interleaved: positionsInterleaved,
+			byteStride: positionsByteStride,
+			byteOffset: positionsByteOffset,
+		} = getBuffer(positions);
 		//position
 		const positionBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, positionsData, gl.STATIC_DRAW);
 		const positionLocation = gl.getAttribLocation(program, "position");
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer); //todo check if redundant
-		gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, 0, 0);
+		gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, positionsByteStride, positionsByteOffset);
 		gl.enableVertexAttribArray(positionLocation);
 		//normal
-		const normalsData = new Float32Array(mesh.attributes.normals);
-		const normalBuffer = gl.createBuffer();
-		gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-		gl.bufferData(gl.ARRAY_BUFFER, normalsData, gl.STATIC_DRAW);
+		const {
+			data: normalsData,
+			interleaved: normalsInterleaved,
+			byteStride: normalsByteStride,
+			byteOffset: normalsByteOffset,
+		} = getBuffer(normals);
+		if (!normalsInterleaved) {
+			const normalBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, normalsData, gl.STATIC_DRAW);
+			gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
+		}
 		const normalLocation = gl.getAttribLocation(program, "normal");
-		gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
-		gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, 0, 0);
+		gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
 		gl.enableVertexAttribArray(normalLocation);
 		if (mesh.attributes.elements) {
 			context.hasElements = true;
@@ -3071,9 +3104,12 @@ async function parseGLTF(content, url) {
 	 */
 	const dataViews = await Promise.all(
 		bufferViews.map(async (bufferView) => {
-			const { buffer, byteOffset, byteLength } = bufferView;
+			const { buffer, byteOffset, byteLength, byteStride } = bufferView;
 			const bufferData = buffersData[buffer];
-			return bufferData.slice(byteOffset, byteOffset + byteLength);
+			return {
+				dataView: bufferData.slice(byteOffset, byteOffset + byteLength),
+				byteStride,
+			};
 		}),
 	);
 
@@ -3086,16 +3122,37 @@ async function parseGLTF(content, url) {
 	const accessorsData = accessors.map((accessor) => {
 		const { bufferView, byteOffset } = accessor;
 
-		const dataView = dataViews[bufferView];
+		const { dataView, byteStride } = dataViews[bufferView];
 		const { type, componentType, count, min, max } = accessor;
+
 		const itemSize = WEBGL_TYPE_SIZES[type];
+		const TypedArray = WEBGL_COMPONENT_TYPES[componentType];
+		const elementBytes = TypedArray.BYTES_PER_ELEMENT;
+		const itemBytes = elementBytes * itemSize;
+		let offset;
+		let length;
+		let interleaved = false;
+		if (byteStride != null && byteStride !== itemBytes) {
+			const ibSlice = Math.floor(byteOffset / byteStride);
+			offset = ibSlice * byteStride;
+			length = (count * byteStride) / elementBytes;
+			interleaved = true;
+		} else {
+			offset = byteOffset;
+			length = count * itemSize;
+		}
+		console.log("itemSize", itemSize);
+
+		const data = new TypedArray(dataView, offset, length);
 		return {
 			type,
 			componentType,
 			count,
 			min,
 			max,
-			data: new WEBGL_COMPONENT_TYPES[componentType](dataView, byteOffset, count * itemSize),
+			data,
+			interleaved,
+			...(interleaved ? { byteOffset, byteStride } : {}),
 		};
 	});
 
@@ -3158,6 +3215,7 @@ async function parseGLTF(content, url) {
 				uv: uvAccessor,
 				material: primitive.material,
 				drawMode: drawModes[primitive.mode],
+				matrix: identity(new Float32Array(16)),
 			};
 		});
 		return {
@@ -3172,19 +3230,35 @@ async function parseGLTF(content, url) {
 	}
 
 	function parseGroup(nodeData) {
-		const { children, matrix } = nodeData;
+		const { children, matrix, scale, translation, rotation } = nodeData;
+		let nodeMatrix;
+
+		if (matrix == null && (scale != null || translation != null || rotation != null)) {
+			nodeMatrix = createMatrixFromGLTFTransform(nodeData);
+		} else if (matrix != null) {
+			nodeMatrix = matrix;
+		} else {
+			nodeMatrix = identity(new Float32Array(16));
+		}
 		return {
 			children: children.map((child) => {
-				return nodesData[child];
+				if (nodesData[child].children != null) {
+					return parseGroup(nodesData[child]);
+				} else {
+					return nodesData[child];
+				}
 			}),
-			matrix,
+			matrix: nodeMatrix,
 		};
 	}
 }
 
 function createMeshFromGLTF(gltfScene, gltfObject) {
-	const transformMatrix = createMatrixFromGLTFTransform(gltfObject);
-	const gltfMaterial = gltfScene.materials[gltfObject.mesh[0].material];
+	console.log("gltfObject", gltfObject);
+
+	//const transformMatrix = createMatrixFromGLTFTransform(gltfObject);
+	const [mesh] = gltfObject.mesh;
+	const gltfMaterial = gltfScene.materials[mesh.material];
 	const material = {};
 	if (gltfMaterial.pbrMetallicRoughness) {
 		const { baseColorFactor, metallicFactor, roughnessFactor } = gltfMaterial.pbrMetallicRoughness;
@@ -3192,13 +3266,27 @@ function createMeshFromGLTF(gltfScene, gltfObject) {
 	}
 	return {
 		attributes: {
-			positions: gltfObject.mesh[0].position.data,
-			normals: gltfObject.mesh[0].normal.data,
-			elements: gltfObject.mesh[0].indices.data,
+			positions: mesh.position.interleaved
+				? {
+						data: mesh.position.data,
+						interleaved: mesh.position.interleaved,
+						byteOffset: mesh.position.byteOffset,
+						byteStride: mesh.position.byteStride,
+					}
+				: mesh.position.data,
+			normals: mesh.normal.interleaved
+				? {
+						data: mesh.normal.data,
+						interleaved: mesh.normal.interleaved,
+						byteOffset: mesh.normal.byteOffset,
+						byteStride: mesh.normal.byteStride,
+					}
+				: mesh.normal.data,
+			elements: mesh.indices.data,
 		},
-		drawMode: gltfObject.mesh[0].drawMode,
+		drawMode: mesh.drawMode,
 		material,
-		transformMatrix,
+		transformMatrix: mesh.matrix,
 	};
 }
 
@@ -3207,6 +3295,15 @@ function createMatrixFromGLTFTransform(object) {
 	const matrix = identity(new Float32Array(16));
 	fromRotationTranslationScale(matrix, rotation || [0, 0, 0, 0], translation || [0, 0, 0], scale || [1, 1, 1]);
 	return matrix;
+}
+
+function traverseScene(scene, callback) {
+	scene.forEach((node) => {
+		callback(node);
+		if (node.children != null) {
+			traverseScene(node.children, callback);
+		}
+	});
 }
 
 /* src\main-test.svelte generated by Svelte v4.2.18 */
@@ -3260,9 +3357,21 @@ function instance($$self, $$props, $$invalidate) {
 	let camera;
 
 	onMount(async () => {
-		const file = await loadGLTFFile("box.gltf");
-		const object = file.scene.find(o => o.children != null).children[0];
+		const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf");
+		console.log("file", file);
+
+		//const object = file.scene.find((o) => o.children != null).children[0];
+		let object;
+
+		traverseScene(file.scene, o => {
+			if (o.mesh != null) {
+				object = o;
+			}
+		});
+
+		console.log("object", object);
 		const loadedMesh = createMeshFromGLTF(file, object);
+		console.log("loadedMesh", loadedMesh);
 
 		await createTexture({
 			url: "checker-map_tho.png",

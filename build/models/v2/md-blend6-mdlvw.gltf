@@ -1,0 +1,144 @@
+{
+  "asset": { "generator": "glTF-Transform v4.0.2", "version": "2.0" },
+  "accessors": [
+    {
+      "type": "SCALAR",
+      "componentType": 5123,
+      "count": 1128,
+      "bufferView": 0,
+      "byteOffset": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5126,
+      "count": 1062,
+      "max": [706.7385864257812, 706.7492065429688, 971.5443725585938],
+      "min": [-707.2886962890625, -708.4921264648438, -39.864898681640625],
+      "bufferView": 1,
+      "byteOffset": 0
+    },
+    {
+      "type": "VEC3",
+      "componentType": 5126,
+      "count": 1062,
+      "bufferView": 1,
+      "byteOffset": 12
+    }
+  ],
+  "bufferViews": [
+    { "buffer": 0, "byteOffset": 0, "byteLength": 2256, "target": 34963 },
+    {
+      "buffer": 0,
+      "byteOffset": 2256,
+      "byteLength": 25488,
+      "byteStride": 24,
+      "target": 34962
+    }
+  ],
+  "buffers": [{ "uri": "md-blend6-mdlvw.bin", "byteLength": 27744 }],
+  "materials": [
+    {
+      "name": "Default",
+      "extras": { "associations": { "materials": 0 } },
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [1, 0.0343398068028541, 0.0343398068028541, 1],
+        "roughnessFactor": 0.45,
+        "metallicFactor": 0.99
+      },
+      "emissiveFactor": [1, 0.20507873637973145, 0.12477181755144427]
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": { "POSITION": 1, "NORMAL": 2 },
+          "mode": 4,
+          "material": 0,
+          "indices": 0
+        }
+      ]
+    }
+  ],
+  "cameras": [
+    {
+      "name": "PerspectiveCamera",
+      "type": "perspective",
+      "perspective": {
+        "znear": 0.10000000149011612,
+        "zfar": 1000,
+        "yfov": 0.39959652046304894,
+        "aspectRatio": 1.7777777777777777
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "name": "Box009",
+      "extras": {
+        "name": "Box009",
+        "associations": { "meshes": 0, "primitives": 0, "nodes": 0 },
+        "variantData": {}
+      },
+      "translation": [0, -264.8992614746094, -0.00003559155811672099],
+      "scale": [
+        0.001005128724500537, 0.001005128724500537, 0.001005128724500537
+      ],
+      "mesh": 0
+    },
+    {
+      "name": "md",
+      "extras": { "name": "md", "associations": { "nodes": 5 } },
+      "translation": [0, 0, -264.8985595703125],
+      "rotation": [-0.7071068286895766, 0, 0, 0.7071067336835153],
+      "children": [0]
+    },
+    {
+      "name": "Scene_1",
+      "extras": { "name": "Scene_1", "associations": { "nodes": 6 } },
+      "children": [1]
+    },
+    {
+      "name": "9fd527dd-82c1-4af6-9a2f-dde631003708",
+      "extras": {
+        "name": "9fd527dd-82c1-4af6-9a2f-dde631003708",
+        "associations": { "nodes": 7 }
+      },
+      "scale": [
+        0.009999999776482582, 0.009999999776482582, 0.009999999776482582
+      ],
+      "children": [2]
+    },
+    {
+      "name": "b4146e5b-624b-4a1a-9f76-4a6e94e2f73e",
+      "extras": {
+        "name": "b4146e5b-624b-4a1a-9f76-4a6e94e2f73e",
+        "associations": { "nodes": 8 }
+      },
+      "children": [3]
+    },
+    {
+      "name": "Caméra",
+      "extras": { "name": "Caméra", "associations": { "nodes": 9 } },
+      "translation": [0, 0.07493671774864197, 0.1026163101196289],
+      "rotation": [
+        -0.29694148927284925, 0.007691917484639113, 0.0023920207773545374,
+        0.9548616991954555
+      ],
+      "camera": 0
+    },
+    {
+      "name": "Scene",
+      "extras": { "name": "Scene", "associations": { "nodes": 10 } },
+      "children": [4, 5]
+    },
+    {
+      "name": "AuxScene_1",
+      "extras": { "name": "AuxScene", "associations": { "nodes": 11 } },
+      "children": [6]
+    },
+    { "name": "AuxScene", "children": [7] }
+  ],
+  "scenes": [{ "name": "AuxScene", "nodes": [8] }],
+  "scene": 0
+}

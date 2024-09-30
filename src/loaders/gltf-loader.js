@@ -208,9 +208,12 @@ async function parseGLTF(content, url) {
 	 */
 	const dataViews = await Promise.all(
 		bufferViews.map(async (bufferView) => {
-			const { buffer, byteOffset, byteLength } = bufferView;
+			const { buffer, byteOffset, byteLength, byteStride } = bufferView;
 			const bufferData = buffersData[buffer];
-			return bufferData.slice(byteOffset, byteOffset + byteLength);
+			return {
+				dataView: bufferData.slice(byteOffset, byteOffset + byteLength),
+				byteStride,
+			};
 		}),
 	);
 
@@ -223,16 +226,37 @@ async function parseGLTF(content, url) {
 	const accessorsData = accessors.map((accessor) => {
 		const { bufferView, byteOffset } = accessor;
 
-		const dataView = dataViews[bufferView];
+		const { dataView, byteStride } = dataViews[bufferView];
 		const { type, componentType, count, min, max } = accessor;
+
 		const itemSize = WEBGL_TYPE_SIZES[type];
+		const TypedArray = WEBGL_COMPONENT_TYPES[componentType];
+		const elementBytes = TypedArray.BYTES_PER_ELEMENT;
+		const itemBytes = elementBytes * itemSize;
+		let offset;
+		let length;
+		let interleaved = false;
+		if (byteStride != null && byteStride !== itemBytes) {
+			const ibSlice = Math.floor(byteOffset / byteStride);
+			offset = ibSlice * byteStride;
+			length = (count * byteStride) / elementBytes;
+			interleaved = true;
+		} else {
+			offset = byteOffset;
+			length = count * itemSize;
+		}
+		console.log("itemSize", itemSize);
+
+		const data = new TypedArray(dataView, offset, length);
 		return {
 			type,
 			componentType,
 			count,
 			min,
 			max,
-			data: new WEBGL_COMPONENT_TYPES[componentType](dataView, byteOffset, count * itemSize),
+			data,
+			interleaved,
+			...(interleaved ? { byteOffset, byteStride } : {}),
 		};
 	});
 
@@ -295,6 +319,7 @@ async function parseGLTF(content, url) {
 				uv: uvAccessor,
 				material: primitive.material,
 				drawMode: drawModes[primitive.mode],
+				matrix: identity(new Float32Array(16)),
 			};
 		});
 		return {
@@ -309,19 +334,35 @@ async function parseGLTF(content, url) {
 	}
 
 	function parseGroup(nodeData) {
-		const { children, matrix } = nodeData;
+		const { children, matrix, scale, translation, rotation } = nodeData;
+		let nodeMatrix;
+
+		if (matrix == null && (scale != null || translation != null || rotation != null)) {
+			nodeMatrix = createMatrixFromGLTFTransform(nodeData);
+		} else if (matrix != null) {
+			nodeMatrix = matrix;
+		} else {
+			nodeMatrix = identity(new Float32Array(16));
+		}
 		return {
 			children: children.map((child) => {
-				return nodesData[child];
+				if (nodesData[child].children != null) {
+					return parseGroup(nodesData[child]);
+				} else {
+					return nodesData[child];
+				}
 			}),
-			matrix,
+			matrix: nodeMatrix,
 		};
 	}
 }
 
 export function createMeshFromGLTF(gltfScene, gltfObject) {
-	const transformMatrix = createMatrixFromGLTFTransform(gltfObject);
-	const gltfMaterial = gltfScene.materials[gltfObject.mesh[0].material];
+	console.log("gltfObject", gltfObject);
+
+	//const transformMatrix = createMatrixFromGLTFTransform(gltfObject);
+	const [mesh] = gltfObject.mesh;
+	const gltfMaterial = gltfScene.materials[mesh.material];
 	const material = {};
 	if (gltfMaterial.pbrMetallicRoughness) {
 		const { baseColorFactor, metallicFactor, roughnessFactor } = gltfMaterial.pbrMetallicRoughness;
@@ -329,13 +370,27 @@ export function createMeshFromGLTF(gltfScene, gltfObject) {
 	}
 	return {
 		attributes: {
-			positions: gltfObject.mesh[0].position.data,
-			normals: gltfObject.mesh[0].normal.data,
-			elements: gltfObject.mesh[0].indices.data,
+			positions: mesh.position.interleaved
+				? {
+						data: mesh.position.data,
+						interleaved: mesh.position.interleaved,
+						byteOffset: mesh.position.byteOffset,
+						byteStride: mesh.position.byteStride,
+					}
+				: mesh.position.data,
+			normals: mesh.normal.interleaved
+				? {
+						data: mesh.normal.data,
+						interleaved: mesh.normal.interleaved,
+						byteOffset: mesh.normal.byteOffset,
+						byteStride: mesh.normal.byteStride,
+					}
+				: mesh.normal.data,
+			elements: mesh.indices.data,
 		},
-		drawMode: gltfObject.mesh[0].drawMode,
+		drawMode: mesh.drawMode,
 		material,
-		transformMatrix,
+		transformMatrix: mesh.matrix,
 	};
 }
 
@@ -355,4 +410,13 @@ function createMatrixFromGLTFTransform(object) {
 	const matrix = identity(new Float32Array(16));
 	fromRotationTranslationScale(matrix, rotation || [0, 0, 0, 0], translation || [0, 0, 0], scale || [1, 1, 1]);
 	return matrix;
+}
+
+export function traverseScene(scene, callback) {
+	scene.forEach((node) => {
+		callback(node);
+		if (node.children != null) {
+			traverseScene(node.children, callback);
+		}
+	});
 }

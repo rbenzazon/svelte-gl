@@ -18,16 +18,25 @@ import { createTexture } from "./texture/texture.js";
 import { createWobblyAnimation } from "./animation/wobbly/wobbly.js";
 import { createPulsatingScaleAnimation } from "./animation/pulsating-scale/pulsating-scale.js";
 import { createNoiseDistortionAnimation } from "./animation/noise-distortion/noise-distortion.js";
-import { loadGLTFFile, createMeshFromGLTF } from "./loaders/gltf-loader.js";
+import { loadGLTFFile, createMeshFromGLTF, traverseScene } from "./loaders/gltf-loader.js";
 
 let canvas;
 let light1;
 let mesh1;
 let camera;
 onMount(async () => {
-	const file = await loadGLTFFile("box.gltf");
-	const object = file.scene.find((o) => o.children != null).children[0];
+	const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf");
+	console.log("file", file);
+	//const object = file.scene.find((o) => o.children != null).children[0];
+	let object;
+	traverseScene(file.scene, (o) => {
+		if (o.mesh != null) {
+			object = o;
+		}
+	});
+	console.log("object", object);
 	const loadedMesh = createMeshFromGLTF(file, object);
+	console.log("loadedMesh", loadedMesh);
 	const diffuseMap = await createTexture({
 		url: "checker-map_tho.png",
 		/*normalScale: [1, 1],*/
