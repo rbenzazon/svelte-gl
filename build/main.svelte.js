@@ -3113,6 +3113,18 @@ async function parseGLTF(content, url) {
 		}),
 	);
 
+	const bufferCache = {};
+	function getBufferCache(dataView, offset) {
+		return bufferCache[dataView] && bufferCache[dataView][offset];
+	}
+	function setBufferCache(buffer, dataView, offset) {
+		bufferCache[dataView] = bufferCache[dataView] || {};
+		bufferCache[dataView][offset] = buffer;
+	}
+	function hasBufferCache(dataView, offset) {
+		return bufferCache[dataView] && bufferCache[dataView][offset] != null;
+	}
+
 	/**
 	 * Accessors are used to describe how to read data from a bufferView
 	 * They are read by using a typed array constructor.
@@ -3141,9 +3153,17 @@ async function parseGLTF(content, url) {
 			offset = byteOffset;
 			length = count * itemSize;
 		}
-		console.log("itemSize", itemSize);
 
-		const data = new TypedArray(dataView, offset, length);
+		let data;
+		if (interleaved && hasBufferCache(dataView, offset)) {
+			data = getBufferCache(dataView, offset);
+		} else {
+			data = new TypedArray(dataView, offset, length);
+			if (interleaved) {
+				setBufferCache(data, dataView, offset);
+			}
+		}
+
 		return {
 			type,
 			componentType,
