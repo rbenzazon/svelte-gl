@@ -884,6 +884,67 @@ function invert(out, a) {
   return out;
 }
 /**
+ * Multiplies two mat4s
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the first operand
+ * @param {ReadonlyMat4} b the second operand
+ * @returns {mat4} out
+ */
+
+function multiply(out, a, b) {
+  var a00 = a[0],
+      a01 = a[1],
+      a02 = a[2],
+      a03 = a[3];
+  var a10 = a[4],
+      a11 = a[5],
+      a12 = a[6],
+      a13 = a[7];
+  var a20 = a[8],
+      a21 = a[9],
+      a22 = a[10],
+      a23 = a[11];
+  var a30 = a[12],
+      a31 = a[13],
+      a32 = a[14],
+      a33 = a[15]; // Cache only the current line of the second matrix
+
+  var b0 = b[0],
+      b1 = b[1],
+      b2 = b[2],
+      b3 = b[3];
+  out[0] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[1] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[2] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[3] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+  b0 = b[4];
+  b1 = b[5];
+  b2 = b[6];
+  b3 = b[7];
+  out[4] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[5] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[6] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[7] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+  b0 = b[8];
+  b1 = b[9];
+  b2 = b[10];
+  b3 = b[11];
+  out[8] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[9] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[10] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[11] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+  b0 = b[12];
+  b1 = b[13];
+  b2 = b[14];
+  b3 = b[15];
+  out[12] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[13] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+  return out;
+}
+/**
  * Rotates a matrix by the given angle around the X axis
  *
  * @param {mat4} out the receiving matrix
@@ -3205,6 +3266,10 @@ async function parseGLTF(content, url) {
 	let { nodes: sceneNodes } = mainScene;
 	let sceneNodesData = sceneNodes.map((nodeID) => nodesData[nodeID]);
 
+	sceneNodesData.forEach((node) => {
+		recurseNodes(node);
+	});
+
 	const lights = {};
 
 	return {
@@ -3247,6 +3312,16 @@ async function parseGLTF(content, url) {
 		return {
 			camera: cameras[nodeData.camera],
 		};
+	}
+
+	function recurseNodes(nodeData, parent = null) {
+		const { children } = nodeData;
+		if (parent != null) nodeData.parent = parent;
+		if (children != null) {
+			return children.map((child) => {
+				recurseNodes(child, nodeData);
+			});
+		}
 	}
 
 	function parseGroup(nodeData) {
@@ -3308,6 +3383,40 @@ function createMeshFromGLTF(gltfScene, gltfObject) {
 		material,
 		transformMatrix: mesh.matrix,
 	};
+}
+
+function getNodeMatrix(node) {
+	if (node.mesh != null) {
+		return node.mesh[0].matrix;
+	} else {
+		return node.matrix;
+	}
+}
+
+/**
+ *
+ * @param {Object} node
+ * @param {Array} parentMatrix
+ * @param {Object} target
+ */
+function getAbsoluteNodeMatrix(node) {
+	console.log("node", node);
+
+	const matrices = [];
+	let currentNode = node;
+
+	while (currentNode.parent != null) {
+		matrices.unshift(getNodeMatrix(currentNode));
+		currentNode = currentNode.parent;
+	}
+	console.log("matrices", matrices);
+
+	return matrices.reduce(
+		(acc, matrix) => {
+			return multiply(acc, acc, matrix);
+		},
+		identity(new Float32Array(16)),
+	);
 }
 
 function createMatrixFromGLTFTransform(object) {
@@ -3390,6 +3499,9 @@ function instance($$self, $$props, $$invalidate) {
 		});
 
 		console.log("object", object);
+		const absolute = getAbsoluteNodeMatrix(object);
+		console.log("absolute", absolute);
+		object.mesh[0].matrix = absolute;
 		const loadedMesh = createMeshFromGLTF(file, object);
 		console.log("loadedMesh", loadedMesh);
 

@@ -1,4 +1,4 @@
-import { fromRotationTranslationScale, identity } from "gl-matrix/esm/mat4.js";
+import { fromRotationTranslationScale, identity, multiply } from "gl-matrix/esm/mat4.js";
 
 /**
  * @typedef {Object} GLTFFile
@@ -309,6 +309,10 @@ async function parseGLTF(content, url) {
 	let { nodes: sceneNodes } = mainScene;
 	let sceneNodesData = sceneNodes.map((nodeID) => nodesData[nodeID]);
 
+	sceneNodesData.forEach((node) => {
+		recurseNodes(node);
+	});
+
 	const lights = {};
 
 	return {
@@ -351,6 +355,16 @@ async function parseGLTF(content, url) {
 		return {
 			camera: cameras[nodeData.camera],
 		};
+	}
+
+	function recurseNodes(nodeData, parent = null) {
+		const { children } = nodeData;
+		if (parent != null) nodeData.parent = parent;
+		if (children != null) {
+			return children.map((child) => {
+				recurseNodes(child, nodeData);
+			});
+		}
 	}
 
 	function parseGroup(nodeData) {
@@ -414,16 +428,39 @@ export function createMeshFromGLTF(gltfScene, gltfObject) {
 	};
 }
 
-export function getAbsoluteMatrix(file, mesh) {
-	const { nodes } = file;
+function getNodeMatrix(node) {
+	if (node.mesh != null) {
+		return node.mesh[0].matrix;
+	} else {
+		return node.matrix;
+	}
 }
+
 /**
  *
  * @param {Object} node
  * @param {Array} parentMatrix
  * @param {Object} target
  */
-function recurseNodeMatrices(node, parentMatrix, target) {}
+export function getAbsoluteNodeMatrix(node) {
+	console.log("node", node);
+
+	const matrices = [];
+	let currentNode = node;
+
+	while (currentNode.parent != null) {
+		matrices.unshift(getNodeMatrix(currentNode));
+		currentNode = currentNode.parent;
+	}
+	console.log("matrices", matrices);
+
+	return matrices.reduce(
+		(acc, matrix) => {
+			return multiply(acc, acc, matrix);
+		},
+		identity(new Float32Array(16)),
+	);
+}
 
 function createMatrixFromGLTFTransform(object) {
 	const { translation, rotation, scale } = object;

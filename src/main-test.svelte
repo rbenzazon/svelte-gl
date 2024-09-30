@@ -18,7 +18,7 @@ import { createTexture } from "./texture/texture.js";
 import { createWobblyAnimation } from "./animation/wobbly/wobbly.js";
 import { createPulsatingScaleAnimation } from "./animation/pulsating-scale/pulsating-scale.js";
 import { createNoiseDistortionAnimation } from "./animation/noise-distortion/noise-distortion.js";
-import { loadGLTFFile, createMeshFromGLTF, traverseScene } from "./loaders/gltf-loader.js";
+import { loadGLTFFile, createMeshFromGLTF, traverseScene, getAbsoluteNodeMatrix } from "./loaders/gltf-loader.js";
 
 let canvas;
 let light1;
@@ -35,6 +35,9 @@ onMount(async () => {
 		}
 	});
 	console.log("object", object);
+	const absolute = getAbsoluteNodeMatrix(object);
+	console.log("absolute", absolute);
+	object.mesh[0].matrix = absolute;
 	const loadedMesh = createMeshFromGLTF(file, object);
 	console.log("loadedMesh", loadedMesh);
 	const diffuseMap = await createTexture({
