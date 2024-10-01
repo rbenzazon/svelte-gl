@@ -1,4 +1,5 @@
-import { fromRotationTranslationScale, identity, multiply } from "gl-matrix/esm/mat4.js";
+import { fromRotationTranslationScale, getScaling, identity, multiply } from "gl-matrix/esm/mat4.js";
+import { transformQuat, add, scale, distance } from "gl-matrix/esm/vec3.js";
 
 /**
  * @typedef {Object} GLTFFile
@@ -36,13 +37,45 @@ import { fromRotationTranslationScale, identity, multiply } from "gl-matrix/esm/
  */
 
 /**
+ * @typedef {Object} GLTFCameraNode
+ * @property {Number} camera
+ */
+
+/**
  * @typedef {Object} GLTFGroupNode
  * @property {Array<Number>} children
  * @property {mat4} matrix
  */
 
 /**
- * @typedef {GLTFMeshNode|GLTFGroupNode} GLTFNode
+ * @typedef {Object} GLTFBaseNode
+ * @property {string} name
+ * @property {vec3} translation
+ * @property {vec4} rotation
+ * @property {vec3} scale
+ */
+
+/**
+ * @typedef {GLTFBaseNode & (GLTFMeshNode|GLTFGroupNode|GLTFCameraNode)} GLTFNode
+ */
+
+/*
+fov,
+near,
+far,
+position,
+target,
+up,
+*/
+
+/**
+ * @typedef {Object} SvelteGLCamera
+ * @property {Number} fov
+ * @property {Number} near
+ * @property {Number} far
+ * @property {vec3} position
+ * @property {vec3} target
+ * @property {vec3} up
  */
 
 /**
@@ -100,14 +133,20 @@ import { fromRotationTranslationScale, identity, multiply } from "gl-matrix/esm/
  * @property {String} uri
  * @property {Number} byteLength
  */
+
 /**
  * @typedef {Object} GLTFCamera
  * @property {String} type
+ * @property {String} name
+ * @property {GLTFCameraPerspective} perspective
+ */
+
+/**
+ * @typedef {Object} GLTFCameraPerspective
  * @property {Number} aspectRatio
  * @property {Number} yfov
  * @property {Number} znear
  * @property {Number} zfar
- * @property {String} name
  */
 /**
  * @typedef {Object} GLTFMaterial
@@ -284,9 +323,12 @@ async function parseGLTF(content, url) {
 
 	let nodesData = nodes.map((node) => {
 		if (node.mesh != null) {
-			return meshesData[node.mesh];
+			return {
+				...meshesData[node.mesh],
+				matrix: createMatrixFromGLTFTransform(node),
+			};
 		} else if (node.camera != null) {
-			return parseCamera(node);
+			return parseCameraNode(node);
 		} else if (node.children != null) {
 			return node;
 		}
@@ -297,7 +339,7 @@ async function parseGLTF(content, url) {
 	 */
 	nodesData = nodesData.map((node) => {
 		if (node.children != null) {
-			return parseGroup(node);
+			return parseGroupNode(node);
 		} else {
 			return node;
 		}
@@ -336,6 +378,7 @@ async function parseGLTF(content, url) {
 			const normalAccessor = accessorsData[NORMAL];
 			const uvAccessor = accessorsData[TEXCOORD_0];
 			const indexAccessor = accessorsData[indices];
+
 			return {
 				position: positionAccessor,
 				normal: normalAccessor,
@@ -343,17 +386,23 @@ async function parseGLTF(content, url) {
 				uv: uvAccessor,
 				material: primitive.material,
 				drawMode: drawModes[primitive.mode],
-				matrix: identity(new Float32Array(16)),
 			};
 		});
-		return {
-			mesh: primitivesData,
-		};
+		return primitivesData[0];
 	}
 
-	function parseCamera(nodeData) {
+	function parseCameraNode(nodeData) {
+		if (
+			nodeData.matrix == null &&
+			(nodeData.scale != null || nodeData.translation != null || nodeData.rotation != null)
+		) {
+			nodeData.matrix = createMatrixFromGLTFTransform(nodeData);
+		} else if (nodeData.matrix == null) {
+			nodeData.matrix = identity(new Float32Array(16));
+		}
 		return {
-			camera: cameras[nodeData.camera],
+			...nodeData,
+			...cameras[nodeData.camera],
 		};
 	}
 
@@ -367,7 +416,7 @@ async function parseGLTF(content, url) {
 		}
 	}
 
-	function parseGroup(nodeData) {
+	function parseGroupNode(nodeData) {
 		const { children, matrix, scale, translation, rotation } = nodeData;
 		let nodeMatrix;
 
@@ -381,7 +430,7 @@ async function parseGLTF(content, url) {
 		return {
 			children: children.map((child) => {
 				if (nodesData[child].children != null) {
-					return parseGroup(nodesData[child]);
+					return parseGroupNode(nodesData[child]);
 				} else {
 					return nodesData[child];
 				}
@@ -392,10 +441,8 @@ async function parseGLTF(content, url) {
 }
 
 export function createMeshFromGLTF(gltfScene, gltfObject) {
-	console.log("gltfObject", gltfObject);
-
 	//const transformMatrix = createMatrixFromGLTFTransform(gltfObject);
-	const [mesh] = gltfObject.mesh;
+	const mesh = gltfObject;
 	const gltfMaterial = gltfScene.materials[mesh.material];
 	const material = {};
 	if (gltfMaterial.pbrMetallicRoughness) {
@@ -427,13 +474,57 @@ export function createMeshFromGLTF(gltfScene, gltfObject) {
 		transformMatrix: mesh.matrix,
 	};
 }
+/**
+ *
+ * @param {GLTFCamera & GLTFBaseNode & GLTFCameraNode} gltfObject
+ * @returns {SvelteGLCamera}
+ */
+/*
+Example of a camera object in a gltf file
+{
+	camera: 0,
+	name: "Camera",
+	perspective:{
+		"znear": 0.10000000149011612,
+		"zfar": 1000,
+		"yfov": 0.39959652046304894,
+		"aspectRatio": 1.7777777777777777
+	},
+	type: "perspective",
+	rotation: [0, 0, 0, 1],
+	translation: [0, 0, 0],
+}
+*/
+/*
+Example of a camera object in svelte-gl
+{
+	fov: 0.39959652046304894,
+	near: 0.10000000149011612,
+	far: 1000,
+	position: [0, 0, 0],
+	target: [0, 0, 0],
+	up: [0, 1, 0],
+}
+*/
 
-function getNodeMatrix(node) {
-	if (node.mesh != null) {
-		return node.mesh[0].matrix;
-	} else {
-		return node.matrix;
-	}
+export function createCameraFromGLTF(gltfObject) {
+	const { perspective, translation, rotation } = gltfObject;
+	const matrix = createMatrixFromGLTFTransform(gltfObject);
+	const dist = distance([0, 0, 0], translation);
+	const target = [0, 0, -1];
+
+	transformQuat(target, target, rotation);
+	scale(target, target, dist);
+	add(target, target, translation);
+
+	return {
+		fov: perspective.yfov,
+		near: perspective.znear,
+		far: perspective.zfar,
+		position: translation,
+		target,
+		up: [0, 1, 0], // Assuming the up vector is always [0, 1, 0]
+	};
 }
 
 /**
@@ -443,16 +534,17 @@ function getNodeMatrix(node) {
  * @param {Object} target
  */
 export function getAbsoluteNodeMatrix(node) {
-	console.log("node", node);
-
 	const matrices = [];
 	let currentNode = node;
 
 	while (currentNode.parent != null) {
-		matrices.unshift(getNodeMatrix(currentNode));
+		matrices.unshift(currentNode.matrix);
 		currentNode = currentNode.parent;
 	}
-	console.log("matrices", matrices);
+	console.log(
+		"matrices",
+		matrices.map((m) => getScaling([], m)),
+	);
 
 	return matrices.reduce(
 		(acc, matrix) => {
@@ -463,6 +555,8 @@ export function getAbsoluteNodeMatrix(node) {
 }
 
 function createMatrixFromGLTFTransform(object) {
+	console.log("createMatrixFromGLTFTransform", object);
+
 	const { translation, rotation, scale } = object;
 	const matrix = identity(new Float32Array(16));
 	fromRotationTranslationScale(matrix, rotation || [0, 0, 0, 0], translation || [0, 0, 0], scale || [1, 1, 1]);

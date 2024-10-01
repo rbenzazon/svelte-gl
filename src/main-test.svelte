@@ -18,7 +18,13 @@ import { createTexture } from "./texture/texture.js";
 import { createWobblyAnimation } from "./animation/wobbly/wobbly.js";
 import { createPulsatingScaleAnimation } from "./animation/pulsating-scale/pulsating-scale.js";
 import { createNoiseDistortionAnimation } from "./animation/noise-distortion/noise-distortion.js";
-import { loadGLTFFile, createMeshFromGLTF, traverseScene, getAbsoluteNodeMatrix } from "./loaders/gltf-loader.js";
+import {
+	loadGLTFFile,
+	createMeshFromGLTF,
+	traverseScene,
+	getAbsoluteNodeMatrix,
+	createCameraFromGLTF,
+} from "./loaders/gltf-loader.js";
 
 let canvas;
 let light1;
@@ -29,15 +35,23 @@ onMount(async () => {
 	console.log("file", file);
 	//const object = file.scene.find((o) => o.children != null).children[0];
 	let object;
+	let camera;
 	traverseScene(file.scene, (o) => {
-		if (o.mesh != null) {
+		if (o.position != null) {
 			object = o;
+		} else if (o.camera != null) {
+			camera = o;
 		}
 	});
 	console.log("object", object);
+	console.log("camera", camera);
+	const absoluteCamera = getAbsoluteNodeMatrix(camera);
+	console.log("absoluteCamera", absoluteCamera);
+	const cameraFromFile = createCameraFromGLTF(camera);
+	console.log("cameraFromFile", cameraFromFile);
 	const absolute = getAbsoluteNodeMatrix(object);
 	console.log("absolute", absolute);
-	object.mesh[0].matrix = absolute;
+	object.matrix = absolute;
 	const loadedMesh = createMeshFromGLTF(file, object);
 	console.log("loadedMesh", loadedMesh);
 	const diffuseMap = await createTexture({
@@ -49,7 +63,12 @@ onMount(async () => {
 	renderer.setCanvas(canvas);
 	renderer.setBackgroundColor(skyblue);
 	renderer.setAmbientLight(0xffffff, 0.5);
-	camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75);
+	/*camera = renderer.setCamera(cameraFromFile.position,
+		cameraFromFile.target,
+		(cameraFromFile.fov/Math.PI)*180,
+		cameraFromFile.near,
+		cameraFromFile.far);//[0, 5, -5], [0, 0, 0], 75);*/
+	camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75, undefined, undefined, undefined, absoluteCamera);
 
 	const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 	sphereGeometry.uvs = generateUVs(sphereGeometry);

@@ -47,7 +47,17 @@ function createRenderer() {
 					return get(renderer).camera;
 				},
 			};
-			function updateCamera(position = [0, 0, -1], target = [0, 0, 0], fov = 80, near = 0.1, far = 1000, up = [0, 1, 0]) {
+			function updateCamera(
+				position = [0, 0, -1],
+				target = [0, 0, 0],
+				fov = 80,
+				near = 0.1,
+				far = 1000,
+				up = [0, 1, 0],
+				matrix = null,
+			) {
+				console.log("update camera");
+
 				update((renderer) => {
 					renderer.camera = {
 						fov,
@@ -56,6 +66,7 @@ function createRenderer() {
 						position,
 						target,
 						up,
+						matrix,
 					};
 					return renderer;
 				});

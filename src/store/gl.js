@@ -1,4 +1,13 @@
-import { create, invert, transpose, identity, lookAt, perspective } from "gl-matrix/esm/mat4.js";
+import {
+	create,
+	invert,
+	transpose,
+	identity,
+	lookAt,
+	perspective,
+	getTranslation,
+	getRotation,
+} from "gl-matrix/esm/mat4.js";
 import { get } from "svelte/store";
 import { renderState } from "./engine.js";
 import defaultVertex from "../shaders/default-vertex.glsl";
@@ -260,7 +269,7 @@ export function setupCamera(context, camera) {
 		const aspectRatio = context.canvas.width / context.canvas.height;
 		const nearClippingPlaneDistance = camera.near;
 		const farClippingPlaneDistance = camera.far;
-
+		console.log("camera", camera);
 		let projection = new Float32Array(16);
 		projection = perspective(
 			projection,
@@ -274,14 +283,47 @@ export function setupCamera(context, camera) {
 
 		// view matrix
 		const viewLocation = gl.getUniformLocation(program, "view");
-		const view = new Float32Array(16);
+		const cameraMatrix = lookAt(new Float32Array(16), getTranslation([], camera.matrix), camera.target, camera.up);
+		console.log("cameraPosition", getTranslation([], camera.matrix));
+		console.log("cameraRotation", getEuler([], getRotation([], camera.matrix)));
 
-		lookAt(view, camera.position, camera.target, camera.up);
+		const view = cameraMatrix; //camera.matrix != null ? camera.matrix : lookAt(new Float32Array(16), camera.position, camera.target, camera.up);
+
 		gl.uniformMatrix4fv(viewLocation, false, view);
 
 		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");
 		gl.uniform3fv(cameraPositionLocation, camera.position);
 	};
+}
+function getEuler(out, quat) {
+	let x = quat[0],
+		y = quat[1],
+		z = quat[2],
+		w = quat[3],
+		x2 = x * x,
+		y2 = y * y,
+		z2 = z * z,
+		w2 = w * w;
+	let unit = x2 + y2 + z2 + w2;
+	let test = x * w - y * z;
+	if (test > 0.499995 * unit) {
+		//TODO: Use glmatrix.EPSILON
+		// singularity at the north pole
+		out[0] = ((Math.PI / 2) * 180) / Math.PI;
+		out[1] = (2 * Math.atan2(y, x) * 180) / Math.PI;
+		out[2] = (0 * 180) / Math.PI;
+	} else if (test < -0.499995 * unit) {
+		//TODO: Use glmatrix.EPSILON
+		// singularity at the south pole
+		out[0] = ((-Math.PI / 2) * 180) / Math.PI;
+		out[1] = (2 * Math.atan2(y, x) * 180) / Math.PI;
+		out[2] = (0 * 180) / Math.PI;
+	} else {
+		out[0] = (Math.asin(2 * (x * z - w * y)) * 180) / Math.PI;
+		out[1] = (Math.atan2(2 * (x * w + y * z), 1 - 2 * (z2 + w2)) * 180) / Math.PI;
+		out[2] = (Math.atan2(2 * (x * y + z * w), 1 - 2 * (y2 + z2)) * 180) / Math.PI;
+	}
+	return out;
 }
 
 export function setupTransformMatrix(context, transformMatrix, numInstances) {
