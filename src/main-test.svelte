@@ -4,6 +4,7 @@ import { get } from "svelte/store";
 import { renderer } from "./store/engine.js";
 //import { createCube } from "./geometries/cube.js";
 import { identity, rotateX, rotateY, rotateZ, translate, scale } from "gl-matrix/esm/mat4.js";
+import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import { createPolyhedron, createSmoothShadedNormals, generateUVs } from "./geometries/polyhedron.js";
 //import { createPlane } from "./geometries/plane.js";
 import { createCone } from "./geometries/cone.js";
@@ -32,28 +33,21 @@ let mesh1;
 let camera;
 onMount(async () => {
 	const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf");
-	console.log("file", file);
-	//const object = file.scene.find((o) => o.children != null).children[0];
-	let object;
+	let meshObject;
 	let camera;
 	traverseScene(file.scene, (o) => {
 		if (o.position != null) {
-			object = o;
+			meshObject = o;
 		} else if (o.camera != null) {
 			camera = o;
 		}
 	});
-	console.log("object", object);
-	console.log("camera", camera);
-	const absoluteCamera = getAbsoluteNodeMatrix(camera);
-	console.log("absoluteCamera", absoluteCamera);
+	const cameraAbsoluteMatrix = getAbsoluteNodeMatrix(camera);
 	const cameraFromFile = createCameraFromGLTF(camera);
-	console.log("cameraFromFile", cameraFromFile);
-	const absolute = getAbsoluteNodeMatrix(object);
-	console.log("absolute", absolute);
-	object.matrix = absolute;
-	const loadedMesh = createMeshFromGLTF(file, object);
-	console.log("loadedMesh", loadedMesh);
+	transformMat4(cameraFromFile.position, cameraFromFile.position, cameraAbsoluteMatrix);
+	const meshAbsoluteMatrix = getAbsoluteNodeMatrix(meshObject);
+	meshObject.matrix = meshAbsoluteMatrix;
+	const loadedMesh = createMeshFromGLTF(file, meshObject);
 	const diffuseMap = await createTexture({
 		url: "checker-map_tho.png",
 		/*normalScale: [1, 1],*/
@@ -68,7 +62,8 @@ onMount(async () => {
 		(cameraFromFile.fov/Math.PI)*180,
 		cameraFromFile.near,
 		cameraFromFile.far);//[0, 5, -5], [0, 0, 0], 75);*/
-	camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75, undefined, undefined, undefined, absoluteCamera);
+	//camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75, undefined, undefined, undefined, absoluteCamera);
+	camera = renderer.setCamera(...Object.values(cameraFromFile));
 
 	const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 	sphereGeometry.uvs = generateUVs(sphereGeometry);

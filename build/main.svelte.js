@@ -989,104 +989,6 @@ function rotateX(out, a, rad) {
   return out;
 }
 /**
- * Returns the translation vector component of a transformation
- *  matrix. If a matrix is built with fromRotationTranslation,
- *  the returned vector will be the same as the translation vector
- *  originally supplied.
- * @param  {vec3} out Vector to receive translation component
- * @param  {ReadonlyMat4} mat Matrix to be decomposed (input)
- * @return {vec3} out
- */
-
-function getTranslation(out, mat) {
-  out[0] = mat[12];
-  out[1] = mat[13];
-  out[2] = mat[14];
-  return out;
-}
-/**
- * Returns the scaling factor component of a transformation
- *  matrix. If a matrix is built with fromRotationTranslationScale
- *  with a normalized Quaternion paramter, the returned vector will be
- *  the same as the scaling vector
- *  originally supplied.
- * @param  {vec3} out Vector to receive scaling factor component
- * @param  {ReadonlyMat4} mat Matrix to be decomposed (input)
- * @return {vec3} out
- */
-
-function getScaling(out, mat) {
-  var m11 = mat[0];
-  var m12 = mat[1];
-  var m13 = mat[2];
-  var m21 = mat[4];
-  var m22 = mat[5];
-  var m23 = mat[6];
-  var m31 = mat[8];
-  var m32 = mat[9];
-  var m33 = mat[10];
-  out[0] = Math.hypot(m11, m12, m13);
-  out[1] = Math.hypot(m21, m22, m23);
-  out[2] = Math.hypot(m31, m32, m33);
-  return out;
-}
-/**
- * Returns a quaternion representing the rotational component
- *  of a transformation matrix. If a matrix is built with
- *  fromRotationTranslation, the returned quaternion will be the
- *  same as the quaternion originally supplied.
- * @param {quat} out Quaternion to receive the rotation component
- * @param {ReadonlyMat4} mat Matrix to be decomposed (input)
- * @return {quat} out
- */
-
-function getRotation(out, mat) {
-  var scaling = new ARRAY_TYPE(3);
-  getScaling(scaling, mat);
-  var is1 = 1 / scaling[0];
-  var is2 = 1 / scaling[1];
-  var is3 = 1 / scaling[2];
-  var sm11 = mat[0] * is1;
-  var sm12 = mat[1] * is2;
-  var sm13 = mat[2] * is3;
-  var sm21 = mat[4] * is1;
-  var sm22 = mat[5] * is2;
-  var sm23 = mat[6] * is3;
-  var sm31 = mat[8] * is1;
-  var sm32 = mat[9] * is2;
-  var sm33 = mat[10] * is3;
-  var trace = sm11 + sm22 + sm33;
-  var S = 0;
-
-  if (trace > 0) {
-    S = Math.sqrt(trace + 1.0) * 2;
-    out[3] = 0.25 * S;
-    out[0] = (sm23 - sm32) / S;
-    out[1] = (sm31 - sm13) / S;
-    out[2] = (sm12 - sm21) / S;
-  } else if (sm11 > sm22 && sm11 > sm33) {
-    S = Math.sqrt(1.0 + sm11 - sm22 - sm33) * 2;
-    out[3] = (sm23 - sm32) / S;
-    out[0] = 0.25 * S;
-    out[1] = (sm12 + sm21) / S;
-    out[2] = (sm31 + sm13) / S;
-  } else if (sm22 > sm33) {
-    S = Math.sqrt(1.0 + sm22 - sm11 - sm33) * 2;
-    out[3] = (sm31 - sm13) / S;
-    out[0] = (sm12 + sm21) / S;
-    out[1] = 0.25 * S;
-    out[2] = (sm23 + sm32) / S;
-  } else {
-    S = Math.sqrt(1.0 + sm33 - sm11 - sm22) * 2;
-    out[3] = (sm12 - sm21) / S;
-    out[0] = (sm31 + sm13) / S;
-    out[1] = (sm23 + sm32) / S;
-    out[2] = 0.25 * S;
-  }
-
-  return out;
-}
-/**
  * Creates a matrix from a quaternion rotation, vector translation and vector scale
  * This is equivalent to (but much faster than):
  *
@@ -1581,7 +1483,6 @@ function setupCamera(context, camera) {
 		const aspectRatio = context.canvas.width / context.canvas.height;
 		const nearClippingPlaneDistance = camera.near;
 		const farClippingPlaneDistance = camera.far;
-		console.log("camera", camera);
 		let projection = new Float32Array(16);
 		projection = perspective(
 			projection,
@@ -1595,47 +1496,13 @@ function setupCamera(context, camera) {
 
 		// view matrix
 		const viewLocation = gl.getUniformLocation(program, "view");
-		const cameraMatrix = lookAt(new Float32Array(16), getTranslation([], camera.matrix), camera.target, camera.up);
-		console.log("cameraPosition", getTranslation([], camera.matrix));
-		console.log("cameraRotation", getEuler([], getRotation([], camera.matrix)));
-
-		const view = cameraMatrix; //camera.matrix != null ? camera.matrix : lookAt(new Float32Array(16), camera.position, camera.target, camera.up);
-
+		const view = new Float32Array(16);
+		lookAt(view, camera.position, camera.target, camera.up);
 		gl.uniformMatrix4fv(viewLocation, false, view);
 
 		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");
 		gl.uniform3fv(cameraPositionLocation, camera.position);
 	};
-}
-function getEuler(out, quat) {
-	let x = quat[0],
-		y = quat[1],
-		z = quat[2],
-		w = quat[3],
-		x2 = x * x,
-		y2 = y * y,
-		z2 = z * z,
-		w2 = w * w;
-	let unit = x2 + y2 + z2 + w2;
-	let test = x * w - y * z;
-	if (test > 0.499995 * unit) {
-		//TODO: Use glmatrix.EPSILON
-		// singularity at the north pole
-		out[0] = ((Math.PI / 2) * 180) / Math.PI;
-		out[1] = (2 * Math.atan2(y, x) * 180) / Math.PI;
-		out[2] = (0 * 180) / Math.PI;
-	} else if (test < -0.499995 * unit) {
-		//TODO: Use glmatrix.EPSILON
-		// singularity at the south pole
-		out[0] = ((-Math.PI / 2) * 180) / Math.PI;
-		out[1] = (2 * Math.atan2(y, x) * 180) / Math.PI;
-		out[2] = (0 * 180) / Math.PI;
-	} else {
-		out[0] = (Math.asin(2 * (x * z - w * y)) * 180) / Math.PI;
-		out[1] = (Math.atan2(2 * (x * w + y * z), 1 - 2 * (z2 + w2)) * 180) / Math.PI;
-		out[2] = (Math.atan2(2 * (x * y + z * w), 1 - 2 * (y2 + z2)) * 180) / Math.PI;
-	}
-	return out;
 }
 
 function setupTransformMatrix(context, transformMatrix, numInstances) {
@@ -1831,9 +1698,6 @@ function setupAttributes(context, mesh) {
 		const { positions, normals, elements, uvs } = mesh.attributes;
 		const vao = (context.vao = gl.createVertexArray());
 		gl.bindVertexArray(vao);
-
-		console.log("setupAttributes", mesh.attributes);
-
 		const {
 			data: positionsData,
 			interleaved: positionsInterleaved,
@@ -1920,8 +1784,6 @@ function createRenderer() {
 				up = [0, 1, 0],
 				matrix = null,
 			) {
-				console.log("update camera");
-
 				update((renderer) => {
 					renderer.camera = {
 						fov,
@@ -2300,50 +2162,6 @@ function create$1() {
   return out;
 }
 /**
- * Adds two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-
-function add$1(out, a, b) {
-  out[0] = a[0] + b[0];
-  out[1] = a[1] + b[1];
-  out[2] = a[2] + b[2];
-  return out;
-}
-/**
- * Scales a vec3 by a scalar number
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the vector to scale
- * @param {Number} b amount to scale the vector by
- * @returns {vec3} out
- */
-
-function scale(out, a, b) {
-  out[0] = a[0] * b;
-  out[1] = a[1] * b;
-  out[2] = a[2] * b;
-  return out;
-}
-/**
- * Calculates the euclidian distance between two vec3's
- *
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {Number} distance between a and b
- */
-
-function distance(a, b) {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
-  return Math.hypot(x, y, z);
-}
-/**
  * Normalize a vec3
  *
  * @param {vec3} out the receiving vector
@@ -2387,46 +2205,24 @@ function lerp(out, a, b, t) {
   return out;
 }
 /**
- * Transforms the vec3 with a quat
- * Can also be used for dual quaternions. (Multiply it with the real part)
+ * Transforms the vec3 with a mat4.
+ * 4th vector component is implicitly '1'
  *
  * @param {vec3} out the receiving vector
  * @param {ReadonlyVec3} a the vector to transform
- * @param {ReadonlyQuat} q quaternion to transform with
+ * @param {ReadonlyMat4} m matrix to transform with
  * @returns {vec3} out
  */
 
-function transformQuat(out, a, q) {
-  // benchmarks: https://jsperf.com/quaternion-transform-vec3-implementations-fixed
-  var qx = q[0],
-      qy = q[1],
-      qz = q[2],
-      qw = q[3];
+function transformMat4(out, a, m) {
   var x = a[0],
       y = a[1],
-      z = a[2]; // var qvec = [qx, qy, qz];
-  // var uv = vec3.cross([], qvec, a);
-
-  var uvx = qy * z - qz * y,
-      uvy = qz * x - qx * z,
-      uvz = qx * y - qy * x; // var uuv = vec3.cross([], qvec, uv);
-
-  var uuvx = qy * uvz - qz * uvy,
-      uuvy = qz * uvx - qx * uvz,
-      uuvz = qx * uvy - qy * uvx; // vec3.scale(uv, uv, 2 * w);
-
-  var w2 = qw * 2;
-  uvx *= w2;
-  uvy *= w2;
-  uvz *= w2; // vec3.scale(uuv, uuv, 2);
-
-  uuvx *= 2;
-  uuvy *= 2;
-  uuvz *= 2; // return vec3.add(out, a, vec3.add(out, uv, uuv));
-
-  out[0] = x + uvx + uuvx;
-  out[1] = y + uvy + uuvy;
-  out[2] = z + uvz + uuvz;
+      z = a[2];
+  var w = m[3] * x + m[7] * y + m[11] * z + m[15];
+  w = w || 1.0;
+  out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w;
+  out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
+  out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w;
   return out;
 }
 /**
@@ -3693,21 +3489,30 @@ Example of a camera object in svelte-gl
 */
 
 function createCameraFromGLTF(gltfObject) {
-	const { perspective, translation, rotation } = gltfObject;
-	createMatrixFromGLTFTransform(gltfObject);
-	const dist = distance([0, 0, 0], translation);
+	const { perspective, translation /*, rotation*/ } = gltfObject;
+	/*const matrix = createMatrixFromGLTFTransform(gltfObject);
+	const dist = distance([0, 0, 0], translation);*/
+	/*
 	const target = [0, 0, -1];
-
 	transformQuat(target, target, rotation);
 	scale(target, target, dist);
-	add$1(target, target, translation);
-
+	add(target, target, translation);
+	*/
+	/*
+	position = [0, 0, -1],
+	target = [0, 0, 0],
+	fov = 80,
+	near = 0.1,
+	far = 1000,
+	up = [0, 1, 0],
+	matrix = null,
+	*/
 	return {
-		fov: perspective.yfov,
+		position: translation,
+		target: [0, 0, 0],
+		fov: (perspective.yfov / Math.PI) * 180,
 		near: perspective.znear,
 		far: perspective.zfar,
-		position: translation,
-		target,
 		up: [0, 1, 0], // Assuming the up vector is always [0, 1, 0]
 	};
 }
@@ -3726,22 +3531,10 @@ function getAbsoluteNodeMatrix(node) {
 		matrices.unshift(currentNode.matrix);
 		currentNode = currentNode.parent;
 	}
-	console.log(
-		"matrices",
-		matrices.map((m) => getScaling([], m)),
-	);
-
-	return matrices.reduce(
-		(acc, matrix) => {
-			return multiply(acc, acc, matrix);
-		},
-		identity(new Float32Array(16)),
-	);
+	return matrices.reduce((acc, matrix) => multiply(acc, acc, matrix), identity(new Float32Array(16)));
 }
 
 function createMatrixFromGLTFTransform(object) {
-	console.log("createMatrixFromGLTFTransform", object);
-
 	const { translation, rotation, scale } = object;
 	const matrix = identity(new Float32Array(16));
 	fromRotationTranslationScale(matrix, rotation || [0, 0, 0, 0], translation || [0, 0, 0], scale || [1, 1, 1]);
@@ -3808,32 +3601,23 @@ function instance($$self, $$props, $$invalidate) {
 
 	onMount(async () => {
 		const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf");
-		console.log("file", file);
-
-		//const object = file.scene.find((o) => o.children != null).children[0];
-		let object;
-
+		let meshObject;
 		let camera;
 
 		traverseScene(file.scene, o => {
 			if (o.position != null) {
-				object = o;
+				meshObject = o;
 			} else if (o.camera != null) {
 				camera = o;
 			}
 		});
 
-		console.log("object", object);
-		console.log("camera", camera);
-		const absoluteCamera = getAbsoluteNodeMatrix(camera);
-		console.log("absoluteCamera", absoluteCamera);
+		const cameraAbsoluteMatrix = getAbsoluteNodeMatrix(camera);
 		const cameraFromFile = createCameraFromGLTF(camera);
-		console.log("cameraFromFile", cameraFromFile);
-		const absolute = getAbsoluteNodeMatrix(object);
-		console.log("absolute", absolute);
-		object.matrix = absolute;
-		const loadedMesh = createMeshFromGLTF(file, object);
-		console.log("loadedMesh", loadedMesh);
+		transformMat4(cameraFromFile.position, cameraFromFile.position, cameraAbsoluteMatrix);
+		const meshAbsoluteMatrix = getAbsoluteNodeMatrix(meshObject);
+		meshObject.matrix = meshAbsoluteMatrix;
+		const loadedMesh = createMeshFromGLTF(file, meshObject);
 
 		await createTexture({
 			url: "checker-map_tho.png",
@@ -3851,7 +3635,8 @@ function instance($$self, $$props, $$invalidate) {
 	(cameraFromFile.fov/Math.PI)*180,
 	cameraFromFile.near,
 	cameraFromFile.far);//[0, 5, -5], [0, 0, 0], 75);*/
-		camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75, undefined, undefined, undefined, absoluteCamera);
+		//camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75, undefined, undefined, undefined, absoluteCamera);
+		camera = renderer.setCamera(...Object.values(cameraFromFile));
 
 		const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 		sphereGeometry.uvs = generateUVs(sphereGeometry);

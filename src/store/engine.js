@@ -56,8 +56,6 @@ function createRenderer() {
 				up = [0, 1, 0],
 				matrix = null,
 			) {
-				console.log("update camera");
-
 				update((renderer) => {
 					renderer.camera = {
 						fov,

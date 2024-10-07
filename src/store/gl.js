@@ -269,7 +269,6 @@ export function setupCamera(context, camera) {
 		const aspectRatio = context.canvas.width / context.canvas.height;
 		const nearClippingPlaneDistance = camera.near;
 		const farClippingPlaneDistance = camera.far;
-		console.log("camera", camera);
 		let projection = new Float32Array(16);
 		projection = perspective(
 			projection,
@@ -283,12 +282,8 @@ export function setupCamera(context, camera) {
 
 		// view matrix
 		const viewLocation = gl.getUniformLocation(program, "view");
-		const cameraMatrix = lookAt(new Float32Array(16), getTranslation([], camera.matrix), camera.target, camera.up);
-		console.log("cameraPosition", getTranslation([], camera.matrix));
-		console.log("cameraRotation", getEuler([], getRotation([], camera.matrix)));
-
-		const view = cameraMatrix; //camera.matrix != null ? camera.matrix : lookAt(new Float32Array(16), camera.position, camera.target, camera.up);
-
+		const view = new Float32Array(16);
+		lookAt(view, camera.position, camera.target, camera.up);
 		gl.uniformMatrix4fv(viewLocation, false, view);
 
 		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");
@@ -519,9 +514,6 @@ export function setupAttributes(context, mesh) {
 		const { positions, normals, elements, uvs } = mesh.attributes;
 		const vao = (context.vao = gl.createVertexArray());
 		gl.bindVertexArray(vao);
-
-		console.log("setupAttributes", mesh.attributes);
-
 		const {
 			data: positionsData,
 			interleaved: positionsInterleaved,

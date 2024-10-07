@@ -508,21 +508,30 @@ Example of a camera object in svelte-gl
 */
 
 export function createCameraFromGLTF(gltfObject) {
-	const { perspective, translation, rotation } = gltfObject;
-	const matrix = createMatrixFromGLTFTransform(gltfObject);
-	const dist = distance([0, 0, 0], translation);
+	const { perspective, translation /*, rotation*/ } = gltfObject;
+	/*const matrix = createMatrixFromGLTFTransform(gltfObject);
+	const dist = distance([0, 0, 0], translation);*/
+	/*
 	const target = [0, 0, -1];
-
 	transformQuat(target, target, rotation);
 	scale(target, target, dist);
 	add(target, target, translation);
-
+	*/
+	/*
+	position = [0, 0, -1],
+	target = [0, 0, 0],
+	fov = 80,
+	near = 0.1,
+	far = 1000,
+	up = [0, 1, 0],
+	matrix = null,
+	*/
 	return {
-		fov: perspective.yfov,
+		position: translation,
+		target: [0, 0, 0],
+		fov: (perspective.yfov / Math.PI) * 180,
 		near: perspective.znear,
 		far: perspective.zfar,
-		position: translation,
-		target,
 		up: [0, 1, 0], // Assuming the up vector is always [0, 1, 0]
 	};
 }
@@ -541,22 +550,10 @@ export function getAbsoluteNodeMatrix(node) {
 		matrices.unshift(currentNode.matrix);
 		currentNode = currentNode.parent;
 	}
-	console.log(
-		"matrices",
-		matrices.map((m) => getScaling([], m)),
-	);
-
-	return matrices.reduce(
-		(acc, matrix) => {
-			return multiply(acc, acc, matrix);
-		},
-		identity(new Float32Array(16)),
-	);
+	return matrices.reduce((acc, matrix) => multiply(acc, acc, matrix), identity(new Float32Array(16)));
 }
 
 function createMatrixFromGLTFTransform(object) {
-	console.log("createMatrixFromGLTFTransform", object);
-
 	const { translation, rotation, scale } = object;
 	const matrix = identity(new Float32Array(16));
 	fromRotationTranslationScale(matrix, rotation || [0, 0, 0, 0], translation || [0, 0, 0], scale || [1, 1, 1]);
