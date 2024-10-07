@@ -1,24 +1,11 @@
 <script type="module">
 import { onMount } from "svelte";
-import { get } from "svelte/store";
 import { renderer } from "./store/engine.js";
-//import { createCube } from "./geometries/cube.js";
-import { identity, rotateX, rotateY, rotateZ, translate, scale } from "gl-matrix/esm/mat4.js";
+import { scale } from "gl-matrix/esm/mat4.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
-import { createPolyhedron, createSmoothShadedNormals, generateUVs } from "./geometries/polyhedron.js";
-//import { createPlane } from "./geometries/plane.js";
-import { createCone } from "./geometries/cone.js";
 import { createPointLight } from "./lights/point-light.js";
-import { createAGXToneMapping } from "./tone-mapping/agx.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
-import { /*createFlatShadedNormals,*/ distributeCirclePoints, toRadian } from "./geometries/common.js";
-import { createSpecular } from "./material/specular/specular.js";
 import { skyblue } from "./color/color-keywords.js";
-import { createTexture } from "./texture/texture.js";
-//import {loadGLBFile } from "./loaders/glb-loader.js";
-import { createWobblyAnimation } from "./animation/wobbly/wobbly.js";
-import { createPulsatingScaleAnimation } from "./animation/pulsating-scale/pulsating-scale.js";
-import { createNoiseDistortionAnimation } from "./animation/noise-distortion/noise-distortion.js";
 import {
 	loadGLTFFile,
 	createMeshFromGLTF,
@@ -46,32 +33,31 @@ onMount(async () => {
 	const cameraFromFile = createCameraFromGLTF(camera);
 	transformMat4(cameraFromFile.position, cameraFromFile.position, cameraAbsoluteMatrix);
 	const meshAbsoluteMatrix = getAbsoluteNodeMatrix(meshObject);
+	scale(meshAbsoluteMatrix, meshAbsoluteMatrix, [3, 3, 3]);
 	meshObject.matrix = meshAbsoluteMatrix;
 	const loadedMesh = createMeshFromGLTF(file, meshObject);
-	const diffuseMap = await createTexture({
-		url: "checker-map_tho.png",
-		/*normalScale: [1, 1],*/
-		type: "diffuse",
-		coordinateSpace: "circular",
-	});
+
 	renderer.setCanvas(canvas);
 	renderer.setBackgroundColor(skyblue);
 	renderer.setAmbientLight(0xffffff, 0.5);
-	/*camera = renderer.setCamera(cameraFromFile.position,
-		cameraFromFile.target,
-		(cameraFromFile.fov/Math.PI)*180,
-		cameraFromFile.near,
-		cameraFromFile.far);//[0, 5, -5], [0, 0, 0], 75);*/
-	//camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75, undefined, undefined, undefined, absoluteCamera);
 	camera = renderer.setCamera(...Object.values(cameraFromFile));
-
+	/*
+	const diffuseMap = await createTexture({
+		url: "checker-map_tho.png",
+		//normalScale: [1, 1],
+		type: "diffuse",
+		coordinateSpace: "circular",
+	});
+	camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75);
 	const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
 	sphereGeometry.uvs = generateUVs(sphereGeometry);
-	//const planeGeometry = createPlane(3, 3, 100, 100);
+	const planeGeometry = createPlane(3, 3, 100, 100);
 	const coneGeometry = createCone(3, 3, 50);
 	const initialMatrix = identity(new Float32Array(16));
-	rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));
+	rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));*/
+
 	mesh1 = renderer.addMesh(loadedMesh);
+
 	/*renderer.addAnimation(
 		mesh1,
 		createPulsatingScaleAnimation({
@@ -80,13 +66,19 @@ onMount(async () => {
 			frequency: 0.002,
 		}),
 	);*/
-
 	/*renderer.addAnimation(
 		mesh1,
 		createNoiseDistortionAnimation({
 			frequency: 2,
 			speed: 1.5,
 			amplitude: 0.5,
+		}),
+	);*/
+	/*renderer.addAnimation(
+		mesh1,
+		createWobblyAnimation({
+			frequency: 0.004,
+			amplitude: 5,
 		}),
 	);*/
 

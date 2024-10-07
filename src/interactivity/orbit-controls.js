@@ -42,8 +42,9 @@ export function createOrbitControls(canvas, camera) {
 		const cameraValue = camera.get();
 		const { position, target, fov } = cameraValue;
 		const { radius, polar, azimuth } = getCoordinates(position, target);
+		console.log("radius", radius);
 
-		const newPosition = getPositionFromPolar(radius + event.deltaY / 300, polar, azimuth);
+		const newPosition = getPositionFromPolar(radius + event.deltaY * 0.001 * radius, polar, azimuth);
 		newPosition[0] = newPosition[0] + target[0];
 		newPosition[1] = newPosition[1] + target[1];
 		newPosition[2] = newPosition[2] + target[2];
