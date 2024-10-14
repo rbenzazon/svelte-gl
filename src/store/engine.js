@@ -262,16 +262,28 @@ const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex, in
 };
 
 export const programs = derived(renderer, ($renderer) => {
-	return $renderer.meshes.map((mesh) => {
+	//create a list of unique materials used in meshes
+	const materials = new Set($renderer.meshes.map((mesh) => mesh.material));
+	//each program will setup one material and list meshes that use it
+	return Array.from(materials).map((material) => {
+		const meshes = $renderer.meshes.filter((mesh) => mesh.material === material);
 		return {
-			createProgram,
-			mesh,
-			attributes: mesh.attributes,
-			uniforms: mesh.uniforms,
+			createProgram: createProgram(material),
+			meshes,
 			createShaders: createShaders(),
 			endProgramSetup,
 		};
 	});
+
+	/*return $renderer.meshes.map((mesh) => {
+		return {
+			createProgram,
+			mesh,
+			attributes: mesh.attributes,
+			createShaders: createShaders(),
+			endProgramSetup,
+		};
+	});*/
 });
 
 export const renderState = writable({
@@ -337,12 +349,12 @@ const webglapp = derived(
 						program.createProgram(appContext),
 						program.createShaders(appContext, program.mesh),
 						program.endProgramSetup(appContext),
+						setupCamera(appContext, $renderer.camera),
 						setupAmbientLight(appContext, $renderer.ambientLightColor),
 						...(program.mesh.material ? [setupMeshColor(appContext, program.mesh.material)] : []),
 						...(program.mesh.material?.diffuseMap ? [program.mesh.material?.diffuseMap.setupTexture(appContext)] : []),
 						...(program.mesh.material?.normalMap ? [program.mesh.material?.normalMap.setupTexture(appContext)] : []),
 						setupAttributes(appContext, program.mesh),
-						setupCamera(appContext, $renderer.camera),
 						...(program.mesh?.material?.specular ? [program.mesh.material.specular.setupSpecular(appContext)] : []),
 						setupTransformMatrix(
 							appContext,
@@ -359,13 +371,12 @@ const webglapp = derived(
 								return acc;
 							}, new Map()),
 						].map(([_, setupLights]) => setupLights(appContext, $renderer.lights)),
+						...(requireTime ? [setupTime(appContext)] : []),
+						render(appContext, $programs[0].mesh.instances, $programs[0].mesh.drawMode),
 					];
 				}, []),
 			);
-		list.push(
-			...(requireTime ? [setupTime(appContext)] : []),
-			render(appContext, $programs[0].mesh.instances, $programs[0].mesh.drawMode),
-		);
+		
 		return list;
 	},
 	emptyApp,

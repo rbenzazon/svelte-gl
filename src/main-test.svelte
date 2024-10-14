@@ -1,11 +1,13 @@
 <script type="module">
 import { onMount } from "svelte";
-import { renderer } from "./store/engine.js";
-import { scale } from "gl-matrix/esm/mat4.js";
+import { renderer, materials } from "./store/engine.js";
+import { scale, identity } from "gl-matrix/esm/mat4.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import { createPointLight } from "./lights/point-light.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import { skyblue } from "./color/color-keywords.js";
+import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
+import { createCube } from "./geometries/cube.js";
 import {
 	loadGLTFFile,
 	createMeshFromGLTF,
@@ -19,7 +21,7 @@ let light1;
 let mesh1;
 let camera;
 onMount(async () => {
-	const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf");
+	const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf","models/v2/md-blend6-mdlvw.bin");
 	let meshObject;
 	let camera;
 	traverseScene(file.scene, (o) => {
@@ -40,7 +42,8 @@ onMount(async () => {
 	renderer.setCanvas(canvas);
 	renderer.setBackgroundColor(skyblue);
 	renderer.setAmbientLight(0xffffff, 0.5);
-	camera = renderer.setCamera(...Object.values(cameraFromFile));
+	//camera = renderer.setCamera(...Object.values(cameraFromFile));
+	camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75);
 	/*
 	const diffuseMap = await createTexture({
 		url: "checker-map_tho.png",
@@ -56,8 +59,18 @@ onMount(async () => {
 	const initialMatrix = identity(new Float32Array(16));
 	rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));*/
 
+	
+	//const cubeMesh = createPolyhedron(1.5, 7, createSmoothShadedNormals);
+	const cubeMesh = createCube();
+	
+	const cube = renderer.addMesh({
+		...cubeMesh,
+		matrix: identity(new Float32Array(16)),
+		material: {
+			diffuse: [1, 0.5, 0.5],
+		},
+	});
 	mesh1 = renderer.addMesh(loadedMesh);
-
 	/*renderer.addAnimation(
 		mesh1,
 		createPulsatingScaleAnimation({

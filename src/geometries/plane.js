@@ -1,3 +1,4 @@
+import {drawModes} from "../store/webgl.js";
 export function createPlane(
 	width = 1,
 	depth = 1,
@@ -41,10 +42,13 @@ export function createPlane(
 		}
 	}
 	return {
-		positions: new Float32Array(positions),
-		normals: new Float32Array(normals),
-		uvs: new Float32Array(uvs),
-		elements: new Uint16Array(indices),
-		...(generateColors ? { colors: new Float32Array(positions.map((_, i) => (i % 3 === 0 ? 1 : 1))) } : {}),
+		attributes: {
+			positions: new Float32Array(positions),
+			normals: new Float32Array(normals),
+			uvs: new Float32Array(uvs),
+			elements: new Uint16Array(indices),
+			...(generateColors ? { colors: new Float32Array(positions.map((_, i) => (i % 3 === 0 ? 1 : 1))) } : {}),
+		},
+		drawMode: drawModes[4],
 	};
 }

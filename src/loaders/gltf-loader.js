@@ -1,3 +1,5 @@
+import {drawModes} from "../store/webgl.js";
+
 import { fromRotationTranslationScale, getScaling, identity, multiply } from "gl-matrix/esm/mat4.js";
 import { transformQuat, add, scale, distance } from "gl-matrix/esm/vec3.js";
 
@@ -189,27 +191,36 @@ const WEBGL_TYPE_SIZES = {
 	VEC3: 3,
 	VEC4: 4,
 };
-const drawModes = {
-	0: "POINTS",
-	1: "LINES",
-	2: "LINE_LOOP",
-	3: "LINE_STRIP",
-	4: "TRIANGLES",
-	5: "TRIANGLE_STRIP",
-	6: "TRIANGLE_FAN",
-};
 
-export async function loadGLTFFile(url) {
+
+
+export async function loadGLTFFile(url,binUrlPreload = undefined) {
 	try {
+		let binPreloadMap = new Map();
+		if(binUrlPreload){
+			binPreloadMap.set(binUrlPreload,loadBinary(binUrlPreload));
+		}
+		
 		const response = await fetch(url);
 		if (!response.ok) {
 			throw new Error(`Failed to fetch GLB file: ${response.statusText}`);
 		}
 		/** @type {GLTFFile} **/
 		const content = await response.json();
-		return await parseGLTF(content, url);
+		return await parseGLTF(content, url,binPreloadMap);
 	} catch (error) {
 		console.error("Error loading GLTF file:", error);
+	}
+}
+
+async function loadBinary(url){
+	let bin
+	if(url){
+		bin = await fetch(url);
+		if (!bin.ok) {
+			throw new Error(`Failed to fetch GLTF Binary file: ${bin.statusText}`);
+		}
+		return await bin.arrayBuffer();
 	}
 }
 /**
@@ -218,7 +229,7 @@ export async function loadGLTFFile(url) {
  * @param {String} url
  * @returns
  */
-async function parseGLTF(content, url) {
+async function parseGLTF(content, url,binPreloadMap) {
 	const baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
 	const { buffers, bufferViews, accessors, scenes, nodes, meshes, cameras, materials, scene } = content;
 
@@ -233,11 +244,11 @@ async function parseGLTF(content, url) {
 	const buffersData = await Promise.all(
 		buffers.map(async (buffer) => {
 			const { uri } = buffer;
-			const response = await fetch(baseUrl + uri);
-			if (!response.ok) {
-				throw new Error(`Failed to fetch buffer: ${response.statusText}`);
+			const filePath = baseUrl+uri;
+			if(binPreloadMap.has(filePath)){
+				return binPreloadMap.get(filePath);
 			}
-			return await response.arrayBuffer();
+			return loadBinary(filePath);
 		}),
 	);
 
@@ -256,6 +267,9 @@ async function parseGLTF(content, url) {
 		}),
 	);
 
+	/**
+	 * Buffer cache is used to store buffers that are interleaved
+	 */
 	const bufferCache = {};
 	function getBufferCache(dataView, offset) {
 		return bufferCache[dataView] && bufferCache[dataView][offset];
@@ -441,7 +455,6 @@ async function parseGLTF(content, url) {
 }
 
 export function createMeshFromGLTF(gltfScene, gltfObject) {
-	//const transformMatrix = createMatrixFromGLTFTransform(gltfObject);
 	const mesh = gltfObject;
 	const gltfMaterial = gltfScene.materials[mesh.material];
 	const material = {};

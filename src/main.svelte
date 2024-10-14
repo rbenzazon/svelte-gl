@@ -32,8 +32,8 @@ onMount(async () => {
 	renderer.setAmbientLight(0xffffff, 0.5);
 	camera = renderer.setCamera([0, 0, -2], [0, 0, 0], 70);
 
-	const sphereGeometry = createPolyhedron(1.5, 7, createSmoothShadedNormals);
-	sphereGeometry.uvs = generateUVs(sphereGeometry);
+	const sphereMesh = createPolyhedron(1.5, 7, createSmoothShadedNormals);
+	sphereMesh.attributes.uvs = generateUVs(sphereMesh.attributes);
 
 	let identityMatrix = new Array(16).fill(0);
 	identity(identityMatrix);
@@ -53,7 +53,7 @@ onMount(async () => {
 	});
 
 	mesh1 = renderer.addMesh({
-		attributes: sphereGeometry,
+		...sphereMesh,
 		instances: numInstances,
 		matrices,
 		material: {

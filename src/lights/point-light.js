@@ -30,7 +30,15 @@ export const setPointLightsUBO = (newPointLightsUBO) => {
 export const getPointLightsUBO = () => {
 	return pointLightsUBO;
 };
+/** @typedef {Object} WithGL
+ * @property {WebGL2RenderingContext} gl
+ */
 
+/**
+ * 
+ * @param {WithGL} param0 
+ * @param {*} lights 
+ */
 export function createPointLightBuffer({ gl }, lights) {
 	const pointLigths = lights.filter((l) => get(l).type === "point");
 	// Create a single Float32Array to hold all the point light data

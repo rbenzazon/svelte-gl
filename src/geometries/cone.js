@@ -1,5 +1,6 @@
 import { normalize, add, lerp } from "gl-matrix/esm/vec3.js";
 import { getPositionFromPolar } from "./common";
+import { drawModes } from "../store/webgl";
 
 export function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1) {
 	radialSegment = Math.max(radialSegment, 3);
@@ -40,8 +41,11 @@ export function createCone(radius = 1, height = 1, radialSegment = 3, heightSegm
 		uvs.push([0, 0], [1 - uvX, 1], [1 - uvXNext, 1]);
 	}
 	return {
-		positions: new Float32Array(positions.flatMap((p) => p)),
-		normals: new Float32Array(normals.flatMap((p) => p)),
-		uvs: new Float32Array(uvs.flatMap((p) => p)),
+		attributes: {
+			positions: new Float32Array(positions.flatMap((p) => p)),
+			normals: new Float32Array(normals.flatMap((p) => p)),
+			uvs: new Float32Array(uvs.flatMap((p) => p)),
+		},
+		drawMode: drawModes[4],
 	};
 }

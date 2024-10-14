@@ -32,6 +32,8 @@ function toRadian(a) {
 
 export function initRenderer(rendererContext, appContext) {
 	return function () {
+		console.log("initRenderer");
+		
 		const canvasRect = rendererContext.canvas.getBoundingClientRect();
 		rendererContext.canvas.width = canvasRect.width;
 		rendererContext.canvas.height = canvasRect.height;
@@ -73,6 +75,7 @@ export function render(context, instances, drawMode) {
 		contextValue.loop && contextValue.loop();
 		// when using vertex array objects, you must bind it before rendering
 		gl.bindVertexArray(contextValue.vao);
+		console.log("drawMode", drawMode);
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, contextValue.attributeLength, instances);
 		} else {
@@ -92,17 +95,61 @@ export function render(context, instances, drawMode) {
 export function createProgram(context) {
 	return function createProgram() {
 		context = get(context);
+		if(context.program != null) {
+			return;
+		}		
 		const gl = context.gl;
 		const program = gl.createProgram();
 		context.program = program;
 	};
 }
 
+export function linkProgram(context) {
+	return function () {
+		context = get(context);
+		/** @type {WebGL2RenderingContext} **/
+		const gl = context.gl;
+		const program = context.program;
+		gl.linkProgram(program);
+		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+			console.error("ERROR linking program!", gl.getProgramInfoLog(program));
+		}
+	};
+}
+
+export function validateProgram(context) {
+	return function () {
+		context = get(context);
+		/** @type {WebGL2RenderingContext} **/
+		const gl = context.gl;
+		const program = context.program;
+
+		gl.validateProgram(program);
+		if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
+			console.error("ERROR validating program!", gl.getProgramInfoLog(program));
+		}
+	};
+}
+
+export function useProgram(context) {
+	return function () {
+		context = get(context);
+		/** @type {WebGL2RenderingContext} **/
+		const gl = context.gl;
+		const program = context.program;
+		gl.useProgram(program);
+	};
+}
+
 export function endProgramSetup(context) {
 	return function () {
 		context = get(context);
+		/** @type {WebGL2RenderingContext} **/
 		const gl = context.gl;
 		const program = context.program;
+		if(context.program === context.programUsed){
+			return;
+		}
 		gl.linkProgram(program);
 		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
 			console.error("ERROR linking program!", gl.getProgramInfoLog(program));
@@ -112,6 +159,7 @@ export function endProgramSetup(context) {
 			console.error("ERROR validating program!", gl.getProgramInfoLog(program));
 		}
 		gl.useProgram(program);
+		context.programUsed = program; 
 	};
 }
 
