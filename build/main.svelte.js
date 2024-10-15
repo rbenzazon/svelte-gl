@@ -60,6 +60,16 @@ function get_store_value(store) {
 	return value;
 }
 
+/** @returns {void} */
+function component_subscribe(component, store, callback) {
+	component.$$.on_destroy.push(subscribe(store, callback));
+}
+
+function set_store_value(store, ret, value) {
+	store.set(value);
+	return ret;
+}
+
 /**
  * @param {Node} target
  * @param {Node} node
@@ -516,481 +526,6 @@ if (typeof window !== 'undefined')
 	// @ts-ignore
 	(window.__svelte || (window.__svelte = { v: new Set() })).v.add(PUBLIC_VERSION);
 
-/**
- * Common utilities
- * @module glMatrix
- */
-// Configuration Constants
-var EPSILON = 0.000001;
-var ARRAY_TYPE = typeof Float32Array !== 'undefined' ? Float32Array : Array;
-if (!Math.hypot) Math.hypot = function () {
-  var y = 0,
-      i = arguments.length;
-
-  while (i--) {
-    y += arguments[i] * arguments[i];
-  }
-
-  return Math.sqrt(y);
-};
-
-/**
- * 4x4 Matrix<br>Format: column-major, when typed out it looks like row-major<br>The matrices are being post multiplied.
- * @module mat4
- */
-
-/**
- * Creates a new identity mat4
- *
- * @returns {mat4} a new 4x4 matrix
- */
-
-function create$1() {
-  var out = new ARRAY_TYPE(16);
-
-  if (ARRAY_TYPE != Float32Array) {
-    out[1] = 0;
-    out[2] = 0;
-    out[3] = 0;
-    out[4] = 0;
-    out[6] = 0;
-    out[7] = 0;
-    out[8] = 0;
-    out[9] = 0;
-    out[11] = 0;
-    out[12] = 0;
-    out[13] = 0;
-    out[14] = 0;
-  }
-
-  out[0] = 1;
-  out[5] = 1;
-  out[10] = 1;
-  out[15] = 1;
-  return out;
-}
-/**
- * Set a mat4 to the identity matrix
- *
- * @param {mat4} out the receiving matrix
- * @returns {mat4} out
- */
-
-function identity(out) {
-  out[0] = 1;
-  out[1] = 0;
-  out[2] = 0;
-  out[3] = 0;
-  out[4] = 0;
-  out[5] = 1;
-  out[6] = 0;
-  out[7] = 0;
-  out[8] = 0;
-  out[9] = 0;
-  out[10] = 1;
-  out[11] = 0;
-  out[12] = 0;
-  out[13] = 0;
-  out[14] = 0;
-  out[15] = 1;
-  return out;
-}
-/**
- * Transpose the values of a mat4
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the source matrix
- * @returns {mat4} out
- */
-
-function transpose(out, a) {
-  // If we are transposing ourselves we can skip a few steps but have to cache some values
-  if (out === a) {
-    var a01 = a[1],
-        a02 = a[2],
-        a03 = a[3];
-    var a12 = a[6],
-        a13 = a[7];
-    var a23 = a[11];
-    out[1] = a[4];
-    out[2] = a[8];
-    out[3] = a[12];
-    out[4] = a01;
-    out[6] = a[9];
-    out[7] = a[13];
-    out[8] = a02;
-    out[9] = a12;
-    out[11] = a[14];
-    out[12] = a03;
-    out[13] = a13;
-    out[14] = a23;
-  } else {
-    out[0] = a[0];
-    out[1] = a[4];
-    out[2] = a[8];
-    out[3] = a[12];
-    out[4] = a[1];
-    out[5] = a[5];
-    out[6] = a[9];
-    out[7] = a[13];
-    out[8] = a[2];
-    out[9] = a[6];
-    out[10] = a[10];
-    out[11] = a[14];
-    out[12] = a[3];
-    out[13] = a[7];
-    out[14] = a[11];
-    out[15] = a[15];
-  }
-
-  return out;
-}
-/**
- * Inverts a mat4
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the source matrix
- * @returns {mat4} out
- */
-
-function invert(out, a) {
-  var a00 = a[0],
-      a01 = a[1],
-      a02 = a[2],
-      a03 = a[3];
-  var a10 = a[4],
-      a11 = a[5],
-      a12 = a[6],
-      a13 = a[7];
-  var a20 = a[8],
-      a21 = a[9],
-      a22 = a[10],
-      a23 = a[11];
-  var a30 = a[12],
-      a31 = a[13],
-      a32 = a[14],
-      a33 = a[15];
-  var b00 = a00 * a11 - a01 * a10;
-  var b01 = a00 * a12 - a02 * a10;
-  var b02 = a00 * a13 - a03 * a10;
-  var b03 = a01 * a12 - a02 * a11;
-  var b04 = a01 * a13 - a03 * a11;
-  var b05 = a02 * a13 - a03 * a12;
-  var b06 = a20 * a31 - a21 * a30;
-  var b07 = a20 * a32 - a22 * a30;
-  var b08 = a20 * a33 - a23 * a30;
-  var b09 = a21 * a32 - a22 * a31;
-  var b10 = a21 * a33 - a23 * a31;
-  var b11 = a22 * a33 - a23 * a32; // Calculate the determinant
-
-  var det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
-
-  if (!det) {
-    return null;
-  }
-
-  det = 1.0 / det;
-  out[0] = (a11 * b11 - a12 * b10 + a13 * b09) * det;
-  out[1] = (a02 * b10 - a01 * b11 - a03 * b09) * det;
-  out[2] = (a31 * b05 - a32 * b04 + a33 * b03) * det;
-  out[3] = (a22 * b04 - a21 * b05 - a23 * b03) * det;
-  out[4] = (a12 * b08 - a10 * b11 - a13 * b07) * det;
-  out[5] = (a00 * b11 - a02 * b08 + a03 * b07) * det;
-  out[6] = (a32 * b02 - a30 * b05 - a33 * b01) * det;
-  out[7] = (a20 * b05 - a22 * b02 + a23 * b01) * det;
-  out[8] = (a10 * b10 - a11 * b08 + a13 * b06) * det;
-  out[9] = (a01 * b08 - a00 * b10 - a03 * b06) * det;
-  out[10] = (a30 * b04 - a31 * b02 + a33 * b00) * det;
-  out[11] = (a21 * b02 - a20 * b04 - a23 * b00) * det;
-  out[12] = (a11 * b07 - a10 * b09 - a12 * b06) * det;
-  out[13] = (a00 * b09 - a01 * b07 + a02 * b06) * det;
-  out[14] = (a31 * b01 - a30 * b03 - a32 * b00) * det;
-  out[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
-  return out;
-}
-/**
- * Multiplies two mat4s
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the first operand
- * @param {ReadonlyMat4} b the second operand
- * @returns {mat4} out
- */
-
-function multiply(out, a, b) {
-  var a00 = a[0],
-      a01 = a[1],
-      a02 = a[2],
-      a03 = a[3];
-  var a10 = a[4],
-      a11 = a[5],
-      a12 = a[6],
-      a13 = a[7];
-  var a20 = a[8],
-      a21 = a[9],
-      a22 = a[10],
-      a23 = a[11];
-  var a30 = a[12],
-      a31 = a[13],
-      a32 = a[14],
-      a33 = a[15]; // Cache only the current line of the second matrix
-
-  var b0 = b[0],
-      b1 = b[1],
-      b2 = b[2],
-      b3 = b[3];
-  out[0] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-  out[1] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-  out[2] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-  out[3] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-  b0 = b[4];
-  b1 = b[5];
-  b2 = b[6];
-  b3 = b[7];
-  out[4] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-  out[5] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-  out[6] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-  out[7] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-  b0 = b[8];
-  b1 = b[9];
-  b2 = b[10];
-  b3 = b[11];
-  out[8] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-  out[9] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-  out[10] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-  out[11] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-  b0 = b[12];
-  b1 = b[13];
-  b2 = b[14];
-  b3 = b[15];
-  out[12] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
-  out[13] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
-  out[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
-  out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
-  return out;
-}
-/**
- * Scales the mat4 by the dimensions in the given vec3 not using vectorization
- *
- * @param {mat4} out the receiving matrix
- * @param {ReadonlyMat4} a the matrix to scale
- * @param {ReadonlyVec3} v the vec3 to scale the matrix by
- * @returns {mat4} out
- **/
-
-function scale(out, a, v) {
-  var x = v[0],
-      y = v[1],
-      z = v[2];
-  out[0] = a[0] * x;
-  out[1] = a[1] * x;
-  out[2] = a[2] * x;
-  out[3] = a[3] * x;
-  out[4] = a[4] * y;
-  out[5] = a[5] * y;
-  out[6] = a[6] * y;
-  out[7] = a[7] * y;
-  out[8] = a[8] * z;
-  out[9] = a[9] * z;
-  out[10] = a[10] * z;
-  out[11] = a[11] * z;
-  out[12] = a[12];
-  out[13] = a[13];
-  out[14] = a[14];
-  out[15] = a[15];
-  return out;
-}
-/**
- * Creates a matrix from a quaternion rotation, vector translation and vector scale
- * This is equivalent to (but much faster than):
- *
- *     mat4.identity(dest);
- *     mat4.translate(dest, vec);
- *     let quatMat = mat4.create();
- *     quat4.toMat4(quat, quatMat);
- *     mat4.multiply(dest, quatMat);
- *     mat4.scale(dest, scale)
- *
- * @param {mat4} out mat4 receiving operation result
- * @param {quat4} q Rotation quaternion
- * @param {ReadonlyVec3} v Translation vector
- * @param {ReadonlyVec3} s Scaling vector
- * @returns {mat4} out
- */
-
-function fromRotationTranslationScale(out, q, v, s) {
-  // Quaternion math
-  var x = q[0],
-      y = q[1],
-      z = q[2],
-      w = q[3];
-  var x2 = x + x;
-  var y2 = y + y;
-  var z2 = z + z;
-  var xx = x * x2;
-  var xy = x * y2;
-  var xz = x * z2;
-  var yy = y * y2;
-  var yz = y * z2;
-  var zz = z * z2;
-  var wx = w * x2;
-  var wy = w * y2;
-  var wz = w * z2;
-  var sx = s[0];
-  var sy = s[1];
-  var sz = s[2];
-  out[0] = (1 - (yy + zz)) * sx;
-  out[1] = (xy + wz) * sx;
-  out[2] = (xz - wy) * sx;
-  out[3] = 0;
-  out[4] = (xy - wz) * sy;
-  out[5] = (1 - (xx + zz)) * sy;
-  out[6] = (yz + wx) * sy;
-  out[7] = 0;
-  out[8] = (xz + wy) * sz;
-  out[9] = (yz - wx) * sz;
-  out[10] = (1 - (xx + yy)) * sz;
-  out[11] = 0;
-  out[12] = v[0];
-  out[13] = v[1];
-  out[14] = v[2];
-  out[15] = 1;
-  return out;
-}
-/**
- * Generates a perspective projection matrix with the given bounds.
- * The near/far clip planes correspond to a normalized device coordinate Z range of [-1, 1],
- * which matches WebGL/OpenGL's clip volume.
- * Passing null/undefined/no value for far will generate infinite projection matrix.
- *
- * @param {mat4} out mat4 frustum matrix will be written into
- * @param {number} fovy Vertical field of view in radians
- * @param {number} aspect Aspect ratio. typically viewport width/height
- * @param {number} near Near bound of the frustum
- * @param {number} far Far bound of the frustum, can be null or Infinity
- * @returns {mat4} out
- */
-
-function perspectiveNO(out, fovy, aspect, near, far) {
-  var f = 1.0 / Math.tan(fovy / 2),
-      nf;
-  out[0] = f / aspect;
-  out[1] = 0;
-  out[2] = 0;
-  out[3] = 0;
-  out[4] = 0;
-  out[5] = f;
-  out[6] = 0;
-  out[7] = 0;
-  out[8] = 0;
-  out[9] = 0;
-  out[11] = -1;
-  out[12] = 0;
-  out[13] = 0;
-  out[15] = 0;
-
-  if (far != null && far !== Infinity) {
-    nf = 1 / (near - far);
-    out[10] = (far + near) * nf;
-    out[14] = 2 * far * near * nf;
-  } else {
-    out[10] = -1;
-    out[14] = -2 * near;
-  }
-
-  return out;
-}
-/**
- * Alias for {@link mat4.perspectiveNO}
- * @function
- */
-
-var perspective = perspectiveNO;
-/**
- * Generates a look-at matrix with the given eye position, focal point, and up axis.
- * If you want a matrix that actually makes an object look at another object, you should use targetTo instead.
- *
- * @param {mat4} out mat4 frustum matrix will be written into
- * @param {ReadonlyVec3} eye Position of the viewer
- * @param {ReadonlyVec3} center Point the viewer is looking at
- * @param {ReadonlyVec3} up vec3 pointing up
- * @returns {mat4} out
- */
-
-function lookAt(out, eye, center, up) {
-  var x0, x1, x2, y0, y1, y2, z0, z1, z2, len;
-  var eyex = eye[0];
-  var eyey = eye[1];
-  var eyez = eye[2];
-  var upx = up[0];
-  var upy = up[1];
-  var upz = up[2];
-  var centerx = center[0];
-  var centery = center[1];
-  var centerz = center[2];
-
-  if (Math.abs(eyex - centerx) < EPSILON && Math.abs(eyey - centery) < EPSILON && Math.abs(eyez - centerz) < EPSILON) {
-    return identity(out);
-  }
-
-  z0 = eyex - centerx;
-  z1 = eyey - centery;
-  z2 = eyez - centerz;
-  len = 1 / Math.hypot(z0, z1, z2);
-  z0 *= len;
-  z1 *= len;
-  z2 *= len;
-  x0 = upy * z2 - upz * z1;
-  x1 = upz * z0 - upx * z2;
-  x2 = upx * z1 - upy * z0;
-  len = Math.hypot(x0, x1, x2);
-
-  if (!len) {
-    x0 = 0;
-    x1 = 0;
-    x2 = 0;
-  } else {
-    len = 1 / len;
-    x0 *= len;
-    x1 *= len;
-    x2 *= len;
-  }
-
-  y0 = z1 * x2 - z2 * x1;
-  y1 = z2 * x0 - z0 * x2;
-  y2 = z0 * x1 - z1 * x0;
-  len = Math.hypot(y0, y1, y2);
-
-  if (!len) {
-    y0 = 0;
-    y1 = 0;
-    y2 = 0;
-  } else {
-    len = 1 / len;
-    y0 *= len;
-    y1 *= len;
-    y2 *= len;
-  }
-
-  out[0] = x0;
-  out[1] = y0;
-  out[2] = z0;
-  out[3] = 0;
-  out[4] = x1;
-  out[5] = y1;
-  out[6] = z1;
-  out[7] = 0;
-  out[8] = x2;
-  out[9] = y2;
-  out[10] = z2;
-  out[11] = 0;
-  out[12] = -(x0 * eyex + x1 * eyey + x2 * eyez);
-  out[13] = -(y0 * eyex + y1 * eyey + y2 * eyez);
-  out[14] = -(z0 * eyex + z1 * eyey + z2 * eyez);
-  out[15] = 1;
-  return out;
-}
-
 const subscriber_queue = [];
 
 /**
@@ -1166,6 +701,332 @@ function derived(stores, fn, initial_value) {
 	});
 }
 
+/**
+ * Common utilities
+ * @module glMatrix
+ */
+// Configuration Constants
+var EPSILON = 0.000001;
+var ARRAY_TYPE = typeof Float32Array !== 'undefined' ? Float32Array : Array;
+if (!Math.hypot) Math.hypot = function () {
+  var y = 0,
+      i = arguments.length;
+
+  while (i--) {
+    y += arguments[i] * arguments[i];
+  }
+
+  return Math.sqrt(y);
+};
+
+/**
+ * 4x4 Matrix<br>Format: column-major, when typed out it looks like row-major<br>The matrices are being post multiplied.
+ * @module mat4
+ */
+
+/**
+ * Creates a new identity mat4
+ *
+ * @returns {mat4} a new 4x4 matrix
+ */
+
+function create() {
+  var out = new ARRAY_TYPE(16);
+
+  if (ARRAY_TYPE != Float32Array) {
+    out[1] = 0;
+    out[2] = 0;
+    out[3] = 0;
+    out[4] = 0;
+    out[6] = 0;
+    out[7] = 0;
+    out[8] = 0;
+    out[9] = 0;
+    out[11] = 0;
+    out[12] = 0;
+    out[13] = 0;
+    out[14] = 0;
+  }
+
+  out[0] = 1;
+  out[5] = 1;
+  out[10] = 1;
+  out[15] = 1;
+  return out;
+}
+/**
+ * Set a mat4 to the identity matrix
+ *
+ * @param {mat4} out the receiving matrix
+ * @returns {mat4} out
+ */
+
+function identity(out) {
+  out[0] = 1;
+  out[1] = 0;
+  out[2] = 0;
+  out[3] = 0;
+  out[4] = 0;
+  out[5] = 1;
+  out[6] = 0;
+  out[7] = 0;
+  out[8] = 0;
+  out[9] = 0;
+  out[10] = 1;
+  out[11] = 0;
+  out[12] = 0;
+  out[13] = 0;
+  out[14] = 0;
+  out[15] = 1;
+  return out;
+}
+/**
+ * Transpose the values of a mat4
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the source matrix
+ * @returns {mat4} out
+ */
+
+function transpose(out, a) {
+  // If we are transposing ourselves we can skip a few steps but have to cache some values
+  if (out === a) {
+    var a01 = a[1],
+        a02 = a[2],
+        a03 = a[3];
+    var a12 = a[6],
+        a13 = a[7];
+    var a23 = a[11];
+    out[1] = a[4];
+    out[2] = a[8];
+    out[3] = a[12];
+    out[4] = a01;
+    out[6] = a[9];
+    out[7] = a[13];
+    out[8] = a02;
+    out[9] = a12;
+    out[11] = a[14];
+    out[12] = a03;
+    out[13] = a13;
+    out[14] = a23;
+  } else {
+    out[0] = a[0];
+    out[1] = a[4];
+    out[2] = a[8];
+    out[3] = a[12];
+    out[4] = a[1];
+    out[5] = a[5];
+    out[6] = a[9];
+    out[7] = a[13];
+    out[8] = a[2];
+    out[9] = a[6];
+    out[10] = a[10];
+    out[11] = a[14];
+    out[12] = a[3];
+    out[13] = a[7];
+    out[14] = a[11];
+    out[15] = a[15];
+  }
+
+  return out;
+}
+/**
+ * Inverts a mat4
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the source matrix
+ * @returns {mat4} out
+ */
+
+function invert(out, a) {
+  var a00 = a[0],
+      a01 = a[1],
+      a02 = a[2],
+      a03 = a[3];
+  var a10 = a[4],
+      a11 = a[5],
+      a12 = a[6],
+      a13 = a[7];
+  var a20 = a[8],
+      a21 = a[9],
+      a22 = a[10],
+      a23 = a[11];
+  var a30 = a[12],
+      a31 = a[13],
+      a32 = a[14],
+      a33 = a[15];
+  var b00 = a00 * a11 - a01 * a10;
+  var b01 = a00 * a12 - a02 * a10;
+  var b02 = a00 * a13 - a03 * a10;
+  var b03 = a01 * a12 - a02 * a11;
+  var b04 = a01 * a13 - a03 * a11;
+  var b05 = a02 * a13 - a03 * a12;
+  var b06 = a20 * a31 - a21 * a30;
+  var b07 = a20 * a32 - a22 * a30;
+  var b08 = a20 * a33 - a23 * a30;
+  var b09 = a21 * a32 - a22 * a31;
+  var b10 = a21 * a33 - a23 * a31;
+  var b11 = a22 * a33 - a23 * a32; // Calculate the determinant
+
+  var det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+
+  if (!det) {
+    return null;
+  }
+
+  det = 1.0 / det;
+  out[0] = (a11 * b11 - a12 * b10 + a13 * b09) * det;
+  out[1] = (a02 * b10 - a01 * b11 - a03 * b09) * det;
+  out[2] = (a31 * b05 - a32 * b04 + a33 * b03) * det;
+  out[3] = (a22 * b04 - a21 * b05 - a23 * b03) * det;
+  out[4] = (a12 * b08 - a10 * b11 - a13 * b07) * det;
+  out[5] = (a00 * b11 - a02 * b08 + a03 * b07) * det;
+  out[6] = (a32 * b02 - a30 * b05 - a33 * b01) * det;
+  out[7] = (a20 * b05 - a22 * b02 + a23 * b01) * det;
+  out[8] = (a10 * b10 - a11 * b08 + a13 * b06) * det;
+  out[9] = (a01 * b08 - a00 * b10 - a03 * b06) * det;
+  out[10] = (a30 * b04 - a31 * b02 + a33 * b00) * det;
+  out[11] = (a21 * b02 - a20 * b04 - a23 * b00) * det;
+  out[12] = (a11 * b07 - a10 * b09 - a12 * b06) * det;
+  out[13] = (a00 * b09 - a01 * b07 + a02 * b06) * det;
+  out[14] = (a31 * b01 - a30 * b03 - a32 * b00) * det;
+  out[15] = (a20 * b03 - a21 * b01 + a22 * b00) * det;
+  return out;
+}
+/**
+ * Generates a perspective projection matrix with the given bounds.
+ * The near/far clip planes correspond to a normalized device coordinate Z range of [-1, 1],
+ * which matches WebGL/OpenGL's clip volume.
+ * Passing null/undefined/no value for far will generate infinite projection matrix.
+ *
+ * @param {mat4} out mat4 frustum matrix will be written into
+ * @param {number} fovy Vertical field of view in radians
+ * @param {number} aspect Aspect ratio. typically viewport width/height
+ * @param {number} near Near bound of the frustum
+ * @param {number} far Far bound of the frustum, can be null or Infinity
+ * @returns {mat4} out
+ */
+
+function perspectiveNO(out, fovy, aspect, near, far) {
+  var f = 1.0 / Math.tan(fovy / 2),
+      nf;
+  out[0] = f / aspect;
+  out[1] = 0;
+  out[2] = 0;
+  out[3] = 0;
+  out[4] = 0;
+  out[5] = f;
+  out[6] = 0;
+  out[7] = 0;
+  out[8] = 0;
+  out[9] = 0;
+  out[11] = -1;
+  out[12] = 0;
+  out[13] = 0;
+  out[15] = 0;
+
+  if (far != null && far !== Infinity) {
+    nf = 1 / (near - far);
+    out[10] = (far + near) * nf;
+    out[14] = 2 * far * near * nf;
+  } else {
+    out[10] = -1;
+    out[14] = -2 * near;
+  }
+
+  return out;
+}
+/**
+ * Alias for {@link mat4.perspectiveNO}
+ * @function
+ */
+
+var perspective = perspectiveNO;
+/**
+ * Generates a look-at matrix with the given eye position, focal point, and up axis.
+ * If you want a matrix that actually makes an object look at another object, you should use targetTo instead.
+ *
+ * @param {mat4} out mat4 frustum matrix will be written into
+ * @param {ReadonlyVec3} eye Position of the viewer
+ * @param {ReadonlyVec3} center Point the viewer is looking at
+ * @param {ReadonlyVec3} up vec3 pointing up
+ * @returns {mat4} out
+ */
+
+function lookAt(out, eye, center, up) {
+  var x0, x1, x2, y0, y1, y2, z0, z1, z2, len;
+  var eyex = eye[0];
+  var eyey = eye[1];
+  var eyez = eye[2];
+  var upx = up[0];
+  var upy = up[1];
+  var upz = up[2];
+  var centerx = center[0];
+  var centery = center[1];
+  var centerz = center[2];
+
+  if (Math.abs(eyex - centerx) < EPSILON && Math.abs(eyey - centery) < EPSILON && Math.abs(eyez - centerz) < EPSILON) {
+    return identity(out);
+  }
+
+  z0 = eyex - centerx;
+  z1 = eyey - centery;
+  z2 = eyez - centerz;
+  len = 1 / Math.hypot(z0, z1, z2);
+  z0 *= len;
+  z1 *= len;
+  z2 *= len;
+  x0 = upy * z2 - upz * z1;
+  x1 = upz * z0 - upx * z2;
+  x2 = upx * z1 - upy * z0;
+  len = Math.hypot(x0, x1, x2);
+
+  if (!len) {
+    x0 = 0;
+    x1 = 0;
+    x2 = 0;
+  } else {
+    len = 1 / len;
+    x0 *= len;
+    x1 *= len;
+    x2 *= len;
+  }
+
+  y0 = z1 * x2 - z2 * x1;
+  y1 = z2 * x0 - z0 * x2;
+  y2 = z0 * x1 - z1 * x0;
+  len = Math.hypot(y0, y1, y2);
+
+  if (!len) {
+    y0 = 0;
+    y1 = 0;
+    y2 = 0;
+  } else {
+    len = 1 / len;
+    y0 *= len;
+    y1 *= len;
+    y2 *= len;
+  }
+
+  out[0] = x0;
+  out[1] = y0;
+  out[2] = z0;
+  out[3] = 0;
+  out[4] = x1;
+  out[5] = y1;
+  out[6] = z1;
+  out[7] = 0;
+  out[8] = x2;
+  out[9] = y2;
+  out[10] = z2;
+  out[11] = 0;
+  out[12] = -(x0 * eyex + x1 * eyey + x2 * eyez);
+  out[13] = -(y0 * eyex + y1 * eyey + y2 * eyez);
+  out[14] = -(z0 * eyex + z1 * eyey + z2 * eyez);
+  out[15] = 1;
+  return out;
+}
+
 var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\nin vec2 uv;\r\n${instances ?\r\n`\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n` : `\r\nuniform mat4 world;\r\nuniform mat4 normalMatrix;\r\n`}\r\n\r\n\r\nuniform float time;\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\nout vec3 vViewPosition;\r\nout highp vec2 vUv;\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n    vec3 modifiedNormal = normal;\r\n    vec3 animatedPosition = position;\r\n    ${positionModifier}\r\n\r\n    vUv = vec3( uv, 1 ).xy;\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(animatedPosition, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    // todo : use modifiedNormal when effect is done\r\n    vNormal = vec3(normalMatrix * vec4(modifiedNormal , 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(animatedPosition, 1.0);\r\n    vViewPosition = -gl_Position.xyz;\r\n}";
 
 var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n//uniform mat3 normalMatrix;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\nin highp vec2 vUv;\r\nin vec3 vViewPosition;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\t${diffuseMapSample}\r\n\t\r\n\r\n\tvec3 normal = normalize( vNormal );\r\n\t${normalMapSample}\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, 1.0f);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
@@ -1220,21 +1081,21 @@ function SRGBToLinear(c, index) {
 // Uniform Buffer Objects, must have unique binding points
 const UBO_BINDING_POINT_POINTLIGHT = 0;
 
-const degree = Math.PI / 180;
+const degree$1 = Math.PI / 180;
 /**
  * Convert Degree To Radian
  *
  * @param {Number} a Angle in Degrees
  */
 
-function toRadian(a) {
-	return a * degree;
+function toRadian$1(a) {
+	return a * degree$1;
 }
 
-function initRenderer(rendererContext, appContext) {
+function initRenderer$1(rendererContext, appContext) {
 	return function () {
 		console.log("initRenderer");
-		
+
 		const canvasRect = rendererContext.canvas.getBoundingClientRect();
 		rendererContext.canvas.width = canvasRect.width;
 		rendererContext.canvas.height = canvasRect.height;
@@ -1245,19 +1106,19 @@ function initRenderer(rendererContext, appContext) {
 		}));
 		gl.viewportWidth = rendererContext.canvas.width;
 		gl.viewportHeight = rendererContext.canvas.height;
-		gl.clearColor.apply(gl, rendererContext.backgroundColor);
+		gl.clearColor(...rendererContext.backgroundColor);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
 		gl.frontFace(gl.CCW);
 		gl.cullFace(gl.BACK);
-		renderState.set({
+		renderState$1.set({
 			init: true,
 		});
 	};
 }
 
-function setupTime(context) {
+function setupTime$1(context) {
 	return function () {
 		const contextValue = get_store_value(context);
 		const gl = contextValue.gl;
@@ -1267,7 +1128,7 @@ function setupTime(context) {
 	};
 }
 
-function render(context, instances, drawMode) {
+function render$1(context, instances, drawMode) {
 	return function () {
 		const contextValue = get_store_value(context);
 		/** @type {WebGL2RenderingContext} **/
@@ -1293,12 +1154,12 @@ function render(context, instances, drawMode) {
 	};
 }
 
-function createProgram(context) {
+function createProgram$1(context) {
 	return function createProgram() {
 		context = get_store_value(context);
-		if(context.program != null) {
+		if (context.program != null) {
 			return;
-		}		
+		}
 		const gl = context.gl;
 		const program = gl.createProgram();
 		context.program = program;
@@ -1311,7 +1172,7 @@ function endProgramSetup(context) {
 		/** @type {WebGL2RenderingContext} **/
 		const gl = context.gl;
 		const program = context.program;
-		if(context.program === context.programUsed){
+		if (context.program === context.programUsed) {
 			return;
 		}
 		gl.linkProgram(program);
@@ -1323,11 +1184,11 @@ function endProgramSetup(context) {
 			console.error("ERROR validating program!", gl.getProgramInfoLog(program));
 		}
 		gl.useProgram(program);
-		context.programUsed = program; 
+		context.programUsed = program;
 	};
 }
 
-function createShaders() {
+function createShaders$1() {
 	return function (context, mesh) {
 		return function () {
 			context = get_store_value(context);
@@ -1421,6 +1282,950 @@ function createShaders() {
 					...(mesh.material?.specular ? [specularDeclaration] : []),
 					...(mesh.material?.diffuseMap ? [diffuseMapDeclaration] : []),
 					...(mesh.material?.normalMap ? [normalMapDeclaration] : []),
+				].join("\n"),
+				diffuseMapSample,
+				normalMapSample,
+				irradiance: [
+					...(context.numPointLights
+						? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
+						: []),
+				].join("\n"),
+				toneMapping: [
+					...(context.toneMappings?.length > 0 ? [...context.toneMappings.map((tm) => tm.shader({ color: true }))] : []),
+				].join("\n"),
+				//todo, remove this after decoupling the point light shader
+				numPointLights: context.numPointLights,
+			});
+			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+			gl.shaderSource(fragmentShader, fragmentShaderSource);
+			//console.log(fragmentShaderSource);
+			gl.compileShader(fragmentShader);
+			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
+			}
+			gl.attachShader(program, vertexShader);
+			gl.attachShader(program, fragmentShader);
+		};
+	};
+}
+
+function setupMeshColor$1(context, { diffuse, metalness }) {
+	return function () {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = context.program;
+		const colorLocation = gl.getUniformLocation(program, "diffuse");
+		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
+		const metalnessLocation = gl.getUniformLocation(program, "metalness");
+		gl.uniform1f(metalnessLocation, metalness);
+	};
+}
+
+function setupAmbientLight$1(context, ambientLightColor) {
+	return function () {
+		context = get_store_value(context);
+		const { gl, program } = context;
+		const ambientLightColorLocation = gl.getUniformLocation(program, "ambientLightColor");
+		gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
+	};
+}
+
+function setupCamera$1(context, camera) {
+	return function createCamera() {
+		context = get_store_value(context);
+		const gl = context.gl;
+		const program = context.program;
+		// projection matrix
+		const projectionLocation = gl.getUniformLocation(program, "projection");
+
+		const fieldOfViewInRadians = toRadian$1(camera.fov);
+		const aspectRatio = context.canvas.width / context.canvas.height;
+		const nearClippingPlaneDistance = camera.near;
+		const farClippingPlaneDistance = camera.far;
+		let projection = new Float32Array(16);
+		projection = perspective(
+			projection,
+			fieldOfViewInRadians,
+			aspectRatio,
+			nearClippingPlaneDistance,
+			farClippingPlaneDistance,
+		);
+
+		gl.uniformMatrix4fv(projectionLocation, false, projection);
+
+		// view matrix
+		const viewLocation = gl.getUniformLocation(program, "view");
+		const view = new Float32Array(16);
+		lookAt(view, camera.position, camera.target, camera.up);
+		gl.uniformMatrix4fv(viewLocation, false, view);
+
+		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");
+		gl.uniform3fv(cameraPositionLocation, camera.position);
+	};
+}
+
+function setupTransformMatrix$1(context, transformMatrix, numInstances) {
+	if (numInstances == null) {
+		return function createTransformMatrix() {
+			context = get_store_value(context);
+			const gl = context.gl;
+			const program = context.program;
+			if (!transformMatrix) {
+				transformMatrix = new Float32Array(16);
+				identity(transformMatrix);
+			}
+			context.transformMatrix = transformMatrix;
+			const worldLocation = gl.getUniformLocation(program, "world");
+			gl.uniformMatrix4fv(worldLocation, false, transformMatrix);
+		};
+	} else {
+		return function createTransformMatrices() {
+			const attributeName = "world";
+			/** @type {{gl: WebGL2RenderingContext}} **/
+			context = get_store_value(context);
+			const { gl, program, vao } = context;
+
+			const transformMatricesWindows = (context.transformMatricesWindows = context.transformMatricesWindows || []);
+
+			const transformMatricesValues = transformMatrix.reduce((acc, m) => [...acc, ...get_store_value(m)], []);
+			const transformMatricesData = new Float32Array(transformMatricesValues);
+
+			// create windows for each matrix
+			for (let i = 0; i < numInstances; ++i) {
+				const byteOffsetToMatrix = i * 16 * 4;
+				const numFloatsForView = 16;
+				transformMatricesWindows.push(new Float32Array(transformMatricesData.buffer, byteOffsetToMatrix, numFloatsForView));
+			}
+			/*
+			transformMatricesWindows.forEach((mat, index) => {
+				const count = index - Math.floor(numInstances / 2);
+				identity(mat);
+				//transform the model matrix
+				translate(mat, mat, [count * 2, 0, 0]);
+				rotateY(mat, mat, toRadian(count * 10));
+				scale(mat, mat, [0.5, 0.5, 0.5]);
+			});
+*/
+			//context.transformMatrix = transformMatricesWindows;
+			gl.bindVertexArray(vao);
+			const matrixBuffer = gl.createBuffer();
+			context.matrixBuffer = matrixBuffer;
+			const transformMatricesLocation = gl.getAttribLocation(program, attributeName);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, transformMatricesData.byteLength, gl.DYNAMIC_DRAW);
+			// set all 4 attributes for matrix
+			const bytesPerMatrix = 4 * 16;
+			for (let i = 0; i < 4; ++i) {
+				const loc = transformMatricesLocation + i;
+				gl.enableVertexAttribArray(loc);
+				// note the stride and offset
+				const offset = i * 16; // 4 floats per row, 4 bytes per float
+				gl.vertexAttribPointer(
+					loc, // location
+					4, // size (num values to pull from buffer per iteration)
+					gl.FLOAT, // type of data in buffer
+					false, // normalize
+					bytesPerMatrix, // stride, num bytes to advance to get to next set of values
+					offset, // offset in buffer
+				);
+				// this line says this attribute only changes for each 1 instance
+				gl.vertexAttribDivisor(loc, 1);
+			}
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, transformMatricesData);
+
+			gl.bindVertexArray(null);
+		};
+	}
+}
+function updateTransformMatrix(context, worldMatrix) {
+	context = get_store_value(context);
+	const gl = context.gl;
+	const program = context.program;
+	const worldLocation = gl.getUniformLocation(program, "world");
+	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
+}
+
+function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
+	context = get_store_value(context);
+	/** @type{{gl:WebGL2RenderingContext}} **/
+	const { gl, program, vao, matrixBuffer } = context;
+	gl.bindVertexArray(vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
+	const bytesPerMatrix = 4 * 16;
+	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
+	gl.bindVertexArray(null);
+}
+
+function setupNormalMatrix$1(context, numInstances) {
+	if (numInstances == null) {
+		return function createNormalMatrix() {
+			/** @type{{gl:WebGL2RenderingContext}} **/
+			const { gl, program, transformMatrix } = get_store_value(context);
+			const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
+			context.normalMatrixLocation = normalMatrixLocation;
+			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix$1(transformMatrix));
+		};
+	} else {
+		return function createNormalMatrices() {
+			context = get_store_value(context);
+			/** @type{{gl:WebGL2RenderingContext}} **/
+			const { gl, program, transformMatrix, vao, transformMatricesWindows } = context;
+			gl.bindVertexArray(vao);
+			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
+			const normalMatricesValues = [];
+
+			for (let i = 0; i < numInstances; i++) {
+				normalMatricesValues.push(...derivateNormalMatrix$1(transformMatricesWindows[i]));
+			}
+			const normalMatrices = new Float32Array(normalMatricesValues);
+			const normalMatrixBuffer = gl.createBuffer();
+			context.normalMatrixBuffer = normalMatrixBuffer;
+			gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, normalMatrices.byteLength, gl.DYNAMIC_DRAW);
+
+			gl.bufferSubData(gl.ARRAY_BUFFER, 0, normalMatrices);
+			// set all 4 attributes for matrix
+			const bytesPerMatrix = 4 * 16;
+			for (let i = 0; i < 4; ++i) {
+				const loc = normalMatricesLocation + i;
+				gl.enableVertexAttribArray(loc);
+				// note the stride and offset
+				const offset = i * 16; // 4 floats per row, 4 bytes per float
+				gl.vertexAttribPointer(
+					loc, // location
+					4, // size (num values to pull from buffer per iteration)
+					gl.FLOAT, // type of data in buffer
+					false, // normalize
+					bytesPerMatrix, // stride, num bytes to advance to get to next set of values
+					offset, // offset in buffer
+				);
+				// this line says this attribute only changes for each 1 instance
+				gl.vertexAttribDivisor(loc, 1);
+			}
+			gl.bindVertexArray(null);
+		};
+	}
+}
+
+function updateNormalMatrix({ gl, program }, normalMatrix) {
+	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
+	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+}
+
+function updateInstanceNormalMatrix({ gl, program, vao, normalMatrixBuffer }, normalMatrix, instanceIndex) {
+	gl.bindVertexArray(vao);
+	gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
+	const bytesPerMatrix = 4 * 16;
+	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, normalMatrix);
+	gl.bindVertexArray(null);
+}
+
+function derivateNormalMatrix$1(transformMatrix) {
+	const normalMatrix = create();
+	invert(normalMatrix, transformMatrix);
+	transpose(normalMatrix, normalMatrix);
+	return normalMatrix;
+}
+
+function getBuffer$1(variable) {
+	let dataSource;
+	let interleaved;
+	if (variable.data) {
+		dataSource = variable.data;
+		interleaved = variable.interleaved;
+	} else {
+		dataSource = variable;
+	}
+	const data = dataSource.buffer && dataSource.buffer instanceof ArrayBuffer ? dataSource : new Float32Array(dataSource);
+	return {
+		data,
+		interleaved,
+		...(interleaved ? { byteStride: variable.byteStride, byteOffset: variable.byteOffset } : {}),
+	};
+}
+
+function setupAttributes$1(context, mesh) {
+	return function () {
+		context = get_store_value(context);
+		/** @type {WebGL2RenderingContext} **/
+		const gl = context.gl;
+		const program = context.program;
+		context.attributeLength = mesh.attributes.elements
+			? mesh.attributes.elements.length
+			: mesh.attributes.positions.length / 3;
+
+		const { positions, normals, elements, uvs } = mesh.attributes;
+		const vao = (context.vao = gl.createVertexArray());
+		gl.bindVertexArray(vao);
+		const {
+			data: positionsData,
+			interleaved: positionsInterleaved,
+			byteStride: positionsByteStride,
+			byteOffset: positionsByteOffset,
+		} = getBuffer$1(positions);
+		//position
+		const positionBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, positionsData, gl.STATIC_DRAW);
+		const positionLocation = gl.getAttribLocation(program, "position");
+		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer); //todo check if redundant
+		gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, positionsByteStride, positionsByteOffset);
+		gl.enableVertexAttribArray(positionLocation);
+		//normal
+		const {
+			data: normalsData,
+			interleaved: normalsInterleaved,
+			byteStride: normalsByteStride,
+			byteOffset: normalsByteOffset,
+		} = getBuffer$1(normals);
+		if (!normalsInterleaved) {
+			const normalBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, normalsData, gl.STATIC_DRAW);
+			gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
+		}
+		const normalLocation = gl.getAttribLocation(program, "normal");
+		gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
+		gl.enableVertexAttribArray(normalLocation);
+		if (mesh.attributes.elements) {
+			context.hasElements = true;
+			const elementsData = new Uint16Array(mesh.attributes.elements);
+			const elementBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
+			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, elementsData, gl.STATIC_DRAW);
+		}
+		if (mesh.attributes.uvs) {
+			const uvsData = new Float32Array(mesh.attributes.uvs);
+			const uvBuffer = gl.createBuffer();
+			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, uvsData, gl.STATIC_DRAW);
+			const uvLocation = gl.getAttribLocation(program, "uv");
+			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+			gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
+			gl.enableVertexAttribArray(uvLocation);
+		}
+
+		gl.bindVertexArray(null);
+	};
+}
+
+function createRenderer$1() {
+	const { subscribe, set, update } = writable({
+		backgroundColor: [2.55, 2.55, 2.55, 1],
+		canvas: null,
+		camera: null,
+		meshes: [],
+		lights: [],
+		toneMappings: [],
+		loop: null,
+		enabled: false,
+		ambientLightColor: [0, 0, 0],
+	});
+	return {
+		subscribe,
+		setCamera: (...rest) => {
+			updateCamera(...rest);
+			return {
+				set: (...rest) => {
+					updateCamera(...rest);
+					setupCamera$1(appContext$1, get_store_value(renderer$1).camera)();
+				},
+				get: () => {
+					return get_store_value(renderer$1).camera;
+				},
+			};
+			function updateCamera(
+				position = [0, 0, -1],
+				target = [0, 0, 0],
+				fov = 80,
+				near = 0.1,
+				far = 1000,
+				up = [0, 1, 0],
+				matrix = null,
+			) {
+				update((renderer) => {
+					renderer.camera = {
+						fov,
+						near,
+						far,
+						position,
+						target,
+						up,
+						matrix,
+					};
+					return renderer;
+				});
+			}
+		},
+
+		addMesh: (mesh) => {
+			const index = get_store_value(renderer$1).meshes.length;
+
+			if (mesh.instances && mesh.instances > 1) {
+				var { matrices, unsubs } = new Array(mesh.instances).fill().reduce(
+					(acc, curr, instanceIndex) => {
+						const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(
+							update,
+							index,
+							instanceIndex,
+							mesh.matrices[instanceIndex],
+						);
+						acc.matrices.push(transformMatrix);
+						acc.unsubs.push(unsubNormalMatrix);
+						return acc;
+					},
+					{ matrices: [], unsubs: [] },
+				);
+			} else {
+				var { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index, null, mesh.transformMatrix);
+			}
+			mesh.material = {
+				metalness: 0,
+				...mesh.material,
+			};
+			const meshWithMatrix = {
+				...mesh,
+				...(matrices ? { matrices, unsubs } : { transformMatrix }),
+				unsub: () => {
+					if (matrices) {
+						unsubs.forEach((unsub) => unsub());
+					} else {
+						unsubNormalMatrix();
+					}
+				},
+				animations: [],
+			};
+			update((renderer) => {
+				renderer.meshes = [...renderer.meshes, meshWithMatrix];
+				return renderer;
+			});
+			return meshWithMatrix;
+		},
+		removeMesh: (mesh) => {
+			update((renderer) => {
+				renderer.meshes = renderer.meshes.filter((m) => m !== mesh);
+				return renderer;
+			});
+			mesh.unsub();
+		},
+		setAmbientLight: (color, intensity) => {
+			update((renderer) => {
+				renderer.ambientLightColor = convertToVector3(color).map((c) => c * intensity);
+				return renderer;
+			});
+		},
+		addLight: (light) => {
+			const index = get_store_value(renderer$1).lights.length;
+			const store = createLightStore$1(update, light, index);
+			update((renderer) => {
+				renderer.lights = [...renderer.lights, store];
+				return renderer;
+			});
+			return {
+				remove: () =>
+					update((renderer) => {
+						renderer.lights = renderer.lights.filter((l) => l !== light);
+						return renderer;
+					}),
+				set: store.set,
+			};
+		},
+		addToneMapping: (toneMapping) =>
+			update((renderer) => {
+				renderer.toneMappings = [...renderer.toneMappings, toneMapping];
+				return renderer;
+			}),
+		addAnimation: (mesh, animation) =>
+			update((renderer) => {
+				renderer.meshes = renderer.meshes.map((m) => {
+					if (m === mesh) {
+						m.animations.push(animation);
+					}
+					return m;
+				});
+				return renderer;
+			}),
+		setLoop: (loop) =>
+			update((renderer) => {
+				renderer.loop = loop;
+				return renderer;
+			}),
+		setCanvas: (canvas) =>
+			update((renderer) => {
+				renderer.canvas = canvas;
+				return renderer;
+			}),
+		setBackgroundColor: (backgroundColor) => {
+			backgroundColor = [...convertToVector3(backgroundColor), 1];
+			update((renderer) => {
+				renderer.backgroundColor = backgroundColor;
+				return renderer;
+			});
+		},
+		start: () =>
+			update((renderer) => {
+				renderer.enabled = true;
+				return renderer;
+			}),
+		stop: () =>
+			update((renderer) => {
+				renderer.enabled = false;
+				return renderer;
+			}),
+	};
+}
+
+const createLightStore$1 = (parentStoreUpdate, initialProps, lightIndex) => {
+	const store = writable(initialProps);
+	const { subscribe, set, update } = store;
+	const customStore = {
+		subscribe,
+		set: (props) => {
+			update((prev) => {
+				if (appContext$1 && get_store_value(appContext$1).program) {
+					prev.updateOneLight(appContext$1, get_store_value(renderer$1).lights, customStore);
+				}
+				return { ...prev, ...props };
+			});
+			parentStoreUpdate((renderer) => {
+				renderer.lights[lightIndex] = customStore;
+				return renderer;
+			});
+		},
+	};
+	return customStore;
+};
+
+const renderer$1 = createRenderer$1();
+
+const defaultWorldMatrix = new Float32Array(16);
+identity(defaultWorldMatrix);
+
+const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex, initialValue) => {
+	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
+	const transformMatrix = {
+		subscribe,
+		set: (matrix) => {
+			set(matrix);
+			if (appContext$1 && get_store_value(appContext$1).program) {
+				// in case of a single program app, let's update the uniform only and draw the single program
+				if (get_store_value(programs$1).length === 1) {
+					if (instanceIndex == null) {
+						updateTransformMatrix(appContext$1, matrix);
+					} else {
+						updateInstanceTransformMatrix(appContext$1, matrix, instanceIndex);
+					}
+					// update the store to trigger the render
+					parentStoreUpdate((renderer) => {
+						renderer.meshes[meshIndex].transformMatrix = matrix;
+						return renderer;
+					});
+				} // in case of a multi program app, we need to setup and draw the programs
+				else {
+					renderState$1.set({ init: false });
+				}
+			}
+			return matrix;
+		},
+	};
+	const normalMatrixStore = derived(transformMatrix, ($transformMatrix) => {
+		const context = get_store_value(appContext$1);
+		if (!context.gl) {
+			return;
+		}
+		const normalMatrix = derivateNormalMatrix$1($transformMatrix);
+		if (instanceIndex == null) {
+			updateNormalMatrix(context, normalMatrix);
+		} else {
+			updateInstanceNormalMatrix(context, normalMatrix, instanceIndex);
+		}
+		return normalMatrix;
+	});
+	const unsubNormalMatrix = normalMatrixStore.subscribe(() => {});
+	return {
+		transformMatrix,
+		unsubNormalMatrix,
+	};
+};
+
+const programs$1 = derived(renderer$1, ($renderer) => {
+	//create a list of unique materials used in meshes
+	const materials = new Set($renderer.meshes.map((mesh) => mesh.material));
+	//each program will setup one material and list meshes that use it
+	return Array.from(materials).map((material) => {
+		const meshes = $renderer.meshes.filter((mesh) => mesh.material === material);
+		return {
+			createProgram: createProgram$1(material),
+			meshes,
+			createShaders: createShaders$1(),
+			endProgramSetup,
+		};
+	});
+
+	/*return $renderer.meshes.map((mesh) => {
+		return {
+			createProgram,
+			mesh,
+			attributes: mesh.attributes,
+			createShaders: createShaders(),
+			endProgramSetup,
+		};
+	});*/
+});
+
+const renderState$1 = writable({
+	init: false,
+});
+
+const appContext$1 = writable({});
+
+/*
+Single program apps (one mesh/material) will not need to setup the program again
+but multi program apps require to setup the program before rendering if the last changes
+affect a program that is not the last one rendered. because the last one rendered is still mounted / in memory of the GPU
+this store will be used to know if we need to setup the program before rendering again
+todo : map existing compiled programs and decouple draw passes from program creation or setup
+*/
+const lastProgramRendered = writable(null);
+
+const emptyApp$1 = [];
+const webglapp$1 = derived(
+	[renderer$1, programs$1],
+	([$renderer, $programs]) => {
+		// if renderer.enabled is false, the scene is being setup, we should not render
+		// if running is 4, we let the loop run completly as a way to batch scene updates
+		if (!$renderer.enabled || get_store_value(running$1) === 4) {
+			//log("webglapp not ready");
+			return emptyApp$1;
+		}
+
+		const numPointLights = $renderer.lights.filter((l) => get_store_value(l).type === "point").length;
+		const pointLightShader = get_store_value($renderer.lights.find((l) => get_store_value(l).type === "point")).shader;
+		const requireTime = $programs.some((program) => program.mesh.animations?.some((animation) => animation.requireTime));
+
+		let rendererContext = {
+			canvas: $renderer.canvas,
+			backgroundColor: $renderer.backgroundColor,
+			...($renderer.toneMappings.length > 0
+				? {
+						toneMappings: $renderer.toneMappings,
+					}
+				: undefined),
+			...(numPointLights > 0
+				? {
+						numPointLights,
+						pointLightShader,
+					}
+				: undefined),
+		};
+		const list = [];
+
+		appContext$1.update((appContext) => ({
+			...appContext,
+			...rendererContext,
+		}));
+
+		!get_store_value(renderState$1).init && list.push(initRenderer$1(rendererContext, appContext$1));
+		!get_store_value(renderState$1).init &&
+			list.push(
+				...$programs.reduce((acc, program) => {
+					lastProgramRendered.set(program);
+					const animationsSetups = program.mesh.animations?.map((animation) => animation.setupAnimation(appContext$1)) || [];
+					return [
+						...acc,
+						program.createProgram(appContext$1),
+						program.createShaders(appContext$1, program.mesh),
+						program.endProgramSetup(appContext$1),
+						setupCamera$1(appContext$1, $renderer.camera),
+						setupAmbientLight$1(appContext$1, $renderer.ambientLightColor),
+						...(program.mesh.material ? [setupMeshColor$1(appContext$1, program.mesh.material)] : []),
+						...(program.mesh.material?.diffuseMap ? [program.mesh.material?.diffuseMap.setupTexture(appContext$1)] : []),
+						...(program.mesh.material?.normalMap ? [program.mesh.material?.normalMap.setupTexture(appContext$1)] : []),
+						setupAttributes$1(appContext$1, program.mesh),
+						...(program.mesh?.material?.specular ? [program.mesh.material.specular.setupSpecular(appContext$1)] : []),
+						setupTransformMatrix$1(
+							appContext$1,
+							program.mesh.instances == null ? get_store_value(program.mesh.transformMatrix) : program.mesh.matrices,
+							program.mesh.instances,
+						),
+						...animationsSetups,
+						setupNormalMatrix$1(appContext$1, program.mesh.instances),
+						// reduce by type to setup lights once per type
+						...[
+							...$renderer.lights.reduce((acc, light) => {
+								const lightValue = get_store_value(light);
+								acc.set(lightValue.type, lightValue.setupLights);
+								return acc;
+							}, new Map()),
+						].map(([_, setupLights]) => setupLights(appContext$1, $renderer.lights)),
+						...(requireTime ? [setupTime$1(appContext$1)] : []),
+						render$1(appContext$1, $programs[0].mesh.instances, $programs[0].mesh.drawMode),
+					];
+				}, []),
+			);
+
+		return list;
+	},
+	emptyApp$1,
+);
+
+/**
+ * running states
+ * 0 : not started
+ * 1 : init currently running
+ * 2 : init done, waiting for start
+ * 3 : loop requested, ready to run									<---|
+ * 																		|---- end state occilates between 3 and 4
+ * 4 : loop currently running, renderer updates ignored momentarily	<---|
+ */
+const running$1 = writable(0);
+const renderLoopStore$1 = derived([webglapp$1], ([$webglapp]) => {
+	if ($webglapp.length === 0) {
+		return 0;
+	}
+	if (!get_store_value(renderState$1).init && get_store_value(running$1) === 0) {
+		running$1.set(1);
+		$webglapp.forEach((f) => f());
+		running$1.set(2);
+		return 1;
+	} else if (get_store_value(running$1) === 2) {
+		running$1.set(3);
+		requestAnimationFrame(loop);
+		return 2;
+	}
+	async function loop() {
+		// skipping this iteration is previous one not finished
+		if (get_store_value(running$1) !== 4) {
+			running$1.set(4);
+			get_store_value(renderer$1).loop && get_store_value(renderer$1).loop();
+			$webglapp.forEach((f) => f());
+			running$1.set(3);
+		}
+		requestAnimationFrame(loop);
+	}
+});
+
+renderLoopStore$1.subscribe((value) => {
+	console.log("render loop store subscribed", value);
+});
+
+const degree = Math.PI / 180;
+/**
+ * Convert Degree To Radian
+ *
+ * @param {Number} a Angle in Degrees
+ */
+
+function toRadian(a) {
+	return a * degree;
+}
+
+function initRenderer(rendererContext, appContext) {
+	return function () {
+		console.log("initRenderer");
+
+		const canvasRect = rendererContext.canvas.getBoundingClientRect();
+		rendererContext.canvas.width = canvasRect.width;
+		rendererContext.canvas.height = canvasRect.height;
+		const gl = (rendererContext.gl = rendererContext.canvas.getContext("webgl2"));
+		appContext.update((appContext) => ({
+			...appContext,
+			...rendererContext,
+		}));
+		gl.viewportWidth = rendererContext.canvas.width;
+		gl.viewportHeight = rendererContext.canvas.height;
+		gl.clearColor(...rendererContext.backgroundColor);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
+		gl.enable(gl.DEPTH_TEST);
+		gl.enable(gl.CULL_FACE);
+		gl.frontFace(gl.CCW);
+		gl.cullFace(gl.BACK);
+		renderState$1.set({
+			init: true,
+		});
+	};
+}
+
+function setupTime(context) {
+	return function () {
+		const contextValue = get_store_value(context);
+		const gl = contextValue.gl;
+		const program = contextValue.program;
+		const timeLocation = gl.getUniformLocation(program, "time");
+		gl.uniform1f(timeLocation, performance.now());
+	};
+}
+
+function render(context, instances, drawMode) {
+	return function () {
+		const contextValue = get_store_value(context);
+		/** @type {WebGL2RenderingContext} **/
+		const gl = contextValue.gl;
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		contextValue.loop && contextValue.loop();
+		// when using vertex array objects, you must bind it before rendering
+		gl.bindVertexArray(contextValue.vao);
+		console.log("drawMode", drawMode);
+		if (instances) {
+			gl.drawArraysInstanced(gl[drawMode], 0, contextValue.attributeLength, instances);
+		} else {
+			if (contextValue.hasElements) {
+				gl.drawElements(gl[drawMode], contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
+			} else {
+				gl.drawArrays(gl[drawMode], 0, contextValue.attributeLength);
+				//add mesh visualization (lines)
+				//gl.drawArrays(gl.LINE_STRIP, 0, contextValue.attributeLength);
+			}
+		}
+		// when binding vertex array objects you must unbind it after rendering
+		gl.bindVertexArray(null);
+	};
+}
+
+function createProgram(context) {
+	return function createProgram() {
+		context = get_store_value(context);
+		if (context.program != null) {
+			return;
+		}
+		const gl = context.gl;
+		const program = gl.createProgram();
+		context.program = program;
+	};
+}
+
+function linkProgram(context) {
+	return function () {
+		context = get_store_value(context);
+		/** @type {WebGL2RenderingContext} **/
+		const gl = context.gl;
+		const program = context.program;
+		gl.linkProgram(program);
+		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+			console.error("ERROR linking program!", gl.getProgramInfoLog(program));
+		}
+	};
+}
+
+function validateProgram(context) {
+	return function () {
+		context = get_store_value(context);
+		/** @type {WebGL2RenderingContext} **/
+		const gl = context.gl;
+		const program = context.program;
+
+		gl.validateProgram(program);
+		if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
+			console.error("ERROR validating program!", gl.getProgramInfoLog(program));
+		}
+	};
+}
+
+function useProgram(context) {
+	return function () {
+		context = get_store_value(context);
+		/** @type {WebGL2RenderingContext} **/
+		const gl = context.gl;
+		const program = context.program;
+		gl.useProgram(program);
+	};
+}
+
+function createShaders() {
+	return function (context, material, meshes) {
+		return function () {
+			context = get_store_value(context);
+			const gl = context.gl;
+			const program = context.program;
+
+			let vertexDeclarations = "";
+			let vertexPositionModifiers = "";
+
+			let vertexAnimationsDeclaration = "";
+			let vertexAnimationsModifier = "";
+			const [mesh] = meshes;
+			const vertexAnimationComponents = mesh.animations?.filter(({ type }) => type === "vertex");
+			if (vertexAnimationComponents?.length > 0) {
+				vertexAnimationsDeclaration += vertexAnimationComponents.reduce((acc, component) => {
+					return acc + component.shader({ declaration: true });
+				}, "");
+				vertexAnimationsModifier += vertexAnimationComponents.reduce((acc, component) => {
+					return acc + component.shader({ position: true });
+				}, "");
+				vertexDeclarations += vertexAnimationsDeclaration;
+				vertexPositionModifiers += vertexAnimationsModifier;
+			}
+			const vertexShaderSource = templateLiteralRenderer(defaultVertex, {
+				instances: false,
+				declarations: "",
+				positionModifier: "",
+			})({
+				instances: mesh.instances > 1,
+				declarations: vertexDeclarations,
+				positionModifier: vertexPositionModifiers,
+			});
+			//console.log(vertexShaderSource);
+			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+			gl.shaderSource(vertexShader, vertexShaderSource);
+			gl.compileShader(vertexShader);
+			if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+				console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
+			}
+			let specularIrradiance = "";
+			let specularDeclaration = "";
+			if (material.specular) {
+				specularDeclaration = material.specular.shader({ declaration: true });
+				specularIrradiance = material.specular.shader({ irradiance: true });
+			}
+			let diffuseMapDeclaration = "";
+			let diffuseMapSample = "";
+			if (material.diffuseMap) {
+				diffuseMapDeclaration = material.diffuseMap.shader({
+					declaration: true,
+					mapType: material.diffuseMap.type,
+				});
+				diffuseMapSample = material.diffuseMap.shader({
+					diffuseMapSample: true,
+					mapType: material.diffuseMap.type,
+					coordinateSpace: material.diffuseMap.coordinateSpace,
+				});
+			}
+			let normalMapDeclaration = "";
+			let normalMapSample = "";
+			if (material.normalMap) {
+				normalMapDeclaration = material.normalMap.shader({
+					declaration: true,
+					mapType: material.normalMap.type,
+				});
+				normalMapSample = material.normalMap.shader({
+					normalMapSample: true,
+					mapType: material.normalMap.type,
+				});
+			}
+			const fragmentShaderSource = templateLiteralRenderer(defaultFragment, {
+				defines: "",
+				declarations: "",
+				diffuseMapSample: "",
+				normalMapSample: "",
+				irradiance: "",
+				toneMapping: "",
+				numPointLights: 0,
+			})({
+				defines: objectToDefines({
+					...(context.numPointLights
+						? {
+								NUM_POINT_LIGHTS: context.numPointLights,
+							}
+						: undefined),
+				}),
+				declarations: [
+					...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : []),
+					...(context.toneMappings?.length > 0
+						? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
+						: []),
+					...(material.specular ? [specularDeclaration] : []),
+					...(material.diffuseMap ? [diffuseMapDeclaration] : []),
+					...(material.normalMap ? [normalMapDeclaration] : []),
 				].join("\n"),
 				diffuseMapSample,
 				normalMapSample,
@@ -1576,24 +2381,6 @@ function setupTransformMatrix(context, transformMatrix, numInstances) {
 		};
 	}
 }
-function updateTransformMatrix(context, worldMatrix) {
-	context = get_store_value(context);
-	const gl = context.gl;
-	const program = context.program;
-	const worldLocation = gl.getUniformLocation(program, "world");
-	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
-}
-
-function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
-	context = get_store_value(context);
-	/** @type{{gl:WebGL2RenderingContext}} **/
-	const { gl, program, vao, matrixBuffer } = context;
-	gl.bindVertexArray(vao);
-	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
-	const bytesPerMatrix = 4 * 16;
-	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
-	gl.bindVertexArray(null);
-}
 
 function setupNormalMatrix(context, numInstances) {
 	if (numInstances == null) {
@@ -1646,21 +2433,8 @@ function setupNormalMatrix(context, numInstances) {
 	}
 }
 
-function updateNormalMatrix({ gl, program }, normalMatrix) {
-	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
-}
-
-function updateInstanceNormalMatrix({ gl, program, vao, normalMatrixBuffer }, normalMatrix, instanceIndex) {
-	gl.bindVertexArray(vao);
-	gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
-	const bytesPerMatrix = 4 * 16;
-	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, normalMatrix);
-	gl.bindVertexArray(null);
-}
-
 function derivateNormalMatrix(transformMatrix) {
-	const normalMatrix = create$1();
+	const normalMatrix = create();
 	invert(normalMatrix, transformMatrix);
 	transpose(normalMatrix, normalMatrix);
 	return normalMatrix;
@@ -1748,300 +2522,227 @@ function setupAttributes(context, mesh) {
 	};
 }
 
+function hasSameShallow$1(a, b) {
+	if (a == null || b == null || a.size !== b.size) {
+		return false;
+	}
+	for (let item of a) {
+		if (!b.has(item)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+function hasSameShallow(a, b) {
+	if (a == null || b == null || a.length !== b.length) {
+		return false;
+	}
+	for (let i = 0; i < a.length; i++) {
+		if (a[i] !== b[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
+function isLight(sceneNode) {
+	sceneNode = get_store_value(sceneNode);
+	return (
+		sceneNode.shader instanceof Function &&
+		sceneNode.setupLights instanceof Function &&
+		sceneNode.updateOneLight instanceof Function
+	);
+}
+
 function createRenderer() {
 	const { subscribe, set, update } = writable({
-		backgroundColor: [2.55, 2.55, 2.55, 1],
+		//ref
 		canvas: null,
-		camera: null,
-		meshes: [],
-		lights: [],
-		toneMappings: [],
+		//ref
 		loop: null,
-		enabled: false,
+		//value
+		backgroundColor: [2.55, 2.55, 2.55, 1],
+		//ref
+		camera: null,
+		//value
 		ambientLightColor: [0, 0, 0],
+		//values
+		toneMappings: [],
+		//value
+		enabled: false,
 	});
+	/*
+	function customUpdate(updater){
+		update((renderer)=>{
+			const next = updater(renderer);
+			return next;
+		});
+	}
+	*/
+	//specific on change handling, might be useless
+	function customSet(next) {
+		const current = get_store_value(renderer);
+		if (current.camera !== next.camera) ;
+		set(next);
+	}
+
 	return {
 		subscribe,
-		setCamera: (...rest) => {
-			updateCamera(...rest);
-			return {
-				set: (...rest) => {
-					updateCamera(...rest);
-					setupCamera(appContext, get_store_value(renderer).camera)();
-				},
-				get: () => {
-					return get_store_value(renderer).camera;
-				},
-			};
-			function updateCamera(
-				position = [0, 0, -1],
-				target = [0, 0, 0],
-				fov = 80,
-				near = 0.1,
-				far = 1000,
-				up = [0, 1, 0],
-				matrix = null,
-			) {
-				update((renderer) => {
-					renderer.camera = {
-						fov,
-						near,
-						far,
-						position,
-						target,
-						up,
-						matrix,
-					};
-					return renderer;
-				});
-			}
-		},
-
-		addMesh: (mesh) => {
-			const index = get_store_value(renderer).meshes.length;
-
-			if (mesh.instances && mesh.instances > 1) {
-				var { matrices, unsubs } = new Array(mesh.instances).fill().reduce(
-					(acc, curr, instanceIndex) => {
-						const { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(
-							update,
-							index,
-							instanceIndex,
-							mesh.matrices[instanceIndex],
-						);
-						acc.matrices.push(transformMatrix);
-						acc.unsubs.push(unsubNormalMatrix);
-						return acc;
-					},
-					{ matrices: [], unsubs: [] },
-				);
-			} else {
-				var { transformMatrix, unsubNormalMatrix } = createMeshMatricesStore(update, index, null, mesh.transformMatrix);
-			}
-			mesh.material = {
-				metalness: 0,
-				...mesh.material,
-			};
-			const meshWithMatrix = {
-				...mesh,
-				...(matrices ? { matrices, unsubs } : { transformMatrix }),
-				unsub: () => {
-					if (matrices) {
-						unsubs.forEach((unsub) => unsub());
-					} else {
-						unsubNormalMatrix();
-					}
-				},
-				animations: [],
-			};
-			update((renderer) => {
-				renderer.meshes = [...renderer.meshes, meshWithMatrix];
-				return renderer;
-			});
-			return meshWithMatrix;
-		},
-		removeMesh: (mesh) => {
-			update((renderer) => {
-				renderer.meshes = renderer.meshes.filter((m) => m !== mesh);
-				return renderer;
-			});
-			mesh.unsub();
-		},
-		setAmbientLight: (color, intensity) => {
-			update((renderer) => {
-				renderer.ambientLightColor = convertToVector3(color).map((c) => c * intensity);
-				return renderer;
-			});
-		},
-		addLight: (light) => {
-			const index = get_store_value(renderer).lights.length;
-			const store = createLightStore(update, light, index);
-			update((renderer) => {
-				renderer.lights = [...renderer.lights, store];
-				return renderer;
-			});
-			return {
-				remove: () =>
-					update((renderer) => {
-						renderer.lights = renderer.lights.filter((l) => l !== light);
-						return renderer;
-					}),
-				set: store.set,
-			};
-		},
-		addToneMapping: (toneMapping) =>
-			update((renderer) => {
-				renderer.toneMappings = [...renderer.toneMappings, toneMapping];
-				return renderer;
-			}),
-		addAnimation: (mesh, animation) =>
-			update((renderer) => {
-				renderer.meshes = renderer.meshes.map((m) => {
-					if (m === mesh) {
-						m.animations.push(animation);
-					}
-					return m;
-				});
-				return renderer;
-			}),
-		setLoop: (loop) =>
-			update((renderer) => {
-				renderer.loop = loop;
-				return renderer;
-			}),
-		setCanvas: (canvas) =>
-			update((renderer) => {
-				renderer.canvas = canvas;
-				return renderer;
-			}),
-		setBackgroundColor: (backgroundColor) => {
-			backgroundColor = [...convertToVector3(backgroundColor), 1];
-			update((renderer) => {
-				renderer.backgroundColor = backgroundColor;
-				return renderer;
-			});
-		},
-		start: () =>
-			update((renderer) => {
-				renderer.enabled = true;
-				return renderer;
-			}),
-		stop: () =>
-			update((renderer) => {
-				renderer.enabled = false;
-				return renderer;
-			}),
+		set: customSet,
 	};
 }
 
-const createLightStore = (parentStoreUpdate, initialProps, lightIndex) => {
-	const store = writable(initialProps);
-	const { subscribe, set, update } = store;
-	const customStore = {
-		subscribe,
-		set: (props) => {
-			update((prev) => {
-				if (appContext && get_store_value(appContext).program) {
-					prev.updateOneLight(appContext, get_store_value(renderer).lights, customStore);
-				}
-				return { ...prev, ...props };
-			});
-			parentStoreUpdate((renderer) => {
-				renderer.lights[lightIndex] = customStore;
-				return renderer;
-			});
-		},
+function createCamera(
+	position = [0, 0, -1],
+	target = [0, 0, 0],
+	fov = 80,
+	near = 0.1,
+	far = 1000,
+	up = [0, 1, 0],
+	matrix = null,
+) {
+	return {
+		position,
+		target,
+		fov,
+		near,
+		far,
+		up,
+		matrix,
 	};
-	return customStore;
-};
+}
 
+function createAmbientLight(color, intensity) {
+	return convertToVector3(color).map((c) => c * intensity);
+}
+
+function createBackgroundColor(color) {
+	return [...convertToVector3(color), 1];
+}
 const renderer = createRenderer();
 
-const defaultWorldMatrix = new Float32Array(16);
-identity(defaultWorldMatrix);
+const scene = writable([]);
 
-const createMeshMatricesStore = (parentStoreUpdate, meshIndex, instanceIndex, initialValue) => {
-	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
-	const transformMatrix = {
-		subscribe,
-		set: (matrix) => {
-			set(matrix);
-			if (appContext && get_store_value(appContext).program) {
-				// in case of a single program app, let's update the uniform only and draw the single program
-				if (get_store_value(programs).length === 1) {
-					if (instanceIndex == null) {
-						updateTransformMatrix(appContext, matrix);
-					} else {
-						updateInstanceTransformMatrix(appContext, matrix, instanceIndex);
-					}
-					// update the store to trigger the render
-					parentStoreUpdate((renderer) => {
-						renderer.meshes[meshIndex].transformMatrix = matrix;
-						return renderer;
-					});
-				} // in case of a multi program app, we need to setup and draw the programs
-				else {
-					renderState.set({ init: false });
-				}
-			}
-			return matrix;
-		},
-	};
-	const normalMatrixStore = derived(transformMatrix, ($transformMatrix) => {
-		const context = get_store_value(appContext);
-		if (!context.gl) {
-			return;
-		}
-		const normalMatrix = derivateNormalMatrix($transformMatrix);
-		if (instanceIndex == null) {
-			updateNormalMatrix(context, normalMatrix);
-		} else {
-			updateInstanceNormalMatrix(context, normalMatrix, instanceIndex);
-		}
-		return normalMatrix;
-	});
-	const unsubNormalMatrix = normalMatrixStore.subscribe(() => {});
+const createLightStore = (initialProps) => {
+	const { subscribe, set } = writable(initialProps);
 	return {
-		transformMatrix,
-		unsubNormalMatrix,
+		subscribe,
+		set: (props) => {
+			//update buffers here
+			set(props);
+		},
 	};
 };
 
-const programs = derived(renderer, ($renderer) => {
-	//create a list of unique materials used in meshes
-	const materials = new Set($renderer.meshes.map((mesh) => mesh.material));
-	//each program will setup one material and list meshes that use it
-	return Array.from(materials).map((material) => {
-		const meshes = $renderer.meshes.filter((mesh) => mesh.material === material);
-		return {
-			createProgram: createProgram(material),
-			meshes,
-			createShaders: createShaders(),
-			endProgramSetup,
-		};
-	});
+let meshCache;
 
-	/*return $renderer.meshes.map((mesh) => {
-		return {
-			createProgram,
-			mesh,
-			attributes: mesh.attributes,
-			uniforms: mesh.uniforms,
-			createShaders: createShaders(),
-			endProgramSetup,
-		};
-	});*/
+const meshes = derived([scene], ([$scene]) => {
+	const meshNodes = $scene.filter((node) => node.attributes != null);
+	//using throw to cancel update flow when unchanged
+	if (hasSameShallow(meshCache, meshNodes)) {
+		throw new Error("meshes unchanged");
+	} else {
+		meshCache = meshNodes;
+	}
+	return meshNodes;
+});
+
+let materialCache;
+
+const materials = derived([meshes], ([$meshes]) => {
+	const materials = new Set();
+	$meshes.forEach((node) => {
+		materials.add(node.material);
+	});
+	//using throw to cancel update flow when unchanged
+	if (hasSameShallow$1(materialCache, materials)) {
+		throw new Error("materials unchanged");
+	} else {
+		materialCache = materials;
+	}
+	return materials;
+});
+
+const programs = derived([scene, meshes, materials], ([$scene, $meshes, $materials]) => {
+	let programs = Array.from($materials);
+
+	//this sublist mesh items require their own respective program (shader)
+	const specialMeshes = new Set(
+		$meshes.filter((node) => node.instances > 1 || node.animations?.some((a) => a.type === "vertex")),
+	);
+
+	programs = programs.reduce((acc, current) => {
+		const materialMeshes = $meshes.filter((node) => node.material === current);
+		const withoutSpecialMeshes = materialMeshes.filter((node, index) => {
+			if (!specialMeshes.has(node)) {
+				materialMeshes.splice(index, 1);
+				return true;
+			}
+			return false;
+		});
+		if (withoutSpecialMeshes.length > 0) {
+			acc.push({
+				material: current,
+				meshes: withoutSpecialMeshes,
+			});
+		}
+		const currentSpecialMeshes = materialMeshes.filter((node) => specialMeshes.has(node));
+		currentSpecialMeshes.forEach((mesh) => {
+			const requireTime = mesh.animations?.some((animation) => animation.requireTime);
+			acc.push({
+				requireTime,
+				material: current,
+				meshes: [mesh],
+			});
+		});
+
+		return acc;
+	}, []);
+	return programs.map((p) => ({
+		...p,
+		createProgram,
+		createShaders: createShaders(),
+		linkProgram,
+		validateProgram,
+		useProgram,
+	}));
 });
 
 const renderState = writable({
 	init: false,
 });
 
-const appContext = writable({});
+function isStore(obj) {
+	return obj != null && obj.subscribe != null;
+}
 
-/*
-Single program apps (one mesh/material) will not need to setup the program again
-but multi program apps require to setup the program before rendering if the last changes
-affect a program that is not the last one rendered. because the last one rendered is still mounted / in memory of the GPU
-this store will be used to know if we need to setup the program before rendering again
-todo : map existing compiled programs and decouple draw passes from program creation or setup
-*/
-const lastProgramRendered = writable(null);
+const appContext = writable({});
 
 const emptyApp = [];
 const webglapp = derived(
-	[renderer, programs],
-	([$renderer, $programs]) => {
+	[renderer, programs, scene],
+	([$renderer, $programs, $scene]) => {
 		// if renderer.enabled is false, the scene is being setup, we should not render
 		// if running is 4, we let the loop run completly as a way to batch scene updates
 		if (!$renderer.enabled || get_store_value(running) === 4) {
 			//log("webglapp not ready");
 			return emptyApp;
 		}
+		const lights = $scene.filter(isStore).filter(isLight);
+		console.log("$scene", $scene);
+		console.log("lights", lights);
 
-		const numPointLights = $renderer.lights.filter((l) => get_store_value(l).type === "point").length;
-		const pointLightShader = get_store_value($renderer.lights.find((l) => get_store_value(l).type === "point")).shader;
-		const requireTime = $programs.some((program) => program.mesh.animations?.some((animation) => animation.requireTime));
+		const pointLights = lights.filter((l) => get_store_value(l).type === "point");
+		const numPointLights = pointLights.length;
+		let pointLightShader;
+		if (numPointLights > 0) {
+			pointLightShader = get_store_value(pointLights[0]).shader;
+		}
+		//this is moved into program items as p.requireTime prop to handle inside the program loop
+		/*const requireTime = $programs.some((p) =>
+			p.meshes.some(m => m.animations
+				?.some((animation) => animation.requireTime)));*/
 
 		let rendererContext = {
 			canvas: $renderer.canvas,
@@ -2058,53 +2759,67 @@ const webglapp = derived(
 					}
 				: undefined),
 		};
-		const list = [];
+		const renderPipeline = [];
 
 		appContext.update((appContext) => ({
 			...appContext,
 			...rendererContext,
 		}));
 
-		!get_store_value(renderState).init && list.push(initRenderer(rendererContext, appContext));
+		// is it necessary ?
+		//const camera = $scene.find(isCamera);
+
+		!get_store_value(renderState).init && renderPipeline.push(initRenderer(rendererContext, appContext));
 		!get_store_value(renderState).init &&
-			list.push(
+			renderPipeline.push(
 				...$programs.reduce((acc, program) => {
-					lastProgramRendered.set(program);
-					const animationsSetups = program.mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || [];
 					return [
 						...acc,
 						program.createProgram(appContext),
-						program.createShaders(appContext, program.mesh),
-						program.endProgramSetup(appContext),
-						setupAmbientLight(appContext, $renderer.ambientLightColor),
-						...(program.mesh.material ? [setupMeshColor(appContext, program.mesh.material)] : []),
-						...(program.mesh.material?.diffuseMap ? [program.mesh.material?.diffuseMap.setupTexture(appContext)] : []),
-						...(program.mesh.material?.normalMap ? [program.mesh.material?.normalMap.setupTexture(appContext)] : []),
-						setupAttributes(appContext, program.mesh),
+						program.createShaders(appContext, program.material, program.meshes),
+						program.linkProgram(appContext),
+						program.validateProgram(appContext),
+						program.useProgram(appContext),
 						setupCamera(appContext, $renderer.camera),
-						...(program.mesh?.material?.specular ? [program.mesh.material.specular.setupSpecular(appContext)] : []),
-						setupTransformMatrix(
-							appContext,
-							program.mesh.instances == null ? get_store_value(program.mesh.transformMatrix) : program.mesh.matrices,
-							program.mesh.instances,
-						),
-						...animationsSetups,
-						setupNormalMatrix(appContext, program.mesh.instances),
-						// reduce by type to setup lights once per type
+						setupAmbientLight(appContext, $renderer.ambientLightColor),
 						...[
-							...$renderer.lights.reduce((acc, light) => {
+							...lights.reduce((acc, light) => {
+								console.log("light", light);
+
 								const lightValue = get_store_value(light);
 								acc.set(lightValue.type, lightValue.setupLights);
 								return acc;
 							}, new Map()),
-						].map(([_, setupLights]) => setupLights(appContext, $renderer.lights)),
-						...(requireTime ? [setupTime(appContext)] : []),
-						render(appContext, $programs[0].mesh.instances, $programs[0].mesh.drawMode),
+						].map(([_, setupLights]) => setupLights(appContext, lights)),
+						...(program.material?.specular ? [program.material.specular.setupSpecular(appContext)] : []),
+						...(program.material?.diffuseMap ? [program.mesh.material?.diffuseMap.setupTexture(appContext)] : []),
+						...(program.material?.normalMap ? [program.material?.normalMap.setupTexture(appContext)] : []),
+						...(program.requireTime ? [setupTime(appContext)] : []),
+						...program.meshes.reduce(
+							(acc, mesh) => [
+								...acc,
+
+								setupAttributes(appContext, mesh),
+								setupMeshColor(appContext, program.material),
+
+								setupTransformMatrix(
+									appContext,
+									mesh.instances == null ? get_store_value(mesh.transformMatrix) : mesh.matrices,
+									mesh.instances,
+								),
+								setupNormalMatrix(appContext, mesh.instances),
+								...(mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || []),
+								// reduce by type to setup lights once per type
+
+								render(appContext, mesh.instances, mesh.drawMode),
+							],
+							[],
+						),
 					];
 				}, []),
 			);
-		
-		return list;
+
+		return renderPipeline;
 	},
 	emptyApp,
 );
@@ -2149,95 +2864,6 @@ renderLoopStore.subscribe((value) => {
 	console.log("render loop store subscribed", value);
 });
 
-/**
- * 3 Dimensional Vector
- * @module vec3
- */
-
-/**
- * Creates a new, empty vec3
- *
- * @returns {vec3} a new 3D vector
- */
-
-function create() {
-  var out = new ARRAY_TYPE(3);
-
-  if (ARRAY_TYPE != Float32Array) {
-    out[0] = 0;
-    out[1] = 0;
-    out[2] = 0;
-  }
-
-  return out;
-}
-/**
- * Transforms the vec3 with a mat4.
- * 4th vector component is implicitly '1'
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the vector to transform
- * @param {ReadonlyMat4} m matrix to transform with
- * @returns {vec3} out
- */
-
-function transformMat4(out, a, m) {
-  var x = a[0],
-      y = a[1],
-      z = a[2];
-  var w = m[3] * x + m[7] * y + m[11] * z + m[15];
-  w = w || 1.0;
-  out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w;
-  out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
-  out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w;
-  return out;
-}
-/**
- * Perform some operation over an array of vec3s.
- *
- * @param {Array} a the array of vectors to iterate over
- * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
- * @param {Number} offset Number of elements to skip at the beginning of the array
- * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
- * @param {Function} fn Function to call for each vector in the array
- * @param {Object} [arg] additional argument to pass to fn
- * @returns {Array} a
- * @function
- */
-
-(function () {
-  var vec = create();
-  return function (a, stride, offset, count, fn, arg) {
-    var i, l;
-
-    if (!stride) {
-      stride = 3;
-    }
-
-    if (!offset) {
-      offset = 0;
-    }
-
-    if (count) {
-      l = Math.min(count * stride + offset, a.length);
-    } else {
-      l = a.length;
-    }
-
-    for (i = offset; i < l; i += stride) {
-      vec[0] = a[i];
-      vec[1] = a[i + 1];
-      vec[2] = a[i + 2];
-      fn(vec, vec, arg);
-      a[i] = vec[0];
-      a[i + 1] = vec[1];
-      a[i + 2] = vec[2];
-    }
-
-    return a;
-  };
-})();
-
 var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct LightParams {\r\n    vec3 irradiance;\r\n    vec3 direction;\r\n    vec3 color;\r\n    float distance;\r\n};\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nLightParams getDirectDiffuse(const in PointLight pointLight,const in vec3 vertexPosition, const in vec3 normal,const in PhysicalMaterial material, inout ReflectedLight reflectedLight) {\r\n    LightParams lightParams = LightParams(vec3(0.0f), vec3(0.0f), vec3(0.0f), 0.0f);\r\n    vec3 lVector = pointLight.position - vertexPosition;\r\n    lightParams.distance = length(lVector);\r\n    lightParams.direction = normalize(lVector);\r\n    float dotNL = saturate(dot(normal, lightParams.direction));\r\n    lightParams.color = pointLight.color;\r\n    lightParams.color *= getDistanceAttenuation(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);\r\n    lightParams.irradiance = dotNL * lightParams.color;\r\n    \r\n    reflectedLight.directDiffuse += lightParams.irradiance * BRDF_Lambert(material.diffuseColor);\r\n    return lightParams;\r\n}\r\n\r\nfloat calculatePointLightBrightness(float lightDistance, float cutoffDistance, float decayExponent) {\r\n    return getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    vec3 irradiance = vec3(0.0f);\r\n    vec3 direction = vec3(0.0f);\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        \r\n\r\n        LightParams lightParams = getDirectDiffuse(pointLight, vertex, normal, material, reflectedLight);\r\n        totalIrradiance += reflectedLight.directDiffuse;\r\n        ${specularIrradiance}\r\n    }\r\n` : ''\r\n}\r\n";
 
 function multiplyScalarVec3(a, scalar) {
@@ -2273,7 +2899,15 @@ const setPointLightsUBO = (newPointLightsUBO) => {
 const getPointLightsUBO = () => {
 	return pointLightsUBO;
 };
+/** @typedef {Object} WithGL
+ * @property {WebGL2RenderingContext} gl
+ */
 
+/**
+ *
+ * @param {WithGL} param0
+ * @param {*} lights
+ */
 function createPointLightBuffer({ gl }, lights) {
 	const pointLigths = lights.filter((l) => get_store_value(l).type === "point");
 	// Create a single Float32Array to hold all the point light data
@@ -2315,6 +2949,8 @@ function writeLightBuffer(buffer, light, offset) {
 
 function setupLights(context, lights) {
 	return function () {
+		console.log("setupLights");
+
 		context = get_store_value(context);
 		const gl = context.gl;
 		const program = context.program;
@@ -2343,70 +2979,6 @@ function updateOneLight(context, lights, light) {
 		writeLightBuffer(lightData, lightValue, offset);
 		gl.bindBuffer(gl.UNIFORM_BUFFER, pointLightsUBO);
 		gl.bufferSubData(gl.UNIFORM_BUFFER, offset * Float32Array.BYTES_PER_ELEMENT, lightData);
-	}
-}
-
-function createOrbitControls(canvas, camera) {
-	canvas.addEventListener("mousedown", onMouseDown);
-	canvas.addEventListener("wheel", onMouseWheel);
-	let startX;
-	let startY;
-	function onMouseDown(event) {
-		canvas.addEventListener("mousemove", onMouseMove);
-		startX = event.clientX;
-		startY = event.clientY;
-		canvas.addEventListener("mouseup", onMouseUp);
-	}
-	function getCoordinates(position, target) {
-		const radius = Math.sqrt(
-			Math.pow(position[0] - target[0], 2) + Math.pow(position[1] - target[1], 2) + Math.pow(position[2] - target[2], 2),
-		);
-
-		const polar = Math.acos(Math.max(-1, Math.min(1, (position[1] - target[1]) / radius)));
-		const azimuth = Math.atan2(position[0] - target[0], position[2] - target[2]);
-		return {
-			radius,
-			polar,
-			azimuth,
-		};
-	}
-	function onMouseMove(event) {
-		const x = event.clientX - startX;
-		const y = event.clientY - startY;
-		const cameraValue = camera.get();
-		const { position, target, fov } = cameraValue;
-		const { radius, polar, azimuth } = getCoordinates(position, target);
-
-		const newPosition = getPositionFromPolar(radius, polar - y / 100, azimuth - x / 100);
-		newPosition[0] = newPosition[0] + target[0];
-		newPosition[1] = newPosition[1] + target[1];
-		newPosition[2] = newPosition[2] + target[2];
-
-		camera.set(newPosition, target, fov);
-		startX = event.clientX;
-		startY = event.clientY;
-	}
-	function onMouseWheel(event) {
-		const cameraValue = camera.get();
-		const { position, target, fov } = cameraValue;
-		const { radius, polar, azimuth } = getCoordinates(position, target);
-		console.log("radius", radius);
-
-		const newPosition = getPositionFromPolar(radius + event.deltaY * 0.001 * radius, polar, azimuth);
-		newPosition[0] = newPosition[0] + target[0];
-		newPosition[1] = newPosition[1] + target[1];
-		newPosition[2] = newPosition[2] + target[2];
-
-		camera.set(newPosition, target, fov);
-	}
-
-	function getPositionFromPolar(radius, polar, azimuth) {
-		const sinPhiRadius = Math.sin(polar) * radius;
-		return [sinPhiRadius * Math.sin(azimuth), Math.cos(polar) * radius, sinPhiRadius * Math.cos(azimuth)];
-	}
-	function onMouseUp(event) {
-		canvas.removeEventListener("mousemove", onMouseMove);
-		canvas.removeEventListener("mouseup", onMouseUp);
 	}
 }
 
@@ -2472,586 +3044,7 @@ function createCube() {
 	};
 }
 
-/**
- * @typedef {Object} GLTFFile
- * @property {Array<GLTFAsset>} asset
- * @property {Number} scene
- * @property {Array<GLTFScene>} scenes
- * @property {Array<GLTFNode>} nodes
- * @property {Array<GLTFMesh>} meshes
- * @property {Array<GLTFAccessor>} accessors
- * @property {Array<GLTFBufferView>} bufferViews
- * @property {Array<GLTFBuffer>} buffers
- * @property {Array<GLTFCamera>} cameras
- * @property {Array<GLTFMaterial>} materials
- */
-
-/**
- * @typedef {Object} GLTFAsset
- * @property {String} version
- * @property {String} generator
- * @property {String} minVersion
- * @property {String} extensions
- * @property {String} extras
- * @property {String} profile
- * @property {String} extensionsUsed
- */
-
-/**
- * @typedef {Object} GLTFScene
- * @property {Array<Number>} nodes
- */
-
-/**
- * @typedef {Object} GLTFMeshNode
- * @property {Number} mesh
- */
-
-/**
- * @typedef {Object} GLTFCameraNode
- * @property {Number} camera
- */
-
-/**
- * @typedef {Object} GLTFGroupNode
- * @property {Array<Number>} children
- * @property {mat4} matrix
- */
-
-/**
- * @typedef {Object} GLTFBaseNode
- * @property {string} name
- * @property {vec3} translation
- * @property {vec4} rotation
- * @property {vec3} scale
- */
-
-/**
- * @typedef {GLTFBaseNode & (GLTFMeshNode|GLTFGroupNode|GLTFCameraNode)} GLTFNode
- */
-
-/*
-fov,
-near,
-far,
-position,
-target,
-up,
-*/
-
-/**
- * @typedef {Object} SvelteGLCamera
- * @property {Number} fov
- * @property {Number} near
- * @property {Number} far
- * @property {vec3} position
- * @property {vec3} target
- * @property {vec3} up
- */
-
-/**
- * @typedef {Object} GLTFMesh
- * @property {Array<GLTFPrimitive>} primitives
- * @property {String} name
- */
-/**
- * @typedef {Object} GLTFPrimitive
- * @property {GLTFAttribute} attributes
- * @property {Number} indices
- * @property {Number} material
- * @property {Number} mode
- */
-/**
- * @typedef {Object} GLTFAttribute
- * @property {Number} POSITION
- * @property {Number} NORMAL
- * @property {Number} TEXCOORD_0
- * @property {Number} TEXCOORD_1
- */
-/**
- * @typedef {keyof typeof WEBGL_COMPONENT_TYPES} WEBGLComponentType
- */
-/**
- * @typedef {Object} GLTFAccessor
- * @property {Number} bufferView
- * @property {Number} byteOffset
- * @property {WEBGLComponentType} componentType
- * @property {Number} count
- * @property {
- * 		"VEC2"|
- * 		"VEC3"|
- * 		"VEC4"|
- * 		"MAT2"|
- * 		"MAT3"|
- * 		"MAT4"|
- * 		"SCALAR"
- * } type
- * @property {Array<Number>} min
- * @property {Array<Number>} max
- * @property {String} name
- * @property {String} normalized
- */
-/**
- * @typedef {Object} GLTFBufferView
- * @property {Number} buffer
- * @property {Number} byteOffset
- * @property {Number} byteLength
- * @property {Number} byteStride
- * @property {String} target
- */
-/**
- * @typedef {Object} GLTFBuffer
- * @property {String} uri
- * @property {Number} byteLength
- */
-
-/**
- * @typedef {Object} GLTFCamera
- * @property {String} type
- * @property {String} name
- * @property {GLTFCameraPerspective} perspective
- */
-
-/**
- * @typedef {Object} GLTFCameraPerspective
- * @property {Number} aspectRatio
- * @property {Number} yfov
- * @property {Number} znear
- * @property {Number} zfar
- */
-/**
- * @typedef {Object} GLTFMaterial
- * @property {GLTFPBRMetallicRoughness} pbrMetallicRoughness
- * @property {String} name
- * @property {GLTFTexture} normalTexture
- * @property {GLTFTexture} baseColorTexture
- * @property {GLTFTexture} metallicRoughnessTexture
- * @property {GLTFTexture} specularGlossinessTexture
- * @property {GLTFTexture} diffuseTexture
- * @property {GLTFTexture} ambientTexture
- */
-/**
- * @typedef {Object} GLTFPBRMetallicRoughness
- * @property {vec4} baseColorFactor
- * @property {Number} metallicFactor
- * @property {Number} roughnessFactor
- */
-/**
- * @typedef {Object} GLTFTexture
- * @property {Number} index
- * @property {Number} texCoord
- * @property {String} name
- */
-
-const WEBGL_COMPONENT_TYPES = {
-	5120: Int8Array,
-	5121: Uint8Array,
-	5122: Int16Array,
-	5123: Uint16Array,
-	5125: Uint32Array,
-	5126: Float32Array,
-};
-const WEBGL_TYPE_SIZES = {
-	MAT2: 4,
-	MAT3: 9,
-	MAT4: 16,
-	SCALAR: 1,
-	VEC2: 2,
-	VEC3: 3,
-	VEC4: 4,
-};
-
-
-
-async function loadGLTFFile(url,binUrlPreload = undefined) {
-	try {
-		let binPreloadMap = new Map();
-		if(binUrlPreload){
-			binPreloadMap.set(binUrlPreload,loadBinary(binUrlPreload));
-		}
-		
-		const response = await fetch(url);
-		if (!response.ok) {
-			throw new Error(`Failed to fetch GLB file: ${response.statusText}`);
-		}
-		/** @type {GLTFFile} **/
-		const content = await response.json();
-		return await parseGLTF(content, url,binPreloadMap);
-	} catch (error) {
-		console.error("Error loading GLTF file:", error);
-	}
-}
-
-async function loadBinary(url){
-	let bin;
-	if(url){
-		bin = await fetch(url);
-		if (!bin.ok) {
-			throw new Error(`Failed to fetch GLTF Binary file: ${bin.statusText}`);
-		}
-		return await bin.arrayBuffer();
-	}
-}
-/**
- *
- * @param {GLTFFile} content
- * @param {String} url
- * @returns
- */
-async function parseGLTF(content, url,binPreloadMap) {
-	const baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
-	const { buffers, bufferViews, accessors, scenes, nodes, meshes, cameras, materials, scene } = content;
-
-	/**
-	 * buffers can be either :
-	 *  -base64 data uri
-	 * 	-a path to a :
-	 *  	1/uncompressed binary file
-	 * 		2/Draco compressed file
-	 * for now Draco is not supported, it requires a huge webassembly module
-	 */
-	const buffersData = await Promise.all(
-		buffers.map(async (buffer) => {
-			const { uri } = buffer;
-			const filePath = baseUrl+uri;
-			if(binPreloadMap.has(filePath)){
-				return binPreloadMap.get(filePath);
-			}
-			return loadBinary(filePath);
-		}),
-	);
-
-	/**
-	 * bufferViews are used to describe a subset of a buffer
-	 * they are referenced by accessors
-	 */
-	const dataViews = await Promise.all(
-		bufferViews.map(async (bufferView) => {
-			const { buffer, byteOffset, byteLength, byteStride } = bufferView;
-			const bufferData = buffersData[buffer];
-			return {
-				dataView: bufferData.slice(byteOffset, byteOffset + byteLength),
-				byteStride,
-			};
-		}),
-	);
-
-	/**
-	 * Buffer cache is used to store buffers that are interleaved
-	 */
-	const bufferCache = {};
-	function getBufferCache(dataView, offset) {
-		return bufferCache[dataView] && bufferCache[dataView][offset];
-	}
-	function setBufferCache(buffer, dataView, offset) {
-		bufferCache[dataView] = bufferCache[dataView] || {};
-		bufferCache[dataView][offset] = buffer;
-	}
-	function hasBufferCache(dataView, offset) {
-		return bufferCache[dataView] && bufferCache[dataView][offset] != null;
-	}
-
-	/**
-	 * Accessors are used to describe how to read data from a bufferView
-	 * They are read by using a typed array constructor.
-	 * Note that each accessor uses a dataview but not necesarily all of it,
-	 * the accessor can use a subset of the dataview
-	 */
-	const accessorsData = accessors.map((accessor) => {
-		const { bufferView, byteOffset } = accessor;
-
-		const { dataView, byteStride } = dataViews[bufferView];
-		const { type, componentType, count, min, max } = accessor;
-
-		const itemSize = WEBGL_TYPE_SIZES[type];
-		const TypedArray = WEBGL_COMPONENT_TYPES[componentType];
-		const elementBytes = TypedArray.BYTES_PER_ELEMENT;
-		const itemBytes = elementBytes * itemSize;
-		let offset;
-		let length;
-		let interleaved = false;
-		if (byteStride != null && byteStride !== itemBytes) {
-			const ibSlice = Math.floor(byteOffset / byteStride);
-			offset = ibSlice * byteStride;
-			length = (count * byteStride) / elementBytes;
-			interleaved = true;
-		} else {
-			offset = byteOffset;
-			length = count * itemSize;
-		}
-
-		let data;
-		if (interleaved && hasBufferCache(dataView, offset)) {
-			data = getBufferCache(dataView, offset);
-		} else {
-			data = new TypedArray(dataView, offset, length);
-			if (interleaved) {
-				setBufferCache(data, dataView, offset);
-			}
-		}
-
-		return {
-			type,
-			componentType,
-			count,
-			min,
-			max,
-			data,
-			interleaved,
-			...(interleaved ? { byteOffset, byteStride } : {}),
-		};
-	});
-
-	const meshesData = meshes.map((mesh) => parseMesh(mesh));
-
-	let nodesData = nodes.map((node) => {
-		if (node.mesh != null) {
-			return {
-				...meshesData[node.mesh],
-				matrix: createMatrixFromGLTFTransform(node),
-			};
-		} else if (node.camera != null) {
-			return parseCameraNode(node);
-		} else if (node.children != null) {
-			return node;
-		}
-	});
-
-	/**
-	 * requires 2 passes because groups reference other nodes that are not yet parsed
-	 */
-	nodesData = nodesData.map((node) => {
-		if (node.children != null) {
-			return parseGroupNode(node);
-		} else {
-			return node;
-		}
-	});
-
-	// the file can contain multiple scenes but the scene prop indicates the main scene index
-	const mainScene = scenes[scene];
-
-	let { nodes: sceneNodes } = mainScene;
-	let sceneNodesData = sceneNodes.map((nodeID) => nodesData[nodeID]);
-
-	sceneNodesData.forEach((node) => {
-		recurseNodes(node);
-	});
-
-	const lights = {};
-
-	return {
-		scene: sceneNodesData,
-		materials,
-		lights,
-		cameras,
-	};
-
-	/**
-	 *
-	 * @param {GLTFMeshNode} nodeData
-	 * @returns
-	 */
-	function parseMesh(meshData) {
-		const { primitives } = meshData;
-		const primitivesData = primitives.map((primitive) => {
-			const { attributes, indices } = primitive;
-			const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
-			const positionAccessor = accessorsData[POSITION];
-			const normalAccessor = accessorsData[NORMAL];
-			const uvAccessor = accessorsData[TEXCOORD_0];
-			const indexAccessor = accessorsData[indices];
-
-			return {
-				position: positionAccessor,
-				normal: normalAccessor,
-				indices: indexAccessor,
-				uv: uvAccessor,
-				material: primitive.material,
-				drawMode: drawModes[primitive.mode],
-			};
-		});
-		return primitivesData[0];
-	}
-
-	function parseCameraNode(nodeData) {
-		if (
-			nodeData.matrix == null &&
-			(nodeData.scale != null || nodeData.translation != null || nodeData.rotation != null)
-		) {
-			nodeData.matrix = createMatrixFromGLTFTransform(nodeData);
-		} else if (nodeData.matrix == null) {
-			nodeData.matrix = identity(new Float32Array(16));
-		}
-		return {
-			...nodeData,
-			...cameras[nodeData.camera],
-		};
-	}
-
-	function recurseNodes(nodeData, parent = null) {
-		const { children } = nodeData;
-		if (parent != null) nodeData.parent = parent;
-		if (children != null) {
-			return children.map((child) => {
-				recurseNodes(child, nodeData);
-			});
-		}
-	}
-
-	function parseGroupNode(nodeData) {
-		const { children, matrix, scale, translation, rotation } = nodeData;
-		let nodeMatrix;
-
-		if (matrix == null && (scale != null || translation != null || rotation != null)) {
-			nodeMatrix = createMatrixFromGLTFTransform(nodeData);
-		} else if (matrix != null) {
-			nodeMatrix = matrix;
-		} else {
-			nodeMatrix = identity(new Float32Array(16));
-		}
-		return {
-			children: children.map((child) => {
-				if (nodesData[child].children != null) {
-					return parseGroupNode(nodesData[child]);
-				} else {
-					return nodesData[child];
-				}
-			}),
-			matrix: nodeMatrix,
-		};
-	}
-}
-
-function createMeshFromGLTF(gltfScene, gltfObject) {
-	const mesh = gltfObject;
-	const gltfMaterial = gltfScene.materials[mesh.material];
-	const material = {};
-	if (gltfMaterial.pbrMetallicRoughness) {
-		const { baseColorFactor, metallicFactor, roughnessFactor } = gltfMaterial.pbrMetallicRoughness;
-		material.diffuse = baseColorFactor.slice(0, 3);
-	}
-	return {
-		attributes: {
-			positions: mesh.position.interleaved
-				? {
-						data: mesh.position.data,
-						interleaved: mesh.position.interleaved,
-						byteOffset: mesh.position.byteOffset,
-						byteStride: mesh.position.byteStride,
-					}
-				: mesh.position.data,
-			normals: mesh.normal.interleaved
-				? {
-						data: mesh.normal.data,
-						interleaved: mesh.normal.interleaved,
-						byteOffset: mesh.normal.byteOffset,
-						byteStride: mesh.normal.byteStride,
-					}
-				: mesh.normal.data,
-			elements: mesh.indices.data,
-		},
-		drawMode: mesh.drawMode,
-		material,
-		transformMatrix: mesh.matrix,
-	};
-}
-/**
- *
- * @param {GLTFCamera & GLTFBaseNode & GLTFCameraNode} gltfObject
- * @returns {SvelteGLCamera}
- */
-/*
-Example of a camera object in a gltf file
-{
-	camera: 0,
-	name: "Camera",
-	perspective:{
-		"znear": 0.10000000149011612,
-		"zfar": 1000,
-		"yfov": 0.39959652046304894,
-		"aspectRatio": 1.7777777777777777
-	},
-	type: "perspective",
-	rotation: [0, 0, 0, 1],
-	translation: [0, 0, 0],
-}
-*/
-/*
-Example of a camera object in svelte-gl
-{
-	fov: 0.39959652046304894,
-	near: 0.10000000149011612,
-	far: 1000,
-	position: [0, 0, 0],
-	target: [0, 0, 0],
-	up: [0, 1, 0],
-}
-*/
-
-function createCameraFromGLTF(gltfObject) {
-	const { perspective, translation /*, rotation*/ } = gltfObject;
-	/*const matrix = createMatrixFromGLTFTransform(gltfObject);
-	const dist = distance([0, 0, 0], translation);*/
-	/*
-	const target = [0, 0, -1];
-	transformQuat(target, target, rotation);
-	scale(target, target, dist);
-	add(target, target, translation);
-	*/
-	/*
-	position = [0, 0, -1],
-	target = [0, 0, 0],
-	fov = 80,
-	near = 0.1,
-	far = 1000,
-	up = [0, 1, 0],
-	matrix = null,
-	*/
-	return {
-		position: translation,
-		target: [0, 0, 0],
-		fov: (perspective.yfov / Math.PI) * 180,
-		near: perspective.znear,
-		far: perspective.zfar,
-		up: [0, 1, 0], // Assuming the up vector is always [0, 1, 0]
-	};
-}
-
-/**
- *
- * @param {Object} node
- * @param {Array} parentMatrix
- * @param {Object} target
- */
-function getAbsoluteNodeMatrix(node) {
-	const matrices = [];
-	let currentNode = node;
-
-	while (currentNode.parent != null) {
-		matrices.unshift(currentNode.matrix);
-		currentNode = currentNode.parent;
-	}
-	return matrices.reduce((acc, matrix) => multiply(acc, acc, matrix), identity(new Float32Array(16)));
-}
-
-function createMatrixFromGLTFTransform(object) {
-	const { translation, rotation, scale } = object;
-	const matrix = identity(new Float32Array(16));
-	fromRotationTranslationScale(matrix, rotation || [0, 0, 0, 0], translation || [0, 0, 0], scale || [1, 1, 1]);
-	return matrix;
-}
-
-function traverseScene(scene, callback) {
-	scene.forEach((node) => {
-		callback(node);
-		if (node.children != null) {
-			traverseScene(node.children, callback);
-		}
-	});
-}
-
-/* src\main-test.svelte generated by Svelte v4.2.18 */
+/* src\main-refactor.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
 	let canvas_1;
@@ -3078,104 +3071,32 @@ function create_fragment(ctx) {
 }
 
 function animate() {
-	
-} /*const rotation = 0.001 * Math.PI;
-for (let i = 0; i < numInstances; i++) {
-	const tmp = get(mesh1.matrices[i]);
-	rotateY(tmp, tmp, rotation / 2);
-	rotateX(tmp, tmp, rotation);
-	rotateZ(tmp, tmp, rotation / 3);
-	mesh1.matrices[i].set(tmp);
-}*/ /*
-const lightX = Math.sin(performance.now() / 2000) * 0.5;
-const lightY = Math.cos(performance.now() / 2000) * 0.5;
-const r = Math.sin(performance.now() / 6000) * 0.5 + 0.5;
-const g = Math.cos(performance.now() / 5000) * 0.5 + 0.5;
-const b = Math.sin(performance.now() / 4000) * 0.5 + 0.5;
-light1.set({
-	position: [lightX, lightY, -0.4],
-	color: [r, g, b],
-});*/
+	console.log("animate");
+}
 
 function instance($$self, $$props, $$invalidate) {
+	let $renderer;
+	let $scene;
+	component_subscribe($$self, renderer, $$value => $$invalidate(2, $renderer = $$value));
+	component_subscribe($$self, scene, $$value => $$invalidate(3, $scene = $$value));
 	let canvas;
 
 	onMount(async () => {
-		const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf", "models/v2/md-blend6-mdlvw.bin");
-		let meshObject;
-		let camera;
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				canvas,
+				backgroundColor: createBackgroundColor(skyblue),
+				camera: createCamera([0, 5, -5], [0, 0, 0], 75),
+				ambientLightColor: createAmbientLight(0xffffff, 0.5)
+			},
+			$renderer
+		);
 
-		traverseScene(file.scene, o => {
-			if (o.position != null) {
-				meshObject = o;
-			} else if (o.camera != null) {
-				camera = o;
-			}
-		});
-
-		const cameraAbsoluteMatrix = getAbsoluteNodeMatrix(camera);
-		const cameraFromFile = createCameraFromGLTF(camera);
-		transformMat4(cameraFromFile.position, cameraFromFile.position, cameraAbsoluteMatrix);
-		const meshAbsoluteMatrix = getAbsoluteNodeMatrix(meshObject);
-		scale(meshAbsoluteMatrix, meshAbsoluteMatrix, [3, 3, 3]);
-		meshObject.matrix = meshAbsoluteMatrix;
-		const loadedMesh = createMeshFromGLTF(file, meshObject);
-		renderer.setCanvas(canvas);
-		renderer.setBackgroundColor(skyblue);
-		renderer.setAmbientLight(0xffffff, 0.5);
-
-		//camera = renderer.setCamera(...Object.values(cameraFromFile));
-		camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75);
-
-		/*
-const diffuseMap = await createTexture({
-	url: "checker-map_tho.png",
-	//normalScale: [1, 1],
-	type: "diffuse",
-	coordinateSpace: "circular",
-});
-camera = renderer.setCamera([0, 5, -5], [0, 0, 0], 75);
-const sphereGeometry = createPolyhedron(1, 10, createSmoothShadedNormals);
-sphereGeometry.uvs = generateUVs(sphereGeometry);
-const planeGeometry = createPlane(3, 3, 100, 100);
-const coneGeometry = createCone(3, 3, 50);
-const initialMatrix = identity(new Float32Array(16));
-rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));*/
-		//const cubeMesh = createPolyhedron(1.5, 7, createSmoothShadedNormals);
 		const cubeMesh = createCube();
 
-		renderer.addMesh({
-			...cubeMesh,
-			matrix: identity(new Float32Array(16)),
-			material: { diffuse: [1, 0.5, 0.5] }
-		});
-
-		renderer.addMesh(loadedMesh);
-
-		/*renderer.addAnimation(
-	mesh1,
-	createPulsatingScaleAnimation({
-		minScale: 1,
-		maxScale: 1.5,
-		frequency: 0.002,
-	}),
-);*/
-		/*renderer.addAnimation(
-	mesh1,
-	createNoiseDistortionAnimation({
-		frequency: 2,
-		speed: 1.5,
-		amplitude: 0.5,
-	}),
-);*/
-		/*renderer.addAnimation(
-	mesh1,
-	createWobblyAnimation({
-		frequency: 0.004,
-		amplitude: 5,
-	}),
-);*/
-		renderer.addLight(createPointLight({
+		const light = createLightStore(createPointLight({
 			position: [-2, 3, 0],
 			color: [1, 1, 1],
 			intensity: 20,
@@ -3183,19 +3104,29 @@ rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));*/
 			decayExponent: 2
 		}));
 
-		/*renderer.addLight(
-	createPointLight({
-		position: [0, 5, 5],
-		color: [1, 1, 1],
-		intensity: 4,
-		cutoffDistance: 0,
-		decayExponent: 2,
-	}),
-);*/
-		renderer.setLoop(animate);
+		set_store_value(
+			scene,
+			$scene = [
+				...$scene,
+				{
+					...cubeMesh,
+					matrix: identity(new Float32Array(16)),
+					material: { diffuse: [1, 0.5, 0.5] }
+				},
+				light
+			],
+			$scene
+		);
 
-		renderer.start();
-		createOrbitControls(canvas, camera);
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				loop: animate,
+				enabled: true
+			},
+			$renderer
+		);
 	});
 
 	function canvas_1_binding($$value) {
@@ -3208,11 +3139,11 @@ rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));*/
 	return [canvas, canvas_1_binding];
 }
 
-class Main_test extends SvelteComponent {
+class Main_refactor extends SvelteComponent {
 	constructor(options) {
 		super();
 		init(this, options, instance, create_fragment, safe_not_equal, {});
 	}
 }
 
-export { Main_test as default };
+export { Main_refactor as default };

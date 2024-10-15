@@ -35,9 +35,9 @@ export const getPointLightsUBO = () => {
  */
 
 /**
- * 
- * @param {WithGL} param0 
- * @param {*} lights 
+ *
+ * @param {WithGL} param0
+ * @param {*} lights
  */
 export function createPointLightBuffer({ gl }, lights) {
 	const pointLigths = lights.filter((l) => get(l).type === "point");
@@ -80,6 +80,8 @@ function writeLightBuffer(buffer, light, offset) {
 
 export function setupLights(context, lights) {
 	return function () {
+		console.log("setupLights");
+
 		context = get(context);
 		const gl = context.gl;
 		const program = context.program;

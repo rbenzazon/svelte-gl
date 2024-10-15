@@ -1,4 +1,4 @@
-import {drawModes} from "../store/webgl.js";
+import { drawModes } from "../store/webgl.js";
 
 import { fromRotationTranslationScale, getScaling, identity, multiply } from "gl-matrix/esm/mat4.js";
 import { transformQuat, add, scale, distance } from "gl-matrix/esm/vec3.js";
@@ -192,30 +192,28 @@ const WEBGL_TYPE_SIZES = {
 	VEC4: 4,
 };
 
-
-
-export async function loadGLTFFile(url,binUrlPreload = undefined) {
+export async function loadGLTFFile(url, binUrlPreload = undefined) {
 	try {
 		let binPreloadMap = new Map();
-		if(binUrlPreload){
-			binPreloadMap.set(binUrlPreload,loadBinary(binUrlPreload));
+		if (binUrlPreload) {
+			binPreloadMap.set(binUrlPreload, loadBinary(binUrlPreload));
 		}
-		
+
 		const response = await fetch(url);
 		if (!response.ok) {
 			throw new Error(`Failed to fetch GLB file: ${response.statusText}`);
 		}
 		/** @type {GLTFFile} **/
 		const content = await response.json();
-		return await parseGLTF(content, url,binPreloadMap);
+		return await parseGLTF(content, url, binPreloadMap);
 	} catch (error) {
 		console.error("Error loading GLTF file:", error);
 	}
 }
 
-async function loadBinary(url){
-	let bin
-	if(url){
+async function loadBinary(url) {
+	let bin;
+	if (url) {
 		bin = await fetch(url);
 		if (!bin.ok) {
 			throw new Error(`Failed to fetch GLTF Binary file: ${bin.statusText}`);
@@ -229,7 +227,7 @@ async function loadBinary(url){
  * @param {String} url
  * @returns
  */
-async function parseGLTF(content, url,binPreloadMap) {
+async function parseGLTF(content, url, binPreloadMap) {
 	const baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
 	const { buffers, bufferViews, accessors, scenes, nodes, meshes, cameras, materials, scene } = content;
 
@@ -244,8 +242,8 @@ async function parseGLTF(content, url,binPreloadMap) {
 	const buffersData = await Promise.all(
 		buffers.map(async (buffer) => {
 			const { uri } = buffer;
-			const filePath = baseUrl+uri;
-			if(binPreloadMap.has(filePath)){
+			const filePath = baseUrl + uri;
+			if (binPreloadMap.has(filePath)) {
 				return binPreloadMap.get(filePath);
 			}
 			return loadBinary(filePath);

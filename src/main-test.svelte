@@ -21,7 +21,7 @@ let light1;
 let mesh1;
 let camera;
 onMount(async () => {
-	const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf","models/v2/md-blend6-mdlvw.bin");
+	const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf", "models/v2/md-blend6-mdlvw.bin");
 	let meshObject;
 	let camera;
 	traverseScene(file.scene, (o) => {
@@ -59,10 +59,9 @@ onMount(async () => {
 	const initialMatrix = identity(new Float32Array(16));
 	rotateX(initialMatrix, initialMatrix, -(Math.PI / 2));*/
 
-	
 	//const cubeMesh = createPolyhedron(1.5, 7, createSmoothShadedNormals);
 	const cubeMesh = createCube();
-	
+
 	const cube = renderer.addMesh({
 		...cubeMesh,
 		matrix: identity(new Float32Array(16)),

@@ -1,4 +1,4 @@
-import {drawModes} from "../store/webgl.js";
+import { drawModes } from "../store/webgl.js";
 export function createPlane(
 	width = 1,
 	depth = 1,

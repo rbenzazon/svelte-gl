@@ -376,7 +376,7 @@ const webglapp = derived(
 					];
 				}, []),
 			);
-		
+
 		return list;
 	},
 	emptyApp,

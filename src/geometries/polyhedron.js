@@ -1,7 +1,7 @@
 import { lerp as lerpVec3, normalize as normalizeVec3 } from "gl-matrix/esm/vec3.js";
 import { add as addVec2, divide as divideVec2 } from "gl-matrix/esm/vec2.js";
 import { normalizeNormals, createVec3, multiplyScalarVec3 } from "./common";
-import {drawModes} from "../store/webgl.js";
+import { drawModes } from "../store/webgl.js";
 
 /**
  * @typedef {{

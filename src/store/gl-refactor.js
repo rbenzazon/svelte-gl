@@ -164,7 +164,7 @@ export function endProgramSetup(context) {
 }
 
 export function createShaders() {
-	return function (context, mesh) {
+	return function (context, material, meshes) {
 		return function () {
 			context = get(context);
 			const gl = context.gl;
@@ -175,8 +175,9 @@ export function createShaders() {
 
 			let vertexAnimationsDeclaration = "";
 			let vertexAnimationsModifier = "";
+			const [mesh] = meshes;
 			const vertexAnimationComponents = mesh.animations?.filter(({ type }) => type === "vertex");
-			if (vertexAnimationComponents.length > 0) {
+			if (vertexAnimationComponents?.length > 0) {
 				vertexAnimationsDeclaration += vertexAnimationComponents.reduce((acc, component) => {
 					return acc + component.shader({ declaration: true });
 				}, "");
@@ -204,33 +205,33 @@ export function createShaders() {
 			}
 			let specularIrradiance = "";
 			let specularDeclaration = "";
-			if (mesh.material?.specular) {
-				specularDeclaration = mesh.material.specular.shader({ declaration: true });
-				specularIrradiance = mesh.material.specular.shader({ irradiance: true });
+			if (material.specular) {
+				specularDeclaration = material.specular.shader({ declaration: true });
+				specularIrradiance = material.specular.shader({ irradiance: true });
 			}
 			let diffuseMapDeclaration = "";
 			let diffuseMapSample = "";
-			if (mesh.material?.diffuseMap) {
-				diffuseMapDeclaration = mesh.material.diffuseMap.shader({
+			if (material.diffuseMap) {
+				diffuseMapDeclaration = material.diffuseMap.shader({
 					declaration: true,
-					mapType: mesh.material.diffuseMap.type,
+					mapType: material.diffuseMap.type,
 				});
-				diffuseMapSample = mesh.material.diffuseMap.shader({
+				diffuseMapSample = material.diffuseMap.shader({
 					diffuseMapSample: true,
-					mapType: mesh.material.diffuseMap.type,
-					coordinateSpace: mesh.material.diffuseMap.coordinateSpace,
+					mapType: material.diffuseMap.type,
+					coordinateSpace: material.diffuseMap.coordinateSpace,
 				});
 			}
 			let normalMapDeclaration = "";
 			let normalMapSample = "";
-			if (mesh.material?.normalMap) {
-				normalMapDeclaration = mesh.material.normalMap.shader({
+			if (material.normalMap) {
+				normalMapDeclaration = material.normalMap.shader({
 					declaration: true,
-					mapType: mesh.material.normalMap.type,
+					mapType: material.normalMap.type,
 				});
-				normalMapSample = mesh.material.normalMap.shader({
+				normalMapSample = material.normalMap.shader({
 					normalMapSample: true,
-					mapType: mesh.material.normalMap.type,
+					mapType: material.normalMap.type,
 				});
 			}
 			const fragmentShaderSource = templateLiteralRenderer(defaultFragment, {
@@ -254,9 +255,9 @@ export function createShaders() {
 					...(context.toneMappings?.length > 0
 						? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
 						: []),
-					...(mesh.material?.specular ? [specularDeclaration] : []),
-					...(mesh.material?.diffuseMap ? [diffuseMapDeclaration] : []),
-					...(mesh.material?.normalMap ? [normalMapDeclaration] : []),
+					...(material.specular ? [specularDeclaration] : []),
+					...(material.diffuseMap ? [diffuseMapDeclaration] : []),
+					...(material.normalMap ? [normalMapDeclaration] : []),
 				].join("\n"),
 				diffuseMapSample,
 				normalMapSample,
