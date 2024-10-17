@@ -2027,6 +2027,7 @@ function initRenderer(rendererContext, appContext) {
 		const canvasRect = rendererContext.canvas.getBoundingClientRect();
 		rendererContext.canvas.width = canvasRect.width;
 		rendererContext.canvas.height = canvasRect.height;
+		/** @type {WebGL2RenderingContext} */
 		const gl = (rendererContext.gl = rendererContext.canvas.getContext("webgl2"));
 		appContext.update((appContext) => ({
 			...appContext,
@@ -2064,7 +2065,7 @@ function render(context, instances, drawMode) {
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		contextValue.loop && contextValue.loop();
 		// when using vertex array objects, you must bind it before rendering
-		gl.bindVertexArray(contextValue.vao);
+		//gl.bindVertexArray(contextValue.vao);
 		console.log("drawMode", drawMode);
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, contextValue.attributeLength, instances);
@@ -2082,7 +2083,16 @@ function render(context, instances, drawMode) {
 	};
 }
 
-function createProgram(context) {
+function bindVAO(context, mesh) {
+	return function () {
+		const contextValue = get_store_value(context);
+		const gl = contextValue.gl;
+		contextValue.vao;
+		gl.bindVertexArray(contextValue.vao);
+	};
+}
+
+function createProgram(context, programStore) {
 	return function createProgram() {
 		context = get_store_value(context);
 		if (context.program != null) {
@@ -2091,6 +2101,7 @@ function createProgram(context) {
 		const gl = context.gl;
 		const program = gl.createProgram();
 		context.program = program;
+		context.programMap.set(programStore, program);
 	};
 }
 
@@ -2164,7 +2175,7 @@ function createShaders() {
 				declarations: vertexDeclarations,
 				positionModifier: vertexPositionModifiers,
 			});
-			//console.log(vertexShaderSource);
+			console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
@@ -2242,7 +2253,7 @@ function createShaders() {
 			});
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
-			//console.log(fragmentShaderSource);
+			console.log(fragmentShaderSource);
 			gl.compileShader(fragmentShader);
 			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
 				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
@@ -2469,6 +2480,7 @@ function setupAttributes(context, mesh) {
 
 		const { positions, normals, elements, uvs } = mesh.attributes;
 		const vao = (context.vao = gl.createVertexArray());
+		context.meshMap.set(mesh, vao);
 		gl.bindVertexArray(vao);
 		const {
 			data: positionsData,
@@ -2545,6 +2557,21 @@ function hasSameShallow(a, b) {
 	}
 	return true;
 }
+function optionalPropsDeepEqual(a, b) {
+	if (a == null || b == null) {
+		return false;
+	}
+	for (let key in a) {
+		if (Array.isArray(a[key])) {
+			if (!hasSameShallow(a[key], b[key])) {
+				return false;
+			}
+		} else if (a[key] !== b[key]) {
+			return false;
+		}
+	}
+	return true;
+}
 
 function isLight(sceneNode) {
 	sceneNode = get_store_value(sceneNode);
@@ -2556,69 +2583,113 @@ function isLight(sceneNode) {
 }
 
 function createRenderer() {
-	const { subscribe, set, update } = writable({
+	const initialValue = {
 		//ref
 		canvas: null,
 		//ref
 		loop: null,
 		//value
-		backgroundColor: [2.55, 2.55, 2.55, 1],
+		backgroundColor: 0xffffff,
 		//ref
-		camera: null,
+		camera: {
+			position: [0, 0, -1],
+			target: [0, 0, 0],
+			fov: 80,
+			near: 0.1,
+			far: 1000,
+			up: [0, 1, 0],
+			matrix: null,
+		},
 		//value
-		ambientLightColor: [0, 0, 0],
+		ambientLightColor: [0xffffff, 0],
 		//values
 		toneMappings: [],
 		//value
 		enabled: false,
-	});
-	/*
-	function customUpdate(updater){
-		update((renderer)=>{
+	};
+	let cache = initialValue;
+	let processed = new Map();
+	const store = writable(initialValue);
+	const { subscribe, set, update } = store;
+
+	/**
+	 * Update function can update uniforms and other values directly
+	 */
+	function updateCanvas(canvas) {}
+	function updateLoop(loop) {}
+	function updateBackgroundColor(color) {
+		processed.set("backgroundColor", [...convertToVector3(color), 1]);
+	}
+	function updateCamera(camera, prev) {
+		return {
+			...prev,
+			...camera,
+		};
+	}
+	function updateAmbientLightColor([color, intensity]) {
+		processed.set(
+			"ambientLightColor",
+			convertToVector3(color).map((c) => c * intensity),
+		);
+	}
+	function updateToneMappings(toneMappings) {}
+	function updateEnabled(enabled) {}
+
+	function customUpdate(updater) {
+		update((renderer) => {
 			const next = updater(renderer);
+			if (cache.canvas != null && next.canvas !== cache.canvas) {
+				updateCanvas(next.canvas);
+			}
+			if (cache.loop != null && next.loop !== cache.loop) {
+				updateLoop(next.loop);
+			}
+			if (next.backgroundColor !== cache.backgroundColor) {
+				updateBackgroundColor(next.backgroundColor);
+			}
+			if (!optionalPropsDeepEqual(next.camera, cache.camera)) {
+				next.camera = updateCamera(next.camera, cache.camera);
+			}
+			if (!hasSameShallow(next.ambientLightColor, cache.ambientLightColor)) {
+				updateAmbientLightColor(next.ambientLightColor);
+			}
+			if (!hasSameShallow(next.toneMappings, cache.toneMappings)) {
+				updateToneMappings(next.toneMappings);
+			}
+			if (next.enabled !== cache.enabled) {
+				updateEnabled(next.enabled);
+			}
+			cache = next;
 			return next;
 		});
 	}
-	*/
+
+	function getProcessed() {
+		const values = get_store_value(store);
+		return Object.entries(values)
+			.map(([key, value]) => {
+				if (processed.has(key)) {
+					return [key, processed.get(key)];
+				}
+				return [key, value];
+			})
+			.reduce((acc, [key, value]) => {
+				acc[key] = value;
+				return acc;
+			}, {});
+	}
+
 	//specific on change handling, might be useless
 	function customSet(next) {
-		const current = get_store_value(renderer);
-		if (current.camera !== next.camera) ;
-		set(next);
+		customUpdate((renderer) => next);
 	}
 
 	return {
 		subscribe,
 		set: customSet,
+		update: customUpdate,
+		getProcessed,
 	};
-}
-
-function createCamera(
-	position = [0, 0, -1],
-	target = [0, 0, 0],
-	fov = 80,
-	near = 0.1,
-	far = 1000,
-	up = [0, 1, 0],
-	matrix = null,
-) {
-	return {
-		position,
-		target,
-		fov,
-		near,
-		far,
-		up,
-		matrix,
-	};
-}
-
-function createAmbientLight(color, intensity) {
-	return convertToVector3(color).map((c) => c * intensity);
-}
-
-function createBackgroundColor(color) {
-	return [...convertToVector3(color), 1];
 }
 const renderer = createRenderer();
 
@@ -2717,7 +2788,28 @@ function isStore(obj) {
 	return obj != null && obj.subscribe != null;
 }
 
-const appContext = writable({});
+function selectProgram(appContext, program) {
+	const { programMap } = appContext;
+	const cachedProgram = programMap.get(program);
+	appContext.update((appContext) => ({
+		...appContext,
+		program: cachedProgram,
+	}));
+}
+
+function selectMesh(appContext, mesh) {
+	const { meshMap } = appContext;
+	const cachedVAO = meshMap.get(mesh);
+	appContext.update((appContext) => ({
+		...appContext,
+		vao: cachedVAO,
+	}));
+}
+
+const appContext = writable({
+	programMap: new Map(),
+	meshMap: new Map(),
+});
 
 const emptyApp = [];
 const webglapp = derived(
@@ -2743,10 +2835,11 @@ const webglapp = derived(
 		/*const requireTime = $programs.some((p) =>
 			p.meshes.some(m => m.animations
 				?.some((animation) => animation.requireTime)));*/
-
+		const rendererValues = renderer.getProcessed();
+		console.log("rendererValues", rendererValues);
 		let rendererContext = {
 			canvas: $renderer.canvas,
-			backgroundColor: $renderer.backgroundColor,
+			backgroundColor: rendererValues.backgroundColor,
 			...($renderer.toneMappings.length > 0
 				? {
 						toneMappings: $renderer.toneMappings,
@@ -2773,44 +2866,61 @@ const webglapp = derived(
 		!get_store_value(renderState).init &&
 			renderPipeline.push(
 				...$programs.reduce((acc, program) => {
+					console.log("program", program);
+					console.log("appContext", get_store_value(appContext));
+
 					return [
 						...acc,
-						program.createProgram(appContext),
-						program.createShaders(appContext, program.material, program.meshes),
-						program.linkProgram(appContext),
-						program.validateProgram(appContext),
-						program.useProgram(appContext),
-						setupCamera(appContext, $renderer.camera),
-						setupAmbientLight(appContext, $renderer.ambientLightColor),
-						...[
-							...lights.reduce((acc, light) => {
-								console.log("light", light);
+						...(get_store_value(appContext).programMap.has(program)
+							? [!console.log("selectProgram") && selectProgram(appContext, program), program.useProgram(appContext)]
+							: [
+									program.createProgram(appContext, program),
+									program.createShaders(appContext, program.material, program.meshes),
+									program.linkProgram(appContext),
+									program.validateProgram(appContext),
+									program.useProgram(appContext),
+									setupCamera(appContext, $renderer.camera),
+									setupAmbientLight(appContext, rendererValues.ambientLightColor),
+									...[
+										...lights.reduce((acc, light) => {
+											console.log("light", light);
 
-								const lightValue = get_store_value(light);
-								acc.set(lightValue.type, lightValue.setupLights);
-								return acc;
-							}, new Map()),
-						].map(([_, setupLights]) => setupLights(appContext, lights)),
-						...(program.material?.specular ? [program.material.specular.setupSpecular(appContext)] : []),
-						...(program.material?.diffuseMap ? [program.mesh.material?.diffuseMap.setupTexture(appContext)] : []),
-						...(program.material?.normalMap ? [program.material?.normalMap.setupTexture(appContext)] : []),
-						...(program.requireTime ? [setupTime(appContext)] : []),
+											const lightValue = get_store_value(light);
+											acc.set(lightValue.type, lightValue.setupLights);
+											return acc;
+										}, new Map()),
+									].map(([_, setupLights]) => setupLights(appContext, lights)),
+									...(program.material?.specular ? [program.material.specular.setupSpecular(appContext)] : []),
+									...(program.material?.diffuseMap ? [program.mesh.material?.diffuseMap.setupTexture(appContext)] : []),
+									...(program.material?.normalMap ? [program.material?.normalMap.setupTexture(appContext)] : []),
+									...(program.requireTime ? [setupTime(appContext)] : []),
+								]),
+
 						...program.meshes.reduce(
 							(acc, mesh) => [
 								...acc,
+								...(get_store_value(appContext).meshMap.has(mesh)
+									? [
+											selectMesh(appContext, mesh),
+											//setupMeshColor(appContext, program.material),// is it necessary ?multiple meshes only render with same material so same color
+											...(mesh.instances == null
+												? [setupTransformMatrix(appContext, get_store_value(mesh.transformMatrix)), setupNormalMatrix(appContext)]
+												: []),
+										]
+									: [
+											setupAttributes(appContext, mesh),
+											setupMeshColor(appContext, program.material),
 
-								setupAttributes(appContext, mesh),
-								setupMeshColor(appContext, program.material),
-
-								setupTransformMatrix(
-									appContext,
-									mesh.instances == null ? get_store_value(mesh.transformMatrix) : mesh.matrices,
-									mesh.instances,
-								),
-								setupNormalMatrix(appContext, mesh.instances),
-								...(mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || []),
-								// reduce by type to setup lights once per type
-
+											setupTransformMatrix(
+												appContext,
+												mesh.instances == null ? get_store_value(mesh.transformMatrix) : mesh.matrices,
+												mesh.instances,
+											),
+											setupNormalMatrix(appContext, mesh.instances),
+											...(mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || []),
+											// reduce by type to setup lights once per type
+										]),
+								bindVAO(appContext),
 								render(appContext, mesh.instances, mesh.drawMode),
 							],
 							[],
@@ -3087,9 +3197,13 @@ function instance($$self, $$props, $$invalidate) {
 			$renderer = {
 				...$renderer,
 				canvas,
-				backgroundColor: createBackgroundColor(skyblue),
-				camera: createCamera([0, 5, -5], [0, 0, 0], 75),
-				ambientLightColor: createAmbientLight(0xffffff, 0.5)
+				backgroundColor: skyblue,
+				camera: {
+					position: [0, 5, -5],
+					target: [0, 0, 0],
+					fov: 75
+				},
+				ambientLightColor: [0xffffff, 0.5]
 			},
 			$renderer
 		);
@@ -3111,7 +3225,7 @@ function instance($$self, $$props, $$invalidate) {
 				{
 					...cubeMesh,
 					matrix: identity(new Float32Array(16)),
-					material: { diffuse: [1, 0.5, 0.5] }
+					material: { diffuse: [1, 0.5, 0.5], metalness: 0 }
 				},
 				light
 			],

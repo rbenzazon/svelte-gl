@@ -37,6 +37,7 @@ export function initRenderer(rendererContext, appContext) {
 		const canvasRect = rendererContext.canvas.getBoundingClientRect();
 		rendererContext.canvas.width = canvasRect.width;
 		rendererContext.canvas.height = canvasRect.height;
+		/** @type {WebGL2RenderingContext} */
 		const gl = (rendererContext.gl = rendererContext.canvas.getContext("webgl2"));
 		appContext.update((appContext) => ({
 			...appContext,
@@ -74,7 +75,7 @@ export function render(context, instances, drawMode) {
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		contextValue.loop && contextValue.loop();
 		// when using vertex array objects, you must bind it before rendering
-		gl.bindVertexArray(contextValue.vao);
+		//gl.bindVertexArray(contextValue.vao);
 		console.log("drawMode", drawMode);
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, contextValue.attributeLength, instances);
@@ -92,7 +93,16 @@ export function render(context, instances, drawMode) {
 	};
 }
 
-export function createProgram(context) {
+export function bindVAO(context, mesh) {
+	return function () {
+		const contextValue = get(context);
+		const gl = contextValue.gl;
+		const vao = contextValue.vao;
+		gl.bindVertexArray(contextValue.vao);
+	};
+}
+
+export function createProgram(context, programStore) {
 	return function createProgram() {
 		context = get(context);
 		if (context.program != null) {
@@ -101,6 +111,7 @@ export function createProgram(context) {
 		const gl = context.gl;
 		const program = gl.createProgram();
 		context.program = program;
+		context.programMap.set(programStore, program);
 	};
 }
 
@@ -141,28 +152,6 @@ export function useProgram(context) {
 	};
 }
 
-export function endProgramSetup(context) {
-	return function () {
-		context = get(context);
-		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
-		if (context.program === context.programUsed) {
-			return;
-		}
-		gl.linkProgram(program);
-		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-			console.error("ERROR linking program!", gl.getProgramInfoLog(program));
-		}
-		gl.validateProgram(program);
-		if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-			console.error("ERROR validating program!", gl.getProgramInfoLog(program));
-		}
-		gl.useProgram(program);
-		context.programUsed = program;
-	};
-}
-
 export function createShaders() {
 	return function (context, material, meshes) {
 		return function () {
@@ -196,7 +185,7 @@ export function createShaders() {
 				declarations: vertexDeclarations,
 				positionModifier: vertexPositionModifiers,
 			});
-			//console.log(vertexShaderSource);
+			console.log(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
@@ -274,7 +263,7 @@ export function createShaders() {
 			});
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
-			//console.log(fragmentShaderSource);
+			console.log(fragmentShaderSource);
 			gl.compileShader(fragmentShader);
 			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
 				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
@@ -562,6 +551,7 @@ export function setupAttributes(context, mesh) {
 
 		const { positions, normals, elements, uvs } = mesh.attributes;
 		const vao = (context.vao = gl.createVertexArray());
+		context.meshMap.set(mesh, vao);
 		gl.bindVertexArray(vao);
 		const {
 			data: positionsData,

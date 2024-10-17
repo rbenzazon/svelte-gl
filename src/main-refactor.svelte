@@ -19,9 +19,13 @@ onMount(async () => {
 	$renderer = {
 		...$renderer,
 		canvas,
-		backgroundColor: createBackgroundColor(skyblue),
-		camera: createCamera([0, 5, -5], [0, 0, 0], 75),
-		ambientLightColor: createAmbientLight(0xffffff, 0.5),
+		backgroundColor: skyblue,
+		camera: {
+			position: [0, 5, -5],
+			target: [0, 0, 0],
+			fov: 75,
+		},
+		ambientLightColor: [0xffffff, 0.5],
 	};
 
 	const cubeMesh = createCube();
@@ -43,6 +47,7 @@ onMount(async () => {
 			matrix: identity(new Float32Array(16)),
 			material: {
 				diffuse: [1, 0.5, 0.5],
+				metalness: 0,
 			},
 		},
 		light,

@@ -9,3 +9,18 @@ export function hasSameShallow(a, b) {
 	}
 	return true;
 }
+export function optionalPropsDeepEqual(a, b) {
+	if (a == null || b == null) {
+		return false;
+	}
+	for (let key in a) {
+		if (Array.isArray(a[key])) {
+			if (!hasSameShallow(a[key], b[key])) {
+				return false;
+			}
+		} else if (a[key] !== b[key]) {
+			return false;
+		}
+	}
+	return true;
+}
