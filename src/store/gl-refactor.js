@@ -30,30 +30,27 @@ function toRadian(a) {
 	return a * degree;
 }
 
-export function initRenderer(rendererContext, appContext) {
+export function initRenderer(context) {
 	return function initRenderer() {
-		console.log("initRenderer");
-		const canvasRect = rendererContext.canvas.getBoundingClientRect();
-		rendererContext.canvas.width = canvasRect.width;
-		rendererContext.canvas.height = canvasRect.height;
+		const contextValue = get(context);
+		const canvasRect = contextValue.canvas.getBoundingClientRect();
+		contextValue.canvas.width = canvasRect.width;
+		contextValue.canvas.height = canvasRect.height;
 		/** @type {WebGL2RenderingContext} */
-		const gl = (rendererContext.gl = rendererContext.canvas.getContext("webgl2"));
-		appContext.update((appContext) => ({
+		const gl = contextValue.canvas.getContext("webgl2");
+		context.update((appContext) => ({
 			...appContext,
-			...rendererContext,
+			...contextValue,
+			gl,
 		}));
-		gl.viewportWidth = rendererContext.canvas.width;
-		gl.viewportHeight = rendererContext.canvas.height;
-		gl.clearColor(...rendererContext.backgroundColor);
+		gl.viewportWidth = canvasRect.width;
+		gl.viewportHeight = canvasRect.height;
+		gl.clearColor(...contextValue.backgroundColor);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
 		gl.frontFace(gl.CCW);
 		gl.cullFace(gl.BACK);
-		/*renderState.set({
-			init: true,
-		});*/
-		console.log("initRenderer done", get(renderState));
 	};
 }
 
@@ -67,23 +64,26 @@ export function setupTime(context) {
 	};
 }
 
+export function clearFrame(context) {
+	return function clearFrame() {
+		const contextValue = get(context);
+		const { gl } = contextValue;
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	};
+}
+
 export function render(context, instances, drawMode) {
 	return function render() {
 		const contextValue = get(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = contextValue.gl;
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-		contextValue.loop && contextValue.loop();
-		// when using vertex array objects, you must bind it before rendering
-		//gl.bindVertexArray(contextValue.vao);
-		console.log("Draw drawMode", drawMode);
+		const { gl, attributeLength, hasElements } = contextValue;
 		if (instances) {
-			gl.drawArraysInstanced(gl[drawMode], 0, contextValue.attributeLength, instances);
+			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
 		} else {
-			if (contextValue.hasElements) {
-				gl.drawElements(gl[drawMode], contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
+			if (hasElements) {
+				gl.drawElements(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
-				gl.drawArrays(gl[drawMode], 0, contextValue.attributeLength);
+				gl.drawArrays(gl[drawMode], 0, attributeLength);
 				//add mesh visualization (lines)
 				//gl.drawArrays(gl.LINE_STRIP, 0, contextValue.attributeLength);
 			}
@@ -113,8 +113,6 @@ export function createProgram(context, programStore) {
 
 		contextValue.programMap.set(programStore, program);
 		context.update((context) => {
-			console.log("createProgram context update");
-
 			return {
 				...contextValue,
 				program,

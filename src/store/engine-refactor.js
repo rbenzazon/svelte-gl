@@ -20,6 +20,7 @@ import {
 	setupTime,
 	useProgram,
 	bindVAO,
+	clearFrame,
 } from "./gl-refactor.js";
 import { hasSameShallow } from "../utils/set.js";
 import { hasSameShallow as arrayHasSameShallow, optionalPropsDeepEqual } from "../utils/array.js";
@@ -92,21 +93,6 @@ function createRenderer() {
 		});
 	}
 
-	function getProcessed() {
-		const values = get(store);
-		return Object.entries(values)
-			.map(([key, value]) => {
-				if (processed.has(key)) {
-					return [key, processed.get(key)];
-				}
-				return [key, value];
-			})
-			.reduce((acc, [key, value]) => {
-				acc[key] = value;
-				return acc;
-			}, {});
-	}
-
 	//specific on change handling, might be useless
 	function customSet(next) {
 		customUpdate((renderer) => next);
@@ -116,7 +102,20 @@ function createRenderer() {
 		subscribe,
 		set: customSet,
 		update: customUpdate,
-		getProcessed,
+		get processed() {
+			const values = get(store);
+			return Object.entries(values)
+				.map(([key, value]) => {
+					if (processed.has(key)) {
+						return [key, processed.get(key)];
+					}
+					return [key, value];
+				})
+				.reduce((acc, [key, value]) => {
+					acc[key] = value;
+					return acc;
+				}, {});
+		},
 		get revision() {
 			return get(revisionStore);
 		},
@@ -138,7 +137,6 @@ function createCameraStore() {
 	const revisionStore = writable(0);
 	function customUpdate(updater) {
 		update((camera) => {
-			//console.log("camera update");
 			//this makes update require only the changed props (especially the revision)
 			const next = {
 				...camera,
@@ -318,7 +316,7 @@ export const appContext = writable({
 	meshMap: new Map(),
 });
 
-const emptyApp = [];
+const emptyRenderPipeline = [];
 const revisionMap = new Map();
 revisionMap.set(renderer, 0);
 revisionMap.set(scene, 0);
@@ -361,24 +359,20 @@ function updated() {
  */
 const running = writable(0);
 
-const webglapp = derived(
+const renderPipeline = derived(
 	[renderer, programs, scene, camera, running],
 	([$renderer, $programs, $scene, $camera, $running]) => {
 		// if renderer.enabled is false, the scene is being setup, we should not render
-		// if running is 4, we let the loop run completly as a way to batch scene updates
+		// if running is 4, we delay the pipeline updates as a way to batch scene updates
 		if (!$renderer.enabled || $running === 4 || $running === 1) {
-			console.log("webglapp update cancelled");
 			//TODO maybe throw here to cancel the update flow
-			return emptyApp;
+			return emptyRenderPipeline;
 		}
-		console.log("webglapp derived", $running);
-		const rendererValue = get(renderer);
-		const rendererRevision = renderer.revision;
-		const cameraValue = get(camera);
-		const cameraRevision = camera.revision;
-		const sceneValue = get(scene);
-		const sceneRevision = scene.revision;
-		// this map will tell you which stores have been updated since last updated() call
+		/**
+		 * this map will tell you which stores have been updated since
+		 * last updated() call while changes were batched
+		 */
+
 		const updateMap = updated();
 		/*
 		if(updateMap.has(renderer)){
@@ -391,6 +385,8 @@ const webglapp = derived(
 			console.log("update camera");
 		}
 		*/
+		//we must filter in the stores first because not all the nodes are stores for now
+		//then we filter the lights
 		const lights = $scene.filter(isStore).filter(isLight);
 
 		const pointLights = lights.filter((l) => get(l).type === "point");
@@ -399,11 +395,7 @@ const webglapp = derived(
 		if (numPointLights > 0) {
 			pointLightShader = get(pointLights[0]).shader;
 		}
-		//this is moved into program items as p.requireTime prop to handle inside the program loop
-		/*const requireTime = $programs.some((p) =>
-			p.meshes.some(m => m.animations
-				?.some((animation) => animation.requireTime)));*/
-		const rendererValues = renderer.getProcessed();
+		const rendererValues = renderer.processed;
 		let rendererContext = {
 			canvas: $renderer.canvas,
 			backgroundColor: rendererValues.backgroundColor,
@@ -419,7 +411,7 @@ const webglapp = derived(
 					}
 				: undefined),
 		};
-		const renderPipeline = [];
+		const pipeline = [];
 
 		appContext.update((appContext) => ({
 			...appContext,
@@ -428,14 +420,12 @@ const webglapp = derived(
 
 		const init = get(renderState).init;
 		if (!init) {
-			renderPipeline.push(initRenderer(rendererContext, appContext));
+			pipeline.push(initRenderer(appContext));
 		}
 		/*!init &&*/
-		renderPipeline.push(
+		pipeline.push(
+			...[clearFrame(appContext)],
 			...$programs.reduce((acc, program) => {
-				//console.log("program", program);
-				//console.log("appContext", get(appContext));
-
 				return [
 					...acc,
 					...(get(appContext).programMap.has(program)
@@ -473,21 +463,15 @@ const webglapp = derived(
 										selectMesh(appContext, mesh),
 										//setupMeshColor(appContext, program.material),// is it necessary ?multiple meshes only render with same material so same color
 										...(mesh.instances == null
-											? [setupTransformMatrix(appContext, get(mesh.transformMatrix)), setupNormalMatrix(appContext)]
+											? [setupTransformMatrix(appContext, mesh.matrix), setupNormalMatrix(appContext)]
 											: []),
 									]
 								: [
 										setupAttributes(appContext, mesh),
 										setupMeshColor(appContext, program.material),
-
-										setupTransformMatrix(
-											appContext,
-											mesh.instances == null ? get(mesh.transformMatrix) : mesh.matrices,
-											mesh.instances,
-										),
+										setupTransformMatrix(appContext, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
 										setupNormalMatrix(appContext, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || []),
-										// reduce by type to setup lights once per type
 									]),
 							bindVAO(appContext),
 							render(appContext, mesh.instances, mesh.drawMode),
@@ -497,52 +481,45 @@ const webglapp = derived(
 				];
 			}, []),
 		);
-		console.log("renderPipeline", renderPipeline.length, renderPipeline);
 
-		return renderPipeline;
+		return pipeline;
 	},
-	emptyApp,
+	emptyRenderPipeline,
 );
 
-const renderLoopStore = derived([webglapp], ([$webglapp]) => {
-	if ($webglapp.length === 0) {
-		//console.log("renderLoopStore update cancelled");
+const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
+	if ($renderPipeline.length === 0) {
 		return 0;
 	}
 	if (!get(renderState).init && get(running) === 0) {
 		running.set(1);
-		$webglapp.forEach((f) => f());
+		$renderPipeline.forEach((f) => f());
 		renderState.set({
 			init: true,
 		});
 		running.set(2);
-		//console.log("renderLoopStore finish init");
 		return 1;
 	} else if (get(running) === 2) {
 		running.set(3);
 		requestAnimationFrame(loop);
-		//console.log("renderLoopStore starting loop");
 		return 2;
 	}
-	//console.log("renderLoopStore none", get(running), get(renderState).init);
 
 	async function loop() {
-		// skipping this iteration is previous one not finished
-		if (get(running) !== 4) {
-			console.log("renderLoopStore loop start", get(webglapp).length);
-
-			running.set(4);
-			get(renderer).loop && get(renderer).loop();
-			running.set(3);
-			get(webglapp).forEach((f) => f());
-
-			console.log("renderLoopStore loop finish, running 3");
-		}
-		//console.log("renderLoopStore requestAnimationFrame");
+		//lock pipeline updates to batch changes while loop is running
+		running.set(4);
+		get(renderer).loop && get(renderer).loop();
+		//unlock pipeline updates and trigger next update
+		running.set(3);
+		//run pipeline updates
+		get(renderPipeline).forEach((f) => f());
+		//lock pipeline updates to batch changes that come from other sources than loop
+		running.set(4);
 		requestAnimationFrame(loop);
 	}
 });
 
+//this is necessary because the store needs to be subscribed to to be activated
 const unsub = renderLoopStore.subscribe((value) => {
-	console.log("render loop store subscribed", value);
+	//console.log("render loop store subscribed", value);
 });

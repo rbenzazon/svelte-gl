@@ -894,6 +894,61 @@ function invert(out, a) {
   return out;
 }
 /**
+ * Translate a mat4 by the given vector
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the matrix to translate
+ * @param {ReadonlyVec3} v vector to translate by
+ * @returns {mat4} out
+ */
+
+function translate(out, a, v) {
+  var x = v[0],
+      y = v[1],
+      z = v[2];
+  var a00, a01, a02, a03;
+  var a10, a11, a12, a13;
+  var a20, a21, a22, a23;
+
+  if (a === out) {
+    out[12] = a[0] * x + a[4] * y + a[8] * z + a[12];
+    out[13] = a[1] * x + a[5] * y + a[9] * z + a[13];
+    out[14] = a[2] * x + a[6] * y + a[10] * z + a[14];
+    out[15] = a[3] * x + a[7] * y + a[11] * z + a[15];
+  } else {
+    a00 = a[0];
+    a01 = a[1];
+    a02 = a[2];
+    a03 = a[3];
+    a10 = a[4];
+    a11 = a[5];
+    a12 = a[6];
+    a13 = a[7];
+    a20 = a[8];
+    a21 = a[9];
+    a22 = a[10];
+    a23 = a[11];
+    out[0] = a00;
+    out[1] = a01;
+    out[2] = a02;
+    out[3] = a03;
+    out[4] = a10;
+    out[5] = a11;
+    out[6] = a12;
+    out[7] = a13;
+    out[8] = a20;
+    out[9] = a21;
+    out[10] = a22;
+    out[11] = a23;
+    out[12] = a00 * x + a10 * y + a20 * z + a[12];
+    out[13] = a01 * x + a11 * y + a21 * z + a[13];
+    out[14] = a02 * x + a12 * y + a22 * z + a[14];
+    out[15] = a03 * x + a13 * y + a23 * z + a[15];
+  }
+
+  return out;
+}
+/**
  * Generates a perspective projection matrix with the given bounds.
  * The near/far clip planes correspond to a normalized device coordinate Z range of [-1, 1],
  * which matches WebGL/OpenGL's clip volume.
@@ -1888,15 +1943,15 @@ todo : map existing compiled programs and decouple draw passes from program crea
 */
 const lastProgramRendered = writable(null);
 
-const emptyApp$1 = [];
-const webglapp$1 = derived(
+const emptyApp = [];
+const webglapp = derived(
 	[renderer$1, programs$1],
 	([$renderer, $programs]) => {
 		// if renderer.enabled is false, the scene is being setup, we should not render
 		// if running is 4, we let the loop run completly as a way to batch scene updates
 		if (!$renderer.enabled || get_store_value(running$1) === 4) {
 			//log("webglapp not ready");
-			return emptyApp$1;
+			return emptyApp;
 		}
 
 		const numPointLights = $renderer.lights.filter((l) => get_store_value(l).type === "point").length;
@@ -1966,7 +2021,7 @@ const webglapp$1 = derived(
 
 		return list;
 	},
-	emptyApp$1,
+	emptyApp,
 );
 
 /**
@@ -1979,7 +2034,7 @@ const webglapp$1 = derived(
  * 4 : loop currently running, renderer updates ignored momentarily	<---|
  */
 const running$1 = writable(0);
-const renderLoopStore$1 = derived([webglapp$1], ([$webglapp]) => {
+const renderLoopStore$1 = derived([webglapp], ([$webglapp]) => {
 	if ($webglapp.length === 0) {
 		return 0;
 	}
@@ -2020,30 +2075,27 @@ function toRadian(a) {
 	return a * degree;
 }
 
-function initRenderer(rendererContext, appContext) {
+function initRenderer(context) {
 	return function initRenderer() {
-		console.log("initRenderer");
-		const canvasRect = rendererContext.canvas.getBoundingClientRect();
-		rendererContext.canvas.width = canvasRect.width;
-		rendererContext.canvas.height = canvasRect.height;
+		const contextValue = get_store_value(context);
+		const canvasRect = contextValue.canvas.getBoundingClientRect();
+		contextValue.canvas.width = canvasRect.width;
+		contextValue.canvas.height = canvasRect.height;
 		/** @type {WebGL2RenderingContext} */
-		const gl = (rendererContext.gl = rendererContext.canvas.getContext("webgl2"));
-		appContext.update((appContext) => ({
+		const gl = contextValue.canvas.getContext("webgl2");
+		context.update((appContext) => ({
 			...appContext,
-			...rendererContext,
+			...contextValue,
+			gl,
 		}));
-		gl.viewportWidth = rendererContext.canvas.width;
-		gl.viewportHeight = rendererContext.canvas.height;
-		gl.clearColor(...rendererContext.backgroundColor);
+		gl.viewportWidth = canvasRect.width;
+		gl.viewportHeight = canvasRect.height;
+		gl.clearColor(...contextValue.backgroundColor);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
 		gl.enable(gl.DEPTH_TEST);
 		gl.enable(gl.CULL_FACE);
 		gl.frontFace(gl.CCW);
 		gl.cullFace(gl.BACK);
-		/*renderState.set({
-			init: true,
-		});*/
-		console.log("initRenderer done", get_store_value(renderState$1));
 	};
 }
 
@@ -2057,23 +2109,26 @@ function setupTime(context) {
 	};
 }
 
+function clearFrame(context) {
+	return function clearFrame() {
+		const contextValue = get_store_value(context);
+		const { gl } = contextValue;
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	};
+}
+
 function render(context, instances, drawMode) {
 	return function render() {
 		const contextValue = get_store_value(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = contextValue.gl;
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-		contextValue.loop && contextValue.loop();
-		// when using vertex array objects, you must bind it before rendering
-		//gl.bindVertexArray(contextValue.vao);
-		console.log("Draw drawMode", drawMode);
+		const { gl, attributeLength, hasElements } = contextValue;
 		if (instances) {
-			gl.drawArraysInstanced(gl[drawMode], 0, contextValue.attributeLength, instances);
+			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
 		} else {
-			if (contextValue.hasElements) {
-				gl.drawElements(gl[drawMode], contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
+			if (hasElements) {
+				gl.drawElements(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
-				gl.drawArrays(gl[drawMode], 0, contextValue.attributeLength);
+				gl.drawArrays(gl[drawMode], 0, attributeLength);
 				//add mesh visualization (lines)
 				//gl.drawArrays(gl.LINE_STRIP, 0, contextValue.attributeLength);
 			}
@@ -2103,8 +2158,6 @@ function createProgram(context, programStore) {
 
 		contextValue.programMap.set(programStore, program);
 		context.update((context) => {
-			console.log("createProgram context update");
-
 			return {
 				...contextValue,
 				program,
@@ -2675,21 +2728,6 @@ function createRenderer() {
 		});
 	}
 
-	function getProcessed() {
-		const values = get_store_value(store);
-		return Object.entries(values)
-			.map(([key, value]) => {
-				if (processed.has(key)) {
-					return [key, processed.get(key)];
-				}
-				return [key, value];
-			})
-			.reduce((acc, [key, value]) => {
-				acc[key] = value;
-				return acc;
-			}, {});
-	}
-
 	//specific on change handling, might be useless
 	function customSet(next) {
 		customUpdate((renderer) => next);
@@ -2699,7 +2737,20 @@ function createRenderer() {
 		subscribe,
 		set: customSet,
 		update: customUpdate,
-		getProcessed,
+		get processed() {
+			const values = get_store_value(store);
+			return Object.entries(values)
+				.map(([key, value]) => {
+					if (processed.has(key)) {
+						return [key, processed.get(key)];
+					}
+					return [key, value];
+				})
+				.reduce((acc, [key, value]) => {
+					acc[key] = value;
+					return acc;
+				}, {});
+		},
 		get revision() {
 			return get_store_value(revisionStore);
 		},
@@ -2721,7 +2772,6 @@ function createCameraStore() {
 	const revisionStore = writable(0);
 	function customUpdate(updater) {
 		update((camera) => {
-			//console.log("camera update");
 			//this makes update require only the changed props (especially the revision)
 			const next = {
 				...camera,
@@ -2893,7 +2943,7 @@ const appContext = writable({
 	meshMap: new Map(),
 });
 
-const emptyApp = [];
+const emptyRenderPipeline = [];
 const revisionMap = new Map();
 revisionMap.set(renderer, 0);
 revisionMap.set(scene, 0);
@@ -2935,24 +2985,20 @@ function updated() {
  */
 const running = writable(0);
 
-const webglapp = derived(
+const renderPipeline = derived(
 	[renderer, programs, scene, camera, running],
 	([$renderer, $programs, $scene, $camera, $running]) => {
 		// if renderer.enabled is false, the scene is being setup, we should not render
-		// if running is 4, we let the loop run completly as a way to batch scene updates
+		// if running is 4, we delay the pipeline updates as a way to batch scene updates
 		if (!$renderer.enabled || $running === 4 || $running === 1) {
-			console.log("webglapp update cancelled");
 			//TODO maybe throw here to cancel the update flow
-			return emptyApp;
+			return emptyRenderPipeline;
 		}
-		console.log("webglapp derived", $running);
-		get_store_value(renderer);
-		renderer.revision;
-		get_store_value(camera);
-		camera.revision;
-		get_store_value(scene);
-		scene.revision;
-		// this map will tell you which stores have been updated since last updated() call
+		/**
+		 * this map will tell you which stores have been updated since
+		 * last updated() call while changes were batched
+		 */
+
 		const updateMap = updated();
 		/*
 		if(updateMap.has(renderer)){
@@ -2965,6 +3011,8 @@ const webglapp = derived(
 			console.log("update camera");
 		}
 		*/
+		//we must filter in the stores first because not all the nodes are stores for now
+		//then we filter the lights
 		const lights = $scene.filter(isStore).filter(isLight);
 
 		const pointLights = lights.filter((l) => get_store_value(l).type === "point");
@@ -2973,11 +3021,7 @@ const webglapp = derived(
 		if (numPointLights > 0) {
 			pointLightShader = get_store_value(pointLights[0]).shader;
 		}
-		//this is moved into program items as p.requireTime prop to handle inside the program loop
-		/*const requireTime = $programs.some((p) =>
-			p.meshes.some(m => m.animations
-				?.some((animation) => animation.requireTime)));*/
-		const rendererValues = renderer.getProcessed();
+		const rendererValues = renderer.processed;
 		let rendererContext = {
 			canvas: $renderer.canvas,
 			backgroundColor: rendererValues.backgroundColor,
@@ -2993,7 +3037,7 @@ const webglapp = derived(
 					}
 				: undefined),
 		};
-		const renderPipeline = [];
+		const pipeline = [];
 
 		appContext.update((appContext) => ({
 			...appContext,
@@ -3002,14 +3046,12 @@ const webglapp = derived(
 
 		const init = get_store_value(renderState).init;
 		if (!init) {
-			renderPipeline.push(initRenderer(rendererContext, appContext));
+			pipeline.push(initRenderer(appContext));
 		}
 		/*!init &&*/
-		renderPipeline.push(
+		pipeline.push(
+			...[clearFrame(appContext)],
 			...$programs.reduce((acc, program) => {
-				//console.log("program", program);
-				//console.log("appContext", get(appContext));
-
 				return [
 					...acc,
 					...(get_store_value(appContext).programMap.has(program)
@@ -3047,21 +3089,15 @@ const webglapp = derived(
 										selectMesh(appContext, mesh),
 										//setupMeshColor(appContext, program.material),// is it necessary ?multiple meshes only render with same material so same color
 										...(mesh.instances == null
-											? [setupTransformMatrix(appContext, get_store_value(mesh.transformMatrix)), setupNormalMatrix(appContext)]
+											? [setupTransformMatrix(appContext, mesh.matrix), setupNormalMatrix(appContext)]
 											: []),
 									]
 								: [
 										setupAttributes(appContext, mesh),
 										setupMeshColor(appContext, program.material),
-
-										setupTransformMatrix(
-											appContext,
-											mesh.instances == null ? get_store_value(mesh.transformMatrix) : mesh.matrices,
-											mesh.instances,
-										),
+										setupTransformMatrix(appContext, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
 										setupNormalMatrix(appContext, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || []),
-										// reduce by type to setup lights once per type
 									]),
 							bindVAO(appContext),
 							render(appContext, mesh.instances, mesh.drawMode),
@@ -3071,54 +3107,47 @@ const webglapp = derived(
 				];
 			}, []),
 		);
-		console.log("renderPipeline", renderPipeline.length, renderPipeline);
 
-		return renderPipeline;
+		return pipeline;
 	},
-	emptyApp,
+	emptyRenderPipeline,
 );
 
-const renderLoopStore = derived([webglapp], ([$webglapp]) => {
-	if ($webglapp.length === 0) {
-		//console.log("renderLoopStore update cancelled");
+const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
+	if ($renderPipeline.length === 0) {
 		return 0;
 	}
 	if (!get_store_value(renderState).init && get_store_value(running) === 0) {
 		running.set(1);
-		$webglapp.forEach((f) => f());
+		$renderPipeline.forEach((f) => f());
 		renderState.set({
 			init: true,
 		});
 		running.set(2);
-		//console.log("renderLoopStore finish init");
 		return 1;
 	} else if (get_store_value(running) === 2) {
 		running.set(3);
 		requestAnimationFrame(loop);
-		//console.log("renderLoopStore starting loop");
 		return 2;
 	}
-	//console.log("renderLoopStore none", get(running), get(renderState).init);
 
 	async function loop() {
-		// skipping this iteration is previous one not finished
-		if (get_store_value(running) !== 4) {
-			console.log("renderLoopStore loop start", get_store_value(webglapp).length);
-
-			running.set(4);
-			get_store_value(renderer).loop && get_store_value(renderer).loop();
-			running.set(3);
-			get_store_value(webglapp).forEach((f) => f());
-
-			console.log("renderLoopStore loop finish, running 3");
-		}
-		//console.log("renderLoopStore requestAnimationFrame");
+		//lock pipeline updates to batch changes while loop is running
+		running.set(4);
+		get_store_value(renderer).loop && get_store_value(renderer).loop();
+		//unlock pipeline updates and trigger next update
+		running.set(3);
+		//run pipeline updates
+		get_store_value(renderPipeline).forEach((f) => f());
+		//lock pipeline updates to batch changes that come from other sources than loop
+		running.set(4);
 		requestAnimationFrame(loop);
 	}
 });
 
+//this is necessary because the store needs to be subscribed to to be activated
 renderLoopStore.subscribe((value) => {
-	console.log("render loop store subscribed", value);
+	//console.log("render loop store subscribed", value);
 });
 
 var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct LightParams {\r\n    vec3 irradiance;\r\n    vec3 direction;\r\n    vec3 color;\r\n    float distance;\r\n};\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nLightParams getDirectDiffuse(const in PointLight pointLight,const in vec3 vertexPosition, const in vec3 normal,const in PhysicalMaterial material, inout ReflectedLight reflectedLight) {\r\n    LightParams lightParams = LightParams(vec3(0.0f), vec3(0.0f), vec3(0.0f), 0.0f);\r\n    vec3 lVector = pointLight.position - vertexPosition;\r\n    lightParams.distance = length(lVector);\r\n    lightParams.direction = normalize(lVector);\r\n    float dotNL = saturate(dot(normal, lightParams.direction));\r\n    lightParams.color = pointLight.color;\r\n    lightParams.color *= getDistanceAttenuation(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);\r\n    lightParams.irradiance = dotNL * lightParams.color;\r\n    \r\n    reflectedLight.directDiffuse += lightParams.irradiance * BRDF_Lambert(material.diffuseColor);\r\n    return lightParams;\r\n}\r\n\r\nfloat calculatePointLightBrightness(float lightDistance, float cutoffDistance, float decayExponent) {\r\n    return getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    vec3 irradiance = vec3(0.0f);\r\n    vec3 direction = vec3(0.0f);\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        \r\n\r\n        LightParams lightParams = getDirectDiffuse(pointLight, vertex, normal, material, reflectedLight);\r\n        totalIrradiance += reflectedLight.directDiffuse;\r\n        ${specularIrradiance}\r\n    }\r\n` : ''\r\n}\r\n";
@@ -3301,6 +3330,78 @@ function createCube() {
 	};
 }
 
+function createOrbitControls(canvas, camera) {
+	canvas.addEventListener("mousedown", onMouseDown);
+	canvas.addEventListener("wheel", onMouseWheel);
+	let startX;
+	let startY;
+	function onMouseDown(event) {
+		canvas.addEventListener("mousemove", onMouseMove);
+		startX = event.clientX;
+		startY = event.clientY;
+		canvas.addEventListener("mouseup", onMouseUp);
+	}
+	function getCoordinates(position, target) {
+		const radius = Math.sqrt(
+			Math.pow(position[0] - target[0], 2) + Math.pow(position[1] - target[1], 2) + Math.pow(position[2] - target[2], 2),
+		);
+
+		const polar = Math.acos(Math.max(-1, Math.min(1, (position[1] - target[1]) / radius)));
+		const azimuth = Math.atan2(position[0] - target[0], position[2] - target[2]);
+		return {
+			radius,
+			polar,
+			azimuth,
+		};
+	}
+	function onMouseMove(event) {
+		const x = event.clientX - startX;
+		const y = event.clientY - startY;
+		const cameraValue = get_store_value(camera);
+		const { position, target, fov } = cameraValue;
+		const { radius, polar, azimuth } = getCoordinates(position, target);
+
+		const newPosition = getPositionFromPolar(radius, polar - y / 100, azimuth - x / 100);
+		newPosition[0] = newPosition[0] + target[0];
+		newPosition[1] = newPosition[1] + target[1];
+		newPosition[2] = newPosition[2] + target[2];
+
+		camera.set({
+			position: newPosition,
+			target,
+			fov,
+		});
+		startX = event.clientX;
+		startY = event.clientY;
+	}
+	function onMouseWheel(event) {
+		const cameraValue = get_store_value(camera);
+		const { position, target, fov } = cameraValue;
+		const { radius, polar, azimuth } = getCoordinates(position, target);
+		console.log("radius", radius);
+
+		const newPosition = getPositionFromPolar(radius + event.deltaY * 0.001 * radius, polar, azimuth);
+		newPosition[0] = newPosition[0] + target[0];
+		newPosition[1] = newPosition[1] + target[1];
+		newPosition[2] = newPosition[2] + target[2];
+
+		camera.set({
+			position: newPosition,
+			target,
+			fov,
+		});
+	}
+
+	function getPositionFromPolar(radius, polar, azimuth) {
+		const sinPhiRadius = Math.sin(polar) * radius;
+		return [sinPhiRadius * Math.sin(azimuth), Math.cos(polar) * radius, sinPhiRadius * Math.cos(azimuth)];
+	}
+	function onMouseUp(event) {
+		canvas.removeEventListener("mousemove", onMouseMove);
+		canvas.removeEventListener("mouseup", onMouseUp);
+	}
+}
+
 /* src\main-refactor.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
@@ -3327,13 +3428,19 @@ function create_fragment(ctx) {
 	};
 }
 
+function animate() {
+	performance.now() / 1000;
+} /*$camera = {
+	position: [0, 5, -zpos],
+};*/ //console.log("animate", $camera.position);
+
 function instance($$self, $$props, $$invalidate) {
-	let $camera;
 	let $renderer;
 	let $scene;
-	component_subscribe($$self, camera, $$value => $$invalidate(2, $camera = $$value));
-	component_subscribe($$self, renderer, $$value => $$invalidate(3, $renderer = $$value));
-	component_subscribe($$self, scene, $$value => $$invalidate(4, $scene = $$value));
+	let $camera;
+	component_subscribe($$self, renderer, $$value => $$invalidate(2, $renderer = $$value));
+	component_subscribe($$self, scene, $$value => $$invalidate(3, $scene = $$value));
+	component_subscribe($$self, camera, $$value => $$invalidate(4, $camera = $$value));
 	let canvas;
 
 	onMount(async () => {
@@ -3368,10 +3475,18 @@ function instance($$self, $$props, $$invalidate) {
 			decayExponent: 2
 		}));
 
+		const secondCubePos = identity(new Float32Array(16));
+		translate(secondCubePos, secondCubePos, [3, 0, 0]);
+
 		set_store_value(
 			scene,
 			$scene = [
 				...$scene,
+				{
+					...cubeMesh,
+					matrix: secondCubePos,
+					material: { diffuse: [1, 0.5, 0.5], metalness: 0 }
+				},
 				{
 					...cubeMesh,
 					matrix: identity(new Float32Array(16)),
@@ -3392,20 +3507,12 @@ function instance($$self, $$props, $$invalidate) {
 			$renderer
 		);
 
-		setTimeout(
-			() => {
-				set_store_value(camera, $camera = { position: [0, 5, -4] }, $camera);
-			},
-			1000
-		);
-	});
-
-	function animate() {
-		const time = performance.now() / 1000;
-		const zpos = Math.sin(time) * 2;
-		set_store_value(camera, $camera = { position: [0, 5, -zpos] }, $camera);
-		console.log("animate", $camera.position);
-	}
+		createOrbitControls(canvas, camera);
+	}); /*setTimeout(() => {
+	$camera = {
+		position: [0, 5, -4],
+	};
+}, 1000);*/
 
 	function canvas_1_binding($$value) {
 		binding_callbacks[$$value ? 'unshift' : 'push'](() => {

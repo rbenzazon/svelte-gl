@@ -1,3 +1,5 @@
+import { get } from "svelte/store";
+
 export function createOrbitControls(canvas, camera) {
 	canvas.addEventListener("mousedown", onMouseDown);
 	canvas.addEventListener("wheel", onMouseWheel);
@@ -25,7 +27,7 @@ export function createOrbitControls(canvas, camera) {
 	function onMouseMove(event) {
 		const x = event.clientX - startX;
 		const y = event.clientY - startY;
-		const cameraValue = camera.get();
+		const cameraValue = get(camera);
 		const { position, target, fov } = cameraValue;
 		const { radius, polar, azimuth } = getCoordinates(position, target);
 
@@ -34,12 +36,16 @@ export function createOrbitControls(canvas, camera) {
 		newPosition[1] = newPosition[1] + target[1];
 		newPosition[2] = newPosition[2] + target[2];
 
-		camera.set(newPosition, target, fov);
+		camera.set({
+			position: newPosition,
+			target,
+			fov,
+		});
 		startX = event.clientX;
 		startY = event.clientY;
 	}
 	function onMouseWheel(event) {
-		const cameraValue = camera.get();
+		const cameraValue = get(camera);
 		const { position, target, fov } = cameraValue;
 		const { radius, polar, azimuth } = getCoordinates(position, target);
 		console.log("radius", radius);
@@ -49,7 +55,11 @@ export function createOrbitControls(canvas, camera) {
 		newPosition[1] = newPosition[1] + target[1];
 		newPosition[2] = newPosition[2] + target[2];
 
-		camera.set(newPosition, target, fov);
+		camera.set({
+			position: newPosition,
+			target,
+			fov,
+		});
 	}
 
 	function getPositionFromPolar(radius, polar, azimuth) {
