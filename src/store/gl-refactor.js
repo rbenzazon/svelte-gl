@@ -31,9 +31,8 @@ function toRadian(a) {
 }
 
 export function initRenderer(rendererContext, appContext) {
-	return function () {
+	return function initRenderer() {
 		console.log("initRenderer");
-
 		const canvasRect = rendererContext.canvas.getBoundingClientRect();
 		rendererContext.canvas.width = canvasRect.width;
 		rendererContext.canvas.height = canvasRect.height;
@@ -51,9 +50,10 @@ export function initRenderer(rendererContext, appContext) {
 		gl.enable(gl.CULL_FACE);
 		gl.frontFace(gl.CCW);
 		gl.cullFace(gl.BACK);
-		renderState.set({
+		/*renderState.set({
 			init: true,
-		});
+		});*/
+		console.log("initRenderer done", get(renderState));
 	};
 }
 
@@ -68,7 +68,7 @@ export function setupTime(context) {
 }
 
 export function render(context, instances, drawMode) {
-	return function () {
+	return function render() {
 		const contextValue = get(context);
 		/** @type {WebGL2RenderingContext} **/
 		const gl = contextValue.gl;
@@ -76,7 +76,7 @@ export function render(context, instances, drawMode) {
 		contextValue.loop && contextValue.loop();
 		// when using vertex array objects, you must bind it before rendering
 		//gl.bindVertexArray(contextValue.vao);
-		console.log("drawMode", drawMode);
+		console.log("Draw drawMode", drawMode);
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, contextValue.attributeLength, instances);
 		} else {
@@ -94,7 +94,7 @@ export function render(context, instances, drawMode) {
 }
 
 export function bindVAO(context, mesh) {
-	return function () {
+	return function bindVAO() {
 		const contextValue = get(context);
 		const gl = contextValue.gl;
 		const vao = contextValue.vao;
@@ -104,23 +104,31 @@ export function bindVAO(context, mesh) {
 
 export function createProgram(context, programStore) {
 	return function createProgram() {
-		context = get(context);
-		if (context.program != null) {
+		const contextValue = get(context);
+		/*if (context.program != null) {
 			return;
-		}
-		const gl = context.gl;
+		}*/
+		const gl = contextValue.gl;
 		const program = gl.createProgram();
-		context.program = program;
-		context.programMap.set(programStore, program);
+
+		contextValue.programMap.set(programStore, program);
+		context.update((context) => {
+			console.log("createProgram context update");
+
+			return {
+				...contextValue,
+				program,
+			};
+		});
 	};
 }
 
 export function linkProgram(context) {
-	return function () {
-		context = get(context);
+	return function linkProgram() {
+		const contextValue = get(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
+		const gl = contextValue.gl;
+		const program = contextValue.program;
 		gl.linkProgram(program);
 		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
 			console.error("ERROR linking program!", gl.getProgramInfoLog(program));
@@ -129,11 +137,11 @@ export function linkProgram(context) {
 }
 
 export function validateProgram(context) {
-	return function () {
-		context = get(context);
+	return function validateProgram() {
+		const contextValue = get(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
+		const gl = contextValue.gl;
+		const program = contextValue.program;
 
 		gl.validateProgram(program);
 		if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
@@ -143,21 +151,21 @@ export function validateProgram(context) {
 }
 
 export function useProgram(context) {
-	return function () {
-		context = get(context);
+	return function useProgram() {
+		const contextValue = get(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
+		const gl = contextValue.gl;
+		const program = contextValue.program;
 		gl.useProgram(program);
 	};
 }
 
 export function createShaders() {
-	return function (context, material, meshes) {
-		return function () {
-			context = get(context);
-			const gl = context.gl;
-			const program = context.program;
+	return function createShaders(context, material, meshes) {
+		return function createShaders() {
+			const contextValue = get(context);
+			const gl = contextValue.gl;
+			const program = contextValue.program;
 
 			let vertexDeclarations = "";
 			let vertexPositionModifiers = "";
@@ -185,7 +193,7 @@ export function createShaders() {
 				declarations: vertexDeclarations,
 				positionModifier: vertexPositionModifiers,
 			});
-			console.log(vertexShaderSource);
+			//(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
@@ -233,16 +241,16 @@ export function createShaders() {
 				numPointLights: 0,
 			})({
 				defines: objectToDefines({
-					...(context.numPointLights
+					...(contextValue.numPointLights
 						? {
-								NUM_POINT_LIGHTS: context.numPointLights,
+								NUM_POINT_LIGHTS: contextValue.numPointLights,
 							}
 						: undefined),
 				}),
 				declarations: [
-					...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : []),
-					...(context.toneMappings?.length > 0
-						? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
+					...(contextValue.numPointLights ? [contextValue.pointLightShader({ declaration: true, irradiance: false })] : []),
+					...(contextValue.toneMappings?.length > 0
+						? [...contextValue.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
 						: []),
 					...(material.specular ? [specularDeclaration] : []),
 					...(material.diffuseMap ? [diffuseMapDeclaration] : []),
@@ -251,19 +259,21 @@ export function createShaders() {
 				diffuseMapSample,
 				normalMapSample,
 				irradiance: [
-					...(context.numPointLights
-						? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
+					...(contextValue.numPointLights
+						? [contextValue.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
 						: []),
 				].join("\n"),
 				toneMapping: [
-					...(context.toneMappings?.length > 0 ? [...context.toneMappings.map((tm) => tm.shader({ color: true }))] : []),
+					...(contextValue.toneMappings?.length > 0
+						? [...contextValue.toneMappings.map((tm) => tm.shader({ color: true }))]
+						: []),
 				].join("\n"),
 				//todo, remove this after decoupling the point light shader
-				numPointLights: context.numPointLights,
+				numPointLights: contextValue.numPointLights,
 			});
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
-			console.log(fragmentShaderSource);
+			//(fragmentShaderSource);
 			gl.compileShader(fragmentShader);
 			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
 				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
@@ -275,10 +285,10 @@ export function createShaders() {
 }
 
 export function setupMeshColor(context, { diffuse, metalness }) {
-	return function () {
-		context = get(context);
-		const gl = context.gl;
-		const program = context.program;
+	return function setupMeshColor() {
+		const contextValue = get(context);
+		const gl = contextValue.gl;
+		const program = contextValue.program;
 		const colorLocation = gl.getUniformLocation(program, "diffuse");
 		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
 		const metalnessLocation = gl.getUniformLocation(program, "metalness");
@@ -287,9 +297,9 @@ export function setupMeshColor(context, { diffuse, metalness }) {
 }
 
 export function setupAmbientLight(context, ambientLightColor) {
-	return function () {
-		context = get(context);
-		const { gl, program } = context;
+	return function setupAmbientLight() {
+		const contextValue = get(context);
+		const { gl, program } = contextValue;
 		const ambientLightColorLocation = gl.getUniformLocation(program, "ambientLightColor");
 		gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
 	};
@@ -297,14 +307,14 @@ export function setupAmbientLight(context, ambientLightColor) {
 
 export function setupCamera(context, camera) {
 	return function createCamera() {
-		context = get(context);
-		const gl = context.gl;
-		const program = context.program;
+		const contextValue = get(context);
+		const gl = contextValue.gl;
+		const program = contextValue.program;
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
 
 		const fieldOfViewInRadians = toRadian(camera.fov);
-		const aspectRatio = context.canvas.width / context.canvas.height;
+		const aspectRatio = contextValue.canvas.width / contextValue.canvas.height;
 		const nearClippingPlaneDistance = camera.near;
 		const farClippingPlaneDistance = camera.far;
 		let projection = new Float32Array(16);
@@ -362,14 +372,17 @@ function getEuler(out, quat) {
 export function setupTransformMatrix(context, transformMatrix, numInstances) {
 	if (numInstances == null) {
 		return function createTransformMatrix() {
-			context = get(context);
-			const gl = context.gl;
-			const program = context.program;
+			const contextValue = get(context);
+			const gl = contextValue.gl;
+			const program = contextValue.program;
 			if (!transformMatrix) {
 				transformMatrix = new Float32Array(16);
 				identity(transformMatrix);
 			}
-			context.transformMatrix = transformMatrix;
+			context.update((context) => ({
+				...context,
+				transformMatrix,
+			}));
 			const worldLocation = gl.getUniformLocation(program, "world");
 			gl.uniformMatrix4fv(worldLocation, false, transformMatrix);
 		};
@@ -377,10 +390,16 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 		return function createTransformMatrices() {
 			const attributeName = "world";
 			/** @type {{gl: WebGL2RenderingContext}} **/
-			context = get(context);
-			const { gl, program, vao } = context;
+			const contextValue = get(context);
+			const { gl, program, vao } = contextValue;
 
-			const transformMatricesWindows = (context.transformMatricesWindows = context.transformMatricesWindows || []);
+			//TODO, clean that it's useless since we overwrite it anyway and storing this way is not good
+			let transformMatricesWindows;
+			if ((contextValue.transformMatricesWindows = null)) {
+				transformMatricesWindows = [];
+			} else {
+				transformMatricesWindows = contextValue.transformMatricesWindows;
+			}
 
 			const transformMatricesValues = transformMatrix.reduce((acc, m) => [...acc, ...get(m)], []);
 			const transformMatricesData = new Float32Array(transformMatricesValues);
@@ -404,7 +423,11 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 			//context.transformMatrix = transformMatricesWindows;
 			gl.bindVertexArray(vao);
 			const matrixBuffer = gl.createBuffer();
-			context.matrixBuffer = matrixBuffer;
+			context.update((context) => ({
+				...context,
+				matrixBuffer,
+				transformMatricesWindows,
+			}));
 			const transformMatricesLocation = gl.getAttribLocation(program, attributeName);
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, transformMatricesData.byteLength, gl.DYNAMIC_DRAW);
@@ -433,17 +456,17 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 	}
 }
 export function updateTransformMatrix(context, worldMatrix) {
-	context = get(context);
-	const gl = context.gl;
-	const program = context.program;
+	const contextValue = get(context);
+	const gl = contextValue.gl;
+	const program = contextValue.program;
 	const worldLocation = gl.getUniformLocation(program, "world");
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 }
 
 export function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
-	context = get(context);
+	const contextValue = get(context);
 	/** @type{{gl:WebGL2RenderingContext}} **/
-	const { gl, program, vao, matrixBuffer } = context;
+	const { gl, program, vao, matrixBuffer } = contextValue;
 	gl.bindVertexArray(vao);
 	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 	const bytesPerMatrix = 4 * 16;
@@ -457,14 +480,20 @@ export function setupNormalMatrix(context, numInstances) {
 			/** @type{{gl:WebGL2RenderingContext}} **/
 			const { gl, program, transformMatrix } = get(context);
 			const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-			context.normalMatrixLocation = normalMatrixLocation;
+			/*
+			//TODO check why we need this
+			context.update((context) => ({
+				...context,
+				normalMatrixLocation,
+			}));
+			*/
 			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(transformMatrix));
 		};
 	} else {
 		return function createNormalMatrices() {
-			context = get(context);
+			const contextValue = get(context);
 			/** @type{{gl:WebGL2RenderingContext}} **/
-			const { gl, program, transformMatrix, vao, transformMatricesWindows } = context;
+			const { gl, program, transformMatrix, vao, transformMatricesWindows } = contextValue;
 			gl.bindVertexArray(vao);
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
 			const normalMatricesValues = [];
@@ -474,7 +503,10 @@ export function setupNormalMatrix(context, numInstances) {
 			}
 			const normalMatrices = new Float32Array(normalMatricesValues);
 			const normalMatrixBuffer = gl.createBuffer();
-			context.normalMatrixBuffer = normalMatrixBuffer;
+			context.update((context) => ({
+				...context,
+				normalMatrixBuffer,
+			}));
 			gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, normalMatrices.byteLength, gl.DYNAMIC_DRAW);
 
@@ -540,18 +572,27 @@ function getBuffer(variable) {
 }
 
 export function setupAttributes(context, mesh) {
-	return function () {
-		context = get(context);
+	return function setupAttributes() {
+		const contextValue = get(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
-		context.attributeLength = mesh.attributes.elements
+		const gl = contextValue.gl;
+		const program = contextValue.program;
+		const contextChanges = {
+			...contextValue,
+		};
+		contextChanges.attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / 3;
 
 		const { positions, normals, elements, uvs } = mesh.attributes;
-		const vao = (context.vao = gl.createVertexArray());
-		context.meshMap.set(mesh, vao);
+		let vao;
+		if (contextValue.vao) {
+			vao = contextValue.vao;
+		} else {
+			vao = gl.createVertexArray();
+			contextChanges.vao = vao;
+		}
+		contextChanges.meshMap.set(mesh, vao);
 		gl.bindVertexArray(vao);
 		const {
 			data: positionsData,
@@ -584,7 +625,7 @@ export function setupAttributes(context, mesh) {
 		gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
 		gl.enableVertexAttribArray(normalLocation);
 		if (mesh.attributes.elements) {
-			context.hasElements = true;
+			contextChanges.hasElements = true;
 			const elementsData = new Uint16Array(mesh.attributes.elements);
 			const elementBuffer = gl.createBuffer();
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
@@ -602,5 +643,6 @@ export function setupAttributes(context, mesh) {
 		}
 
 		gl.bindVertexArray(null);
+		context.set(contextChanges);
 	};
 }

@@ -79,7 +79,7 @@ function writeLightBuffer(buffer, light, offset) {
 }
 
 export function setupLights(context, lights) {
-	return function () {
+	return function setupLights() {
 		console.log("setupLights");
 
 		context = get(context);

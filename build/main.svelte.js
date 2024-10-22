@@ -2021,9 +2021,8 @@ function toRadian(a) {
 }
 
 function initRenderer(rendererContext, appContext) {
-	return function () {
+	return function initRenderer() {
 		console.log("initRenderer");
-
 		const canvasRect = rendererContext.canvas.getBoundingClientRect();
 		rendererContext.canvas.width = canvasRect.width;
 		rendererContext.canvas.height = canvasRect.height;
@@ -2041,9 +2040,10 @@ function initRenderer(rendererContext, appContext) {
 		gl.enable(gl.CULL_FACE);
 		gl.frontFace(gl.CCW);
 		gl.cullFace(gl.BACK);
-		renderState$1.set({
+		/*renderState.set({
 			init: true,
-		});
+		});*/
+		console.log("initRenderer done", get_store_value(renderState$1));
 	};
 }
 
@@ -2058,7 +2058,7 @@ function setupTime(context) {
 }
 
 function render(context, instances, drawMode) {
-	return function () {
+	return function render() {
 		const contextValue = get_store_value(context);
 		/** @type {WebGL2RenderingContext} **/
 		const gl = contextValue.gl;
@@ -2066,7 +2066,7 @@ function render(context, instances, drawMode) {
 		contextValue.loop && contextValue.loop();
 		// when using vertex array objects, you must bind it before rendering
 		//gl.bindVertexArray(contextValue.vao);
-		console.log("drawMode", drawMode);
+		console.log("Draw drawMode", drawMode);
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, contextValue.attributeLength, instances);
 		} else {
@@ -2084,7 +2084,7 @@ function render(context, instances, drawMode) {
 }
 
 function bindVAO(context, mesh) {
-	return function () {
+	return function bindVAO() {
 		const contextValue = get_store_value(context);
 		const gl = contextValue.gl;
 		contextValue.vao;
@@ -2094,23 +2094,31 @@ function bindVAO(context, mesh) {
 
 function createProgram(context, programStore) {
 	return function createProgram() {
-		context = get_store_value(context);
-		if (context.program != null) {
+		const contextValue = get_store_value(context);
+		/*if (context.program != null) {
 			return;
-		}
-		const gl = context.gl;
+		}*/
+		const gl = contextValue.gl;
 		const program = gl.createProgram();
-		context.program = program;
-		context.programMap.set(programStore, program);
+
+		contextValue.programMap.set(programStore, program);
+		context.update((context) => {
+			console.log("createProgram context update");
+
+			return {
+				...contextValue,
+				program,
+			};
+		});
 	};
 }
 
 function linkProgram(context) {
-	return function () {
-		context = get_store_value(context);
+	return function linkProgram() {
+		const contextValue = get_store_value(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
+		const gl = contextValue.gl;
+		const program = contextValue.program;
 		gl.linkProgram(program);
 		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
 			console.error("ERROR linking program!", gl.getProgramInfoLog(program));
@@ -2119,11 +2127,11 @@ function linkProgram(context) {
 }
 
 function validateProgram(context) {
-	return function () {
-		context = get_store_value(context);
+	return function validateProgram() {
+		const contextValue = get_store_value(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
+		const gl = contextValue.gl;
+		const program = contextValue.program;
 
 		gl.validateProgram(program);
 		if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
@@ -2133,21 +2141,21 @@ function validateProgram(context) {
 }
 
 function useProgram(context) {
-	return function () {
-		context = get_store_value(context);
+	return function useProgram() {
+		const contextValue = get_store_value(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
+		const gl = contextValue.gl;
+		const program = contextValue.program;
 		gl.useProgram(program);
 	};
 }
 
 function createShaders() {
-	return function (context, material, meshes) {
-		return function () {
-			context = get_store_value(context);
-			const gl = context.gl;
-			const program = context.program;
+	return function createShaders(context, material, meshes) {
+		return function createShaders() {
+			const contextValue = get_store_value(context);
+			const gl = contextValue.gl;
+			const program = contextValue.program;
 
 			let vertexDeclarations = "";
 			let vertexPositionModifiers = "";
@@ -2175,7 +2183,7 @@ function createShaders() {
 				declarations: vertexDeclarations,
 				positionModifier: vertexPositionModifiers,
 			});
-			console.log(vertexShaderSource);
+			//(vertexShaderSource);
 			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 			gl.shaderSource(vertexShader, vertexShaderSource);
 			gl.compileShader(vertexShader);
@@ -2223,16 +2231,16 @@ function createShaders() {
 				numPointLights: 0,
 			})({
 				defines: objectToDefines({
-					...(context.numPointLights
+					...(contextValue.numPointLights
 						? {
-								NUM_POINT_LIGHTS: context.numPointLights,
+								NUM_POINT_LIGHTS: contextValue.numPointLights,
 							}
 						: undefined),
 				}),
 				declarations: [
-					...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : []),
-					...(context.toneMappings?.length > 0
-						? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
+					...(contextValue.numPointLights ? [contextValue.pointLightShader({ declaration: true, irradiance: false })] : []),
+					...(contextValue.toneMappings?.length > 0
+						? [...contextValue.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
 						: []),
 					...(material.specular ? [specularDeclaration] : []),
 					...(material.diffuseMap ? [diffuseMapDeclaration] : []),
@@ -2241,19 +2249,21 @@ function createShaders() {
 				diffuseMapSample,
 				normalMapSample,
 				irradiance: [
-					...(context.numPointLights
-						? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
+					...(contextValue.numPointLights
+						? [contextValue.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
 						: []),
 				].join("\n"),
 				toneMapping: [
-					...(context.toneMappings?.length > 0 ? [...context.toneMappings.map((tm) => tm.shader({ color: true }))] : []),
+					...(contextValue.toneMappings?.length > 0
+						? [...contextValue.toneMappings.map((tm) => tm.shader({ color: true }))]
+						: []),
 				].join("\n"),
 				//todo, remove this after decoupling the point light shader
-				numPointLights: context.numPointLights,
+				numPointLights: contextValue.numPointLights,
 			});
 			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 			gl.shaderSource(fragmentShader, fragmentShaderSource);
-			console.log(fragmentShaderSource);
+			//(fragmentShaderSource);
 			gl.compileShader(fragmentShader);
 			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
 				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
@@ -2265,10 +2275,10 @@ function createShaders() {
 }
 
 function setupMeshColor(context, { diffuse, metalness }) {
-	return function () {
-		context = get_store_value(context);
-		const gl = context.gl;
-		const program = context.program;
+	return function setupMeshColor() {
+		const contextValue = get_store_value(context);
+		const gl = contextValue.gl;
+		const program = contextValue.program;
 		const colorLocation = gl.getUniformLocation(program, "diffuse");
 		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
 		const metalnessLocation = gl.getUniformLocation(program, "metalness");
@@ -2277,9 +2287,9 @@ function setupMeshColor(context, { diffuse, metalness }) {
 }
 
 function setupAmbientLight(context, ambientLightColor) {
-	return function () {
-		context = get_store_value(context);
-		const { gl, program } = context;
+	return function setupAmbientLight() {
+		const contextValue = get_store_value(context);
+		const { gl, program } = contextValue;
 		const ambientLightColorLocation = gl.getUniformLocation(program, "ambientLightColor");
 		gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
 	};
@@ -2287,14 +2297,14 @@ function setupAmbientLight(context, ambientLightColor) {
 
 function setupCamera(context, camera) {
 	return function createCamera() {
-		context = get_store_value(context);
-		const gl = context.gl;
-		const program = context.program;
+		const contextValue = get_store_value(context);
+		const gl = contextValue.gl;
+		const program = contextValue.program;
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
 
 		const fieldOfViewInRadians = toRadian(camera.fov);
-		const aspectRatio = context.canvas.width / context.canvas.height;
+		const aspectRatio = contextValue.canvas.width / contextValue.canvas.height;
 		const nearClippingPlaneDistance = camera.near;
 		const farClippingPlaneDistance = camera.far;
 		let projection = new Float32Array(16);
@@ -2322,14 +2332,17 @@ function setupCamera(context, camera) {
 function setupTransformMatrix(context, transformMatrix, numInstances) {
 	if (numInstances == null) {
 		return function createTransformMatrix() {
-			context = get_store_value(context);
-			const gl = context.gl;
-			const program = context.program;
+			const contextValue = get_store_value(context);
+			const gl = contextValue.gl;
+			const program = contextValue.program;
 			if (!transformMatrix) {
 				transformMatrix = new Float32Array(16);
 				identity(transformMatrix);
 			}
-			context.transformMatrix = transformMatrix;
+			context.update((context) => ({
+				...context,
+				transformMatrix,
+			}));
 			const worldLocation = gl.getUniformLocation(program, "world");
 			gl.uniformMatrix4fv(worldLocation, false, transformMatrix);
 		};
@@ -2337,10 +2350,16 @@ function setupTransformMatrix(context, transformMatrix, numInstances) {
 		return function createTransformMatrices() {
 			const attributeName = "world";
 			/** @type {{gl: WebGL2RenderingContext}} **/
-			context = get_store_value(context);
-			const { gl, program, vao } = context;
+			const contextValue = get_store_value(context);
+			const { gl, program, vao } = contextValue;
 
-			const transformMatricesWindows = (context.transformMatricesWindows = context.transformMatricesWindows || []);
+			//TODO, clean that it's useless since we overwrite it anyway and storing this way is not good
+			let transformMatricesWindows;
+			if ((contextValue.transformMatricesWindows = null)) {
+				transformMatricesWindows = [];
+			} else {
+				transformMatricesWindows = contextValue.transformMatricesWindows;
+			}
 
 			const transformMatricesValues = transformMatrix.reduce((acc, m) => [...acc, ...get_store_value(m)], []);
 			const transformMatricesData = new Float32Array(transformMatricesValues);
@@ -2364,7 +2383,11 @@ function setupTransformMatrix(context, transformMatrix, numInstances) {
 			//context.transformMatrix = transformMatricesWindows;
 			gl.bindVertexArray(vao);
 			const matrixBuffer = gl.createBuffer();
-			context.matrixBuffer = matrixBuffer;
+			context.update((context) => ({
+				...context,
+				matrixBuffer,
+				transformMatricesWindows,
+			}));
 			const transformMatricesLocation = gl.getAttribLocation(program, attributeName);
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, transformMatricesData.byteLength, gl.DYNAMIC_DRAW);
@@ -2399,14 +2422,20 @@ function setupNormalMatrix(context, numInstances) {
 			/** @type{{gl:WebGL2RenderingContext}} **/
 			const { gl, program, transformMatrix } = get_store_value(context);
 			const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-			context.normalMatrixLocation = normalMatrixLocation;
+			/*
+			//TODO check why we need this
+			context.update((context) => ({
+				...context,
+				normalMatrixLocation,
+			}));
+			*/
 			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(transformMatrix));
 		};
 	} else {
 		return function createNormalMatrices() {
-			context = get_store_value(context);
+			const contextValue = get_store_value(context);
 			/** @type{{gl:WebGL2RenderingContext}} **/
-			const { gl, program, transformMatrix, vao, transformMatricesWindows } = context;
+			const { gl, program, transformMatrix, vao, transformMatricesWindows } = contextValue;
 			gl.bindVertexArray(vao);
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
 			const normalMatricesValues = [];
@@ -2416,7 +2445,10 @@ function setupNormalMatrix(context, numInstances) {
 			}
 			const normalMatrices = new Float32Array(normalMatricesValues);
 			const normalMatrixBuffer = gl.createBuffer();
-			context.normalMatrixBuffer = normalMatrixBuffer;
+			context.update((context) => ({
+				...context,
+				normalMatrixBuffer,
+			}));
 			gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, normalMatrices.byteLength, gl.DYNAMIC_DRAW);
 
@@ -2469,18 +2501,27 @@ function getBuffer(variable) {
 }
 
 function setupAttributes(context, mesh) {
-	return function () {
-		context = get_store_value(context);
+	return function setupAttributes() {
+		const contextValue = get_store_value(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
-		context.attributeLength = mesh.attributes.elements
+		const gl = contextValue.gl;
+		const program = contextValue.program;
+		const contextChanges = {
+			...contextValue,
+		};
+		contextChanges.attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / 3;
 
 		const { positions, normals, elements, uvs } = mesh.attributes;
-		const vao = (context.vao = gl.createVertexArray());
-		context.meshMap.set(mesh, vao);
+		let vao;
+		if (contextValue.vao) {
+			vao = contextValue.vao;
+		} else {
+			vao = gl.createVertexArray();
+			contextChanges.vao = vao;
+		}
+		contextChanges.meshMap.set(mesh, vao);
 		gl.bindVertexArray(vao);
 		const {
 			data: positionsData,
@@ -2513,7 +2554,7 @@ function setupAttributes(context, mesh) {
 		gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
 		gl.enableVertexAttribArray(normalLocation);
 		if (mesh.attributes.elements) {
-			context.hasElements = true;
+			contextChanges.hasElements = true;
 			const elementsData = new Uint16Array(mesh.attributes.elements);
 			const elementBuffer = gl.createBuffer();
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
@@ -2531,6 +2572,7 @@ function setupAttributes(context, mesh) {
 		}
 
 		gl.bindVertexArray(null);
+		context.set(contextChanges);
 	};
 }
 
@@ -2557,21 +2599,6 @@ function hasSameShallow(a, b) {
 	}
 	return true;
 }
-function optionalPropsDeepEqual(a, b) {
-	if (a == null || b == null) {
-		return false;
-	}
-	for (let key in a) {
-		if (Array.isArray(a[key])) {
-			if (!hasSameShallow(a[key], b[key])) {
-				return false;
-			}
-		} else if (a[key] !== b[key]) {
-			return false;
-		}
-	}
-	return true;
-}
 
 function isLight(sceneNode) {
 	sceneNode = get_store_value(sceneNode);
@@ -2590,16 +2617,6 @@ function createRenderer() {
 		loop: null,
 		//value
 		backgroundColor: 0xffffff,
-		//ref
-		camera: {
-			position: [0, 0, -1],
-			target: [0, 0, 0],
-			fov: 80,
-			near: 0.1,
-			far: 1000,
-			up: [0, 1, 0],
-			matrix: null,
-		},
 		//value
 		ambientLightColor: [0xffffff, 0],
 		//values
@@ -2610,7 +2627,8 @@ function createRenderer() {
 	let cache = initialValue;
 	let processed = new Map();
 	const store = writable(initialValue);
-	const { subscribe, set, update } = store;
+	const { subscribe, update } = store;
+	const revisionStore = writable(0);
 
 	/**
 	 * Update function can update uniforms and other values directly
@@ -2619,12 +2637,6 @@ function createRenderer() {
 	function updateLoop(loop) {}
 	function updateBackgroundColor(color) {
 		processed.set("backgroundColor", [...convertToVector3(color), 1]);
-	}
-	function updateCamera(camera, prev) {
-		return {
-			...prev,
-			...camera,
-		};
 	}
 	function updateAmbientLightColor([color, intensity]) {
 		processed.set(
@@ -2638,6 +2650,8 @@ function createRenderer() {
 	function customUpdate(updater) {
 		update((renderer) => {
 			const next = updater(renderer);
+			//getting revision value from cache prevents revision tampering
+			revisionStore.update((revision) => revision + 1);
 			if (cache.canvas != null && next.canvas !== cache.canvas) {
 				updateCanvas(next.canvas);
 			}
@@ -2646,9 +2660,6 @@ function createRenderer() {
 			}
 			if (next.backgroundColor !== cache.backgroundColor) {
 				updateBackgroundColor(next.backgroundColor);
-			}
-			if (!optionalPropsDeepEqual(next.camera, cache.camera)) {
-				next.camera = updateCamera(next.camera, cache.camera);
 			}
 			if (!hasSameShallow(next.ambientLightColor, cache.ambientLightColor)) {
 				updateAmbientLightColor(next.ambientLightColor);
@@ -2689,11 +2700,78 @@ function createRenderer() {
 		set: customSet,
 		update: customUpdate,
 		getProcessed,
+		get revision() {
+			return get_store_value(revisionStore);
+		},
 	};
 }
+
+function createCameraStore() {
+	const initialCamera = {
+		position: [0, 0, -1],
+		target: [0, 0, 0],
+		fov: 80,
+		near: 0.1,
+		far: 1000,
+		up: [0, 1, 0],
+		matrix: null,
+	};
+	const store = writable(initialCamera);
+	const { subscribe, update } = store;
+	const revisionStore = writable(0);
+	function customUpdate(updater) {
+		update((camera) => {
+			//console.log("camera update");
+			//this makes update require only the changed props (especially the revision)
+			const next = {
+				...camera,
+				...updater(camera),
+			};
+			revisionStore.update((revision) => revision + 1);
+			return next;
+		});
+	}
+	function customSet(next) {
+		customUpdate((camera) => next);
+	}
+	return {
+		subscribe,
+		set: customSet,
+		update: customUpdate,
+		get revision() {
+			return get_store_value(revisionStore);
+		},
+	};
+}
+
+const camera = createCameraStore();
 const renderer = createRenderer();
 
-const scene = writable([]);
+function createSceneStore() {
+	const store = writable([]);
+	const revisionStore = writable(0);
+	const { subscribe, update } = store;
+	function customUpdate(updater) {
+		update((scene) => {
+			const next = updater(scene);
+			revisionStore.update((revision) => revision + 1);
+			return next;
+		});
+	}
+	function customSet(next) {
+		customUpdate((scene) => next);
+	}
+	return {
+		subscribe,
+		set: customSet,
+		update: customUpdate,
+		//this way the revision can't be changed from outside
+		get revision() {
+			return get_store_value(revisionStore);
+		},
+	};
+}
+const scene = createSceneStore();
 
 const createLightStore = (initialProps) => {
 	const { subscribe, set } = writable(initialProps);
@@ -2735,7 +2813,7 @@ const materials = derived([meshes], ([$meshes]) => {
 	return materials;
 });
 
-const programs = derived([scene, meshes, materials], ([$scene, $meshes, $materials]) => {
+const programs = derived([meshes, materials], ([$meshes, $materials]) => {
 	let programs = Array.from($materials);
 
 	//this sublist mesh items require their own respective program (shader)
@@ -2789,21 +2867,25 @@ function isStore(obj) {
 }
 
 function selectProgram(appContext, program) {
-	const { programMap } = appContext;
-	const cachedProgram = programMap.get(program);
-	appContext.update((appContext) => ({
-		...appContext,
-		program: cachedProgram,
-	}));
+	return function selectProgram() {
+		const { programMap } = get_store_value(appContext);
+		const cachedProgram = programMap.get(program);
+		appContext.update((appContext) => ({
+			...appContext,
+			program: cachedProgram,
+		}));
+	};
 }
 
 function selectMesh(appContext, mesh) {
-	const { meshMap } = appContext;
-	const cachedVAO = meshMap.get(mesh);
-	appContext.update((appContext) => ({
-		...appContext,
-		vao: cachedVAO,
-	}));
+	return function selectMesh() {
+		const { meshMap } = get_store_value(appContext);
+		const cachedVAO = meshMap.get(mesh);
+		appContext.update((appContext) => ({
+			...appContext,
+			vao: cachedVAO,
+		}));
+	};
 }
 
 const appContext = writable({
@@ -2812,18 +2894,78 @@ const appContext = writable({
 });
 
 const emptyApp = [];
+const revisionMap = new Map();
+revisionMap.set(renderer, 0);
+revisionMap.set(scene, 0);
+revisionMap.set(camera, 0);
+
+function updated() {
+	const updateMap = new Set();
+	if (revisionMap.get(renderer) !== renderer.revision) {
+		updateMap.add(renderer);
+	}
+	if (revisionMap.get(scene) !== scene.revision) {
+		updateMap.add(scene);
+	}
+	if (revisionMap.get(camera) !== camera.revision) {
+		updateMap.add(camera);
+	}
+	revisionMap.set(renderer, renderer.revision);
+	revisionMap.set(scene, scene.revision); /**
+	 * running states
+	 * 0 : not started
+	 * 1 : init currently running
+	 * 2 : init done, waiting for start
+	 * 3 : loop requested, ready to run									<---|
+	 * 																		|---- end state occilates between 3 and 4
+	 * 4 : loop currently running, renderer updates ignored momentarily	<---|
+	 */
+	revisionMap.set(camera, camera.revision);
+	return updateMap;
+}
+
+/**
+ * running states
+ * 0 : not started
+ * 1 : init currently running
+ * 2 : init done, waiting for start
+ * 3 : loop requested, ready to run									<---|
+ * 																		|---- end state occilates between 3 and 4
+ * 4 : loop currently running, renderer updates ignored momentarily	<---|
+ */
+const running = writable(0);
+
 const webglapp = derived(
-	[renderer, programs, scene],
-	([$renderer, $programs, $scene]) => {
+	[renderer, programs, scene, camera, running],
+	([$renderer, $programs, $scene, $camera, $running]) => {
 		// if renderer.enabled is false, the scene is being setup, we should not render
 		// if running is 4, we let the loop run completly as a way to batch scene updates
-		if (!$renderer.enabled || get_store_value(running) === 4) {
-			//log("webglapp not ready");
+		if (!$renderer.enabled || $running === 4 || $running === 1) {
+			console.log("webglapp update cancelled");
+			//TODO maybe throw here to cancel the update flow
 			return emptyApp;
 		}
+		console.log("webglapp derived", $running);
+		get_store_value(renderer);
+		renderer.revision;
+		get_store_value(camera);
+		camera.revision;
+		get_store_value(scene);
+		scene.revision;
+		// this map will tell you which stores have been updated since last updated() call
+		const updateMap = updated();
+		/*
+		if(updateMap.has(renderer)){
+			console.log("update renderer");
+		}
+		if(updateMap.has(scene)){
+			console.log("update scene");
+		}
+		if(updateMap.has(camera)){
+			console.log("update camera");
+		}
+		*/
 		const lights = $scene.filter(isStore).filter(isLight);
-		console.log("$scene", $scene);
-		console.log("lights", lights);
 
 		const pointLights = lights.filter((l) => get_store_value(l).type === "point");
 		const numPointLights = pointLights.length;
@@ -2836,7 +2978,6 @@ const webglapp = derived(
 			p.meshes.some(m => m.animations
 				?.some((animation) => animation.requireTime)));*/
 		const rendererValues = renderer.getProcessed();
-		console.log("rendererValues", rendererValues);
 		let rendererContext = {
 			canvas: $renderer.canvas,
 			backgroundColor: rendererValues.backgroundColor,
@@ -2859,113 +3000,119 @@ const webglapp = derived(
 			...rendererContext,
 		}));
 
-		// is it necessary ?
-		//const camera = $scene.find(isCamera);
+		const init = get_store_value(renderState).init;
+		if (!init) {
+			renderPipeline.push(initRenderer(rendererContext, appContext));
+		}
+		/*!init &&*/
+		renderPipeline.push(
+			...$programs.reduce((acc, program) => {
+				//console.log("program", program);
+				//console.log("appContext", get(appContext));
 
-		!get_store_value(renderState).init && renderPipeline.push(initRenderer(rendererContext, appContext));
-		!get_store_value(renderState).init &&
-			renderPipeline.push(
-				...$programs.reduce((acc, program) => {
-					console.log("program", program);
-					console.log("appContext", get_store_value(appContext));
+				return [
+					...acc,
+					...(get_store_value(appContext).programMap.has(program)
+						? [
+								selectProgram(appContext, program),
+								program.useProgram(appContext),
+								...(updateMap.has(camera) ? [setupCamera(appContext, $camera)] : []),
+							]
+						: [
+								program.createProgram(appContext, program),
+								program.createShaders(appContext, program.material, program.meshes),
+								program.linkProgram(appContext),
+								program.validateProgram(appContext),
+								program.useProgram(appContext),
+								setupCamera(appContext, $camera),
+								setupAmbientLight(appContext, rendererValues.ambientLightColor),
+								...[
+									...lights.reduce((acc, light) => {
+										const lightValue = get_store_value(light);
+										acc.set(lightValue.type, lightValue.setupLights);
+										return acc;
+									}, new Map()),
+								].map(([_, setupLights]) => setupLights(appContext, lights)),
+								...(program.material?.specular ? [program.material.specular.setupSpecular(appContext)] : []),
+								...(program.material?.diffuseMap ? [program.mesh.material?.diffuseMap.setupTexture(appContext)] : []),
+								...(program.material?.normalMap ? [program.material?.normalMap.setupTexture(appContext)] : []),
+								...(program.requireTime ? [setupTime(appContext)] : []),
+							]),
 
-					return [
-						...acc,
-						...(get_store_value(appContext).programMap.has(program)
-							? [!console.log("selectProgram") && selectProgram(appContext, program), program.useProgram(appContext)]
-							: [
-									program.createProgram(appContext, program),
-									program.createShaders(appContext, program.material, program.meshes),
-									program.linkProgram(appContext),
-									program.validateProgram(appContext),
-									program.useProgram(appContext),
-									setupCamera(appContext, $renderer.camera),
-									setupAmbientLight(appContext, rendererValues.ambientLightColor),
-									...[
-										...lights.reduce((acc, light) => {
-											console.log("light", light);
+					...program.meshes.reduce(
+						(acc, mesh) => [
+							...acc,
+							...(get_store_value(appContext).meshMap.has(mesh)
+								? [
+										selectMesh(appContext, mesh),
+										//setupMeshColor(appContext, program.material),// is it necessary ?multiple meshes only render with same material so same color
+										...(mesh.instances == null
+											? [setupTransformMatrix(appContext, get_store_value(mesh.transformMatrix)), setupNormalMatrix(appContext)]
+											: []),
+									]
+								: [
+										setupAttributes(appContext, mesh),
+										setupMeshColor(appContext, program.material),
 
-											const lightValue = get_store_value(light);
-											acc.set(lightValue.type, lightValue.setupLights);
-											return acc;
-										}, new Map()),
-									].map(([_, setupLights]) => setupLights(appContext, lights)),
-									...(program.material?.specular ? [program.material.specular.setupSpecular(appContext)] : []),
-									...(program.material?.diffuseMap ? [program.mesh.material?.diffuseMap.setupTexture(appContext)] : []),
-									...(program.material?.normalMap ? [program.material?.normalMap.setupTexture(appContext)] : []),
-									...(program.requireTime ? [setupTime(appContext)] : []),
-								]),
-
-						...program.meshes.reduce(
-							(acc, mesh) => [
-								...acc,
-								...(get_store_value(appContext).meshMap.has(mesh)
-									? [
-											selectMesh(appContext, mesh),
-											//setupMeshColor(appContext, program.material),// is it necessary ?multiple meshes only render with same material so same color
-											...(mesh.instances == null
-												? [setupTransformMatrix(appContext, get_store_value(mesh.transformMatrix)), setupNormalMatrix(appContext)]
-												: []),
-										]
-									: [
-											setupAttributes(appContext, mesh),
-											setupMeshColor(appContext, program.material),
-
-											setupTransformMatrix(
-												appContext,
-												mesh.instances == null ? get_store_value(mesh.transformMatrix) : mesh.matrices,
-												mesh.instances,
-											),
-											setupNormalMatrix(appContext, mesh.instances),
-											...(mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || []),
-											// reduce by type to setup lights once per type
-										]),
-								bindVAO(appContext),
-								render(appContext, mesh.instances, mesh.drawMode),
-							],
-							[],
-						),
-					];
-				}, []),
-			);
+										setupTransformMatrix(
+											appContext,
+											mesh.instances == null ? get_store_value(mesh.transformMatrix) : mesh.matrices,
+											mesh.instances,
+										),
+										setupNormalMatrix(appContext, mesh.instances),
+										...(mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || []),
+										// reduce by type to setup lights once per type
+									]),
+							bindVAO(appContext),
+							render(appContext, mesh.instances, mesh.drawMode),
+						],
+						[],
+					),
+				];
+			}, []),
+		);
+		console.log("renderPipeline", renderPipeline.length, renderPipeline);
 
 		return renderPipeline;
 	},
 	emptyApp,
 );
 
-/**
- * running states
- * 0 : not started
- * 1 : init currently running
- * 2 : init done, waiting for start
- * 3 : loop requested, ready to run									<---|
- * 																		|---- end state occilates between 3 and 4
- * 4 : loop currently running, renderer updates ignored momentarily	<---|
- */
-const running = writable(0);
 const renderLoopStore = derived([webglapp], ([$webglapp]) => {
 	if ($webglapp.length === 0) {
+		//console.log("renderLoopStore update cancelled");
 		return 0;
 	}
 	if (!get_store_value(renderState).init && get_store_value(running) === 0) {
 		running.set(1);
 		$webglapp.forEach((f) => f());
+		renderState.set({
+			init: true,
+		});
 		running.set(2);
+		//console.log("renderLoopStore finish init");
 		return 1;
 	} else if (get_store_value(running) === 2) {
 		running.set(3);
 		requestAnimationFrame(loop);
+		//console.log("renderLoopStore starting loop");
 		return 2;
 	}
+	//console.log("renderLoopStore none", get(running), get(renderState).init);
+
 	async function loop() {
 		// skipping this iteration is previous one not finished
 		if (get_store_value(running) !== 4) {
+			console.log("renderLoopStore loop start", get_store_value(webglapp).length);
+
 			running.set(4);
 			get_store_value(renderer).loop && get_store_value(renderer).loop();
-			$webglapp.forEach((f) => f());
 			running.set(3);
+			get_store_value(webglapp).forEach((f) => f());
+
+			console.log("renderLoopStore loop finish, running 3");
 		}
+		//console.log("renderLoopStore requestAnimationFrame");
 		requestAnimationFrame(loop);
 	}
 });
@@ -3058,7 +3205,7 @@ function writeLightBuffer(buffer, light, offset) {
 }
 
 function setupLights(context, lights) {
-	return function () {
+	return function setupLights() {
 		console.log("setupLights");
 
 		context = get_store_value(context);
@@ -3180,15 +3327,13 @@ function create_fragment(ctx) {
 	};
 }
 
-function animate() {
-	console.log("animate");
-}
-
 function instance($$self, $$props, $$invalidate) {
+	let $camera;
 	let $renderer;
 	let $scene;
-	component_subscribe($$self, renderer, $$value => $$invalidate(2, $renderer = $$value));
-	component_subscribe($$self, scene, $$value => $$invalidate(3, $scene = $$value));
+	component_subscribe($$self, camera, $$value => $$invalidate(2, $camera = $$value));
+	component_subscribe($$self, renderer, $$value => $$invalidate(3, $renderer = $$value));
+	component_subscribe($$self, scene, $$value => $$invalidate(4, $scene = $$value));
 	let canvas;
 
 	onMount(async () => {
@@ -3198,14 +3343,19 @@ function instance($$self, $$props, $$invalidate) {
 				...$renderer,
 				canvas,
 				backgroundColor: skyblue,
-				camera: {
-					position: [0, 5, -5],
-					target: [0, 0, 0],
-					fov: 75
-				},
 				ambientLightColor: [0xffffff, 0.5]
 			},
 			$renderer
+		);
+
+		set_store_value(
+			camera,
+			$camera = {
+				position: [0, 5, -5],
+				target: [0, 0, 0],
+				fov: 75
+			},
+			$camera
 		);
 
 		const cubeMesh = createCube();
@@ -3241,7 +3391,21 @@ function instance($$self, $$props, $$invalidate) {
 			},
 			$renderer
 		);
+
+		setTimeout(
+			() => {
+				set_store_value(camera, $camera = { position: [0, 5, -4] }, $camera);
+			},
+			1000
+		);
 	});
+
+	function animate() {
+		const time = performance.now() / 1000;
+		const zpos = Math.sin(time) * 2;
+		set_store_value(camera, $camera = { position: [0, 5, -zpos] }, $camera);
+		console.log("animate", $camera.position);
+	}
 
 	function canvas_1_binding($$value) {
 		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
