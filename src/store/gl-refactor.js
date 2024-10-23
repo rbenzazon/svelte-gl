@@ -71,15 +71,20 @@ export function clearFrame(context) {
 	};
 }
 
-export function render(context, instances, drawMode) {
+export function render(context, mesh, instances, drawMode) {
 	return function render() {
 		const contextValue = get(context);
 		/** @type {WebGL2RenderingContext} **/
-		const { gl, attributeLength, hasElements } = contextValue;
+		const { gl } = contextValue;
+
+		const attributeLength = mesh.attributes.elements
+			? mesh.attributes.elements.length
+			: mesh.attributes.positions.length / 3;
+
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
 		} else {
-			if (hasElements) {
+			if (mesh.attributes.elements) {
 				gl.drawElements(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
 				gl.drawArrays(gl[drawMode], 0, attributeLength);
@@ -95,9 +100,8 @@ export function render(context, instances, drawMode) {
 export function bindVAO(context, mesh) {
 	return function bindVAO() {
 		const contextValue = get(context);
-		const gl = contextValue.gl;
-		const vao = contextValue.vao;
-		gl.bindVertexArray(contextValue.vao);
+		const { gl, vaoMap } = contextValue;
+		gl.bindVertexArray(vaoMap.get(mesh));
 	};
 }
 
@@ -366,7 +370,7 @@ function getEuler(out, quat) {
 	return out;
 }
 
-export function setupTransformMatrix(context, transformMatrix, numInstances) {
+export function setupTransformMatrix(context, mesh, transformMatrix, numInstances) {
 	if (numInstances == null) {
 		return function createTransformMatrix() {
 			const contextValue = get(context);
@@ -388,7 +392,7 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 			const attributeName = "world";
 			/** @type {{gl: WebGL2RenderingContext}} **/
 			const contextValue = get(context);
-			const { gl, program, vao } = contextValue;
+			const { gl, program, vaoMap } = contextValue;
 
 			//TODO, clean that it's useless since we overwrite it anyway and storing this way is not good
 			let transformMatricesWindows;
@@ -418,7 +422,7 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 			});
 */
 			//context.transformMatrix = transformMatricesWindows;
-			gl.bindVertexArray(vao);
+			gl.bindVertexArray(vaoMap.get(mesh));
 			const matrixBuffer = gl.createBuffer();
 			context.update((context) => ({
 				...context,
@@ -460,18 +464,18 @@ export function updateTransformMatrix(context, worldMatrix) {
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 }
 
-export function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
+export function updateInstanceTransformMatrix(context, mesh, worldMatrix, instanceIndex) {
 	const contextValue = get(context);
 	/** @type{{gl:WebGL2RenderingContext}} **/
-	const { gl, program, vao, matrixBuffer } = contextValue;
-	gl.bindVertexArray(vao);
+	const { gl, vaoMap, matrixBuffer } = contextValue;
+	gl.bindVertexArray(vaoMap.get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 	const bytesPerMatrix = 4 * 16;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
 	gl.bindVertexArray(null);
 }
 
-export function setupNormalMatrix(context, numInstances) {
+export function setupNormalMatrix(context, mesh, numInstances) {
 	if (numInstances == null) {
 		return function createNormalMatrix() {
 			/** @type{{gl:WebGL2RenderingContext}} **/
@@ -490,8 +494,9 @@ export function setupNormalMatrix(context, numInstances) {
 		return function createNormalMatrices() {
 			const contextValue = get(context);
 			/** @type{{gl:WebGL2RenderingContext}} **/
-			const { gl, program, transformMatrix, vao, transformMatricesWindows } = contextValue;
-			gl.bindVertexArray(vao);
+			const { gl, program, vaoMap, transformMatricesWindows } = contextValue;
+
+			gl.bindVertexArray(vaoMap.get(mesh));
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
 			const normalMatricesValues = [];
 
@@ -536,8 +541,13 @@ export function updateNormalMatrix({ gl, program }, normalMatrix) {
 	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
 }
 
-export function updateInstanceNormalMatrix({ gl, program, vao, normalMatrixBuffer }, normalMatrix, instanceIndex) {
-	gl.bindVertexArray(vao);
+export function updateInstanceNormalMatrix(
+	{ gl, program, vaoMap, normalMatrixBuffer },
+	mesh,
+	normalMatrix,
+	instanceIndex,
+) {
+	gl.bindVertexArray(vaoMap.get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
 	const bytesPerMatrix = 4 * 16;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, normalMatrix);
@@ -572,24 +582,19 @@ export function setupAttributes(context, mesh) {
 	return function setupAttributes() {
 		const contextValue = get(context);
 		/** @type {WebGL2RenderingContext} **/
-		const gl = contextValue.gl;
+		const { gl, vaoMap } = contextValue;
 		const program = contextValue.program;
 		const contextChanges = {
 			...contextValue,
 		};
-		contextChanges.attributeLength = mesh.attributes.elements
-			? mesh.attributes.elements.length
-			: mesh.attributes.positions.length / 3;
-
 		const { positions, normals, elements, uvs } = mesh.attributes;
 		let vao;
-		if (contextValue.vao) {
-			vao = contextValue.vao;
+		if (vaoMap.has(mesh)) {
+			vao = vaoMap.get(mesh);
 		} else {
 			vao = gl.createVertexArray();
-			contextChanges.vao = vao;
+			contextChanges.vaoMap.set(mesh, vao);
 		}
-		contextChanges.meshMap.set(mesh, vao);
 		gl.bindVertexArray(vao);
 		const {
 			data: positionsData,
@@ -622,7 +627,6 @@ export function setupAttributes(context, mesh) {
 		gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
 		gl.enableVertexAttribArray(normalLocation);
 		if (mesh.attributes.elements) {
-			contextChanges.hasElements = true;
 			const elementsData = new Uint16Array(mesh.attributes.elements);
 			const elementBuffer = gl.createBuffer();
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);

@@ -24,6 +24,6 @@ export default {
             extensions: ['.svelte']
           }),
         commonjs(),
-        terser(),
+        //terser(),
     ]
 };

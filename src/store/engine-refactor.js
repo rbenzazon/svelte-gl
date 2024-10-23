@@ -42,14 +42,19 @@ function createRenderer() {
 		//value
 		enabled: false,
 	};
+	// the cache is made to compare the previous value with the new one
 	let cache = initialValue;
+	// some values have a different internal format
 	let processed = new Map();
 	const store = writable(initialValue);
 	const { subscribe, update } = store;
+
+	//private store to keep track of updates
 	const revisionStore = writable(0);
 
 	/**
-	 * Update function can update uniforms and other values directly
+	 * Update functions are called when a different value is set.
+	 * processed values are updated here
 	 */
 	function updateCanvas(canvas) {}
 	function updateLoop(loop) {}
@@ -68,7 +73,6 @@ function createRenderer() {
 	function customUpdate(updater) {
 		update((renderer) => {
 			const next = updater(renderer);
-			//getting revision value from cache prevents revision tampering
 			revisionStore.update((revision) => revision + 1);
 			if (cache.canvas != null && next.canvas !== cache.canvas) {
 				updateCanvas(next.canvas);
@@ -121,7 +125,27 @@ function createRenderer() {
 		},
 	};
 }
+/**
+ * Camera
+ * @typedef {Object} Camera
+ * @property {import('gl-matrix').vec3} position - The position of the camera
+ * @property {import('gl-matrix').vec3} target - The target of the camera
+ * @property {number} fov - The field of view of the camera in degrees
+ * @property {number} near - The near clipping plane distance
+ * @property {number} far - The far clipping plane distance
+ * @property {import('gl-matrix').vec3} up - The up vector of the camera
+ * @property {import('gl-matrix').mat4 | null} matrix - The view matrix of the camera
+ */
 
+/**
+ * Camera store
+ * @typedef {import('svelte/store').Writable<Camera>} CameraStore
+ * @property {number} revision - The revision of the store
+ */
+
+/**
+ * @return {CameraStore}
+ */
 function createCameraStore() {
 	const initialCamera = {
 		position: [0, 0, -1],
@@ -161,13 +185,6 @@ function createCameraStore() {
 
 export const camera = createCameraStore();
 
-export function createAmbientLight(color, intensity) {
-	return convertToVector3(color).map((c) => c * intensity);
-}
-
-export function createBackgroundColor(color) {
-	return [...convertToVector3(color), 1];
-}
 export const renderer = createRenderer();
 
 function createSceneStore() {
@@ -215,6 +232,18 @@ export const meshes = derived([scene], ([$scene]) => {
 	if (arrayHasSameShallow(meshCache, meshNodes)) {
 		throw new Error("meshes unchanged");
 	} else {
+		/*const contextValue = get(appContext);
+		const newVaoMap = meshNodes.reduce((newMap,node)=>{
+			const existing = newMap.get(node);
+			if(existing){
+				newMap.set(node,existing);
+			}
+			return newMap;
+		}, new Map());
+		appContext.update((appContext) => ({
+			...appContext,
+			vaoMap: newVaoMap,
+		}));*/
 		meshCache = meshNodes;
 	}
 	return meshNodes;
@@ -309,8 +338,9 @@ function selectProgram(appContext, program) {
 
 function selectMesh(appContext, mesh) {
 	return function selectMesh() {
-		const { meshMap } = get(appContext);
-		const cachedVAO = meshMap.get(mesh);
+		const { vaoMap } = get(appContext);
+		const cachedVAO = vaoMap.get(mesh);
+
 		appContext.update((appContext) => ({
 			...appContext,
 			vao: cachedVAO,
@@ -320,7 +350,7 @@ function selectMesh(appContext, mesh) {
 
 export const appContext = writable({
 	programMap: new Map(),
-	meshMap: new Map(),
+	vaoMap: new Map(),
 });
 
 const emptyRenderPipeline = [];
@@ -470,23 +500,23 @@ const renderPipeline = derived(
 					...program.meshes.reduce(
 						(acc, mesh) => [
 							...acc,
-							...(get(appContext).meshMap.has(mesh)
+							...(get(appContext).vaoMap.has(mesh)
 								? [
 										selectMesh(appContext, mesh),
 										//setupMeshColor(appContext, program.material),// is it necessary ?multiple meshes only render with same material so same color
 										...(mesh.instances == null
-											? [setupTransformMatrix(appContext, mesh.matrix), setupNormalMatrix(appContext)]
+											? [setupTransformMatrix(appContext, mesh, mesh.matrix), setupNormalMatrix(appContext, mesh)]
 											: []),
 									]
 								: [
 										setupAttributes(appContext, mesh),
 										setupMeshColor(appContext, program.material),
-										setupTransformMatrix(appContext, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
-										setupNormalMatrix(appContext, mesh.instances),
+										setupTransformMatrix(appContext, mesh, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
+										setupNormalMatrix(appContext, mesh, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || []),
 									]),
-							bindVAO(appContext),
-							render(appContext, mesh.instances, mesh.drawMode),
+							bindVAO(appContext, mesh),
+							render(appContext, mesh, mesh.instances, mesh.drawMode),
 						],
 						[],
 					),
