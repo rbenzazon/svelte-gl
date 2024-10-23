@@ -2,9 +2,9 @@ import { get } from "svelte/store";
 
 export function createOrbitControls(canvas, camera) {
 	//add support for touch events
-	canvas.addEventListener("touchstart", onMouseDown);
-	canvas.addEventListener("mousedown", onMouseDown);
-	canvas.addEventListener("wheel", onMouseWheel);
+	canvas.addEventListener("touchstart", onMouseDown, { passive: false });
+	canvas.addEventListener("mousedown", onMouseDown, { passive: false });
+	canvas.addEventListener("wheel", onMouseWheel, { passive: false });
 	let startX;
 	let startY;
 	function onMouseDown(event) {
@@ -16,10 +16,13 @@ export function createOrbitControls(canvas, camera) {
 			upEventType = "touchend";
 			positionObject = event.touches[0];
 		}
-		canvas.addEventListener(moveEventType, onMouseMove);
+		canvas.addEventListener(moveEventType, onMouseMove, { passive: false });
 		startX = positionObject.clientX;
 		startY = positionObject.clientY;
-		canvas.addEventListener(upEventType, onMouseUp);
+		canvas.addEventListener(upEventType, onMouseUp, { passive: false });
+		//prevent default to avoid the canvas to be selected
+		event.preventDefault();
+		event.stopPropagation();
 	}
 	function getCoordinates(position, target) {
 		const radius = Math.sqrt(
@@ -81,7 +84,13 @@ export function createOrbitControls(canvas, camera) {
 		return [sinPhiRadius * Math.sin(azimuth), Math.cos(polar) * radius, sinPhiRadius * Math.cos(azimuth)];
 	}
 	function onMouseUp(event) {
-		canvas.removeEventListener("mousemove", onMouseMove);
-		canvas.removeEventListener("mouseup", onMouseUp);
+		let moveEventType = "mousemove";
+		let upEventType = "mouseup";
+		if (event.type === "touchend") {
+			moveEventType = "touchmove";
+			upEventType = "touchend";
+		}
+		canvas.removeEventListener(moveEventType, onMouseMove, { passive: false });
+		canvas.removeEventListener(upEventType, onMouseUp, { passive: false });
 	}
 }
