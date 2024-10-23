@@ -1,15 +1,25 @@
 import { get } from "svelte/store";
 
 export function createOrbitControls(canvas, camera) {
+	//add support for touch events
+	canvas.addEventListener("touchstart", onMouseDown);
 	canvas.addEventListener("mousedown", onMouseDown);
 	canvas.addEventListener("wheel", onMouseWheel);
 	let startX;
 	let startY;
 	function onMouseDown(event) {
-		canvas.addEventListener("mousemove", onMouseMove);
-		startX = event.clientX;
-		startY = event.clientY;
-		canvas.addEventListener("mouseup", onMouseUp);
+		let moveEventType = "mousemove";
+		let upEventType = "mouseup";
+		let positionObject = event;
+		if (event.type === "touchstart") {
+			moveEventType = "touchmove";
+			upEventType = "touchend";
+			positionObject = event.touches[0];
+		}
+		canvas.addEventListener(moveEventType, onMouseMove);
+		startX = positionObject.clientX;
+		startY = positionObject.clientY;
+		canvas.addEventListener(upEventType, onMouseUp);
 	}
 	function getCoordinates(position, target) {
 		const radius = Math.sqrt(
@@ -25,8 +35,12 @@ export function createOrbitControls(canvas, camera) {
 		};
 	}
 	function onMouseMove(event) {
-		const x = event.clientX - startX;
-		const y = event.clientY - startY;
+		let positionObject = event;
+		if (event.type === "touchmove") {
+			positionObject = event.touches[0];
+		}
+		const x = positionObject.clientX - startX;
+		const y = positionObject.clientY - startY;
 		const cameraValue = get(camera);
 		const { position, target, fov } = cameraValue;
 		const { radius, polar, azimuth } = getCoordinates(position, target);
@@ -41,8 +55,8 @@ export function createOrbitControls(canvas, camera) {
 			target,
 			fov,
 		});
-		startX = event.clientX;
-		startY = event.clientY;
+		startX = positionObject.clientX;
+		startY = positionObject.clientY;
 	}
 	function onMouseWheel(event) {
 		const cameraValue = get(camera);

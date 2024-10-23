@@ -43,23 +43,23 @@ onMount(async () => {
 
 	const secondCubePos = identity(new Float32Array(16));
 	translate(secondCubePos, secondCubePos, [3, 0, 0]);
-
+	const sameMaterial = {
+		diffuse: [1, 0.5, 0.5],
+		metalness: 0,
+	};
 	$scene = [
 		...$scene,
 
 		{
 			...cubeMesh,
 			matrix: secondCubePos,
-			material: {
-				diffuse: [1, 0.5, 0.5],
-				metalness: 0,
-			},
+			material: sameMaterial,
 		},
 		{
 			...cubeMesh,
 			matrix: identity(new Float32Array(16)),
 			material: {
-				diffuse: [1, 0.5, 0.5],
+				diffuse: [1, 1, 0.5],
 				metalness: 0,
 			},
 		},

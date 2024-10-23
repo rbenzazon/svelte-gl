@@ -246,20 +246,27 @@ export const programs = derived([meshes, materials], ([$meshes, $materials]) => 
 
 	programs = programs.reduce((acc, current) => {
 		const materialMeshes = $meshes.filter((node) => node.material === current);
-		const withoutSpecialMeshes = materialMeshes.filter((node, index) => {
-			if (!specialMeshes.has(node)) {
-				materialMeshes.splice(index, 1);
-				return true;
-			}
-			return false;
-		});
-		if (withoutSpecialMeshes.length > 0) {
+		const { currentNormalMeshes, currentSpecialMeshes } = materialMeshes.reduce(
+			(acc, node) => {
+				if (specialMeshes.has(node)) {
+					acc.currentSpecialMeshes.push(node);
+				} else {
+					acc.currentNormalMeshes.push(node);
+				}
+				return acc;
+			},
+			{
+				currentNormalMeshes: [],
+				currentSpecialMeshes: [],
+			},
+		);
+
+		if (currentNormalMeshes.length > 0) {
 			acc.push({
 				material: current,
-				meshes: withoutSpecialMeshes,
+				meshes: currentNormalMeshes,
 			});
 		}
-		const currentSpecialMeshes = materialMeshes.filter((node) => specialMeshes.has(node));
 		currentSpecialMeshes.forEach((mesh) => {
 			const requireTime = mesh.animations?.some((animation) => animation.requireTime);
 			acc.push({
@@ -268,9 +275,9 @@ export const programs = derived([meshes, materials], ([$meshes, $materials]) => 
 				meshes: [mesh],
 			});
 		});
-
 		return acc;
 	}, []);
+
 	return programs.map((p) => ({
 		...p,
 		createProgram,
@@ -387,6 +394,11 @@ const renderPipeline = derived(
 		*/
 		//we must filter in the stores first because not all the nodes are stores for now
 		//then we filter the lights
+
+		if (updateMap.length === 0) {
+			return emptyRenderPipeline;
+		}
+
 		const lights = $scene.filter(isStore).filter(isLight);
 
 		const pointLights = lights.filter((l) => get(l).type === "point");
@@ -481,7 +493,6 @@ const renderPipeline = derived(
 				];
 			}, []),
 		);
-
 		return pipeline;
 	},
 	emptyRenderPipeline,

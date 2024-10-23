@@ -9,7 +9,6 @@ import {
 	getRotation,
 } from "gl-matrix/esm/mat4.js";
 import { get } from "svelte/store";
-import { renderState } from "./engine.js";
 import defaultVertex from "../shaders/default-vertex.glsl";
 import defaultFragment from "../shaders/default-fragment.glsl";
 import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";

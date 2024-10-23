@@ -2,7 +2,7 @@ import pointLightShader from "./point-light.glsl";
 import { templateLiteralRenderer } from "../shaders/template.js";
 import { get } from "svelte/store";
 import { multiplyScalarVec3 } from "../geometries/common.js";
-import { UBO_BINDING_POINT_POINTLIGHT } from "../store/gl.js";
+import { UBO_BINDING_POINT_POINTLIGHT } from "../store/gl-refactor.js";
 
 export const createPointLight = (props) => {
 	return {
@@ -80,8 +80,6 @@ function writeLightBuffer(buffer, light, offset) {
 
 export function setupLights(context, lights) {
 	return function setupLights() {
-		console.log("setupLights");
-
 		context = get(context);
 		const gl = context.gl;
 		const program = context.program;
