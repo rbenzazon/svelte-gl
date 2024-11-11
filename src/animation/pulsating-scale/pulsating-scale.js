@@ -1,6 +1,7 @@
 import pulsatingScaleShader from "./pulsating-scale.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
 import { get } from "svelte/store";
+import { appContext } from "../../store/engine-refactor";
 
 /**
  * @typedef PulsatingScaleProps
@@ -23,15 +24,14 @@ export const createPulsatingScaleAnimation = (props) => {
 			declaration: false,
 			position: false,
 		}),
-		setupAnimation: (context) => setupPulsatingScale(context, props),
+		setupAnimation: setupPulsatingScale(props),
 	};
 };
 
-function setupPulsatingScale(context, { frequency, minScale, maxScale }) {
+function setupPulsatingScale({ frequency, minScale, maxScale }) {
 	return function () {
-		context = get(context);
 		/** @type {{gl: WebGL2RenderingContext}} **/
-		const { gl, program } = context;
+		const { gl, program } = appContext;
 
 		const frequencyLocation = gl.getUniformLocation(program, "pScaleFrequency");
 		const minScaleLocation = gl.getUniformLocation(program, "pScaleMinScale");

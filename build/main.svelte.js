@@ -1198,7 +1198,8 @@ function render(context, mesh, instances, drawMode) {
 		const attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / 3;
-
+		console.log("rendering", mesh);
+		
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
 		} else {
@@ -2789,6 +2790,60 @@ function createCube() {
 	};
 }
 
+function createPlane(
+	width = 1,
+	depth = 1,
+	widthSegments = 1,
+	depthSegments = 1,
+	clockwise = false,
+	generateColors = false,
+) {
+	const positions = [];
+	const normals = [];
+	const uvs = [];
+	const indices = [];
+	const halfWidth = width / 2;
+	const halfDepth = depth / 2;
+	const segmentWidth = width / widthSegments;
+	const segmentDepth = depth / depthSegments;
+	const gridX = widthSegments + 1;
+	const gridZ = depthSegments + 1;
+	for (let iz = 0; iz < gridZ; iz++) {
+		const z = iz * segmentDepth - halfDepth;
+		for (let ix = 0; ix < gridX; ix++) {
+			const x = ix * segmentWidth - halfWidth;
+			positions.push(x, 0, -z);
+			normals.push(0, 1, 0);
+			uvs.push(ix / widthSegments, 1 - iz / depthSegments);
+		}
+	}
+	for (let iz = 0; iz < depthSegments; iz++) {
+		for (let ix = 0; ix < widthSegments; ix++) {
+			const a = ix + gridX * iz;
+			const b = ix + gridX * (iz + 1);
+			const c = ix + 1 + gridX * (iz + 1);
+			const d = ix + 1 + gridX * iz;
+			if (clockwise) {
+				indices.push(a, b, d);
+				indices.push(b, c, d);
+			} else {
+				indices.push(a, d, b);
+				indices.push(b, d, c);
+			}
+		}
+	}
+	return {
+		attributes: {
+			positions: new Float32Array(positions),
+			normals: new Float32Array(normals),
+			uvs: new Float32Array(uvs),
+			elements: new Uint16Array(indices),
+			...(generateColors ? { colors: new Float32Array(positions.map((_, i) => (i % 3 === 0 ? 1 : 1))) } : {}),
+		},
+		drawMode: drawModes[4],
+	};
+}
+
 function createOrbitControls(canvas, camera) {
 	//add support for touch events
 	canvas.addEventListener("touchstart", onMouseDown, { passive: false });
@@ -2926,13 +2981,17 @@ function instance($$self, $$props, $$invalidate) {
 	let canvas;
 
 	onMount(async () => {
+		const groundMatrix = identity(new Float32Array(16));
+		translate(groundMatrix, groundMatrix, [0, -1.5, 0]);
+
 		set_store_value(
 			renderer,
 			$renderer = {
 				...$renderer,
 				canvas,
 				backgroundColor: skyblue,
-				ambientLightColor: [0xffffff, 0.5]
+				ambientLightColor: [0xffffff, 0.5],
+				preRenderPasses: [createContactShadowPass(10, 10, groundMatrix)]
 			},
 			$renderer
 		);
@@ -2961,6 +3020,7 @@ function instance($$self, $$props, $$invalidate) {
 		const secondCubePos = identity(new Float32Array(16));
 		translate(secondCubePos, secondCubePos, [3, 0, 0]);
 		const sameMaterial = { diffuse: [1, 0.5, 0.5], metalness: 0 };
+		const groundMesh = createPlane(10, 10, 1, 1);
 
 		set_store_value(
 			scene,
@@ -2975,6 +3035,11 @@ function instance($$self, $$props, $$invalidate) {
 					...cubeMesh,
 					matrix: secondCubePos,
 					material: sameMaterial
+				},
+				{
+					...groundMesh,
+					matrix: groundMatrix,
+					material: { diffuse: [1, 1, 1], metalness: 0 }
 				},
 				light
 			],

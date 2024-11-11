@@ -39,8 +39,7 @@ export const getPointLightsUBO = () => {
  * @param {WithGL} param0
  * @param {*} lights
  */
-export function createPointLightBuffer({ gl }, lights) {
-	const pointLigths = lights.filter((l) => get(l).type === "point");
+export function createPointLightBuffer({ gl }, pointLigths) {
 	// Create a single Float32Array to hold all the point light data
 	const numPointLights = pointLigths.length;
 	const pointLightsData = new Float32Array(numPointLights * 12); // Each point light has 12 values (position(3=>4), color(3=>4), intensity(1=>4))
@@ -78,20 +77,22 @@ function writeLightBuffer(buffer, light, offset) {
 	buffer[offset + 12] = 0;
 }
 
-export function setupLights(context, lights) {
-	return function setupLights() {
-		context = get(context);
-		const gl = context.gl;
-		const program = context.program;
+export function setupLights(lights) {
+	return function setupLights(context) {
+		return function setupLights() {
+			context = get(context);
+			const gl = context.gl;
+			const program = context.program;
 
-		//only create the UBO once per app, not per program, todo move the only once logic to webglapp store
-		if (!getPointLightsUBO()) {
-			createPointLightBuffer(context, lights);
-		}
-		//program specific
-		const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
-		// Bind the UBO to the binding point
-		gl.uniformBlockBinding(program, pointLightsBlockIndex, UBO_BINDING_POINT_POINTLIGHT);
+			//only create the UBO once per app, not per program, todo move the only once logic to webglapp store
+			if (!getPointLightsUBO()) {
+				createPointLightBuffer(context, lights);
+			}
+			//program specific
+			const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
+			// Bind the UBO to the binding point
+			gl.uniformBlockBinding(program, pointLightsBlockIndex, UBO_BINDING_POINT_POINTLIGHT);
+		};
 	};
 }
 

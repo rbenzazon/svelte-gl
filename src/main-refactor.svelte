@@ -7,22 +7,35 @@ import {
 	renderer,
 	scene,
 	camera,
+	renderPasses,
 } from "./store/engine-refactor.js";
 import { identity, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
 import { createCube } from "./geometries/cube.js";
+import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
+import { createTexture } from "./texture/texture.js";
+import { createContactShadowPass } from "./store/contact-shadow.js";
 
 let canvas;
 onMount(async () => {
+	const groundMatrix = identity(new Float32Array(16));
+	translate(groundMatrix, groundMatrix, [0, -1.5, 0]);
+
 	$renderer = {
 		...$renderer,
 		canvas,
 		backgroundColor: skyblue,
 		ambientLightColor: [0xffffff, 0.5],
 	};
+
+	const shadowPass = createContactShadowPass(10, 10, groundMatrix);
+	const { getTexture: shadowTexture } = shadowPass;
+
+	$renderPasses = [shadowPass];
+
 	$camera = {
 		position: [0, 5, -5],
 		target: [0, 0, 0],
@@ -44,9 +57,20 @@ onMount(async () => {
 
 	const secondCubePos = identity(new Float32Array(16));
 	translate(secondCubePos, secondCubePos, [3, 0, 0]);
+
 	const sameMaterial = {
 		diffuse: [1, 0.5, 0.5],
 		metalness: 0,
+	};
+	const groundMesh = createPlane(10, 10, 1, 1);
+	const groundDiffuseMap = await createTexture({
+		textureBuffer: shadowTexture,
+		type: "diffuse",
+	});
+	const groundMaterial = {
+		diffuse: [1, 1, 1],
+		metalness: 0,
+		diffuseMap: groundDiffuseMap,
 	};
 	$scene = [
 		...$scene,
@@ -63,7 +87,14 @@ onMount(async () => {
 			matrix: secondCubePos,
 			material: sameMaterial,
 		},
-
+		{
+			...groundMesh,
+			matrix: groundMatrix,
+			material: {
+				diffuse: [1, 1, 1],
+				metalness: 0,
+			},
+		},
 		light,
 	];
 

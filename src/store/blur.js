@@ -1,0 +1,154 @@
+import vertexShaderSource from "../shaders/blur-vertex.glsl";
+import fragmentShaderSource from "../shaders/blur-fragment.glsl";
+import { drawModes } from "./webgl";
+
+export const BLUR_DIRECTION_HORIZONTAL = 0;
+export const BLUR_DIRECTION_VERTICAL = 1;
+
+// Generate a gaussian kernel based on a width
+const generate1DKernel = (width) => {
+	if ((width & 1) !== 1) throw new Error("Only odd guassian kernel sizes are accepted");
+
+	// Small sigma gaussian kernels are a problem. You usually need to add an error correction
+	// algorithm. But since our kernels grow in discrete intervals, we can just pre-compute the
+	// problematic ones. These values are derived from the Pascal's Triangle algorithm.
+	/*const smallKernelLerps = [
+        [1.0],
+        [0.25, 0.5, 0.25],
+        [0.0625, 0.25, 0.375, 0.25, 0.0625],
+        [0.03125, 0.109375, 0.21875, 0.28125, 0.21875, 0.109375, 0.03125],
+	];
+	if (width < 9) return smallKernelLerps[(width - 1) >> 1];*/
+	if (width < 9) throw new Error("Blur must be at least 9 pixels wide");
+
+	const kernel = [];
+	const sigma = width / 6; // Adjust as required
+	const radius = (width - 1) / 2;
+
+	let sum = 0;
+
+	// Populate the array with gaussian kernel values
+	for (let i = 0; i < width; i++) {
+		const offset = i - radius;
+
+		const coefficient = 1 / (sigma * Math.sqrt(2 * Math.PI));
+		const exponent = -(offset * offset) / (2 * (sigma * sigma));
+		const value = coefficient * Math.exp(exponent);
+
+		// We'll need this for normalization below
+		sum += value;
+
+		kernel.push(value);
+	}
+
+	// Normalize the array
+	for (let i = 0; i < width; i++) {
+		kernel[i] /= sum;
+	}
+
+	return kernel;
+};
+
+// Convert a 1D gaussian kernel to value pairs, as an array of linearly interpolated
+// UV coordinates and scaling factors. Gaussian kernels are always have an odd number of
+// weights, so in this implementation, the first weight value is treated as the lone non-pair
+// and then all remaining values are treated as pairs.
+const convertKernelToOffsetsAndScales = (kernel) => {
+	if ((kernel.length & 1) === 0) throw new Error("Only odd kernel sizes can be lerped");
+
+	const radius = Math.ceil(kernel.length / 2);
+	const data = [];
+
+	// Prepopulate the array with the first cell as the lone weight value
+	let offset = -radius + 1;
+	let scale = kernel[0];
+	data.push(offset, scale);
+
+	const total = kernel.reduce((c, v) => c + v);
+
+	for (let i = 1; i < kernel.length; i += 2) {
+		const a = kernel[i];
+		const b = kernel[i + 1];
+
+		offset = -radius + 1 + i + b / (a + b);
+		scale = (a + b) / total;
+		data.push(offset, scale);
+	}
+
+	return data;
+};
+
+export function createBlurProgram() {
+	return function createBlurProgram(context, programStore) {
+		const contextValue = get(context);
+		const { gl } = contextValue;
+		const kernel = generate1DKernel(width);
+		const kernelData = convertKernelToOffsetsAndScales(kernel);
+		if (!contextValue.programMap.has(programStore)) {
+			const program = gl.createProgram();
+			contextValue.programMap.set(programStore, program);
+			context.update((context) => {
+				return {
+					program,
+					...contextValue,
+				};
+			});
+		} else {
+			context.update((context) => {
+				return {
+					program: contextValue.programMap.get(programStore),
+					...contextValue,
+				};
+			});
+		}
+	};
+}
+
+export function createBlurShaders() {
+	return function createBlurShaders(context, programStore) {
+		const contextValue = get(context);
+		const { gl, program } = contextValue;
+
+		const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+		gl.shaderSource(vertexShader, vertexShaderSource);
+		gl.compileShader(vertexShader);
+		if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+			console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
+		}
+		gl.attachShader(program, vertexShader);
+
+		const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+		gl.shaderSource(fragmentShader, fragmentShaderSource);
+		gl.compileShader(fragmentShader);
+		if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+			console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
+		}
+		gl.attachShader(program, fragmentShader);
+	};
+}
+
+export function createBlurMesh() {
+	return {
+		attributes: {
+			positions: new Float32Array([
+				// Pos (xy)
+				-1, 1, -1, -1, 1, 1, 1, -1,
+			]),
+			uvs: new Float32Array([
+				// UV coordinate
+				0, 1, 0, 0, 1, 1, 1, 0,
+			]),
+		},
+		drawMode: drawModes[5],
+	};
+}
+
+export function setBlurUniforms(context, direction, size) {
+	const contextValue = get(context);
+	const { gl, program } = contextValue;
+
+	const unidirectionalUVStride =
+		direction === BLUR_DIRECTION_HORIZONTAL ? [contextValue.canvas.width, 0] : [0, contextValue.canvas.height];
+	const uvStrideUniformLocation = gl.getUniformLocation(program, "uvStride");
+	gl.uniform2fv(uvStrideUniformLocation, unidirectionalUVStride);
+}

@@ -232,22 +232,25 @@ export const meshes = derived([scene], ([$scene]) => {
 	if (arrayHasSameShallow(meshCache, meshNodes)) {
 		throw new Error("meshes unchanged");
 	} else {
-		/*const contextValue = get(appContext);
-		const newVaoMap = meshNodes.reduce((newMap,node)=>{
-			const existing = newMap.get(node);
-			if(existing){
-				newMap.set(node,existing);
-			}
-			return newMap;
-		}, new Map());
-		appContext.update((appContext) => ({
-			...appContext,
-			vaoMap: newVaoMap,
-		}));*/
 		meshCache = meshNodes;
 	}
 	return meshNodes;
 });
+
+let lightCache;
+
+export const lights = derived([scene], ([$scene]) => {
+	const lightNodes = $scene.filter(isStore).filter(isLight);
+	//using throw to cancel update flow when unchanged
+	if (arrayHasSameShallow(lightCache, lightNodes)) {
+		throw new Error("lights unchanged");
+	} else {
+		lightCache = lightNodes;
+	}
+	return lightNodes;
+});
+
+export const renderPasses = writable([]);
 
 let materialCache;
 
@@ -265,57 +268,111 @@ export const materials = derived([meshes], ([$meshes]) => {
 	return materials;
 });
 
-export const programs = derived([meshes, materials], ([$meshes, $materials]) => {
-	let programs = Array.from($materials);
+export const RENDER_PASS_TYPES = {
+	FRAMEBUFFER_TO_TEXTURE: 0,
+};
 
-	//this sublist mesh items require their own respective program (shader)
-	const specialMeshes = new Set(
-		$meshes.filter((node) => node.instances > 1 || node.animations?.some((a) => a.type === "vertex")),
-	);
+export const programs = derived(
+	[meshes, lights, materials, renderPasses],
+	([$meshes, $lights, $materials, $renderPasses]) => {
+		let prePasses = $renderPasses
+			.filter((pass) => pass.order < 0)
+			.map((pass) => ({
+				...pass,
+				...(pass.allMeshes ? { meshes } : {}),
+			}));
 
-	programs = programs.reduce((acc, current) => {
-		const materialMeshes = $meshes.filter((node) => node.material === current);
-		const { currentNormalMeshes, currentSpecialMeshes } = materialMeshes.reduce(
-			(acc, node) => {
-				if (specialMeshes.has(node)) {
-					acc.currentSpecialMeshes.push(node);
-				} else {
-					acc.currentNormalMeshes.push(node);
-				}
-				return acc;
-			},
-			{
-				currentNormalMeshes: [],
-				currentSpecialMeshes: [],
-			},
+		let programs = Array.from($materials);
+
+		//this sublist mesh items require their own respective program (shader)
+		const specialMeshes = new Set(
+			$meshes.filter((node) => node.instances > 1 || node.animations?.some((a) => a.type === "vertex")),
 		);
 
-		if (currentNormalMeshes.length > 0) {
-			acc.push({
-				material: current,
-				meshes: currentNormalMeshes,
-			});
-		}
-		currentSpecialMeshes.forEach((mesh) => {
-			const requireTime = mesh.animations?.some((animation) => animation.requireTime);
-			acc.push({
-				requireTime,
-				material: current,
-				meshes: [mesh],
-			});
-		});
-		return acc;
-	}, []);
+		programs = programs.reduce((acc, current) => {
+			const materialMeshes = $meshes.filter((node) => node.material === current);
+			const { currentNormalMeshes, currentSpecialMeshes } = materialMeshes.reduce(
+				(acc, node) => {
+					if (specialMeshes.has(node)) {
+						acc.currentSpecialMeshes.push(node);
+					} else {
+						acc.currentNormalMeshes.push(node);
+					}
+					return acc;
+				},
+				{
+					currentNormalMeshes: [],
+					currentSpecialMeshes: [],
+				},
+			);
 
-	return programs.map((p) => ({
-		...p,
-		createProgram,
-		createShaders: createShaders(),
-		linkProgram,
-		validateProgram,
-		useProgram,
-	}));
-});
+			if (currentNormalMeshes.length > 0) {
+				acc.push({
+					material: current,
+					meshes: currentNormalMeshes,
+				});
+			}
+			currentSpecialMeshes.forEach((mesh) => {
+				const requireTime = mesh.animations?.some((animation) => animation.requireTime);
+				acc.push({
+					requireTime,
+					material: current,
+					meshes: [mesh],
+				});
+			});
+			return acc;
+		}, []);
+		const pointLights = $lights.filter((l) => get(l).type === "point");
+		const numPointLights = pointLights.length;
+		let pointLightShader;
+		if (numPointLights > 0) {
+			pointLightShader = get(pointLights[0]).shader;
+		}
+
+		return [
+			...prePasses,
+			...programs.map((p) => {
+				const program = {
+					...p,
+					useProgram,
+					setupMaterial: [setupAmbientLight],
+				};
+				program.setupProgram = [
+					createProgram(program),
+					createShaders(p.material, p.meshes, numPointLights, pointLightShader),
+					linkProgram,
+					validateProgram,
+				];
+				if (p.material?.specular) {
+					program.setupMaterial.push(p.material.specular.setupSpecular);
+				}
+				if (p.material?.diffuseMap) {
+					program.setupMaterial.push(p.material.diffuseMap.setupTexture);
+				}
+				if (p.material?.normalMap) {
+					program.setupMaterial.push(p.material.normalMap.setupTexture);
+				}
+				if (p.requireTime) {
+					program.setupMaterial.push(setupTime);
+				}
+				program.setupMaterial.push(
+					...$lights
+						.reduce((acc, light) => {
+							const lightValue = get(light);
+							if (acc.has(lightValue.setupLights)) {
+								acc.set(lightValue.setupLights, [...acc.get(lightValue.setupLights), light]);
+							} else {
+								acc.set(lightValue.setupLights, [light]);
+							}
+							return acc;
+						}, new Map())
+						.map(([setupLights, filteredLights]) => setupLights(filteredLights)),
+				);
+				return program;
+			}),
+		];
+	},
+);
 
 export const renderState = writable({
 	init: false,
@@ -325,33 +382,26 @@ function isStore(obj) {
 	return obj != null && obj.subscribe != null;
 }
 
-function selectProgram(appContext, program) {
+export function selectProgram(programStore) {
 	return function selectProgram() {
-		const { programMap } = get(appContext);
-		const cachedProgram = programMap.get(program);
-		appContext.update((appContext) => ({
-			...appContext,
-			program: cachedProgram,
-		}));
+		const { programMap } = appContext;
+		const cachedProgram = programMap.get(programStore);
+		appContext.program = cachedProgram;
 	};
 }
 
-function selectMesh(appContext, mesh) {
+function selectMesh(mesh) {
 	return function selectMesh() {
-		const { vaoMap } = get(appContext);
+		const { vaoMap } = appContext;
 		const cachedVAO = vaoMap.get(mesh);
-
-		appContext.update((appContext) => ({
-			...appContext,
-			vao: cachedVAO,
-		}));
+		appContext.vao = cachedVAO;
 	};
 }
 
-export const appContext = writable({
+export const appContext = {
 	programMap: new Map(),
 	vaoMap: new Map(),
-});
+};
 
 const emptyRenderPipeline = [];
 const revisionMap = new Map();
@@ -429,94 +479,58 @@ const renderPipeline = derived(
 			return emptyRenderPipeline;
 		}
 
-		const lights = $scene.filter(isStore).filter(isLight);
-
-		const pointLights = lights.filter((l) => get(l).type === "point");
-		const numPointLights = pointLights.length;
-		let pointLightShader;
-		if (numPointLights > 0) {
-			pointLightShader = get(pointLights[0]).shader;
-		}
 		const rendererValues = renderer.processed;
 		let rendererContext = {
 			canvas: $renderer.canvas,
 			backgroundColor: rendererValues.backgroundColor,
+			ambientLightColor: rendererValues.ambientLightColor,
 			...($renderer.toneMappings.length > 0
 				? {
 						toneMappings: $renderer.toneMappings,
 					}
 				: undefined),
-			...(numPointLights > 0
-				? {
-						numPointLights,
-						pointLightShader,
-					}
-				: undefined),
 		};
 		const pipeline = [];
 
-		appContext.update((appContext) => ({
+		appContext = {
 			...appContext,
 			...rendererContext,
-		}));
+		};
 
 		const init = get(renderState).init;
 		if (!init) {
-			pipeline.push(initRenderer(appContext));
+			pipeline.push(initRenderer);
 		}
 		/*!init &&*/
 		pipeline.push(
-			...[clearFrame(appContext)],
+			...[clearFrame],
 			...$programs.reduce((acc, program) => {
 				return [
 					...acc,
-					...(get(appContext).programMap.has(program)
-						? [
-								selectProgram(appContext, program),
-								program.useProgram(appContext),
-								...(updateMap.has(camera) ? [setupCamera(appContext, $camera)] : []),
-							]
-						: [
-								program.createProgram(appContext, program),
-								program.createShaders(appContext, program.material, program.meshes),
-								program.linkProgram(appContext),
-								program.validateProgram(appContext),
-								program.useProgram(appContext),
-								setupCamera(appContext, $camera),
-								setupAmbientLight(appContext, rendererValues.ambientLightColor),
-								...[
-									...lights.reduce((acc, light) => {
-										const lightValue = get(light);
-										acc.set(lightValue.type, lightValue.setupLights);
-										return acc;
-									}, new Map()),
-								].map(([_, setupLights]) => setupLights(appContext, lights)),
-								...(program.material?.specular ? [program.material.specular.setupSpecular(appContext)] : []),
-								...(program.material?.diffuseMap ? [program.mesh.material?.diffuseMap.setupTexture(appContext)] : []),
-								...(program.material?.normalMap ? [program.material?.normalMap.setupTexture(appContext)] : []),
-								...(program.requireTime ? [setupTime(appContext)] : []),
-							]),
-
+					...(appContext.programMap.has(program)
+						? [program.selectProgram(program), program.useProgram]
+						: [...program.setupProgram, program.useProgram, ...progam.setupMaterial]),
+					...(program.setupCamera
+						? [program.setupCamera(appContext)]
+						: [...(updateMap.has(camera) ? [setupCamera($camera)] : [])]),
 					...program.meshes.reduce(
 						(acc, mesh) => [
 							...acc,
-							...(get(appContext).vaoMap.has(mesh)
+							...(appContext.vaoMap.has(mesh)
 								? [
-										selectMesh(appContext, mesh),
+										selectMesh(mesh),
 										//setupMeshColor(appContext, program.material),// is it necessary ?multiple meshes only render with same material so same color
-										...(mesh.instances == null
-											? [setupTransformMatrix(appContext, mesh, mesh.matrix), setupNormalMatrix(appContext, mesh)]
-											: []),
+										...(mesh.instances == null ? [setupTransformMatrix(mesh, mesh.matrix), setupNormalMatrix(mesh)] : []),
 									]
 								: [
-										setupAttributes(appContext, mesh),
-										setupMeshColor(appContext, program.material),
-										setupTransformMatrix(appContext, mesh, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
-										setupNormalMatrix(appContext, mesh, mesh.instances),
-										...(mesh.animations?.map((animation) => animation.setupAnimation(appContext)) || []),
+										setupAttributes(mesh),
+										setupMeshColor(program.material),
+										setupTransformMatrix(mesh, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
+										setupNormalMatrix(mesh, mesh.instances),
+										...(mesh.animations?.map((animation) => animation.setupAnimation) || []),
 									]),
-							bindVAO(appContext, mesh),
-							render(appContext, mesh, mesh.instances, mesh.drawMode),
+							bindVAO(mesh),
+							render(mesh, mesh.instances, mesh.drawMode),
 						],
 						[],
 					),
