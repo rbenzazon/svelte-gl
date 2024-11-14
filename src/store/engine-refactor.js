@@ -336,9 +336,10 @@ export const programs = derived(
 					...p,
 					useProgram,
 					setupMaterial: [setupAmbientLight],
+					createProgram,
+					selectProgram,
 				};
 				program.setupProgram = [
-					createProgram(program),
 					createShaders(p.material, p.meshes, numPointLights, pointLightShader),
 					linkProgram,
 					validateProgram,
@@ -356,8 +357,8 @@ export const programs = derived(
 					program.setupMaterial.push(setupTime);
 				}
 				program.setupMaterial.push(
-					...$lights
-						.reduce((acc, light) => {
+					...Array.from(
+						$lights.reduce((acc, light) => {
 							const lightValue = get(light);
 							if (acc.has(lightValue.setupLights)) {
 								acc.set(lightValue.setupLights, [...acc.get(lightValue.setupLights), light]);
@@ -365,8 +366,8 @@ export const programs = derived(
 								acc.set(lightValue.setupLights, [light]);
 							}
 							return acc;
-						}, new Map())
-						.map(([setupLights, filteredLights]) => setupLights(filteredLights)),
+						}, new Map()),
+					).map(([setupLights, filteredLights]) => setupLights(filteredLights)),
 				);
 				return program;
 			}),
@@ -398,10 +399,17 @@ function selectMesh(mesh) {
 	};
 }
 
-export const appContext = {
+export let appContext = {
 	programMap: new Map(),
 	vaoMap: new Map(),
 };
+
+export function setAppContext(context) {
+	appContext = {
+		...appContext,
+		...context,
+	};
+}
 
 const emptyRenderPipeline = [];
 const revisionMap = new Map();
@@ -509,17 +517,16 @@ const renderPipeline = derived(
 					...acc,
 					...(appContext.programMap.has(program)
 						? [program.selectProgram(program), program.useProgram]
-						: [...program.setupProgram, program.useProgram, ...progam.setupMaterial]),
-					...(program.setupCamera
-						? [program.setupCamera(appContext)]
-						: [...(updateMap.has(camera) ? [setupCamera($camera)] : [])]),
+						: [program.createProgram(program), ...program.setupProgram, program.useProgram, ...program.setupMaterial]),
+					...(program.setupCamera ? [program.setupCamera] : [...(updateMap.has(camera) ? [setupCamera($camera)] : [])]),
+					...(program.setFrameBuffer ? [program.setFrameBuffer] : []),
 					...program.meshes.reduce(
 						(acc, mesh) => [
 							...acc,
 							...(appContext.vaoMap.has(mesh)
 								? [
 										selectMesh(mesh),
-										//setupMeshColor(appContext, program.material),// is it necessary ?multiple meshes only render with same material so same color
+										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
 										...(mesh.instances == null ? [setupTransformMatrix(mesh, mesh.matrix), setupNormalMatrix(mesh)] : []),
 									]
 								: [
@@ -534,6 +541,7 @@ const renderPipeline = derived(
 						],
 						[],
 					),
+					...(program.postDraw ? [program.postDraw] : []),
 				];
 			}, []),
 		);

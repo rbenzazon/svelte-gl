@@ -1,6 +1,7 @@
 import textureShader from "./texture.glsl";
 import { templateLiteralRenderer } from "../shaders/template.js";
 import { get } from "svelte/store";
+import { appContext } from "../store/engine-refactor.js";
 
 const types = {
 	diffuse: "diffuseMap",
@@ -43,7 +44,7 @@ export const createTexture = async (props) => {
 			mapType: undefined,
 			coordinateSpace: undefined,
 		}),
-		setupTexture: (context) => setupTexture(context, image, types[props.type], id[props.type], props.normalScale),
+		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale),
 	};
 	if (typeof image === "function") {
 		output = {
@@ -72,11 +73,10 @@ function loadTexture(url) {
 	});
 }
 
-function setupTexture(context, texture, type, id, normalScale = [1, 1]) {
-	return function () {
-		context = get(context);
+function setupTexture(texture, type, id, normalScale = [1, 1]) {
+	return function setupTexture() {
 		/** @type {{gl: WebGL2RenderingContext}} **/
-		const { gl, program } = context;
+		const { gl, program } = appContext;
 		//uniform sampler2D diffuseMap;
 		let textureBuffer;
 		if (typeof texture === "function") {

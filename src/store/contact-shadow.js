@@ -1,31 +1,88 @@
 import { getTranslation, orthoNO, lookAt } from "gl-matrix/mat4";
 import depthVertexShader from "../shaders/depth-vertex.glsl";
 import depthFragmentShader from "../shaders/depth-fragment.glsl";
-import { bindDefaultFramebuffer, createShaders, linkProgram, useProgram, validateProgram } from "./gl-refactor";
+import { bindDefaultFramebuffer, linkProgram, useProgram, validateProgram } from "./gl-refactor";
 import {
 	BLUR_DIRECTION_HORIZONTAL,
 	BLUR_DIRECTION_VERTICAL,
 	createBlurMesh,
 	createBlurProgram,
 	createBlurShaders,
+	getKernel,
+	setBlurUniforms,
+	setKernelUniforms,
 } from "./blur";
 import { selectProgram } from "./engine-refactor";
-export function createContactShadowPass(width, height, depth, groundMatrix) {
+import { appContext } from "./engine-refactor";
+
+export function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 128) {
 	const groundTranslation = getTranslation([], groundMatrix);
 	const aspect = width / height;
 	const textureWidth = 512 * aspect;
 	const textureHeight = 512 / aspect;
 
-	const projection = new Float32Array(16);
-	projection = orthoNO([], -width / 2, width / 2, -height / 2, height / 2, 0, depth);
+	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
 
-	const view = new Float32Array(16);
-	view = lookAt(
-		view,
+	const view = lookAt(
+		new Float32Array(16),
 		groundTranslation,
 		[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
 		[0, 0, -1],
 	);
+
+	const offsetsAndScales = new Float32Array(256); // Supports gaussian blurs up to 255x255
+	let kernelWidth;
+
+	let shadowFBO;
+
+	let horizontalBlurFBO;
+	function setHorizontalBlurFBO(fbo) {
+		horizontalBlurFBO = fbo;
+	}
+	function getHorizontalBlurFBO() {
+		return horizontalBlurFBO;
+	}
+
+	let horizontalBlurTexture;
+	function setHorizontalBlurTexture(texture) {
+		horizontalBlurTexture = texture;
+	}
+	function getHorizontalBlurTexture() {
+		return horizontalBlurTexture;
+	}
+
+	let verticalBlurFBO;
+	function setVerticalBlurFBO(fbo) {
+		verticalBlurFBO = fbo;
+	}
+	function getVerticalBlurFBO() {
+		return verticalBlurFBO;
+	}
+
+	let verticalBlurTexture;
+	function setVerticalBlurTexture(texture) {
+		verticalBlurTexture = texture;
+	}
+	function getVerticalBlurTexture() {
+		return horizontalBlurTexture;
+	}
+
+	let geometryFBO;
+	function setGeometryFBO(fbo) {
+		geometryFBO = fbo;
+	}
+	function getGeometryFBO() {
+		return geometryFBO;
+	}
+
+	let geometryTexture;
+	function setGeometryTexture(texture) {
+		geometryTexture = texture;
+	}
+	function getGeometryTexture() {
+		return geometryTexture;
+	}
+
 	let shadowTexture;
 
 	function setTexture(texture) {
@@ -41,107 +98,116 @@ export function createContactShadowPass(width, height, depth, groundMatrix) {
 		programs: [
 			{
 				createProgram: createShadowProgram(textureWidth, textureHeight),
-				createShaders,
-				linkProgram,
-				validateProgram,
+				setupProgram: [
+					createShaders,
+					linkProgram,
+					validateProgram,
+					createFBO(textureWidth, textureHeight, setGeometryFBO, setGeometryTexture),
+				],
 				useProgram,
 				setupCamera: setupShadowCamera(projection, view),
+				setFrameBuffer: setFrameBuffer(getGeometryFBO),
 				allMeshes: true,
 			},
 			{
 				createProgram: createBlurProgram(),
-				createShaders: createBlurShaders(),
-				linkProgram,
-				validateProgram,
+				setupProgram: [
+					createBlurShaders,
+					linkProgram,
+					validateProgram,
+					setupBlurKernel(128),
+					createFBO(textureWidth, textureHeight, setHorizontalBlurFBO, setHorizontalBlurTexture),
+				],
 				useProgram,
-				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL, 128),
-				setFrameBuffer,
+				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL, getGeometryTexture),
+				setupCamera: () => {},
+				setFrameBuffer: setFrameBuffer(getHorizontalBlurFBO),
 				meshes: [blurMesh],
 			},
 			{
-				createProgram: createBlurProgram(),
+				createProgram: createBlurProgram(true),
+				setupProgram: [createFBO(textureWidth, textureHeight, setVerticalBlurFBO, setVerticalBlurTexture)],
+				useProgram,
+				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL, getHorizontalBlurTexture),
+				setupCamera: () => {},
+				setFrameBuffer: setFrameBuffer(getVerticalBlurFBO),
 				meshes: [blurMesh],
-				postDraw: bindDefaultFramebuffer,
+				postDraw: setFrameBuffer(),
 			},
 		],
-		getTexture,
+		getTexture: getVerticalBlurTexture,
 		order: -1,
 	};
 }
 
-function selectBlurProgram(blurDirection, blurSize) {
-	const originalSelect = selectProgram(context, program);
-	return function selectBlurProgram(context, program) {
-		originalSelect();
-		setBlurUniforms(context, blurDirection, blurSize);
+function setupBlurKernel(size) {
+	return function setupBlurKernel() {
+		const kernel = getKernel(size);
+		setKernelUniforms(kernel);
 	};
 }
 
-function setFrameBuffer(context) {
-	const contextValue = get(context);
-	const { gl } = contextValue;
-	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+function selectBlurProgram(blurDirection, getTexture) {
+	return function selectBlurProgram(programStore) {
+		selectProgram(programStore)();
+		setBlurUniforms(blurDirection);
+	};
+}
+
+function setFrameBuffer(getFBO = null) {
+	return function setFrameBuffer() {
+		const { gl } = appContext;
+		const fbo = getFBO ? getFBO() : null;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+	};
 }
 
 function setupShadowCamera(projection, view) {
-	return function setupShadowCamera(context) {
-		return function setupShadowCamera() {
-			const contextValue = get(context);
-			const { gl, program } = contextValue;
+	return function setupShadowCamera() {
+		const { gl, program } = appContext;
 
-			const projectionLocation = gl.getUniformLocation(program, "projection");
-			gl.uniformMatrix4fv(projectionLocation, false, projection);
+		const projectionLocation = gl.getUniformLocation(program, "projection");
+		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
-			const viewLocation = gl.getUniformLocation(program, "view");
-			gl.uniformMatrix4fv(viewLocation, false, view);
-		};
+		const viewLocation = gl.getUniformLocation(program, "view");
+		gl.uniformMatrix4fv(viewLocation, false, view);
 	};
 }
 
 function createShaders() {
-	return function createShaders(context) {
-		const contextValue = get(context);
-		const gl = contextValue.gl;
-		const program = contextValue.program;
+	const { gl, program } = appContext;
 
-		const vertexShader = createShader(gl.VERTEX_SHADER);
-		gl.shaderSource(vertexShader, depthVertexShader);
-		gl.compileShader(vertexShader);
-		if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-			console.error(gl.getShaderInfoLog(vertexShader));
-		}
-		gl.attachShader(program, vertexShader);
+	const vertexShader = createShader(gl.VERTEX_SHADER);
+	gl.shaderSource(vertexShader, depthVertexShader);
+	gl.compileShader(vertexShader);
+	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+		console.error(gl.getShaderInfoLog(vertexShader));
+	}
+	gl.attachShader(program, vertexShader);
 
-		const fragmentShader = createShader(gl.FRAGMENT_SHADER);
-		gl.shaderSource(fragmentShader, depthFragmentShader);
-		gl.compileShader(fragmentShader);
-		if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-			console.error(gl.getShaderInfoLog(fragmentShader));
-		}
-		gl.attachShader(program, fragmentShader);
-	};
+	const fragmentShader = createShader(gl.FRAGMENT_SHADER);
+	gl.shaderSource(fragmentShader, depthFragmentShader);
+	gl.compileShader(fragmentShader);
+	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+		console.error(gl.getShaderInfoLog(fragmentShader));
+	}
+	gl.attachShader(program, fragmentShader);
 }
 
 function createShadowProgram(textureWidth, textureHeight) {
-	return function createShadowProgram(context, programStore) {
-		const contextValue = get(context);
-		const { gl } = contextValue;
+	return function createShadowProgram(programStore) {
+		const { gl, programMap } = appContext;
 
 		// Create shader program
 		const program = gl.createProgram();
-		contextValue.programMap.set(programStore, program);
-		context.update((context) => {
-			return {
-				...contextValue,
-			};
-		});
+		programMap.set(programStore, program);
 	};
 }
 
-function createFBO(context, setTexture) {
+/*function createFBO(setTexture) {
 	return function createFBO(width, height) {
-		const contextValue = get(context);
-		const { gl } = contextValue;
+		const { gl } = appContext;
+
 		// Create FBO
 		let fbo = gl.createFramebuffer();
 		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
@@ -181,6 +247,26 @@ function createFBO(context, setTexture) {
 			fbo,
 			texture,
 		};
+	};
+}*/
+
+function createFBO(width, height, setFBO, setTexture) {
+	return function createFBO() {
+		const { gl } = appContext;
+		// The geometry texture will be sampled during the HORIZONTAL pass
+		const texture = gl.createTexture();
+		setTexture(texture);
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+
+		const fbo = gl.createFramebuffer();
+		setFBO(fbo);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+
+		gl.bindTexture(gl.TEXTURE_2D, null);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	};
 }
 

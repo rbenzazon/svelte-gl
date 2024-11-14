@@ -1,6 +1,7 @@
 import vertexShaderSource from "../shaders/blur-vertex.glsl";
 import fragmentShaderSource from "../shaders/blur-fragment.glsl";
 import { drawModes } from "./webgl";
+import { appContext } from "./engine-refactor";
 
 export const BLUR_DIRECTION_HORIZONTAL = 0;
 export const BLUR_DIRECTION_VERTICAL = 1;
@@ -78,53 +79,40 @@ const convertKernelToOffsetsAndScales = (kernel) => {
 	return data;
 };
 
-export function createBlurProgram() {
-	return function createBlurProgram(context, programStore) {
-		const contextValue = get(context);
-		const { gl } = contextValue;
-		const kernel = generate1DKernel(width);
-		const kernelData = convertKernelToOffsetsAndScales(kernel);
-		if (!contextValue.programMap.has(programStore)) {
+export function createBlurProgram(mapCurrent = false) {
+	return function createBlurProgram(programStore) {
+		const { gl, programMap } = appContext;
+		if (!programMap.has(programStore) && !mapCurrent) {
 			const program = gl.createProgram();
-			contextValue.programMap.set(programStore, program);
-			context.update((context) => {
-				return {
-					program,
-					...contextValue,
-				};
-			});
+			programMap.set(programStore, program);
+			appContext.program = program;
+		} else if (mapCurrent) {
+			programMap.set(programStore, appContext.program);
 		} else {
-			context.update((context) => {
-				return {
-					program: contextValue.programMap.get(programStore),
-					...contextValue,
-				};
-			});
+			//todo check if necessary, this check is done in engine already, if it exists, createProgram is not called
+			appContext.program = appContext.programMap.get(programStore);
 		}
 	};
 }
 
 export function createBlurShaders() {
-	return function createBlurShaders(context, programStore) {
-		const contextValue = get(context);
-		const { gl, program } = contextValue;
+	const { gl, program } = appContext;
 
-		const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-		gl.shaderSource(vertexShader, vertexShaderSource);
-		gl.compileShader(vertexShader);
-		if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-			console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
-		}
-		gl.attachShader(program, vertexShader);
+	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+	gl.shaderSource(vertexShader, vertexShaderSource);
+	gl.compileShader(vertexShader);
+	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+		console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
+	}
+	gl.attachShader(program, vertexShader);
 
-		const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-		gl.shaderSource(fragmentShader, fragmentShaderSource);
-		gl.compileShader(fragmentShader);
-		if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-			console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
-		}
-		gl.attachShader(program, fragmentShader);
-	};
+	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+	gl.shaderSource(fragmentShader, fragmentShaderSource);
+	gl.compileShader(fragmentShader);
+	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+		console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
+	}
+	gl.attachShader(program, fragmentShader);
 }
 
 export function createBlurMesh() {
@@ -143,12 +131,33 @@ export function createBlurMesh() {
 	};
 }
 
-export function setBlurUniforms(context, direction, size) {
-	const contextValue = get(context);
-	const { gl, program } = contextValue;
+export function setBlurUniforms(direction) {
+	const { gl, program } = appContext;
 
 	const unidirectionalUVStride =
 		direction === BLUR_DIRECTION_HORIZONTAL ? [contextValue.canvas.width, 0] : [0, contextValue.canvas.height];
 	const uvStrideUniformLocation = gl.getUniformLocation(program, "uvStride");
 	gl.uniform2fv(uvStrideUniformLocation, unidirectionalUVStride);
+}
+
+export function getKernel(size) {
+	/*if (newWidth === kernelWidth) return;
+	kernelWidth = newWidth;*/
+
+	const kernel1D = generate1DKernel(size);
+	const kernel = convertKernelToOffsetsAndScales(kernel1D);
+
+	return kernel;
+
+	/*gl.useProgram(program);
+	gl.uniform2fv(offsetScaleLocation, offsetsAndScales);
+	gl.uniform1i(kernelWidthLocation, numberOfOffsetsAndScales);*/
+}
+
+export function setKernelUniforms(kernel) {
+	const { gl, program } = appContext;
+
+	const offsetScaleLocation = gl.getUniformLocation(program, "offsetAndScale");
+	gl.uniform2fv(offsetScaleLocation, kernel);
+	gl.uniform1i(kernelWidthLocation, kernel.length / 2);
 }

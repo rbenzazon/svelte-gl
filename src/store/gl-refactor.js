@@ -13,7 +13,7 @@ import defaultVertex from "../shaders/default-vertex.glsl";
 import defaultFragment from "../shaders/default-fragment.glsl";
 import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";
 import { SRGBToLinear } from "../color/color-space.js";
-import { appContext } from "./engine-refactor.js";
+import { appContext, setAppContext } from "./engine-refactor.js";
 
 // Uniform Buffer Objects, must have unique binding points
 export const UBO_BINDING_POINT_POINTLIGHT = 0;
@@ -31,12 +31,14 @@ function toRadian(a) {
 }
 
 export function initRenderer() {
+	console.log("initRenderer", appContext);
 	const canvasRect = appContext.canvas.getBoundingClientRect();
 	appContext.canvas.width = canvasRect.width;
 	appContext.canvas.height = canvasRect.height;
 	/** @type {WebGL2RenderingContext} */
 	const gl = appContext.canvas.getContext("webgl2");
 	appContext.gl = gl;
+
 	gl.viewportWidth = canvasRect.width;
 	gl.viewportHeight = canvasRect.height;
 	gl.clearColor(...appContext.backgroundColor);
@@ -252,15 +254,17 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 }
 
 export function setupMeshColor({ diffuse, metalness }) {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
-	const { gl, program } = appContext;
-	const colorLocation = gl.getUniformLocation(program, "diffuse");
-	if (colorLocation == null) {
-		return;
-	}
-	gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
-	const metalnessLocation = gl.getUniformLocation(program, "metalness");
-	gl.uniform1f(metalnessLocation, metalness);
+	return function setupMeshColor() {
+		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
+		const { gl, program } = appContext;
+		const colorLocation = gl.getUniformLocation(program, "diffuse");
+		if (colorLocation == null) {
+			return;
+		}
+		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
+		const metalnessLocation = gl.getUniformLocation(program, "metalness");
+		gl.uniform1f(metalnessLocation, metalness);
+	};
 }
 
 export function setupAmbientLight() {
@@ -391,11 +395,11 @@ export function setupTransformMatrix(mesh, transformMatrix, numInstances) {
 			gl.bindVertexArray(vaoMap.get(mesh));
 			const matrixBuffer = gl.createBuffer();
 
-			appContext = {
-				...appContext,
+			setAppContext({
 				matrixBuffer,
 				transformMatricesWindows,
-			};
+			});
+
 			const transformMatricesLocation = gl.getAttribLocation(program, attributeName);
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, transformMatricesData.byteLength, gl.DYNAMIC_DRAW);

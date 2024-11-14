@@ -31,10 +31,10 @@ onMount(async () => {
 		ambientLightColor: [0xffffff, 0.5],
 	};
 
-	const shadowPass = createContactShadowPass(10, 10, groundMatrix);
+	/*const shadowPass = createContactShadowPass(10, 10, groundMatrix);
 	const { getTexture: shadowTexture } = shadowPass;
 
-	$renderPasses = [shadowPass];
+	$renderPasses = [shadowPass];*/
 
 	$camera = {
 		position: [0, 5, -5],
@@ -63,14 +63,14 @@ onMount(async () => {
 		metalness: 0,
 	};
 	const groundMesh = createPlane(10, 10, 1, 1);
-	const groundDiffuseMap = await createTexture({
+	/*const groundDiffuseMap = await createTexture({
 		textureBuffer: shadowTexture,
 		type: "diffuse",
-	});
+	});*/
 	const groundMaterial = {
 		diffuse: [1, 1, 1],
 		metalness: 0,
-		diffuseMap: groundDiffuseMap,
+		/*diffuseMap: groundDiffuseMap,*/
 	};
 	$scene = [
 		...$scene,

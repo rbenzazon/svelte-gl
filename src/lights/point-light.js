@@ -3,6 +3,7 @@ import { templateLiteralRenderer } from "../shaders/template.js";
 import { get } from "svelte/store";
 import { multiplyScalarVec3 } from "../geometries/common.js";
 import { UBO_BINDING_POINT_POINTLIGHT } from "../store/gl-refactor.js";
+import { appContext } from "../store/engine-refactor.js";
 
 export const createPointLight = (props) => {
 	return {
@@ -39,7 +40,8 @@ export const getPointLightsUBO = () => {
  * @param {WithGL} param0
  * @param {*} lights
  */
-export function createPointLightBuffer({ gl }, pointLigths) {
+export function createPointLightBuffer(pointLigths) {
+	const { gl } = appContext;
 	// Create a single Float32Array to hold all the point light data
 	const numPointLights = pointLigths.length;
 	const pointLightsData = new Float32Array(numPointLights * 12); // Each point light has 12 values (position(3=>4), color(3=>4), intensity(1=>4))
@@ -78,27 +80,22 @@ function writeLightBuffer(buffer, light, offset) {
 }
 
 export function setupLights(lights) {
-	return function setupLights(context) {
-		return function setupLights() {
-			context = get(context);
-			const gl = context.gl;
-			const program = context.program;
+	return function setupLights() {
+		const { gl, program } = appContext;
 
-			//only create the UBO once per app, not per program, todo move the only once logic to webglapp store
-			if (!getPointLightsUBO()) {
-				createPointLightBuffer(context, lights);
-			}
-			//program specific
-			const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
-			// Bind the UBO to the binding point
-			gl.uniformBlockBinding(program, pointLightsBlockIndex, UBO_BINDING_POINT_POINTLIGHT);
-		};
+		//only create the UBO once per app, not per program, todo move the only once logic to webglapp store
+		if (!getPointLightsUBO()) {
+			createPointLightBuffer(lights);
+		}
+		//program specific
+		const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
+		// Bind the UBO to the binding point
+		gl.uniformBlockBinding(program, pointLightsBlockIndex, UBO_BINDING_POINT_POINTLIGHT);
 	};
 }
 
-export function updateOneLight(context, lights, light) {
-	context = get(context);
-	const gl = context.gl;
+export function updateOneLight(lights, light) {
+	const { gl } = appContext;
 	const pointLigths = lights.filter((l) => get(l).type === "point");
 	const lightIndex = pointLigths.findIndex((l) => l === light);
 	const pointLightsUBO = getPointLightsUBO();

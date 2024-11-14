@@ -1,6 +1,8 @@
 import specularShader from "./specular.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
 import { get } from "svelte/store";
+import { appContext } from "../store/engine-refactor.js";
+
 //{ roughness = 0, ior = 1.5, intensity = 1, color = [1, 1, 1] } =
 /**
  * @typedef SpecularProps
@@ -22,15 +24,14 @@ export const createSpecular = (props) => {
 			declaration: false,
 			irradiance: false,
 		}),
-		setupSpecular: (context) => setupSpecular(context, props),
+		setupSpecular: () => setupSpecular(props),
 	};
 };
 
-function setupSpecular(context, { roughness, ior, intensity, color }) {
+function setupSpecular({ roughness, ior, intensity, color }) {
 	return function () {
-		context = get(context);
 		/** @type {{gl: WebGL2RenderingContext}} **/
-		const { gl, program } = context;
+		const { gl, program } = appContext;
 
 		const colorLocation = gl.getUniformLocation(program, "specularColor");
 		const roughnessLocation = gl.getUniformLocation(program, "roughness");
