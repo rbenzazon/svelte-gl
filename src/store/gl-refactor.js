@@ -68,7 +68,6 @@ export function render(mesh, instances, drawMode) {
 		const attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / 3;
-		console.log("rendering", mesh);
 
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);

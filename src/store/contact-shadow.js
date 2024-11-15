@@ -104,7 +104,9 @@ export function createContactShadowPass(width, height, depth, groundMatrix, blur
 					validateProgram,
 					createFBO(textureWidth, textureHeight, setGeometryFBO, setGeometryTexture),
 				],
+				setupMaterial: [],
 				useProgram,
+				selectProgram,
 				setupCamera: setupShadowCamera(projection, view),
 				setFrameBuffer: setFrameBuffer(getGeometryFBO),
 				allMeshes: true,
@@ -115,9 +117,10 @@ export function createContactShadowPass(width, height, depth, groundMatrix, blur
 					createBlurShaders,
 					linkProgram,
 					validateProgram,
-					setupBlurKernel(128),
+					setupBlurKernel(127),
 					createFBO(textureWidth, textureHeight, setHorizontalBlurFBO, setHorizontalBlurTexture),
 				],
+				setupMaterial: [],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL, getGeometryTexture),
 				setupCamera: () => {},
@@ -127,6 +130,7 @@ export function createContactShadowPass(width, height, depth, groundMatrix, blur
 			{
 				createProgram: createBlurProgram(true),
 				setupProgram: [createFBO(textureWidth, textureHeight, setVerticalBlurFBO, setVerticalBlurTexture)],
+				setupMaterial: [],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL, getHorizontalBlurTexture),
 				setupCamera: () => {},
@@ -142,15 +146,23 @@ export function createContactShadowPass(width, height, depth, groundMatrix, blur
 
 function setupBlurKernel(size) {
 	return function setupBlurKernel() {
-		const kernel = getKernel(size);
+		//rollup will remove the "size" argument form getKernel call
+		const rollupWorkAround = {
+			size,
+		};
+		const kernel = getKernel(rollupWorkAround.size);
 		setKernelUniforms(kernel);
+		//workaround to prevent rollup from removing the getKernel argument
+		return rollupWorkAround;
 	};
 }
 
 function selectBlurProgram(blurDirection, getTexture) {
 	return function selectBlurProgram(programStore) {
-		selectProgram(programStore)();
-		setBlurUniforms(blurDirection);
+		return function selectBlurProgram() {
+			selectProgram(programStore)();
+			setBlurUniforms(blurDirection);
+		};
 	};
 }
 
@@ -177,7 +189,7 @@ function setupShadowCamera(projection, view) {
 function createShaders() {
 	const { gl, program } = appContext;
 
-	const vertexShader = createShader(gl.VERTEX_SHADER);
+	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 	gl.shaderSource(vertexShader, depthVertexShader);
 	gl.compileShader(vertexShader);
 	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
@@ -185,7 +197,7 @@ function createShaders() {
 	}
 	gl.attachShader(program, vertexShader);
 
-	const fragmentShader = createShader(gl.FRAGMENT_SHADER);
+	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 	gl.shaderSource(fragmentShader, depthFragmentShader);
 	gl.compileShader(fragmentShader);
 	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
@@ -196,11 +208,14 @@ function createShaders() {
 
 function createShadowProgram(textureWidth, textureHeight) {
 	return function createShadowProgram(programStore) {
-		const { gl, programMap } = appContext;
+		return function createShadowProgram() {
+			const { gl, programMap } = appContext;
 
-		// Create shader program
-		const program = gl.createProgram();
-		programMap.set(programStore, program);
+			// Create shader program
+			const program = gl.createProgram();
+			programMap.set(programStore, program);
+			appContext.program = program;
+		};
 	};
 }
 

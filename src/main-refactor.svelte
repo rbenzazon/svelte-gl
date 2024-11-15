@@ -31,10 +31,10 @@ onMount(async () => {
 		ambientLightColor: [0xffffff, 0.5],
 	};
 
-	/*const shadowPass = createContactShadowPass(10, 10, groundMatrix);
+	const shadowPass = createContactShadowPass(10, 10, 3, groundMatrix);
 	const { getTexture: shadowTexture } = shadowPass;
 
-	$renderPasses = [shadowPass];*/
+	$renderPasses = [shadowPass];
 
 	$camera = {
 		position: [0, 5, -5],

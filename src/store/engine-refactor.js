@@ -275,11 +275,15 @@ export const RENDER_PASS_TYPES = {
 export const programs = derived(
 	[meshes, lights, materials, renderPasses],
 	([$meshes, $lights, $materials, $renderPasses]) => {
+		console.log("programs derived");
 		let prePasses = $renderPasses
 			.filter((pass) => pass.order < 0)
-			.map((pass) => ({
-				...pass,
-				...(pass.allMeshes ? { meshes } : {}),
+			.reduce((acc, pass) => {
+				return acc.concat(...pass.programs);
+			}, [])
+			.map((program) => ({
+				...program,
+				...(program.allMeshes ? { meshes: $meshes } : {}),
 			}));
 
 		let programs = Array.from($materials);
@@ -531,7 +535,7 @@ const renderPipeline = derived(
 									]
 								: [
 										setupAttributes(mesh),
-										setupMeshColor(program.material),
+										...(program.material ? [setupMeshColor(program.material)] : []),
 										setupTransformMatrix(mesh, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
 										setupNormalMatrix(mesh, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation) || []),
@@ -556,7 +560,10 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 	}
 	if (!get(renderState).init && get(running) === 0) {
 		running.set(1);
-		$renderPipeline.forEach((f) => f());
+		$renderPipeline.forEach((f) => {
+			console.log("render pipeline", f);
+			f();
+		});
 		renderState.set({
 			init: true,
 		});
@@ -575,7 +582,10 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 		//unlock pipeline updates and trigger next update
 		running.set(3);
 		//run pipeline updates
-		get(renderPipeline).forEach((f) => f());
+		get(renderPipeline).forEach((f) => {
+			//console.log("render pipeline", f);
+			f();
+		});
 		//lock pipeline updates to batch changes that come from other sources than loop
 		running.set(4);
 		requestAnimationFrame(loop);

@@ -949,6 +949,22 @@ function translate(out, a, v) {
   return out;
 }
 /**
+ * Returns the translation vector component of a transformation
+ *  matrix. If a matrix is built with fromRotationTranslation,
+ *  the returned vector will be the same as the translation vector
+ *  originally supplied.
+ * @param  {vec3} out Vector to receive translation component
+ * @param  {ReadonlyMat4} mat Matrix to be decomposed (input)
+ * @return {vec3} out
+ */
+
+function getTranslation(out, mat) {
+  out[0] = mat[12];
+  out[1] = mat[13];
+  out[2] = mat[14];
+  return out;
+}
+/**
  * Generates a perspective projection matrix with the given bounds.
  * The near/far clip planes correspond to a normalized device coordinate Z range of [-1, 1],
  * which matches WebGL/OpenGL's clip volume.
@@ -997,6 +1013,43 @@ function perspectiveNO(out, fovy, aspect, near, far) {
  */
 
 var perspective = perspectiveNO;
+/**
+ * Generates a orthogonal projection matrix with the given bounds.
+ * The near/far clip planes correspond to a normalized device coordinate Z range of [-1, 1],
+ * which matches WebGL/OpenGL's clip volume.
+ *
+ * @param {mat4} out mat4 frustum matrix will be written into
+ * @param {number} left Left bound of the frustum
+ * @param {number} right Right bound of the frustum
+ * @param {number} bottom Bottom bound of the frustum
+ * @param {number} top Top bound of the frustum
+ * @param {number} near Near bound of the frustum
+ * @param {number} far Far bound of the frustum
+ * @returns {mat4} out
+ */
+
+function orthoNO(out, left, right, bottom, top, near, far) {
+  var lr = 1 / (left - right);
+  var bt = 1 / (bottom - top);
+  var nf = 1 / (near - far);
+  out[0] = -2 * lr;
+  out[1] = 0;
+  out[2] = 0;
+  out[3] = 0;
+  out[4] = 0;
+  out[5] = -2 * bt;
+  out[6] = 0;
+  out[7] = 0;
+  out[8] = 0;
+  out[9] = 0;
+  out[10] = 2 * nf;
+  out[11] = 0;
+  out[12] = (left + right) * lr;
+  out[13] = (top + bottom) * bt;
+  out[14] = (far + near) * nf;
+  out[15] = 1;
+  return out;
+}
 /**
  * Generates a look-at matrix with the given eye position, focal point, and up axis.
  * If you want a matrix that actually makes an object look at another object, you should use targetTo instead.
@@ -1185,7 +1238,6 @@ function render(mesh, instances, drawMode) {
 		const attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / 3;
-		console.log("rendering", mesh);
 
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
@@ -1244,7 +1296,7 @@ function useProgram() {
 	gl.useProgram(program);
 }
 
-function createShaders(material, meshes, numPointLights, pointLightShader) {
+function createShaders$1(material, meshes, numPointLights, pointLightShader) {
 	return function createShaders() {
 		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program } = appContext;
@@ -1932,11 +1984,15 @@ const materials = derived([meshes], ([$meshes]) => {
 const programs = derived(
 	[meshes, lights, materials, renderPasses],
 	([$meshes, $lights, $materials, $renderPasses]) => {
+		console.log("programs derived");
 		let prePasses = $renderPasses
 			.filter((pass) => pass.order < 0)
-			.map((pass) => ({
-				...pass,
-				...(pass.allMeshes ? { meshes } : {}),
+			.reduce((acc, pass) => {
+				return acc.concat(...pass.programs);
+			}, [])
+			.map((program) => ({
+				...program,
+				...(program.allMeshes ? { meshes: $meshes } : {}),
 			}));
 
 		let programs = Array.from($materials);
@@ -1997,7 +2053,7 @@ const programs = derived(
 					selectProgram,
 				};
 				program.setupProgram = [
-					createShaders(p.material, p.meshes, numPointLights, pointLightShader),
+					createShaders$1(p.material, p.meshes, numPointLights, pointLightShader),
 					linkProgram,
 					validateProgram,
 				];
@@ -2187,7 +2243,7 @@ const renderPipeline = derived(
 									]
 								: [
 										setupAttributes(mesh),
-										setupMeshColor(program.material),
+										...(program.material ? [setupMeshColor(program.material)] : []),
 										setupTransformMatrix(mesh, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
 										setupNormalMatrix(mesh, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation) || []),
@@ -2212,7 +2268,10 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 	}
 	if (!get_store_value(renderState).init && get_store_value(running) === 0) {
 		running.set(1);
-		$renderPipeline.forEach((f) => f());
+		$renderPipeline.forEach((f) => {
+			console.log("render pipeline", f);
+			f();
+		});
 		renderState.set({
 			init: true,
 		});
@@ -2231,7 +2290,10 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 		//unlock pipeline updates and trigger next update
 		running.set(3);
 		//run pipeline updates
-		get_store_value(renderPipeline).forEach((f) => f());
+		get_store_value(renderPipeline).forEach((f) => {
+			//console.log("render pipeline", f);
+			f();
+		});
 		//lock pipeline updates to batch changes that come from other sources than loop
 		running.set(4);
 		requestAnimationFrame(loop);
@@ -2908,6 +2970,420 @@ function createOrbitControls(canvas, camera) {
 	}
 }
 
+var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nuniform mat4 modelViewMatrix;\r\nuniform mat4 projectionMatrix;\r\n\r\nin vec3 position;\r\n\r\nout vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tvec3 transformed = vec3( position );\r\n\tvec4 mvPosition = vec4( transformed, 1.0 );\r\n\tmvPosition = modelViewMatrix * mvPosition;\r\n\tgl_Position = projectionMatrix * mvPosition;\r\n\tvHighPrecisionZW = gl_Position.zw;\r\n}";
+
+var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * darkness );\r\n}\r\n\t\t\t\t\t";
+
+var vertexShaderSource = "#version 300 es\r\n\r\nlayout(location=0) in vec4 aPosition;\r\nlayout(location=1) in vec2 aTexCoord;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = aPosition;\r\n    vTexCoord = aTexCoord;\r\n}";
+
+var fragmentShaderSource = "#version 300 es\r\n\r\nprecision mediump float;\r\n\r\nuniform sampler2D sampler;\r\nuniform vec2 uvStride;\r\nuniform vec2[128] offsetAndScale; // x=offset, y=scale\r\nuniform int kernelWidth;\r\n\r\nin vec2 vTexCoord;\r\n\r\nout vec4 fragColor;\r\n\r\nvoid main()\r\n{\r\n\tfor (int i = 0; i < kernelWidth; i++) {\r\n\t\tfragColor += texture(\r\n\t\t\tsampler,\r\n\t\t\tvTexCoord + offsetAndScale[i].x * uvStride\r\n\t\t    //   ^------------------------------------  UV coord for this fragment\r\n\t\t    //              ^-------------------------  Offset to sample (in texel space)\r\n\t\t    //                                  ^-----  Amount to move in UV space per texel (horizontal OR vertical only)\r\n\t\t    //   v------------------------------------  Scale down the sample\r\n\t\t) * offsetAndScale[i].y;\r\n\t}\r\n}";
+
+const BLUR_DIRECTION_HORIZONTAL = 0;
+const BLUR_DIRECTION_VERTICAL = 1;
+
+// Generate a gaussian kernel based on a width
+const generate1DKernel = (width) => {
+	if ((width & 1) !== 1) throw new Error("Only odd guassian kernel sizes are accepted");
+
+	// Small sigma gaussian kernels are a problem. You usually need to add an error correction
+	// algorithm. But since our kernels grow in discrete intervals, we can just pre-compute the
+	// problematic ones. These values are derived from the Pascal's Triangle algorithm.
+	/*const smallKernelLerps = [
+        [1.0],
+        [0.25, 0.5, 0.25],
+        [0.0625, 0.25, 0.375, 0.25, 0.0625],
+        [0.03125, 0.109375, 0.21875, 0.28125, 0.21875, 0.109375, 0.03125],
+	];
+	if (width < 9) return smallKernelLerps[(width - 1) >> 1];*/
+	if (width < 9) throw new Error("Blur must be at least 9 pixels wide");
+
+	const kernel = [];
+	const sigma = width / 6; // Adjust as required
+	const radius = (width - 1) / 2;
+
+	let sum = 0;
+
+	// Populate the array with gaussian kernel values
+	for (let i = 0; i < width; i++) {
+		const offset = i - radius;
+
+		const coefficient = 1 / (sigma * Math.sqrt(2 * Math.PI));
+		const exponent = -(offset * offset) / (2 * (sigma * sigma));
+		const value = coefficient * Math.exp(exponent);
+
+		// We'll need this for normalization below
+		sum += value;
+
+		kernel.push(value);
+	}
+
+	// Normalize the array
+	for (let i = 0; i < width; i++) {
+		kernel[i] /= sum;
+	}
+
+	return kernel;
+};
+
+// Convert a 1D gaussian kernel to value pairs, as an array of linearly interpolated
+// UV coordinates and scaling factors. Gaussian kernels are always have an odd number of
+// weights, so in this implementation, the first weight value is treated as the lone non-pair
+// and then all remaining values are treated as pairs.
+const convertKernelToOffsetsAndScales = (kernel) => {
+	if ((kernel.length & 1) === 0) throw new Error("Only odd kernel sizes can be lerped");
+
+	const radius = Math.ceil(kernel.length / 2);
+	const data = [];
+
+	// Prepopulate the array with the first cell as the lone weight value
+	let offset = -radius + 1;
+	let scale = kernel[0];
+	data.push(offset, scale);
+
+	const total = kernel.reduce((c, v) => c + v);
+
+	for (let i = 1; i < kernel.length; i += 2) {
+		const a = kernel[i];
+		const b = kernel[i + 1];
+
+		offset = -radius + 1 + i + b / (a + b);
+		scale = (a + b) / total;
+		data.push(offset, scale);
+	}
+
+	return data;
+};
+
+function createBlurProgram(mapCurrent = false) {
+	return function createBlurProgram(programStore) {
+		return function createBlurProgram() {
+			const { gl, programMap } = appContext;
+			if (!programMap.has(programStore) && !mapCurrent) {
+				const program = gl.createProgram();
+				programMap.set(programStore, program);
+				appContext.program = program;
+			} else if (mapCurrent) {
+				programMap.set(programStore, appContext.program);
+			} else {
+				//todo check if necessary, this check is done in engine already, if it exists, createProgram is not called
+				appContext.program = appContext.programMap.get(programStore);
+			}
+		};
+	};
+}
+
+function createBlurShaders() {
+	const { gl, program } = appContext;
+
+	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+	gl.shaderSource(vertexShader, vertexShaderSource);
+	gl.compileShader(vertexShader);
+	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+		console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
+	}
+	gl.attachShader(program, vertexShader);
+
+	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+	gl.shaderSource(fragmentShader, fragmentShaderSource);
+	gl.compileShader(fragmentShader);
+	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+		console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
+	}
+	gl.attachShader(program, fragmentShader);
+}
+
+function createBlurMesh() {
+	return {
+		attributes: {
+			positions: new Float32Array([
+				// Pos (xy)
+				-1, 1, -1, -1, 1, 1, 1, -1,
+			]),
+			uvs: new Float32Array([
+				// UV coordinate
+				0, 1, 0, 0, 1, 1, 1, 0,
+			]),
+		},
+		drawMode: drawModes[5],
+	};
+}
+
+function setBlurUniforms(direction) {
+	const { gl, program } = appContext;
+
+	const unidirectionalUVStride =
+		direction === BLUR_DIRECTION_HORIZONTAL ? [appContext.canvas.width, 0] : [0, appContext.canvas.height];
+	const uvStrideUniformLocation = gl.getUniformLocation(program, "uvStride");
+	gl.uniform2fv(uvStrideUniformLocation, unidirectionalUVStride);
+}
+
+function getKernel(size) {
+	/*if (newWidth === kernelWidth) return;
+	kernelWidth = newWidth;*/
+
+	const kernel1D = generate1DKernel(size);
+	const kernel = convertKernelToOffsetsAndScales(kernel1D);
+
+	return kernel;
+
+	/*gl.useProgram(program);
+	gl.uniform2fv(offsetScaleLocation, offsetsAndScales);
+	gl.uniform1i(kernelWidthLocation, numberOfOffsetsAndScales);*/
+}
+
+function setKernelUniforms(kernel) {
+	const { gl, program } = appContext;
+
+	const offsetScaleLocation = gl.getUniformLocation(program, "offsetAndScale");
+	gl.uniform2fv(offsetScaleLocation, kernel);
+	const kernelWidthLocation = gl.getUniformLocation(program, "kernelWidth");
+	gl.uniform1i(kernelWidthLocation, kernel.length / 2);
+}
+
+function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 128) {
+	const groundTranslation = getTranslation([], groundMatrix);
+	const aspect = width / height;
+	const textureWidth = 512 * aspect;
+	const textureHeight = 512 / aspect;
+
+	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
+
+	const view = lookAt(
+		new Float32Array(16),
+		groundTranslation,
+		[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
+		[0, 0, -1],
+	);
+
+	let horizontalBlurFBO;
+	function setHorizontalBlurFBO(fbo) {
+		horizontalBlurFBO = fbo;
+	}
+	function getHorizontalBlurFBO() {
+		return horizontalBlurFBO;
+	}
+
+	let horizontalBlurTexture;
+	function setHorizontalBlurTexture(texture) {
+		horizontalBlurTexture = texture;
+	}
+
+	let verticalBlurFBO;
+	function setVerticalBlurFBO(fbo) {
+		verticalBlurFBO = fbo;
+	}
+	function getVerticalBlurFBO() {
+		return verticalBlurFBO;
+	}
+	function setVerticalBlurTexture(texture) {
+	}
+	function getVerticalBlurTexture() {
+		return horizontalBlurTexture;
+	}
+
+	let geometryFBO;
+	function setGeometryFBO(fbo) {
+		geometryFBO = fbo;
+	}
+	function getGeometryFBO() {
+		return geometryFBO;
+	}
+	function setGeometryTexture(texture) {
+	}
+
+	const blurMesh = createBlurMesh();
+
+	return {
+		programs: [
+			{
+				createProgram: createShadowProgram(),
+				setupProgram: [
+					createShaders,
+					linkProgram,
+					validateProgram,
+					createFBO(textureWidth, textureHeight, setGeometryFBO, setGeometryTexture),
+				],
+				setupMaterial: [],
+				useProgram,
+				selectProgram,
+				setupCamera: setupShadowCamera(projection, view),
+				setFrameBuffer: setFrameBuffer(getGeometryFBO),
+				allMeshes: true,
+			},
+			{
+				createProgram: createBlurProgram(),
+				setupProgram: [
+					createBlurShaders,
+					linkProgram,
+					validateProgram,
+					setupBlurKernel(127),
+					createFBO(textureWidth, textureHeight, setHorizontalBlurFBO, setHorizontalBlurTexture),
+				],
+				setupMaterial: [],
+				useProgram,
+				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL),
+				setupCamera: () => {},
+				setFrameBuffer: setFrameBuffer(getHorizontalBlurFBO),
+				meshes: [blurMesh],
+			},
+			{
+				createProgram: createBlurProgram(true),
+				setupProgram: [createFBO(textureWidth, textureHeight, setVerticalBlurFBO, setVerticalBlurTexture)],
+				setupMaterial: [],
+				useProgram,
+				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL),
+				setupCamera: () => {},
+				setFrameBuffer: setFrameBuffer(getVerticalBlurFBO),
+				meshes: [blurMesh],
+				postDraw: setFrameBuffer(),
+			},
+		],
+		getTexture: getVerticalBlurTexture,
+		order: -1,
+	};
+}
+
+function setupBlurKernel(size) {
+	return function setupBlurKernel() {
+		//rollup will remove the "size" argument form getKernel call
+		const rollupWorkAround = {
+			size,
+		};
+		const kernel = getKernel(rollupWorkAround.size);
+		setKernelUniforms(kernel);
+		//workaround to prevent rollup from removing the getKernel argument
+		return rollupWorkAround;
+	};
+}
+
+function selectBlurProgram(blurDirection, getTexture) {
+	return function selectBlurProgram(programStore) {
+		return function selectBlurProgram() {
+			selectProgram(programStore)();
+			setBlurUniforms(blurDirection);
+		};
+	};
+}
+
+function setFrameBuffer(getFBO = null) {
+	return function setFrameBuffer() {
+		const { gl } = appContext;
+		const fbo = getFBO ? getFBO() : null;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+	};
+}
+
+function setupShadowCamera(projection, view) {
+	return function setupShadowCamera() {
+		const { gl, program } = appContext;
+
+		const projectionLocation = gl.getUniformLocation(program, "projection");
+		gl.uniformMatrix4fv(projectionLocation, false, projection);
+
+		const viewLocation = gl.getUniformLocation(program, "view");
+		gl.uniformMatrix4fv(viewLocation, false, view);
+	};
+}
+
+function createShaders() {
+	const { gl, program } = appContext;
+
+	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+	gl.shaderSource(vertexShader, depthVertexShader);
+	gl.compileShader(vertexShader);
+	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+		console.error(gl.getShaderInfoLog(vertexShader));
+	}
+	gl.attachShader(program, vertexShader);
+
+	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+	gl.shaderSource(fragmentShader, depthFragmentShader);
+	gl.compileShader(fragmentShader);
+	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+		console.error(gl.getShaderInfoLog(fragmentShader));
+	}
+	gl.attachShader(program, fragmentShader);
+}
+
+function createShadowProgram(textureWidth, textureHeight) {
+	return function createShadowProgram(programStore) {
+		return function createShadowProgram() {
+			const { gl, programMap } = appContext;
+
+			// Create shader program
+			const program = gl.createProgram();
+			programMap.set(programStore, program);
+			appContext.program = program;
+		};
+	};
+}
+
+/*function createFBO(setTexture) {
+	return function createFBO(width, height) {
+		const { gl } = appContext;
+
+		// Create FBO
+		let fbo = gl.createFramebuffer();
+		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+
+		// Create texture
+		const texture = gl.createTexture();
+		setTexture(texture);
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+		// Attach texture to FBO
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+
+		// Create renderbuffer
+		const renderbuffer = gl.createRenderbuffer();
+		gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+		gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
+
+		// Attach renderbuffer to FBO
+		gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+
+		// Check FBO status
+		const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+		if (status !== gl.FRAMEBUFFER_COMPLETE) {
+			console.error("Framebuffer is incomplete:", status);
+		}
+
+		// Cleanup
+		gl.bindTexture(gl.TEXTURE_2D, null);
+		gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+		return {
+			fbo,
+			texture,
+		};
+	};
+}*/
+
+function createFBO(width, height, setFBO, setTexture) {
+	return function createFBO() {
+		const { gl } = appContext;
+		// The geometry texture will be sampled during the HORIZONTAL pass
+		const texture = gl.createTexture();
+		setTexture(texture);
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+
+		const fbo = gl.createFramebuffer();
+		setFBO(fbo);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+
+		gl.bindTexture(gl.TEXTURE_2D, null);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	};
+}
+
 /* src\main-refactor.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
@@ -2944,9 +3420,11 @@ function instance($$self, $$props, $$invalidate) {
 	let $renderer;
 	let $scene;
 	let $camera;
+	let $renderPasses;
 	component_subscribe($$self, renderer, $$value => $$invalidate(2, $renderer = $$value));
 	component_subscribe($$self, scene, $$value => $$invalidate(3, $scene = $$value));
 	component_subscribe($$self, camera, $$value => $$invalidate(4, $camera = $$value));
+	component_subscribe($$self, renderPasses, $$value => $$invalidate(5, $renderPasses = $$value));
 	let canvas;
 
 	onMount(async () => {
@@ -2964,10 +3442,9 @@ function instance($$self, $$props, $$invalidate) {
 			$renderer
 		);
 
-		/*const shadowPass = createContactShadowPass(10, 10, groundMatrix);
-const { getTexture: shadowTexture } = shadowPass;
+		const shadowPass = createContactShadowPass(10, 10, 3, groundMatrix);
+		set_store_value(renderPasses, $renderPasses = [shadowPass], $renderPasses);
 
-$renderPasses = [shadowPass];*/
 		set_store_value(
 			camera,
 			$camera = {

@@ -81,17 +81,19 @@ const convertKernelToOffsetsAndScales = (kernel) => {
 
 export function createBlurProgram(mapCurrent = false) {
 	return function createBlurProgram(programStore) {
-		const { gl, programMap } = appContext;
-		if (!programMap.has(programStore) && !mapCurrent) {
-			const program = gl.createProgram();
-			programMap.set(programStore, program);
-			appContext.program = program;
-		} else if (mapCurrent) {
-			programMap.set(programStore, appContext.program);
-		} else {
-			//todo check if necessary, this check is done in engine already, if it exists, createProgram is not called
-			appContext.program = appContext.programMap.get(programStore);
-		}
+		return function createBlurProgram() {
+			const { gl, programMap } = appContext;
+			if (!programMap.has(programStore) && !mapCurrent) {
+				const program = gl.createProgram();
+				programMap.set(programStore, program);
+				appContext.program = program;
+			} else if (mapCurrent) {
+				programMap.set(programStore, appContext.program);
+			} else {
+				//todo check if necessary, this check is done in engine already, if it exists, createProgram is not called
+				appContext.program = appContext.programMap.get(programStore);
+			}
+		};
 	};
 }
 
@@ -135,7 +137,7 @@ export function setBlurUniforms(direction) {
 	const { gl, program } = appContext;
 
 	const unidirectionalUVStride =
-		direction === BLUR_DIRECTION_HORIZONTAL ? [contextValue.canvas.width, 0] : [0, contextValue.canvas.height];
+		direction === BLUR_DIRECTION_HORIZONTAL ? [appContext.canvas.width, 0] : [0, appContext.canvas.height];
 	const uvStrideUniformLocation = gl.getUniformLocation(program, "uvStride");
 	gl.uniform2fv(uvStrideUniformLocation, unidirectionalUVStride);
 }
@@ -159,5 +161,6 @@ export function setKernelUniforms(kernel) {
 
 	const offsetScaleLocation = gl.getUniformLocation(program, "offsetAndScale");
 	gl.uniform2fv(offsetScaleLocation, kernel);
+	const kernelWidthLocation = gl.getUniformLocation(program, "kernelWidth");
 	gl.uniform1i(kernelWidthLocation, kernel.length / 2);
 }
