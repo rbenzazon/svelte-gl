@@ -79,16 +79,24 @@ const convertKernelToOffsetsAndScales = (kernel) => {
 	return data;
 };
 
+/**
+ *
+ * @param {boolean} mapCurrent makes the previous program the current one
+ * which allows to reuse one program in two consecutive and different draw passes
+ * This case is necessary to draw twice with different settings (unitforms)
+ */
 export function createBlurProgram(mapCurrent = false) {
 	return function createBlurProgram(programStore) {
 		return function createBlurProgram() {
-			const { gl, programMap } = appContext;
+			const { gl, programMap, vaoMap } = appContext;
 			if (!programMap.has(programStore) && !mapCurrent) {
 				const program = gl.createProgram();
 				programMap.set(programStore, program);
+				vaoMap.set(programStore, new Map());
 				appContext.program = program;
 			} else if (mapCurrent) {
 				programMap.set(programStore, appContext.program);
+				vaoMap.set(programStore, new Map());
 			} else {
 				//todo check if necessary, this check is done in engine already, if it exists, createProgram is not called
 				appContext.program = appContext.programMap.get(programStore);
@@ -117,6 +125,7 @@ export function createBlurShaders() {
 	gl.attachShader(program, fragmentShader);
 }
 
+// Create a simple quad mesh for the blur shader
 export function createBlurMesh() {
 	return {
 		attributes: {
@@ -133,7 +142,8 @@ export function createBlurMesh() {
 	};
 }
 
-export function setBlurUniforms(direction) {
+// Set the blur stride uniform, which define the direction of the blur
+export function setDirectionUniform(direction) {
 	const { gl, program } = appContext;
 
 	const unidirectionalUVStride =
@@ -142,6 +152,7 @@ export function setBlurUniforms(direction) {
 	gl.uniform2fv(uvStrideUniformLocation, unidirectionalUVStride);
 }
 
+// Generate a kernel
 export function getKernel(size) {
 	/*if (newWidth === kernelWidth) return;
 	kernelWidth = newWidth;*/
@@ -150,12 +161,9 @@ export function getKernel(size) {
 	const kernel = convertKernelToOffsetsAndScales(kernel1D);
 
 	return kernel;
-
-	/*gl.useProgram(program);
-	gl.uniform2fv(offsetScaleLocation, offsetsAndScales);
-	gl.uniform1i(kernelWidthLocation, numberOfOffsetsAndScales);*/
 }
 
+// Set the kernel uniforms
 export function setKernelUniforms(kernel) {
 	const { gl, program } = appContext;
 

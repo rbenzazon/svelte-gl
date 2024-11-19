@@ -395,10 +395,10 @@ export function selectProgram(programStore) {
 	};
 }
 
-function selectMesh(mesh) {
+function selectMesh(programStore, mesh) {
 	return function selectMesh() {
 		const { vaoMap } = appContext;
-		const cachedVAO = vaoMap.get(mesh);
+		const cachedVAO = vaoMap.get(programStore).get(mesh);
 		appContext.vao = cachedVAO;
 	};
 }
@@ -527,20 +527,22 @@ const renderPipeline = derived(
 					...program.meshes.reduce(
 						(acc, mesh) => [
 							...acc,
-							...(appContext.vaoMap.has(mesh)
+							...(appContext.vaoMap.has(program) && appContext.vaoMap.get(program).has(mesh)
 								? [
-										selectMesh(mesh),
+										selectMesh(program, mesh),
 										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
-										...(mesh.instances == null ? [setupTransformMatrix(mesh, mesh.matrix), setupNormalMatrix(mesh)] : []),
+										...(mesh.instances == null
+											? [setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)]
+											: []),
 									]
 								: [
-										setupAttributes(mesh),
+										setupAttributes(program, mesh),
 										...(program.material ? [setupMeshColor(program.material)] : []),
-										setupTransformMatrix(mesh, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
-										setupNormalMatrix(mesh, mesh.instances),
+										setupTransformMatrix(program, mesh, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
+										setupNormalMatrix(program, mesh, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation) || []),
 									]),
-							bindVAO(mesh),
+							bindVAO,
 							render(mesh, mesh.instances, mesh.drawMode),
 						],
 						[],

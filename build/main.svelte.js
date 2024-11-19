@@ -1255,11 +1255,9 @@ function render(mesh, instances, drawMode) {
 	};
 }
 
-function bindVAO(mesh) {
-	return function bindVAO() {
-		const { gl, vaoMap } = appContext;
-		gl.bindVertexArray(vaoMap.get(mesh));
-	};
+function bindVAO() {
+	const { gl, vao } = appContext;
+	gl.bindVertexArray(vao);
 }
 
 function createProgram(programStore) {
@@ -1268,6 +1266,7 @@ function createProgram(programStore) {
 		const { gl } = appContext;
 		const program = gl.createProgram();
 		appContext.programMap.set(programStore, program);
+		appContext.vaoMap.set(programStore, new Map());
 		appContext.program = program;
 	};
 }
@@ -1469,7 +1468,7 @@ function setupCamera(camera) {
 	};
 }
 
-function setupTransformMatrix(mesh, transformMatrix, numInstances) {
+function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances) {
 	if (numInstances == null) {
 		return function setupTransformMatrix() {
 			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
@@ -1523,7 +1522,7 @@ function setupTransformMatrix(mesh, transformMatrix, numInstances) {
 				scale(mat, mat, [0.5, 0.5, 0.5]);
 			});
 */
-			gl.bindVertexArray(vaoMap.get(mesh));
+			gl.bindVertexArray(appContext.vao);
 			const matrixBuffer = gl.createBuffer();
 
 			setAppContext({
@@ -1559,7 +1558,7 @@ function setupTransformMatrix(mesh, transformMatrix, numInstances) {
 	}
 }
 
-function setupNormalMatrix(mesh, numInstances) {
+function setupNormalMatrix(programStore, mesh, numInstances) {
 	if (numInstances == null) {
 		return function setupNormalMatrix() {
 			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
@@ -1579,7 +1578,7 @@ function setupNormalMatrix(mesh, numInstances) {
 				return;
 			}
 
-			gl.bindVertexArray(vaoMap.get(mesh));
+			gl.bindVertexArray(appContext.vao);
 			const normalMatricesValues = [];
 
 			for (let i = 0; i < numInstances; i++) {
@@ -1641,18 +1640,19 @@ function getBuffer(variable) {
 	};
 }
 
-function setupAttributes(mesh) {
+function setupAttributes(programStore, mesh) {
 	return function setupAttributes() {
 		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program, vaoMap } = appContext;
 		const { positions, normals, elements, uvs } = mesh.attributes;
 		let vao;
-		if (vaoMap.has(mesh)) {
-			vao = vaoMap.get(mesh);
+		if (vaoMap.has(programStore) && vaoMap.get(programStore).has(mesh)) {
+			vao = vaoMap.get(programStore).get(mesh);
 		} else {
 			vao = gl.createVertexArray();
-			vaoMap.set(mesh, vao);
+			vaoMap.get(programStore).set(mesh, vao);
 		}
+		appContext.vao = vao;
 		gl.bindVertexArray(vao);
 		const {
 			data: positionsData,
@@ -1683,8 +1683,12 @@ function setupAttributes(mesh) {
 				gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
 			}
 			const normalLocation = gl.getAttribLocation(program, "normal");
-			gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
-			gl.enableVertexAttribArray(normalLocation);
+			if(normalLocation!=-1){
+				gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
+				gl.enableVertexAttribArray(normalLocation);
+			}else {
+				console.log("normal attribute not found");
+			}
 		}
 		if (mesh.attributes.elements) {
 			const elementsData = new Uint16Array(mesh.attributes.elements);
@@ -1698,9 +1702,13 @@ function setupAttributes(mesh) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, uvsData, gl.STATIC_DRAW);
 			const uvLocation = gl.getAttribLocation(program, "uv");
-			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
-			gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
-			gl.enableVertexAttribArray(uvLocation);
+			if(uvLocation!=-1){
+				gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+				gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
+				gl.enableVertexAttribArray(uvLocation);
+			}else {
+				console.log("uv attribute not found");
+			}
 		}
 
 		gl.bindVertexArray(null);
@@ -2104,10 +2112,10 @@ function selectProgram(programStore) {
 	};
 }
 
-function selectMesh(mesh) {
+function selectMesh(programStore, mesh) {
 	return function selectMesh() {
 		const { vaoMap } = appContext;
-		const cachedVAO = vaoMap.get(mesh);
+		const cachedVAO = vaoMap.get(programStore).get(mesh);
 		appContext.vao = cachedVAO;
 	};
 }
@@ -2235,20 +2243,20 @@ const renderPipeline = derived(
 					...program.meshes.reduce(
 						(acc, mesh) => [
 							...acc,
-							...(appContext.vaoMap.has(mesh)
+							...(appContext.vaoMap.has(program) && appContext.vaoMap.get(program).has(mesh)
 								? [
-										selectMesh(mesh),
+										selectMesh(program,mesh),
 										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
-										...(mesh.instances == null ? [setupTransformMatrix(mesh, mesh.matrix), setupNormalMatrix(mesh)] : []),
+										...(mesh.instances == null ? [setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix()] : []),
 									]
 								: [
-										setupAttributes(mesh),
+										setupAttributes(program, mesh),
 										...(program.material ? [setupMeshColor(program.material)] : []),
-										setupTransformMatrix(mesh, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
-										setupNormalMatrix(mesh, mesh.instances),
+										setupTransformMatrix(program, mesh, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
+										setupNormalMatrix(program, mesh, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation) || []),
 									]),
-							bindVAO(mesh),
+							bindVAO,
 							render(mesh, mesh.instances, mesh.drawMode),
 						],
 						[],
@@ -2974,7 +2982,7 @@ var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nun
 
 var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * darkness );\r\n}\r\n\t\t\t\t\t";
 
-var vertexShaderSource = "#version 300 es\r\n\r\nlayout(location=0) in vec4 aPosition;\r\nlayout(location=1) in vec2 aTexCoord;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = aPosition;\r\n    vTexCoord = aTexCoord;\r\n}";
+var vertexShaderSource = "#version 300 es\r\n\r\nin vec4 position;\r\nin vec2 uv;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = position;\r\n    vTexCoord = aTexCoord;\r\n}";
 
 var fragmentShaderSource = "#version 300 es\r\n\r\nprecision mediump float;\r\n\r\nuniform sampler2D sampler;\r\nuniform vec2 uvStride;\r\nuniform vec2[128] offsetAndScale; // x=offset, y=scale\r\nuniform int kernelWidth;\r\n\r\nin vec2 vTexCoord;\r\n\r\nout vec4 fragColor;\r\n\r\nvoid main()\r\n{\r\n\tfor (int i = 0; i < kernelWidth; i++) {\r\n\t\tfragColor += texture(\r\n\t\t\tsampler,\r\n\t\t\tvTexCoord + offsetAndScale[i].x * uvStride\r\n\t\t    //   ^------------------------------------  UV coord for this fragment\r\n\t\t    //              ^-------------------------  Offset to sample (in texel space)\r\n\t\t    //                                  ^-----  Amount to move in UV space per texel (horizontal OR vertical only)\r\n\t\t    //   v------------------------------------  Scale down the sample\r\n\t\t) * offsetAndScale[i].y;\r\n\t}\r\n}";
 
@@ -3057,13 +3065,15 @@ const convertKernelToOffsetsAndScales = (kernel) => {
 function createBlurProgram(mapCurrent = false) {
 	return function createBlurProgram(programStore) {
 		return function createBlurProgram() {
-			const { gl, programMap } = appContext;
+			const { gl, programMap, vaoMap } = appContext;
 			if (!programMap.has(programStore) && !mapCurrent) {
 				const program = gl.createProgram();
 				programMap.set(programStore, program);
+				vaoMap.set(programStore, new Map());
 				appContext.program = program;
 			} else if (mapCurrent) {
 				programMap.set(programStore, appContext.program);
+				vaoMap.set(programStore, new Map());
 			} else {
 				//todo check if necessary, this check is done in engine already, if it exists, createProgram is not called
 				appContext.program = appContext.programMap.get(programStore);
@@ -3277,10 +3287,10 @@ function setupShadowCamera(projection, view) {
 	return function setupShadowCamera() {
 		const { gl, program } = appContext;
 
-		const projectionLocation = gl.getUniformLocation(program, "projection");
+		const projectionLocation = gl.getUniformLocation(program, "projectionMatrix");
 		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
-		const viewLocation = gl.getUniformLocation(program, "view");
+		const viewLocation = gl.getUniformLocation(program, "modelViewMatrix");
 		gl.uniformMatrix4fv(viewLocation, false, view);
 	};
 }
@@ -3308,11 +3318,13 @@ function createShaders() {
 function createShadowProgram(textureWidth, textureHeight) {
 	return function createShadowProgram(programStore) {
 		return function createShadowProgram() {
-			const { gl, programMap } = appContext;
+			const { gl, programMap, vaoMap } = appContext;
 
 			// Create shader program
 			const program = gl.createProgram();
 			programMap.set(programStore, program);
+			vaoMap.set(programStore, new Map());
+
 			appContext.program = program;
 		};
 	};

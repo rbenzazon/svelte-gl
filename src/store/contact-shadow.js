@@ -9,7 +9,7 @@ import {
 	createBlurProgram,
 	createBlurShaders,
 	getKernel,
-	setBlurUniforms,
+	setDirectionUniform,
 	setKernelUniforms,
 } from "./blur";
 import { selectProgram } from "./engine-refactor";
@@ -161,7 +161,7 @@ function selectBlurProgram(blurDirection, getTexture) {
 	return function selectBlurProgram(programStore) {
 		return function selectBlurProgram() {
 			selectProgram(programStore)();
-			setBlurUniforms(blurDirection);
+			setDirectionUniform(blurDirection);
 		};
 	};
 }
@@ -178,10 +178,10 @@ function setupShadowCamera(projection, view) {
 	return function setupShadowCamera() {
 		const { gl, program } = appContext;
 
-		const projectionLocation = gl.getUniformLocation(program, "projection");
+		const projectionLocation = gl.getUniformLocation(program, "projectionMatrix");
 		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
-		const viewLocation = gl.getUniformLocation(program, "view");
+		const viewLocation = gl.getUniformLocation(program, "modelViewMatrix");
 		gl.uniformMatrix4fv(viewLocation, false, view);
 	};
 }
@@ -209,11 +209,13 @@ function createShaders() {
 function createShadowProgram(textureWidth, textureHeight) {
 	return function createShadowProgram(programStore) {
 		return function createShadowProgram() {
-			const { gl, programMap } = appContext;
+			const { gl, programMap, vaoMap } = appContext;
 
 			// Create shader program
 			const program = gl.createProgram();
 			programMap.set(programStore, program);
+			vaoMap.set(programStore, new Map());
+
 			appContext.program = program;
 		};
 	};

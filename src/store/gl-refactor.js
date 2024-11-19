@@ -85,11 +85,9 @@ export function render(mesh, instances, drawMode) {
 	};
 }
 
-export function bindVAO(mesh) {
-	return function bindVAO() {
-		const { gl, vaoMap } = appContext;
-		gl.bindVertexArray(vaoMap.get(mesh));
-	};
+export function bindVAO() {
+	const { gl, vao } = appContext;
+	gl.bindVertexArray(vao);
 }
 
 export function createProgram(programStore) {
@@ -98,6 +96,7 @@ export function createProgram(programStore) {
 		const { gl } = appContext;
 		const program = gl.createProgram();
 		appContext.programMap.set(programStore, program);
+		appContext.vaoMap.set(programStore, new Map());
 		appContext.program = program;
 	};
 }
@@ -337,7 +336,7 @@ function getEuler(out, quat) {
 	return out;
 }
 
-export function setupTransformMatrix(mesh, transformMatrix, numInstances) {
+export function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances) {
 	if (numInstances == null) {
 		return function setupTransformMatrix() {
 			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
@@ -391,7 +390,7 @@ export function setupTransformMatrix(mesh, transformMatrix, numInstances) {
 				scale(mat, mat, [0.5, 0.5, 0.5]);
 			});
 */
-			gl.bindVertexArray(vaoMap.get(mesh));
+			gl.bindVertexArray(appContext.vao);
 			const matrixBuffer = gl.createBuffer();
 
 			setAppContext({
@@ -433,17 +432,17 @@ export function updateTransformMatrix(worldMatrix) {
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 }
 
-export function updateInstanceTransformMatrix(mesh, worldMatrix, instanceIndex) {
+export function updateInstanceTransformMatrix(programStore, mesh, worldMatrix, instanceIndex) {
 	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, vaoMap, matrixBuffer } = appContext;
-	gl.bindVertexArray(vaoMap.get(mesh));
+	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 	const bytesPerMatrix = 4 * 16;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
 	gl.bindVertexArray(null);
 }
 
-export function setupNormalMatrix(mesh, numInstances) {
+export function setupNormalMatrix(programStore, mesh, numInstances) {
 	if (numInstances == null) {
 		return function setupNormalMatrix() {
 			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
@@ -463,7 +462,7 @@ export function setupNormalMatrix(mesh, numInstances) {
 				return;
 			}
 
-			gl.bindVertexArray(vaoMap.get(mesh));
+			gl.bindVertexArray(appContext.vao);
 			const normalMatricesValues = [];
 
 			for (let i = 0; i < numInstances; i++) {
@@ -506,13 +505,9 @@ export function updateNormalMatrix({ gl, program }, normalMatrix) {
 	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
 }
 
-export function updateInstanceNormalMatrix(
-	{ gl, program, vaoMap, normalMatrixBuffer },
-	mesh,
-	normalMatrix,
-	instanceIndex,
-) {
-	gl.bindVertexArray(vaoMap.get(mesh));
+export function updateInstanceNormalMatrix(programStore, mesh, normalMatrix, instanceIndex) {
+	const { gl, vaoMap, normalMatrixBuffer } = appContext;
+	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
 	const bytesPerMatrix = 4 * 16;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, normalMatrix);
@@ -543,18 +538,19 @@ function getBuffer(variable) {
 	};
 }
 
-export function setupAttributes(mesh) {
+export function setupAttributes(programStore, mesh) {
 	return function setupAttributes() {
 		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program, vaoMap } = appContext;
 		const { positions, normals, elements, uvs } = mesh.attributes;
 		let vao;
-		if (vaoMap.has(mesh)) {
-			vao = vaoMap.get(mesh);
+		if (vaoMap.has(programStore) && vaoMap.get(programStore).has(mesh)) {
+			vao = vaoMap.get(programStore).get(mesh);
 		} else {
 			vao = gl.createVertexArray();
-			vaoMap.set(mesh, vao);
+			vaoMap.get(programStore).set(mesh, vao);
 		}
+		appContext.vao = vao;
 		gl.bindVertexArray(vao);
 		const {
 			data: positionsData,
@@ -585,8 +581,12 @@ export function setupAttributes(mesh) {
 				gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
 			}
 			const normalLocation = gl.getAttribLocation(program, "normal");
-			gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
-			gl.enableVertexAttribArray(normalLocation);
+			if (normalLocation != -1) {
+				gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
+				gl.enableVertexAttribArray(normalLocation);
+			} else {
+				console.log("normal attribute not found");
+			}
 		}
 		if (mesh.attributes.elements) {
 			const elementsData = new Uint16Array(mesh.attributes.elements);
@@ -600,9 +600,13 @@ export function setupAttributes(mesh) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, uvsData, gl.STATIC_DRAW);
 			const uvLocation = gl.getAttribLocation(program, "uv");
-			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
-			gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
-			gl.enableVertexAttribArray(uvLocation);
+			if (uvLocation != -1) {
+				gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+				gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
+				gl.enableVertexAttribArray(uvLocation);
+			} else {
+				console.log("uv attribute not found");
+			}
 		}
 
 		gl.bindVertexArray(null);
