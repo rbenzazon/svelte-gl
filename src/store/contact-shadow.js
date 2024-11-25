@@ -39,26 +39,14 @@ export function createContactShadowPass(width, height, depth, groundMatrix, blur
 	const textureHeight = 1024 / aspect;
 	console.log("creating contact shadow pass", width, height, depth, groundMatrix, blurSize);
 
-	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0.1, 10);
+	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
 
 	const view = lookAt(
 		new Float32Array(16),
-		[0, 10, 0], //groundTranslation,
-		[0, 0, 0], //[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
+		groundTranslation,
+		[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
 		[0, 0, -1],
 	);
-	/*const {projection,view} = getCameraProjectionView({
-		position: [0, 10, -10],
-		target: [0, 0, 0],
-		fov: 150,
-		near: 0.1,
-		far: depth,
-		up: [0, 1, 0],
-		matrix: null,
-	},width,height);*/
-
-	/*const view = new Float32Array([-1, 0, 0, 0, 0, 0.7071, 0.7071, 0, 0, 0.7071, -0.7071, 0, 0, 0, -7.0711, 1]);
-	const projection = new Float32Array([1.1397, 0, 0, 0, 0, 1.3032, 0, 0, 0, 0, -1.0002, -1, 0, 0, -0.2000, 0]);*/
 
 	const offsetsAndScales = new Float32Array(256); // Supports gaussian blurs up to 255x255
 	let kernelWidth;

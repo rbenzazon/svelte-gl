@@ -2986,7 +2986,7 @@ function createOrbitControls(canvas, camera) {
 
 var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 world;\r\n\r\nin vec3 position;\r\n\r\nout vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tgl_Position = projection * view * world * vec4( position, 1.0 );\r\n\tvHighPrecisionZW = gl_Position.zw;\r\n}";
 
-var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n//uniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\t//fragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * 1.0 );\r\n\t//\r\n\tfragColor = vec4( vec3(( 1.0  ) ) ,1.0);\r\n}\r\n\t\t\t\t\t";
+var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n//uniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * 1.0 );\r\n\t//fragColor = vec4( vec3( fragCoordZ ), 1.0 );\r\n\t//debug fragColor = vec4( vec3(( 1.0  ) ) ,1.0);\r\n}\r\n\t\t\t\t\t";
 
 var vertexShaderSource = "#version 300 es\r\n\r\nin vec4 position;\r\nin vec2 uv;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = position;\r\n    vTexCoord = uv;\r\n}";
 
@@ -3180,18 +3180,18 @@ function setKernelUniforms(kernel) {
  *
  */
 function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 128) {
-	getTranslation([], groundMatrix);
+	const groundTranslation = getTranslation([], groundMatrix);
 	const aspect = width / height;
 	const textureWidth = 1024 * aspect;
 	const textureHeight = 1024 / aspect;
 	console.log("creating contact shadow pass", width, height, depth, groundMatrix, blurSize);
 
-	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0.1, 10);
+	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
 
 	const view = lookAt(
 		new Float32Array(16),
-		[0, 10, 0], //groundTranslation,
-		[0, 0, 0], //[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
+		groundTranslation,
+		[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
 		[0, 0, -1],
 	);
 
@@ -3496,7 +3496,7 @@ function instance($$self, $$props, $$invalidate) {
 			$renderer
 		);
 
-		const shadowPass = createContactShadowPass(10, 10, 15, groundMatrix, 128);
+		const shadowPass = createContactShadowPass(10, 10, 1, groundMatrix, 128);
 		set_store_value(renderPasses, $renderPasses = [shadowPass], $renderPasses);
 
 		set_store_value(
