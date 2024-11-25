@@ -8,5 +8,5 @@ out vec2 vTexCoord;
 void main()
 {
     gl_Position = position;
-    vTexCoord = aTexCoord;
+    vTexCoord = uv;
 }

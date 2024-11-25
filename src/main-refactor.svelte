@@ -18,6 +18,7 @@ import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import { createTexture } from "./texture/texture.js";
 import { createContactShadowPass } from "./store/contact-shadow.js";
+import { getCameraProjectionView } from "./store/gl-refactor.js";
 
 let canvas;
 onMount(async () => {
@@ -31,7 +32,7 @@ onMount(async () => {
 		ambientLightColor: [0xffffff, 0.5],
 	};
 
-	const shadowPass = createContactShadowPass(10, 10, 3, groundMatrix);
+	const shadowPass = createContactShadowPass(10, 10, 15, groundMatrix, 128);
 	const { getTexture: shadowTexture } = shadowPass;
 
 	$renderPasses = [shadowPass];

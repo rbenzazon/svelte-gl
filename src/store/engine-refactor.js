@@ -21,6 +21,7 @@ import {
 	useProgram,
 	bindVAO,
 	clearFrame,
+	bindDefaultFramebuffer,
 } from "./gl-refactor.js";
 import { hasSameShallow } from "../utils/set.js";
 import { hasSameShallow as arrayHasSameShallow, optionalPropsDeepEqual } from "../utils/array.js";
@@ -335,7 +336,8 @@ export const programs = derived(
 
 		return [
 			...prePasses,
-			...programs.map((p) => {
+			...programs.map((p, index) => {
+				const firstCall = index === 0;
 				const program = {
 					...p,
 					useProgram,
@@ -348,6 +350,9 @@ export const programs = derived(
 					linkProgram,
 					validateProgram,
 				];
+				if (firstCall) {
+					program.setFrameBuffer = bindDefaultFramebuffer;
+				}
 				if (p.material?.specular) {
 					program.setupMaterial.push(p.material.specular.setupSpecular);
 				}
@@ -515,7 +520,6 @@ const renderPipeline = derived(
 		}
 		/*!init &&*/
 		pipeline.push(
-			...[clearFrame],
 			...$programs.reduce((acc, program) => {
 				return [
 					...acc,
@@ -547,7 +551,6 @@ const renderPipeline = derived(
 						],
 						[],
 					),
-					...(program.postDraw ? [program.postDraw] : []),
 				];
 			}, []),
 		);
@@ -563,7 +566,7 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 	if (!get(renderState).init && get(running) === 0) {
 		running.set(1);
 		$renderPipeline.forEach((f) => {
-			console.log("render pipeline", f);
+			console.log("f init", f.name);
 			f();
 		});
 		renderState.set({
@@ -585,7 +588,7 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 		running.set(3);
 		//run pipeline updates
 		get(renderPipeline).forEach((f) => {
-			//console.log("render pipeline", f);
+			console.log("f loop", f.name);
 			f();
 		});
 		//lock pipeline updates to batch changes that come from other sources than loop

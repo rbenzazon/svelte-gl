@@ -1209,10 +1209,9 @@ function initRenderer() {
 	const gl = appContext.canvas.getContext("webgl2");
 	appContext.gl = gl;
 
-	gl.viewportWidth = canvasRect.width;
-	gl.viewportHeight = canvasRect.height;
-	gl.clearColor(...appContext.backgroundColor);
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
+	/*gl.viewportWidth = canvasRect.width;
+	gl.viewportHeight = canvasRect.height;*/
+
 	gl.enable(gl.DEPTH_TEST);
 	gl.enable(gl.CULL_FACE);
 	gl.frontFace(gl.CCW);
@@ -1225,19 +1224,16 @@ function setupTime() {
 	gl.uniform1f(timeLocation, performance.now());
 }
 
-function clearFrame() {
-	const { gl } = appContext;
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-}
-
 function render(mesh, instances, drawMode) {
 	return function render() {
 		/** @type {WebGL2RenderingContext} **/
-		const { gl } = appContext;
+		const { gl, program } = appContext;
 
 		const attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / 3;
+
+		console.log(gl.getProgramInfoLog(program));
 
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
@@ -1293,6 +1289,18 @@ function useProgram() {
 	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, program } = appContext;
 	gl.useProgram(program);
+}
+
+function bindDefaultFramebuffer() {
+	/** @type {{gl:WebGL2RenderingContext}} **/
+	const { gl, backgroundColor } = appContext;
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	console.log("clearFrame", backgroundColor);
+	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+	appContext.frameBufferWidth = gl.canvas.width;
+	appContext.frameBufferHeight = gl.canvas.height;
+	gl.clearColor(...backgroundColor);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
 
 function createShaders$1(material, meshes, numPointLights, pointLightShader) {
@@ -1435,32 +1443,26 @@ function setupAmbientLight() {
 	gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
 }
 
+function getCameraProjectionView(camera, width, height) {
+	console.log("getCameraProjectionView", camera, width, height);
+
+	return {
+		projection: perspective(new Float32Array(16), toRadian(camera.fov), width / height, camera.near, camera.far),
+		view: lookAt(new Float32Array(16), camera.position, camera.target, camera.up),
+	};
+}
+
 function setupCamera(camera) {
 	return function createCamera() {
 		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program, canvas } = appContext;
+		const { projection, view } = getCameraProjectionView(camera, canvas.width, canvas.height);
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
-
-		const fieldOfViewInRadians = toRadian(camera.fov);
-		const aspectRatio = canvas.width / canvas.height;
-		const nearClippingPlaneDistance = camera.near;
-		const farClippingPlaneDistance = camera.far;
-		let projection = new Float32Array(16);
-		projection = perspective(
-			projection,
-			fieldOfViewInRadians,
-			aspectRatio,
-			nearClippingPlaneDistance,
-			farClippingPlaneDistance,
-		);
-
 		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
 		// view matrix
 		const viewLocation = gl.getUniformLocation(program, "view");
-		const view = new Float32Array(16);
-		lookAt(view, camera.position, camera.target, camera.up);
 		gl.uniformMatrix4fv(viewLocation, false, view);
 
 		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");
@@ -1683,10 +1685,10 @@ function setupAttributes(programStore, mesh) {
 				gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
 			}
 			const normalLocation = gl.getAttribLocation(program, "normal");
-			if(normalLocation!=-1){
+			if (normalLocation != -1) {
 				gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
 				gl.enableVertexAttribArray(normalLocation);
-			}else {
+			} else {
 				console.log("normal attribute not found");
 			}
 		}
@@ -1702,11 +1704,11 @@ function setupAttributes(programStore, mesh) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, uvsData, gl.STATIC_DRAW);
 			const uvLocation = gl.getAttribLocation(program, "uv");
-			if(uvLocation!=-1){
+			if (uvLocation != -1) {
 				gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
 				gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
 				gl.enableVertexAttribArray(uvLocation);
-			}else {
+			} else {
 				console.log("uv attribute not found");
 			}
 		}
@@ -2052,7 +2054,8 @@ const programs = derived(
 
 		return [
 			...prePasses,
-			...programs.map((p) => {
+			...programs.map((p, index) => {
+				const firstCall = index === 0;
 				const program = {
 					...p,
 					useProgram,
@@ -2065,6 +2068,9 @@ const programs = derived(
 					linkProgram,
 					validateProgram,
 				];
+				if (firstCall) {
+					program.setFrameBuffer = bindDefaultFramebuffer;
+				}
 				if (p.material?.specular) {
 					program.setupMaterial.push(p.material.specular.setupSpecular);
 				}
@@ -2231,7 +2237,6 @@ const renderPipeline = derived(
 		}
 		/*!init &&*/
 		pipeline.push(
-			...[clearFrame],
 			...$programs.reduce((acc, program) => {
 				return [
 					...acc,
@@ -2245,9 +2250,11 @@ const renderPipeline = derived(
 							...acc,
 							...(appContext.vaoMap.has(program) && appContext.vaoMap.get(program).has(mesh)
 								? [
-										selectMesh(program,mesh),
+										selectMesh(program, mesh),
 										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
-										...(mesh.instances == null ? [setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix()] : []),
+										...(mesh.instances == null
+											? [setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix()]
+											: []),
 									]
 								: [
 										setupAttributes(program, mesh),
@@ -2261,7 +2268,6 @@ const renderPipeline = derived(
 						],
 						[],
 					),
-					...(program.postDraw ? [program.postDraw] : []),
 				];
 			}, []),
 		);
@@ -2277,7 +2283,7 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 	if (!get_store_value(renderState).init && get_store_value(running) === 0) {
 		running.set(1);
 		$renderPipeline.forEach((f) => {
-			console.log("render pipeline", f);
+			console.log("f init", f.name);
 			f();
 		});
 		renderState.set({
@@ -2299,7 +2305,7 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 		running.set(3);
 		//run pipeline updates
 		get_store_value(renderPipeline).forEach((f) => {
-			//console.log("render pipeline", f);
+			console.log("f loop", f.name);
 			f();
 		});
 		//lock pipeline updates to batch changes that come from other sources than loop
@@ -2978,11 +2984,11 @@ function createOrbitControls(canvas, camera) {
 	}
 }
 
-var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nuniform mat4 modelViewMatrix;\r\nuniform mat4 projectionMatrix;\r\n\r\nin vec3 position;\r\n\r\nout vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tvec3 transformed = vec3( position );\r\n\tvec4 mvPosition = vec4( transformed, 1.0 );\r\n\tmvPosition = modelViewMatrix * mvPosition;\r\n\tgl_Position = projectionMatrix * mvPosition;\r\n\tvHighPrecisionZW = gl_Position.zw;\r\n}";
+var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 world;\r\n\r\nin vec3 position;\r\n\r\nout vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tgl_Position = projection * view * world * vec4( position, 1.0 );\r\n\tvHighPrecisionZW = gl_Position.zw;\r\n}";
 
-var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * darkness );\r\n}\r\n\t\t\t\t\t";
+var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n//uniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\t//fragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * 1.0 );\r\n\t//\r\n\tfragColor = vec4( vec3(( 1.0  ) ) ,1.0);\r\n}\r\n\t\t\t\t\t";
 
-var vertexShaderSource = "#version 300 es\r\n\r\nin vec4 position;\r\nin vec2 uv;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = position;\r\n    vTexCoord = aTexCoord;\r\n}";
+var vertexShaderSource = "#version 300 es\r\n\r\nin vec4 position;\r\nin vec2 uv;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = position;\r\n    vTexCoord = uv;\r\n}";
 
 var fragmentShaderSource = "#version 300 es\r\n\r\nprecision mediump float;\r\n\r\nuniform sampler2D sampler;\r\nuniform vec2 uvStride;\r\nuniform vec2[128] offsetAndScale; // x=offset, y=scale\r\nuniform int kernelWidth;\r\n\r\nin vec2 vTexCoord;\r\n\r\nout vec4 fragColor;\r\n\r\nvoid main()\r\n{\r\n\tfor (int i = 0; i < kernelWidth; i++) {\r\n\t\tfragColor += texture(\r\n\t\t\tsampler,\r\n\t\t\tvTexCoord + offsetAndScale[i].x * uvStride\r\n\t\t    //   ^------------------------------------  UV coord for this fragment\r\n\t\t    //              ^-------------------------  Offset to sample (in texel space)\r\n\t\t    //                                  ^-----  Amount to move in UV space per texel (horizontal OR vertical only)\r\n\t\t    //   v------------------------------------  Scale down the sample\r\n\t\t) * offsetAndScale[i].y;\r\n\t}\r\n}";
 
@@ -3062,6 +3068,12 @@ const convertKernelToOffsetsAndScales = (kernel) => {
 	return data;
 };
 
+/**
+ *
+ * @param {boolean} mapCurrent makes the previous program the current one
+ * which allows to reuse one program in two consecutive and different draw passes
+ * This case is necessary to draw twice with different settings (unitforms)
+ */
 function createBlurProgram(mapCurrent = false) {
 	return function createBlurProgram(programStore) {
 		return function createBlurProgram() {
@@ -3102,6 +3114,7 @@ function createBlurShaders() {
 	gl.attachShader(program, fragmentShader);
 }
 
+// Create a simple quad mesh for the blur shader
 function createBlurMesh() {
 	return {
 		attributes: {
@@ -3118,15 +3131,17 @@ function createBlurMesh() {
 	};
 }
 
-function setBlurUniforms(direction) {
+// Set the blur stride uniform, which define the direction of the blur
+function setDirectionUniform(direction) {
 	const { gl, program } = appContext;
 
 	const unidirectionalUVStride =
-		direction === BLUR_DIRECTION_HORIZONTAL ? [appContext.canvas.width, 0] : [0, appContext.canvas.height];
+		direction === BLUR_DIRECTION_HORIZONTAL ? [appContext.frameBufferWidth, 0] : [0, appContext.frameBufferHeight];
 	const uvStrideUniformLocation = gl.getUniformLocation(program, "uvStride");
 	gl.uniform2fv(uvStrideUniformLocation, unidirectionalUVStride);
 }
 
+// Generate a kernel
 function getKernel(size) {
 	/*if (newWidth === kernelWidth) return;
 	kernelWidth = newWidth;*/
@@ -3135,12 +3150,9 @@ function getKernel(size) {
 	const kernel = convertKernelToOffsetsAndScales(kernel1D);
 
 	return kernel;
-
-	/*gl.useProgram(program);
-	gl.uniform2fv(offsetScaleLocation, offsetsAndScales);
-	gl.uniform1i(kernelWidthLocation, numberOfOffsetsAndScales);*/
 }
 
+// Set the kernel uniforms
 function setKernelUniforms(kernel) {
 	const { gl, program } = appContext;
 
@@ -3150,18 +3162,36 @@ function setKernelUniforms(kernel) {
 	gl.uniform1i(kernelWidthLocation, kernel.length / 2);
 }
 
-function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 128) {
-	const groundTranslation = getTranslation([], groundMatrix);
-	const aspect = width / height;
-	const textureWidth = 512 * aspect;
-	const textureHeight = 512 / aspect;
+/**
+ * @typedef {ContactShadowPass} ContactShadowPass
+ * @property {Array} programs array of programs used in the pass
+ * @property {number} order order of the pass in the rendering pipeline
+ * @property {function} getTexture function to get the shadow texture
+ */
 
-	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
+/**
+ *
+ * @param {number} width width of the shadow map
+ * @param {number} height height of the shadow map
+ * @param {number} depth depth of the depth shader shadow rendering
+ * @param {mat4} groundMatrix ground matrix used as orthographic camera for the shadow rendering
+ * @param {number} blurSize size of the blur
+ * @returns {ContactShadowPass} object containing the shadow pass
+ *
+ */
+function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 128) {
+	getTranslation([], groundMatrix);
+	const aspect = width / height;
+	const textureWidth = 1024 * aspect;
+	const textureHeight = 1024 / aspect;
+	console.log("creating contact shadow pass", width, height, depth, groundMatrix, blurSize);
+
+	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0.1, 10);
 
 	const view = lookAt(
 		new Float32Array(16),
-		groundTranslation,
-		[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
+		[0, 10, 0], //groundTranslation,
+		[0, 0, 0], //[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
 		[0, 0, -1],
 	);
 
@@ -3217,7 +3247,7 @@ function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 
 				useProgram,
 				selectProgram,
 				setupCamera: setupShadowCamera(projection, view),
-				setFrameBuffer: setFrameBuffer(getGeometryFBO),
+				setFrameBuffer: setFrameBuffer(getGeometryFBO, textureWidth, textureHeight),
 				allMeshes: true,
 			},
 			{
@@ -3226,26 +3256,24 @@ function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 
 					createBlurShaders,
 					linkProgram,
 					validateProgram,
-					setupBlurKernel(127),
 					createFBO(textureWidth, textureHeight, setHorizontalBlurFBO, setHorizontalBlurTexture),
 				],
-				setupMaterial: [],
+				setupMaterial: [setupBlurKernel(127), () => setDirectionUniform(BLUR_DIRECTION_HORIZONTAL)],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL),
 				setupCamera: () => {},
-				setFrameBuffer: setFrameBuffer(getHorizontalBlurFBO),
+				setFrameBuffer: setFrameBuffer(getHorizontalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
 			},
 			{
 				createProgram: createBlurProgram(true),
 				setupProgram: [createFBO(textureWidth, textureHeight, setVerticalBlurFBO, setVerticalBlurTexture)],
-				setupMaterial: [],
+				setupMaterial: [() => setDirectionUniform(BLUR_DIRECTION_VERTICAL)],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL),
 				setupCamera: () => {},
-				setFrameBuffer: setFrameBuffer(getVerticalBlurFBO),
+				setFrameBuffer: setFrameBuffer(getVerticalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
-				postDraw: setFrameBuffer(),
 			},
 		],
 		getTexture: getVerticalBlurTexture,
@@ -3270,16 +3298,26 @@ function selectBlurProgram(blurDirection, getTexture) {
 	return function selectBlurProgram(programStore) {
 		return function selectBlurProgram() {
 			selectProgram(programStore)();
-			setBlurUniforms(blurDirection);
+			useProgram();
+			setDirectionUniform(blurDirection);
 		};
 	};
 }
 
-function setFrameBuffer(getFBO = null) {
+function setFrameBuffer(getFBO = null, width, height) {
 	return function setFrameBuffer() {
 		const { gl } = appContext;
 		const fbo = getFBO ? getFBO() : null;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+		if (appContext.fbo !== fbo && fbo != null) {
+			console.log("framebuffer change clearing from", appContext.fbo, "to", fbo, [0, 0, 0, 1], width, height);
+			gl.viewport(0, 0, width, height);
+			appContext.frameBufferWidth = width;
+			appContext.frameBufferHeight = height;
+			gl.clearColor(...[0, 0, 0, 0]);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+		}
+		appContext.fbo = fbo;
 	};
 }
 
@@ -3287,10 +3325,12 @@ function setupShadowCamera(projection, view) {
 	return function setupShadowCamera() {
 		const { gl, program } = appContext;
 
-		const projectionLocation = gl.getUniformLocation(program, "projectionMatrix");
+		const projectionLocation = gl.getUniformLocation(program, "projection");
+		console.log("setupShadowCamera projectionLocation", projectionLocation);
+
 		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
-		const viewLocation = gl.getUniformLocation(program, "modelViewMatrix");
+		const viewLocation = gl.getUniformLocation(program, "view");
 		gl.uniformMatrix4fv(viewLocation, false, view);
 	};
 }
@@ -3379,6 +3419,8 @@ function createShadowProgram(textureWidth, textureHeight) {
 function createFBO(width, height, setFBO, setTexture) {
 	return function createFBO() {
 		const { gl } = appContext;
+		console.log("creating FBO", width, height);
+
 		// The geometry texture will be sampled during the HORIZONTAL pass
 		const texture = gl.createTexture();
 		setTexture(texture);
@@ -3454,7 +3496,7 @@ function instance($$self, $$props, $$invalidate) {
 			$renderer
 		);
 
-		const shadowPass = createContactShadowPass(10, 10, 3, groundMatrix);
+		const shadowPass = createContactShadowPass(10, 10, 15, groundMatrix, 128);
 		set_store_value(renderPasses, $renderPasses = [shadowPass], $renderPasses);
 
 		set_store_value(

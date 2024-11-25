@@ -39,10 +39,9 @@ export function initRenderer() {
 	const gl = appContext.canvas.getContext("webgl2");
 	appContext.gl = gl;
 
-	gl.viewportWidth = canvasRect.width;
-	gl.viewportHeight = canvasRect.height;
-	gl.clearColor(...appContext.backgroundColor);
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
+	/*gl.viewportWidth = canvasRect.width;
+	gl.viewportHeight = canvasRect.height;*/
+
 	gl.enable(gl.DEPTH_TEST);
 	gl.enable(gl.CULL_FACE);
 	gl.frontFace(gl.CCW);
@@ -56,18 +55,23 @@ export function setupTime() {
 }
 
 export function clearFrame() {
-	const { gl } = appContext;
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	const { gl, backgroundColor } = appContext;
+	console.log("clearFrame", backgroundColor);
+
+	gl.clearColor(...backgroundColor);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT | gl.DEPTH_BUFFER_BIT);
 }
 
 export function render(mesh, instances, drawMode) {
 	return function render() {
 		/** @type {WebGL2RenderingContext} **/
-		const { gl } = appContext;
+		const { gl, program } = appContext;
 
 		const attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / 3;
+
+		console.log(gl.getProgramInfoLog(program));
 
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
@@ -127,8 +131,13 @@ export function useProgram() {
 
 export function bindDefaultFramebuffer() {
 	/** @type {{gl:WebGL2RenderingContext}} **/
-	const { gl } = appContext;
+	const { gl, backgroundColor } = appContext;
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	console.log("clearFrame", backgroundColor);
+	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+	appContext.frameBufferWidth = gl.canvas.width;
+	appContext.frameBufferHeight = gl.canvas.height;
+	gl.clearColor(...backgroundColor);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
 
@@ -272,32 +281,26 @@ export function setupAmbientLight() {
 	gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
 }
 
+export function getCameraProjectionView(camera, width, height) {
+	console.log("getCameraProjectionView", camera, width, height);
+
+	return {
+		projection: perspective(new Float32Array(16), toRadian(camera.fov), width / height, camera.near, camera.far),
+		view: lookAt(new Float32Array(16), camera.position, camera.target, camera.up),
+	};
+}
+
 export function setupCamera(camera) {
 	return function createCamera() {
 		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program, canvas } = appContext;
+		const { projection, view } = getCameraProjectionView(camera, canvas.width, canvas.height);
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
-
-		const fieldOfViewInRadians = toRadian(camera.fov);
-		const aspectRatio = canvas.width / canvas.height;
-		const nearClippingPlaneDistance = camera.near;
-		const farClippingPlaneDistance = camera.far;
-		let projection = new Float32Array(16);
-		projection = perspective(
-			projection,
-			fieldOfViewInRadians,
-			aspectRatio,
-			nearClippingPlaneDistance,
-			farClippingPlaneDistance,
-		);
-
 		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
 		// view matrix
 		const viewLocation = gl.getUniformLocation(program, "view");
-		const view = new Float32Array(16);
-		lookAt(view, camera.position, camera.target, camera.up);
 		gl.uniformMatrix4fv(viewLocation, false, view);
 
 		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");

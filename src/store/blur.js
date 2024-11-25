@@ -147,7 +147,7 @@ export function setDirectionUniform(direction) {
 	const { gl, program } = appContext;
 
 	const unidirectionalUVStride =
-		direction === BLUR_DIRECTION_HORIZONTAL ? [appContext.canvas.width, 0] : [0, appContext.canvas.height];
+		direction === BLUR_DIRECTION_HORIZONTAL ? [appContext.frameBufferWidth, 0] : [0, appContext.frameBufferHeight];
 	const uvStrideUniformLocation = gl.getUniformLocation(program, "uvStride");
 	gl.uniform2fv(uvStrideUniformLocation, unidirectionalUVStride);
 }
