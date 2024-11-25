@@ -56,7 +56,6 @@ export function setupTime() {
 
 export function clearFrame() {
 	const { gl, backgroundColor } = appContext;
-	console.log("clearFrame", backgroundColor);
 
 	gl.clearColor(...backgroundColor);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT | gl.DEPTH_BUFFER_BIT);
@@ -67,11 +66,11 @@ export function render(mesh, instances, drawMode) {
 		/** @type {WebGL2RenderingContext} **/
 		const { gl, program } = appContext;
 
+		const positionSize = mesh.attributes.positionsSize ?? 3;
+
 		const attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
-			: mesh.attributes.positions.length / 3;
-
-		console.log(gl.getProgramInfoLog(program));
+			: mesh.attributes.positions.length / positionSize;
 
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
@@ -133,7 +132,6 @@ export function bindDefaultFramebuffer() {
 	/** @type {{gl:WebGL2RenderingContext}} **/
 	const { gl, backgroundColor } = appContext;
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-	console.log("clearFrame", backgroundColor);
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	appContext.frameBufferWidth = gl.canvas.width;
 	appContext.frameBufferHeight = gl.canvas.height;
@@ -282,8 +280,6 @@ export function setupAmbientLight() {
 }
 
 export function getCameraProjectionView(camera, width, height) {
-	console.log("getCameraProjectionView", camera, width, height);
-
 	return {
 		projection: perspective(new Float32Array(16), toRadian(camera.fov), width / height, camera.near, camera.far),
 		view: lookAt(new Float32Array(16), camera.position, camera.target, camera.up),
@@ -545,7 +541,7 @@ export function setupAttributes(programStore, mesh) {
 	return function setupAttributes() {
 		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program, vaoMap } = appContext;
-		const { positions, normals, elements, uvs } = mesh.attributes;
+		const { positions, normals, elements, uvs, positionsSize } = mesh.attributes;
 		let vao;
 		if (vaoMap.has(programStore) && vaoMap.get(programStore).has(mesh)) {
 			vao = vaoMap.get(programStore).get(mesh);
@@ -567,7 +563,8 @@ export function setupAttributes(programStore, mesh) {
 		gl.bufferData(gl.ARRAY_BUFFER, positionsData, gl.STATIC_DRAW);
 		const positionLocation = gl.getAttribLocation(program, "position");
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer); //todo check if redundant
-		gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, positionsByteStride, positionsByteOffset);
+		const size = positionsSize != null ? positionsSize : 3;
+		gl.vertexAttribPointer(positionLocation, size, gl.FLOAT, false, positionsByteStride, positionsByteOffset);
 		gl.enableVertexAttribArray(positionLocation);
 		//normal
 		if (mesh.attributes.normals) {

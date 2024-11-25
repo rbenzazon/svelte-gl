@@ -24,19 +24,20 @@ import { mat4 } from "gl-matrix";
 
 /**
  *
- * @param {number} width width of the shadow map
- * @param {number} height height of the shadow map
- * @param {number} depth depth of the depth shader shadow rendering
- * @param {mat4} groundMatrix ground matrix used as orthographic camera for the shadow rendering
+ * @param {number} width width of the plane that will receive the shadow
+ * @param {number} height height of the plane that will receive the shadow
+ * @param {number} depth how far objects in height are see from the shadow camera
+ * @param {mat4} groundMatrix plane ground matrix used as orthographic camera for the shadow rendering
+ * @param {number} textureSize size of the texture used to render the shadow
  * @param {number} blurSize size of the blur
  * @returns {ContactShadowPass} object containing the shadow pass
  *
  */
-export function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 128) {
+export function createContactShadowPass(groundMatrix, depth, width, height, textureSize = 1024, blurSize = 128) {
 	const groundTranslation = getTranslation([], groundMatrix);
 	const aspect = width / height;
-	const textureWidth = 1024 * aspect;
-	const textureHeight = 1024 / aspect;
+	const textureWidth = textureSize * aspect;
+	const textureHeight = textureSize / aspect;
 	console.log("creating contact shadow pass", width, height, depth, groundMatrix, blurSize);
 
 	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
@@ -137,22 +138,31 @@ export function createContactShadowPass(width, height, depth, groundMatrix, blur
 					validateProgram,
 					createFBO(textureWidth, textureHeight, setHorizontalBlurFBO, setHorizontalBlurTexture),
 				],
-				setupMaterial: [setupBlurKernel(127), () => setDirectionUniform(BLUR_DIRECTION_HORIZONTAL)],
+				setupMaterial: [
+					setupBlurKernel(127),
+					() => setDirectionUniform(BLUR_DIRECTION_HORIZONTAL),
+					() => setSourceTexture(getGeometryTexture),
+				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL, getGeometryTexture),
 				setupCamera: () => {},
 				setFrameBuffer: setFrameBuffer(getHorizontalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
+				postDraw: unbindTexture,
 			},
 			{
 				createProgram: createBlurProgram(true),
 				setupProgram: [createFBO(textureWidth, textureHeight, setVerticalBlurFBO, setVerticalBlurTexture)],
-				setupMaterial: [() => setDirectionUniform(BLUR_DIRECTION_VERTICAL)],
+				setupMaterial: [
+					() => setDirectionUniform(BLUR_DIRECTION_VERTICAL),
+					() => setSourceTexture(getHorizontalBlurTexture),
+				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL, getHorizontalBlurTexture),
 				setupCamera: () => {},
 				setFrameBuffer: setFrameBuffer(getVerticalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
+				postDraw: unbindTexture,
 			},
 		],
 		getTexture: getVerticalBlurTexture,
@@ -173,14 +183,27 @@ function setupBlurKernel(size) {
 	};
 }
 
+function unbindTexture() {
+	const { gl } = appContext;
+	gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
 function selectBlurProgram(blurDirection, getTexture) {
 	return function selectBlurProgram(programStore) {
 		return function selectBlurProgram() {
 			selectProgram(programStore)();
 			useProgram();
+			setSourceTexture(getTexture);
 			setDirectionUniform(blurDirection);
 		};
 	};
+}
+
+function setSourceTexture(getTexture) {
+	const { gl } = appContext;
+	const texture = getTexture();
+	console.log("setting source texture", getTexture, texture);
+	gl.bindTexture(gl.TEXTURE_2D, texture);
 }
 
 function setFrameBuffer(getFBO = null, width, height) {

@@ -23,4 +23,5 @@ void main()
 		    //   v------------------------------------  Scale down the sample
 		) * offsetAndScale[i].y;
 	}
+	//fragColor = texture(sampler,vTexCoord);
 }

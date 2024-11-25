@@ -276,7 +276,6 @@ export const RENDER_PASS_TYPES = {
 export const programs = derived(
 	[meshes, lights, materials, renderPasses],
 	([$meshes, $lights, $materials, $renderPasses]) => {
-		console.log("programs derived");
 		let prePasses = $renderPasses
 			.filter((pass) => pass.order < 0)
 			.reduce((acc, pass) => {
@@ -551,6 +550,7 @@ const renderPipeline = derived(
 						],
 						[],
 					),
+					...(program.postDraw ? [program.postDraw] : []),
 				];
 			}, []),
 		);
@@ -566,7 +566,7 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 	if (!get(renderState).init && get(running) === 0) {
 		running.set(1);
 		$renderPipeline.forEach((f) => {
-			console.log("f init", f.name);
+			//log("f init", f.name);
 			f();
 		});
 		renderState.set({
@@ -588,7 +588,7 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 		running.set(3);
 		//run pipeline updates
 		get(renderPipeline).forEach((f) => {
-			console.log("f loop", f.name);
+			//log("f loop", f.name);
 			f();
 		});
 		//lock pipeline updates to batch changes that come from other sources than loop

@@ -129,6 +129,7 @@ export function createBlurShaders() {
 export function createBlurMesh() {
 	return {
 		attributes: {
+			positionsSize: 2,
 			positions: new Float32Array([
 				// Pos (xy)
 				-1, 1, -1, -1, 1, 1, 1, -1,
@@ -158,7 +159,9 @@ export function getKernel(size) {
 	kernelWidth = newWidth;*/
 
 	const kernel1D = generate1DKernel(size);
+	console.log("kernel1D", kernel1D);
 	const kernel = convertKernelToOffsetsAndScales(kernel1D);
+	console.log("kernel", kernel);
 
 	return kernel;
 }
@@ -168,6 +171,7 @@ export function setKernelUniforms(kernel) {
 	const { gl, program } = appContext;
 
 	const offsetScaleLocation = gl.getUniformLocation(program, "offsetAndScale");
+
 	gl.uniform2fv(offsetScaleLocation, kernel);
 	const kernelWidthLocation = gl.getUniformLocation(program, "kernelWidth");
 	gl.uniform1i(kernelWidthLocation, kernel.length / 2);

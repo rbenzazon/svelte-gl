@@ -1229,11 +1229,11 @@ function render(mesh, instances, drawMode) {
 		/** @type {WebGL2RenderingContext} **/
 		const { gl, program } = appContext;
 
+		const positionSize = mesh.attributes.positionsSize ?? 3;
+
 		const attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
-			: mesh.attributes.positions.length / 3;
-
-		console.log(gl.getProgramInfoLog(program));
+			: mesh.attributes.positions.length / positionSize;
 
 		if (instances) {
 			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
@@ -1295,7 +1295,6 @@ function bindDefaultFramebuffer() {
 	/** @type {{gl:WebGL2RenderingContext}} **/
 	const { gl, backgroundColor } = appContext;
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-	console.log("clearFrame", backgroundColor);
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	appContext.frameBufferWidth = gl.canvas.width;
 	appContext.frameBufferHeight = gl.canvas.height;
@@ -1444,8 +1443,6 @@ function setupAmbientLight() {
 }
 
 function getCameraProjectionView(camera, width, height) {
-	console.log("getCameraProjectionView", camera, width, height);
-
 	return {
 		projection: perspective(new Float32Array(16), toRadian(camera.fov), width / height, camera.near, camera.far),
 		view: lookAt(new Float32Array(16), camera.position, camera.target, camera.up),
@@ -1646,7 +1643,7 @@ function setupAttributes(programStore, mesh) {
 	return function setupAttributes() {
 		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program, vaoMap } = appContext;
-		const { positions, normals, elements, uvs } = mesh.attributes;
+		const { positions, normals, elements, uvs, positionsSize } = mesh.attributes;
 		let vao;
 		if (vaoMap.has(programStore) && vaoMap.get(programStore).has(mesh)) {
 			vao = vaoMap.get(programStore).get(mesh);
@@ -1668,7 +1665,8 @@ function setupAttributes(programStore, mesh) {
 		gl.bufferData(gl.ARRAY_BUFFER, positionsData, gl.STATIC_DRAW);
 		const positionLocation = gl.getAttribLocation(program, "position");
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer); //todo check if redundant
-		gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, positionsByteStride, positionsByteOffset);
+		const size = positionsSize != null ? positionsSize : 3;
+		gl.vertexAttribPointer(positionLocation, size, gl.FLOAT, false, positionsByteStride, positionsByteOffset);
 		gl.enableVertexAttribArray(positionLocation);
 		//normal
 		if (mesh.attributes.normals) {
@@ -1994,7 +1992,6 @@ const materials = derived([meshes], ([$meshes]) => {
 const programs = derived(
 	[meshes, lights, materials, renderPasses],
 	([$meshes, $lights, $materials, $renderPasses]) => {
-		console.log("programs derived");
 		let prePasses = $renderPasses
 			.filter((pass) => pass.order < 0)
 			.reduce((acc, pass) => {
@@ -2268,6 +2265,7 @@ const renderPipeline = derived(
 						],
 						[],
 					),
+					...(program.postDraw ? [program.postDraw] : []),
 				];
 			}, []),
 		);
@@ -2283,7 +2281,7 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 	if (!get_store_value(renderState).init && get_store_value(running) === 0) {
 		running.set(1);
 		$renderPipeline.forEach((f) => {
-			console.log("f init", f.name);
+			//log("f init", f.name);
 			f();
 		});
 		renderState.set({
@@ -2305,7 +2303,7 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 		running.set(3);
 		//run pipeline updates
 		get_store_value(renderPipeline).forEach((f) => {
-			console.log("f loop", f.name);
+			//log("f loop", f.name);
 			f();
 		});
 		//lock pipeline updates to batch changes that come from other sources than loop
@@ -2990,7 +2988,7 @@ var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\
 
 var vertexShaderSource = "#version 300 es\r\n\r\nin vec4 position;\r\nin vec2 uv;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = position;\r\n    vTexCoord = uv;\r\n}";
 
-var fragmentShaderSource = "#version 300 es\r\n\r\nprecision mediump float;\r\n\r\nuniform sampler2D sampler;\r\nuniform vec2 uvStride;\r\nuniform vec2[128] offsetAndScale; // x=offset, y=scale\r\nuniform int kernelWidth;\r\n\r\nin vec2 vTexCoord;\r\n\r\nout vec4 fragColor;\r\n\r\nvoid main()\r\n{\r\n\tfor (int i = 0; i < kernelWidth; i++) {\r\n\t\tfragColor += texture(\r\n\t\t\tsampler,\r\n\t\t\tvTexCoord + offsetAndScale[i].x * uvStride\r\n\t\t    //   ^------------------------------------  UV coord for this fragment\r\n\t\t    //              ^-------------------------  Offset to sample (in texel space)\r\n\t\t    //                                  ^-----  Amount to move in UV space per texel (horizontal OR vertical only)\r\n\t\t    //   v------------------------------------  Scale down the sample\r\n\t\t) * offsetAndScale[i].y;\r\n\t}\r\n}";
+var fragmentShaderSource = "#version 300 es\r\n\r\nprecision mediump float;\r\n\r\nuniform sampler2D sampler;\r\nuniform vec2 uvStride;\r\nuniform vec2[128] offsetAndScale; // x=offset, y=scale\r\nuniform int kernelWidth;\r\n\r\nin vec2 vTexCoord;\r\n\r\nout vec4 fragColor;\r\n\r\nvoid main()\r\n{\r\n\tfor (int i = 0; i < kernelWidth; i++) {\r\n\t\tfragColor += texture(\r\n\t\t\tsampler,\r\n\t\t\tvTexCoord + offsetAndScale[i].x * uvStride\r\n\t\t    //   ^------------------------------------  UV coord for this fragment\r\n\t\t    //              ^-------------------------  Offset to sample (in texel space)\r\n\t\t    //                                  ^-----  Amount to move in UV space per texel (horizontal OR vertical only)\r\n\t\t    //   v------------------------------------  Scale down the sample\r\n\t\t) * offsetAndScale[i].y;\r\n\t}\r\n\t//fragColor = texture(sampler,vTexCoord);\r\n}";
 
 const BLUR_DIRECTION_HORIZONTAL = 0;
 const BLUR_DIRECTION_VERTICAL = 1;
@@ -3118,6 +3116,7 @@ function createBlurShaders() {
 function createBlurMesh() {
 	return {
 		attributes: {
+			positionsSize: 2,
 			positions: new Float32Array([
 				// Pos (xy)
 				-1, 1, -1, -1, 1, 1, 1, -1,
@@ -3147,7 +3146,9 @@ function getKernel(size) {
 	kernelWidth = newWidth;*/
 
 	const kernel1D = generate1DKernel(size);
+	console.log("kernel1D", kernel1D);
 	const kernel = convertKernelToOffsetsAndScales(kernel1D);
+	console.log("kernel", kernel);
 
 	return kernel;
 }
@@ -3157,6 +3158,7 @@ function setKernelUniforms(kernel) {
 	const { gl, program } = appContext;
 
 	const offsetScaleLocation = gl.getUniformLocation(program, "offsetAndScale");
+
 	gl.uniform2fv(offsetScaleLocation, kernel);
 	const kernelWidthLocation = gl.getUniformLocation(program, "kernelWidth");
 	gl.uniform1i(kernelWidthLocation, kernel.length / 2);
@@ -3171,19 +3173,20 @@ function setKernelUniforms(kernel) {
 
 /**
  *
- * @param {number} width width of the shadow map
- * @param {number} height height of the shadow map
- * @param {number} depth depth of the depth shader shadow rendering
- * @param {mat4} groundMatrix ground matrix used as orthographic camera for the shadow rendering
+ * @param {number} width width of the plane that will receive the shadow
+ * @param {number} height height of the plane that will receive the shadow
+ * @param {number} depth how far objects in height are see from the shadow camera
+ * @param {mat4} groundMatrix plane ground matrix used as orthographic camera for the shadow rendering
+ * @param {number} textureSize size of the texture used to render the shadow
  * @param {number} blurSize size of the blur
  * @returns {ContactShadowPass} object containing the shadow pass
  *
  */
-function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 128) {
+function createContactShadowPass(groundMatrix, depth, width, height, textureSize = 1024, blurSize = 128) {
 	const groundTranslation = getTranslation([], groundMatrix);
 	const aspect = width / height;
-	const textureWidth = 1024 * aspect;
-	const textureHeight = 1024 / aspect;
+	const textureWidth = textureSize * aspect;
+	const textureHeight = textureSize / aspect;
 	console.log("creating contact shadow pass", width, height, depth, groundMatrix, blurSize);
 
 	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
@@ -3207,6 +3210,9 @@ function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 
 	function setHorizontalBlurTexture(texture) {
 		horizontalBlurTexture = texture;
 	}
+	function getHorizontalBlurTexture() {
+		return horizontalBlurTexture;
+	}
 
 	let verticalBlurFBO;
 	function setVerticalBlurFBO(fbo) {
@@ -3228,7 +3234,13 @@ function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 
 	function getGeometryFBO() {
 		return geometryFBO;
 	}
+
+	let geometryTexture;
 	function setGeometryTexture(texture) {
+		geometryTexture = texture;
+	}
+	function getGeometryTexture() {
+		return geometryTexture;
 	}
 
 	const blurMesh = createBlurMesh();
@@ -3258,22 +3270,31 @@ function createContactShadowPass(width, height, depth, groundMatrix, blurSize = 
 					validateProgram,
 					createFBO(textureWidth, textureHeight, setHorizontalBlurFBO, setHorizontalBlurTexture),
 				],
-				setupMaterial: [setupBlurKernel(127), () => setDirectionUniform(BLUR_DIRECTION_HORIZONTAL)],
+				setupMaterial: [
+					setupBlurKernel(127),
+					() => setDirectionUniform(BLUR_DIRECTION_HORIZONTAL),
+					() => setSourceTexture(getGeometryTexture),
+				],
 				useProgram,
-				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL),
+				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL, getGeometryTexture),
 				setupCamera: () => {},
 				setFrameBuffer: setFrameBuffer(getHorizontalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
+				postDraw: unbindTexture,
 			},
 			{
 				createProgram: createBlurProgram(true),
 				setupProgram: [createFBO(textureWidth, textureHeight, setVerticalBlurFBO, setVerticalBlurTexture)],
-				setupMaterial: [() => setDirectionUniform(BLUR_DIRECTION_VERTICAL)],
+				setupMaterial: [
+					() => setDirectionUniform(BLUR_DIRECTION_VERTICAL),
+					() => setSourceTexture(getHorizontalBlurTexture),
+				],
 				useProgram,
-				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL),
+				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL, getHorizontalBlurTexture),
 				setupCamera: () => {},
 				setFrameBuffer: setFrameBuffer(getVerticalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
+				postDraw: unbindTexture,
 			},
 		],
 		getTexture: getVerticalBlurTexture,
@@ -3294,14 +3315,27 @@ function setupBlurKernel(size) {
 	};
 }
 
+function unbindTexture() {
+	const { gl } = appContext;
+	gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
 function selectBlurProgram(blurDirection, getTexture) {
 	return function selectBlurProgram(programStore) {
 		return function selectBlurProgram() {
 			selectProgram(programStore)();
 			useProgram();
+			setSourceTexture(getTexture);
 			setDirectionUniform(blurDirection);
 		};
 	};
+}
+
+function setSourceTexture(getTexture) {
+	const { gl } = appContext;
+	const texture = getTexture();
+	console.log("setting source texture", getTexture, texture);
+	gl.bindTexture(gl.TEXTURE_2D, texture);
 }
 
 function setFrameBuffer(getFBO = null, width, height) {
@@ -3496,7 +3530,7 @@ function instance($$self, $$props, $$invalidate) {
 			$renderer
 		);
 
-		const shadowPass = createContactShadowPass(10, 10, 1, groundMatrix, 128);
+		const shadowPass = createContactShadowPass(groundMatrix, 1, 10, 10, 1024, 128);
 		set_store_value(renderPasses, $renderPasses = [shadowPass], $renderPasses);
 
 		set_store_value(
