@@ -83,7 +83,7 @@ export function createContactShadowPass(groundMatrix, depth, width, height, text
 		verticalBlurTexture = texture;
 	}
 	function getVerticalBlurTexture() {
-		return horizontalBlurTexture;
+		return verticalBlurTexture;
 	}
 
 	let geometryFBO;
@@ -139,7 +139,7 @@ export function createContactShadowPass(groundMatrix, depth, width, height, text
 					createFBO(textureWidth, textureHeight, setHorizontalBlurFBO, setHorizontalBlurTexture),
 				],
 				setupMaterial: [
-					setupBlurKernel(127),
+					setupBlurKernel(blurSize),
 					() => setDirectionUniform(BLUR_DIRECTION_HORIZONTAL),
 					() => setSourceTexture(getGeometryTexture),
 				],
@@ -176,7 +176,7 @@ function setupBlurKernel(size) {
 		const rollupWorkAround = {
 			size,
 		};
-		const kernel = getKernel(rollupWorkAround.size);
+		const kernel = getKernel(rollupWorkAround.size - 1);
 		setKernelUniforms(kernel);
 		//workaround to prevent rollup from removing the getKernel argument
 		return rollupWorkAround;
@@ -329,6 +329,7 @@ function createFBO(width, height, setFBO, setTexture) {
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
 		const fbo = gl.createFramebuffer();
 		setFBO(fbo);

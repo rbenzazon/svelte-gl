@@ -148,7 +148,9 @@ export function setDirectionUniform(direction) {
 	const { gl, program } = appContext;
 
 	const unidirectionalUVStride =
-		direction === BLUR_DIRECTION_HORIZONTAL ? [appContext.frameBufferWidth, 0] : [0, appContext.frameBufferHeight];
+		direction === BLUR_DIRECTION_HORIZONTAL
+			? [1 / appContext.frameBufferWidth, 0]
+			: [0, 1 / appContext.frameBufferHeight];
 	const uvStrideUniformLocation = gl.getUniformLocation(program, "uvStride");
 	gl.uniform2fv(uvStrideUniformLocation, unidirectionalUVStride);
 }
@@ -174,5 +176,7 @@ export function setKernelUniforms(kernel) {
 
 	gl.uniform2fv(offsetScaleLocation, kernel);
 	const kernelWidthLocation = gl.getUniformLocation(program, "kernelWidth");
+	console.log("kernelWidth", kernel.length / 2);
+
 	gl.uniform1i(kernelWidthLocation, kernel.length / 2);
 }

@@ -2982,13 +2982,120 @@ function createOrbitControls(canvas, camera) {
 	}
 }
 
+var textureShader = "${declaration?\r\n`\r\nuniform sampler2D ${mapType};\r\nuniform vec2 normalScale;\r\n\r\n\r\nmat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {\r\n    vec3 q0 = dFdx( eye_pos.xyz );\r\n    vec3 q1 = dFdy( eye_pos.xyz );\r\n    vec2 st0 = dFdx( uv.st );\r\n    vec2 st1 = dFdy( uv.st );\r\n    vec3 N = surf_norm;\r\n    vec3 q1perp = cross( q1, N );\r\n    vec3 q0perp = cross( N, q0 );\r\n    vec3 T = q1perp * st0.x + q0perp * st1.x;\r\n    vec3 B = q1perp * st0.y + q0perp * st1.y;\r\n    float det = max( dot( T, T ), dot( B, B ) );\r\n    float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );\r\n    return mat3( T * scale, B * scale, N );\r\n}\r\n` : ''\r\n}\r\n${diffuseMapSample?\r\n`\r\n    //atan(uv.y, uv.x)\r\n    ${coordinateSpace === 'circular' ?\r\n`   vec2 uv = vec2(vUv.x/vUv.y, vUv.y);\r\n` :\r\n`   vec2 uv = vUv;\r\n`}\r\n    material.diffuseColor *= texture( ${mapType}, uv ).xyz;\r\n` : ''\r\n}\r\n${normalMapSample?\r\n`\r\n    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );\r\n    normal = texture( normalMap, vUv ).xyz * 2.0 - 1.0;\r\n    normal.xy *= normalScale;\r\n    normal = normalize(tbn * normal);\r\n\t//normal = normalize( normalMatrix * normal );\r\n` : ''\r\n}\r\n";
+
+const types = {
+	diffuse: "diffuseMap",
+	normal: "normalMap",
+};
+
+const id = {
+	diffuse: 0,
+	normal: 1,
+};
+
+/**
+ * @typedef TextureProps
+ * @property {string} url
+ * @property {"diffuse" | "normal"} type
+ * @property {number[]} [normalScale=[1, 1]]
+ * @property {"square" | "circular"} [coordinateSpace="square"]
+ */
+
+/**
+ *
+ * @param {TextureProps} props
+ * @returns
+ */
+const createTexture = async (props) => {
+	let image;
+	if (props.url) {
+		image = await loadTexture(props.url);
+	} else if (typeof props.textureBuffer === "function") {
+		image = props.textureBuffer;
+	}
+
+	let output = {
+		type: types[props.type],
+		coordinateSpace: props.coordinateSpace,
+		shader: templateLiteralRenderer(textureShader, {
+			declaration: false,
+			diffuseMapSample: false,
+			normalMapSample: false,
+			mapType: undefined,
+			coordinateSpace: undefined,
+		}),
+		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale),
+	};
+	if (typeof image === "function") {
+		output = {
+			...output,
+			get textureBuffer() {
+				return image();
+			},
+		};
+	} else {
+		output = {
+			...output,
+			texture: image,
+		};
+	}
+	return output;
+};
+
+function loadTexture(url) {
+	return new Promise((resolve, reject) => {
+		const image = new Image();
+		image.onload = () => {
+			resolve(image);
+		};
+		image.onerror = reject;
+		image.src = url;
+	});
+}
+
+function setupTexture(texture, type, id, normalScale = [1, 1]) {
+	return function setupTexture() {
+		/** @type {{gl: WebGL2RenderingContext}} **/
+		const { gl, program } = appContext;
+		//uniform sampler2D diffuseMap;
+		let textureBuffer;
+		if (typeof texture === "function") {
+			textureBuffer = texture();
+		} else {
+			textureBuffer = gl.createTexture();
+		}
+		const textureLocation = gl.getUniformLocation(program, type);
+		gl.activeTexture(gl["TEXTURE" + id]);
+		gl.bindTexture(gl.TEXTURE_2D, textureBuffer);
+		gl.uniform1i(textureLocation, id);
+		if (typeof texture !== "function") {
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureBuffer);
+		}
+
+		// gl.NEAREST is also allowed, instead of gl.LINEAR, as neither mipmap.
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		// Prevents s-coordinate wrapping (repeating).
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		// Prevents t-coordinate wrapping (repeating).
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		//gl.getExtension("EXT_texture_filter_anisotropic");
+		if (normalScale != null) {
+			const normalScaleLocation = gl.getUniformLocation(program, "normalScale");
+			gl.uniform2fv(normalScaleLocation, normalScale);
+		}
+	};
+}
+
 var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 world;\r\n\r\nin vec3 position;\r\n\r\nout vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tgl_Position = projection * view * world * vec4( position, 1.0 );\r\n\tvHighPrecisionZW = gl_Position.zw;\r\n}";
 
 var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n//uniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * 1.0 );\r\n\t//fragColor = vec4( vec3( fragCoordZ ), 1.0 );\r\n\t//debug fragColor = vec4( vec3(( 1.0  ) ) ,1.0);\r\n}\r\n\t\t\t\t\t";
 
 var vertexShaderSource = "#version 300 es\r\n\r\nin vec4 position;\r\nin vec2 uv;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = position;\r\n    vTexCoord = uv;\r\n}";
 
-var fragmentShaderSource = "#version 300 es\r\n\r\nprecision mediump float;\r\n\r\nuniform sampler2D sampler;\r\nuniform vec2 uvStride;\r\nuniform vec2[128] offsetAndScale; // x=offset, y=scale\r\nuniform int kernelWidth;\r\n\r\nin vec2 vTexCoord;\r\n\r\nout vec4 fragColor;\r\n\r\nvoid main()\r\n{\r\n\tfor (int i = 0; i < kernelWidth; i++) {\r\n\t\tfragColor += texture(\r\n\t\t\tsampler,\r\n\t\t\tvTexCoord + offsetAndScale[i].x * uvStride\r\n\t\t    //   ^------------------------------------  UV coord for this fragment\r\n\t\t    //              ^-------------------------  Offset to sample (in texel space)\r\n\t\t    //                                  ^-----  Amount to move in UV space per texel (horizontal OR vertical only)\r\n\t\t    //   v------------------------------------  Scale down the sample\r\n\t\t) * offsetAndScale[i].y;\r\n\t}\r\n\t//fragColor = texture(sampler,vTexCoord);\r\n}";
+var fragmentShaderSource = "#version 300 es\r\n\r\nprecision mediump float;\r\n\r\nuniform sampler2D sampler;\r\nuniform vec2 uvStride;\r\nuniform vec2[128] offsetAndScale; // x=offset, y=scale\r\nuniform int kernelWidth;\r\n\r\nin vec2 vTexCoord;\r\n\r\nout vec4 fragColor;\r\n\r\nvoid main()\r\n{\r\n\t//fragColor = vec4(vec3(vTexCoord.y),1.0);\r\n\t//fragColor += vec4(vec3(texture(sampler,vTexCoord).w),1.0);\r\n\tfor (int i = 0; i < kernelWidth; i++) {\r\n\r\n\t\tfragColor += texture(\r\n\t\t\tsampler,\r\n\t\t\tvTexCoord + offsetAndScale[i].x * uvStride\r\n\t\t    //   ^------------------------------------  UV coord for this fragment\r\n\t\t    //              ^-------------------------  Offset to sample (in texel space)\r\n\t\t    //                                  ^-----  Amount to move in UV space per texel (horizontal OR vertical only)\r\n\t\t    //   v------------------------------------  Scale down the sample\r\n\t\t) * offsetAndScale[i].y;\r\n\r\n\t\t//fragColor += vec4(vec3(0.01),1.0);\r\n\t}\r\n\t//float value = offsetAndScale[int(vTexCoord.x)].x;\r\n\t//fragColor = vec4(vec3(offsetAndScale[8].x/12.0),1.0);\r\n\t//fragColor = vec4(offsetAndScale[32].x,offsetAndScale[32].x,offsetAndScale[32].x,1.0);//texture(sampler,vTexCoord);\r\n}";
 
 const BLUR_DIRECTION_HORIZONTAL = 0;
 const BLUR_DIRECTION_VERTICAL = 1;
@@ -3135,7 +3242,9 @@ function setDirectionUniform(direction) {
 	const { gl, program } = appContext;
 
 	const unidirectionalUVStride =
-		direction === BLUR_DIRECTION_HORIZONTAL ? [appContext.frameBufferWidth, 0] : [0, appContext.frameBufferHeight];
+		direction === BLUR_DIRECTION_HORIZONTAL
+			? [1 / appContext.frameBufferWidth, 0]
+			: [0, 1 / appContext.frameBufferHeight];
 	const uvStrideUniformLocation = gl.getUniformLocation(program, "uvStride");
 	gl.uniform2fv(uvStrideUniformLocation, unidirectionalUVStride);
 }
@@ -3161,6 +3270,8 @@ function setKernelUniforms(kernel) {
 
 	gl.uniform2fv(offsetScaleLocation, kernel);
 	const kernelWidthLocation = gl.getUniformLocation(program, "kernelWidth");
+	console.log("kernelWidth", kernel.length / 2);
+
 	gl.uniform1i(kernelWidthLocation, kernel.length / 2);
 }
 
@@ -3221,10 +3332,13 @@ function createContactShadowPass(groundMatrix, depth, width, height, textureSize
 	function getVerticalBlurFBO() {
 		return verticalBlurFBO;
 	}
+
+	let verticalBlurTexture;
 	function setVerticalBlurTexture(texture) {
+		verticalBlurTexture = texture;
 	}
 	function getVerticalBlurTexture() {
-		return horizontalBlurTexture;
+		return verticalBlurTexture;
 	}
 
 	let geometryFBO;
@@ -3271,7 +3385,7 @@ function createContactShadowPass(groundMatrix, depth, width, height, textureSize
 					createFBO(textureWidth, textureHeight, setHorizontalBlurFBO, setHorizontalBlurTexture),
 				],
 				setupMaterial: [
-					setupBlurKernel(127),
+					setupBlurKernel(blurSize),
 					() => setDirectionUniform(BLUR_DIRECTION_HORIZONTAL),
 					() => setSourceTexture(getGeometryTexture),
 				],
@@ -3308,7 +3422,7 @@ function setupBlurKernel(size) {
 		const rollupWorkAround = {
 			size,
 		};
-		const kernel = getKernel(rollupWorkAround.size);
+		const kernel = getKernel(rollupWorkAround.size - 1);
 		setKernelUniforms(kernel);
 		//workaround to prevent rollup from removing the getKernel argument
 		return rollupWorkAround;
@@ -3461,6 +3575,7 @@ function createFBO(width, height, setFBO, setTexture) {
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
 		const fbo = gl.createFramebuffer();
 		setFBO(fbo);
@@ -3531,6 +3646,7 @@ function instance($$self, $$props, $$invalidate) {
 		);
 
 		const shadowPass = createContactShadowPass(groundMatrix, 1, 10, 10, 1024, 128);
+		const { getTexture: shadowTexture } = shadowPass;
 		set_store_value(renderPasses, $renderPasses = [shadowPass], $renderPasses);
 
 		set_store_value(
@@ -3559,6 +3675,17 @@ function instance($$self, $$props, $$invalidate) {
 		const sameMaterial = { diffuse: [1, 0.5, 0.5], metalness: 0 };
 		const groundMesh = createPlane(10, 10, 1, 1);
 
+		const groundDiffuseMap = await createTexture({
+			textureBuffer: shadowTexture,
+			type: "diffuse"
+		});
+
+		const groundMaterial = {
+			diffuse: [1, 1, 1],
+			metalness: 0,
+			diffuseMap: groundDiffuseMap
+		};
+
 		set_store_value(
 			scene,
 			$scene = [
@@ -3576,7 +3703,7 @@ function instance($$self, $$props, $$invalidate) {
 				{
 					...groundMesh,
 					matrix: groundMatrix,
-					material: { diffuse: [1, 1, 1], metalness: 0 }
+					material: groundMaterial
 				},
 				light
 			],

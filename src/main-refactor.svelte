@@ -64,14 +64,14 @@ onMount(async () => {
 		metalness: 0,
 	};
 	const groundMesh = createPlane(10, 10, 1, 1);
-	/*const groundDiffuseMap = await createTexture({
+	const groundDiffuseMap = await createTexture({
 		textureBuffer: shadowTexture,
 		type: "diffuse",
-	});*/
+	});
 	const groundMaterial = {
 		diffuse: [1, 1, 1],
 		metalness: 0,
-		/*diffuseMap: groundDiffuseMap,*/
+		diffuseMap: groundDiffuseMap,
 	};
 	$scene = [
 		...$scene,
@@ -91,10 +91,7 @@ onMount(async () => {
 		{
 			...groundMesh,
 			matrix: groundMatrix,
-			material: {
-				diffuse: [1, 1, 1],
-				metalness: 0,
-			},
+			material: groundMaterial,
 		},
 		light,
 	];
