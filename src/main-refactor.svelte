@@ -73,20 +73,22 @@ onMount(async () => {
 		metalness: 0,
 		diffuseMap: groundDiffuseMap,
 	};
+	const transparentMaterial = {
+		diffuse: [1, 1, 0.5],
+		metalness: 0,
+		opacity: 0.5,
+	};
 	$scene = [
 		...$scene,
 		{
 			...sphereMesh,
 			matrix: identity(new Float32Array(16)),
-			material: {
-				diffuse: [1, 1, 0.5],
-				metalness: 0,
-			},
+			material: transparentMaterial,
 		},
 		{
 			...cubeMesh,
 			matrix: secondCubePos,
-			material: sameMaterial,
+			material: transparentMaterial,
 		},
 		{
 			...groundMesh,

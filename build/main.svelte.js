@@ -894,6 +894,67 @@ function invert(out, a) {
   return out;
 }
 /**
+ * Multiplies two mat4s
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the first operand
+ * @param {ReadonlyMat4} b the second operand
+ * @returns {mat4} out
+ */
+
+function multiply(out, a, b) {
+  var a00 = a[0],
+      a01 = a[1],
+      a02 = a[2],
+      a03 = a[3];
+  var a10 = a[4],
+      a11 = a[5],
+      a12 = a[6],
+      a13 = a[7];
+  var a20 = a[8],
+      a21 = a[9],
+      a22 = a[10],
+      a23 = a[11];
+  var a30 = a[12],
+      a31 = a[13],
+      a32 = a[14],
+      a33 = a[15]; // Cache only the current line of the second matrix
+
+  var b0 = b[0],
+      b1 = b[1],
+      b2 = b[2],
+      b3 = b[3];
+  out[0] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[1] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[2] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[3] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+  b0 = b[4];
+  b1 = b[5];
+  b2 = b[6];
+  b3 = b[7];
+  out[4] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[5] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[6] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[7] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+  b0 = b[8];
+  b1 = b[9];
+  b2 = b[10];
+  b3 = b[11];
+  out[8] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[9] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[10] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[11] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+  b0 = b[12];
+  b1 = b[13];
+  b2 = b[14];
+  b3 = b[15];
+  out[12] = b0 * a00 + b1 * a10 + b2 * a20 + b3 * a30;
+  out[13] = b0 * a01 + b1 * a11 + b2 * a21 + b3 * a31;
+  out[14] = b0 * a02 + b1 * a12 + b2 * a22 + b3 * a32;
+  out[15] = b0 * a03 + b1 * a13 + b2 * a23 + b3 * a33;
+  return out;
+}
+/**
  * Translate a mat4 by the given vector
  *
  * @param {mat4} out the receiving matrix
@@ -1137,7 +1198,7 @@ function lookAt(out, eye, center, up) {
 
 var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\nin vec2 uv;\r\n${instances ?\r\n`\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n` : `\r\nuniform mat4 world;\r\nuniform mat4 normalMatrix;\r\n`}\r\n\r\n\r\nuniform float time;\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\nout vec3 vViewPosition;\r\nout highp vec2 vUv;\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n    vec3 modifiedNormal = normal;\r\n    vec3 animatedPosition = position;\r\n    ${positionModifier}\r\n\r\n    vUv = vec3( uv, 1 ).xy;\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(animatedPosition, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    // todo : use modifiedNormal when effect is done\r\n    vNormal = vec3(normalMatrix * vec4(modifiedNormal , 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(animatedPosition, 1.0);\r\n    vViewPosition = -gl_Position.xyz;\r\n}";
 
-var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n//uniform mat3 normalMatrix;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\nin highp vec2 vUv;\r\nin vec3 vViewPosition;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\t${diffuseMapSample}\r\n\t\r\n\r\n\tvec3 normal = normalize( vNormal );\r\n\t${normalMapSample}\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, 1.0f);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
+var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float opacity;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n//uniform mat3 normalMatrix;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\nin highp vec2 vUv;\r\nin vec3 vViewPosition;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\t${diffuseMapSample}\r\n\t\r\n\r\n\tvec3 normal = normalize( vNormal );\r\n\t${normalMapSample}\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, opacity);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
 
 const templateLiteralRenderer = (template, parameters) => {
 	const fn = Function.constructor(
@@ -1201,7 +1262,6 @@ function toRadian(a) {
 }
 
 function initRenderer() {
-	console.log("initRenderer", appContext);
 	const canvasRect = appContext.canvas.getBoundingClientRect();
 	appContext.canvas.width = canvasRect.width;
 	appContext.canvas.height = canvasRect.height;
@@ -1213,6 +1273,13 @@ function initRenderer() {
 	gl.viewportHeight = canvasRect.height;*/
 
 	gl.enable(gl.DEPTH_TEST);
+
+	/*
+	gl.disable(gl.DEPTH_TEST);
+	*/
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
 	gl.enable(gl.CULL_FACE);
 	gl.frontFace(gl.CCW);
 	gl.cullFace(gl.BACK);
@@ -1421,7 +1488,7 @@ function createShaders$1(material, meshes, numPointLights, pointLightShader) {
 	};
 }
 
-function setupMeshColor({ diffuse, metalness }) {
+function setupMeshColor({ diffuse, metalness, opacity }) {
 	return function setupMeshColor() {
 		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program } = appContext;
@@ -1432,6 +1499,8 @@ function setupMeshColor({ diffuse, metalness }) {
 		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
 		const metalnessLocation = gl.getUniformLocation(program, "metalness");
 		gl.uniform1f(metalnessLocation, metalness);
+		const opacityLocation = gl.getUniformLocation(program, "opacity");
+		gl.uniform1f(opacityLocation, opacity ?? 1);
 	};
 }
 
@@ -1686,8 +1755,6 @@ function setupAttributes(programStore, mesh) {
 			if (normalLocation != -1) {
 				gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
 				gl.enableVertexAttribArray(normalLocation);
-			} else {
-				console.log("normal attribute not found");
 			}
 		}
 		if (mesh.attributes.elements) {
@@ -1706,8 +1773,6 @@ function setupAttributes(programStore, mesh) {
 				gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
 				gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
 				gl.enableVertexAttribArray(uvLocation);
-			} else {
-				console.log("uv attribute not found");
 			}
 		}
 
@@ -1747,6 +1812,138 @@ function isLight(sceneNode) {
 		sceneNode.updateOneLight instanceof Function
 	);
 }
+
+/**
+ * 3 Dimensional Vector
+ * @module vec3
+ */
+
+/**
+ * Creates a new, empty vec3
+ *
+ * @returns {vec3} a new 3D vector
+ */
+
+function create() {
+  var out = new ARRAY_TYPE(3);
+
+  if (ARRAY_TYPE != Float32Array) {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+  }
+
+  return out;
+}
+/**
+ * Normalize a vec3
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a vector to normalize
+ * @returns {vec3} out
+ */
+
+function normalize(out, a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  var len = x * x + y * y + z * z;
+
+  if (len > 0) {
+    //TODO: evaluate use of glm_invsqrt here?
+    len = 1 / Math.sqrt(len);
+  }
+
+  out[0] = a[0] * len;
+  out[1] = a[1] * len;
+  out[2] = a[2] * len;
+  return out;
+}
+/**
+ * Performs a linear interpolation between two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
+ * @returns {vec3} out
+ */
+
+function lerp(out, a, b, t) {
+  var ax = a[0];
+  var ay = a[1];
+  var az = a[2];
+  out[0] = ax + t * (b[0] - ax);
+  out[1] = ay + t * (b[1] - ay);
+  out[2] = az + t * (b[2] - az);
+  return out;
+}
+/**
+ * Transforms the vec3 with a mat4.
+ * 4th vector component is implicitly '1'
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the vector to transform
+ * @param {ReadonlyMat4} m matrix to transform with
+ * @returns {vec3} out
+ */
+
+function transformMat4(out, a, m) {
+  var x = a[0],
+      y = a[1],
+      z = a[2];
+  var w = m[3] * x + m[7] * y + m[11] * z + m[15];
+  w = w || 1.0;
+  out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w;
+  out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
+  out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w;
+  return out;
+}
+/**
+ * Perform some operation over an array of vec3s.
+ *
+ * @param {Array} a the array of vectors to iterate over
+ * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
+ * @param {Number} offset Number of elements to skip at the beginning of the array
+ * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
+ * @param {Function} fn Function to call for each vector in the array
+ * @param {Object} [arg] additional argument to pass to fn
+ * @returns {Array} a
+ * @function
+ */
+
+(function () {
+  var vec = create();
+  return function (a, stride, offset, count, fn, arg) {
+    var i, l;
+
+    if (!stride) {
+      stride = 3;
+    }
+
+    if (!offset) {
+      offset = 0;
+    }
+
+    if (count) {
+      l = Math.min(count * stride + offset, a.length);
+    } else {
+      l = a.length;
+    }
+
+    for (i = offset; i < l; i += stride) {
+      vec[0] = a[i];
+      vec[1] = a[i + 1];
+      vec[2] = a[i + 2];
+      fn(vec, vec, arg);
+      a[i] = vec[0];
+      a[i + 1] = vec[1];
+      a[i + 2] = vec[2];
+    }
+
+    return a;
+  };
+})();
 
 function createRenderer() {
 	const initialValue = {
@@ -1989,6 +2186,42 @@ const materials = derived([meshes], ([$meshes]) => {
 	return materials;
 });
 
+function isTransparent(material) {
+	return material.opacity < 1 || material.transparent;
+}
+
+function sortTransparency(a, b) {
+	return (isTransparent(a.material) ? 1 : -1) - (isTransparent(b.material) ? 1 : -1);
+}
+
+function sortMeshesByZ(programs) {
+	if (programs.length === 0 || get_store_value(renderer).canvas == null) {
+		return;
+	}
+	let transparent = false;
+	const canvas = get_store_value(renderer).canvas;
+	const { projection, view } = getCameraProjectionView(get_store_value(camera), canvas.width, canvas.height);
+	const inverseView = invert([], view);
+	const projScreen = multiply([], projection, inverseView);
+	programs.forEach((program) => {
+		if (program.material && (transparent || isTransparent(program.material))) {
+			transparent = true;
+			let logText = "";
+			program.meshes.forEach((mesh, i) => {
+				const meshPosition = getTranslation([], mesh.matrix);
+				mesh.clipSpacePosition = transformMat4([], meshPosition, projScreen);
+			});
+			program.meshes.sort((a, b) => {
+				return b.clipSpacePosition[2] - a.clipSpacePosition[2];
+			});
+			program.meshes.forEach((mesh) => {
+				logText += get_store_value(meshes).indexOf(mesh) + " " + mesh.clipSpacePosition[2] + " ";
+			});
+			console.log("clipSpacePosition", logText);
+		}
+	});
+}
+
 const programs = derived(
 	[meshes, lights, materials, renderPasses],
 	([$meshes, $lights, $materials, $renderPasses]) => {
@@ -2042,6 +2275,9 @@ const programs = derived(
 			});
 			return acc;
 		}, []);
+
+		programs = programs.sort(sortTransparency);
+		sortMeshesByZ(programs);
 		const pointLights = $lights.filter((l) => get_store_value(l).type === "point");
 		const numPointLights = pointLights.length;
 		let pointLightShader;
@@ -2233,6 +2469,7 @@ const renderPipeline = derived(
 			pipeline.push(initRenderer);
 		}
 		/*!init &&*/
+		sortMeshesByZ($programs);
 		pipeline.push(
 			...$programs.reduce((acc, program) => {
 				return [
@@ -2318,117 +2555,6 @@ renderLoopStore.subscribe((value) => {
 });
 
 var pointLightShader = "${declaration?\r\n`\r\n\r\nfloat pow4(const in float x) {\r\n    float x2 = x * x;\r\n    return x2 * x2;\r\n}\r\nfloat pow2(const in float x) {\r\n    return x * x;\r\n}\r\n\r\nfloat saturate(const in float a) {\r\n    return clamp(a, 0.0f, 1.0f);\r\n}\r\n\r\nstruct LightParams {\r\n    vec3 irradiance;\r\n    vec3 direction;\r\n    vec3 color;\r\n    float distance;\r\n};\r\n\r\nstruct PointLight {\r\n    vec3 position;\r\n    vec3 color;\r\n    float cutoffDistance;\r\n    float decayExponent;\r\n};\r\n\r\nlayout(std140) uniform PointLights {\r\n    PointLight pointLights[NUM_POINT_LIGHTS];\r\n};\r\n\r\nfloat getDistanceAttenuation(const in float lightDistance, const in float cutoffDistance, const in float decayExponent) {\r\n\t// based upon Frostbite 3 Moving to Physically-based Rendering\r\n\t// page 32, equation 26: E[window1]\r\n\t// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\n    float distanceFalloff = 1.0f / max(pow(lightDistance, decayExponent), 0.01f);\r\n    if(cutoffDistance > 0.0f) {\r\n        distanceFalloff *= pow2(saturate(1.0f - pow4(lightDistance / cutoffDistance)));\r\n    }\r\n    return distanceFalloff;\r\n\r\n}\r\n\r\nLightParams getDirectDiffuse(const in PointLight pointLight,const in vec3 vertexPosition, const in vec3 normal,const in PhysicalMaterial material, inout ReflectedLight reflectedLight) {\r\n    LightParams lightParams = LightParams(vec3(0.0f), vec3(0.0f), vec3(0.0f), 0.0f);\r\n    vec3 lVector = pointLight.position - vertexPosition;\r\n    lightParams.distance = length(lVector);\r\n    lightParams.direction = normalize(lVector);\r\n    float dotNL = saturate(dot(normal, lightParams.direction));\r\n    lightParams.color = pointLight.color;\r\n    lightParams.color *= getDistanceAttenuation(lightParams.distance, pointLight.cutoffDistance, pointLight.decayExponent);\r\n    lightParams.irradiance = dotNL * lightParams.color;\r\n    \r\n    reflectedLight.directDiffuse += lightParams.irradiance * BRDF_Lambert(material.diffuseColor);\r\n    return lightParams;\r\n}\r\n\r\nfloat calculatePointLightBrightness(float lightDistance, float cutoffDistance, float decayExponent) {\r\n    return getDistanceAttenuation(lightDistance, cutoffDistance, decayExponent);\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n    vec3 irradiance = vec3(0.0f);\r\n    vec3 direction = vec3(0.0f);\r\n    for(int i = 0; i < NUM_POINT_LIGHTS; i++) {\r\n        PointLight pointLight = pointLights[i];\r\n        \r\n\r\n        LightParams lightParams = getDirectDiffuse(pointLight, vertex, normal, material, reflectedLight);\r\n        totalIrradiance += reflectedLight.directDiffuse;\r\n        ${specularIrradiance}\r\n    }\r\n` : ''\r\n}\r\n";
-
-/**
- * 3 Dimensional Vector
- * @module vec3
- */
-
-/**
- * Creates a new, empty vec3
- *
- * @returns {vec3} a new 3D vector
- */
-
-function create() {
-  var out = new ARRAY_TYPE(3);
-
-  if (ARRAY_TYPE != Float32Array) {
-    out[0] = 0;
-    out[1] = 0;
-    out[2] = 0;
-  }
-
-  return out;
-}
-/**
- * Normalize a vec3
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to normalize
- * @returns {vec3} out
- */
-
-function normalize(out, a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var len = x * x + y * y + z * z;
-
-  if (len > 0) {
-    //TODO: evaluate use of glm_invsqrt here?
-    len = 1 / Math.sqrt(len);
-  }
-
-  out[0] = a[0] * len;
-  out[1] = a[1] * len;
-  out[2] = a[2] * len;
-  return out;
-}
-/**
- * Performs a linear interpolation between two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec3} out
- */
-
-function lerp(out, a, b, t) {
-  var ax = a[0];
-  var ay = a[1];
-  var az = a[2];
-  out[0] = ax + t * (b[0] - ax);
-  out[1] = ay + t * (b[1] - ay);
-  out[2] = az + t * (b[2] - az);
-  return out;
-}
-/**
- * Perform some operation over an array of vec3s.
- *
- * @param {Array} a the array of vectors to iterate over
- * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
- * @param {Number} offset Number of elements to skip at the beginning of the array
- * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
- * @param {Function} fn Function to call for each vector in the array
- * @param {Object} [arg] additional argument to pass to fn
- * @returns {Array} a
- * @function
- */
-
-(function () {
-  var vec = create();
-  return function (a, stride, offset, count, fn, arg) {
-    var i, l;
-
-    if (!stride) {
-      stride = 3;
-    }
-
-    if (!offset) {
-      offset = 0;
-    }
-
-    if (count) {
-      l = Math.min(count * stride + offset, a.length);
-    } else {
-      l = a.length;
-    }
-
-    for (i = offset; i < l; i += stride) {
-      vec[0] = a[i];
-      vec[1] = a[i + 1];
-      vec[2] = a[i + 2];
-      fn(vec, vec, arg);
-      a[i] = vec[0];
-      a[i + 1] = vec[1];
-      a[i + 2] = vec[2];
-    }
-
-    return a;
-  };
-})();
 
 function createVec3() {
 	return new Array(3).fill(0);
@@ -3070,7 +3196,7 @@ function setupTexture(texture, type, id, normalScale = [1, 1]) {
 		gl.bindTexture(gl.TEXTURE_2D, textureBuffer);
 		gl.uniform1i(textureLocation, id);
 		if (typeof texture !== "function") {
-			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureBuffer);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture);
 		}
 
 		// gl.NEAREST is also allowed, instead of gl.LINEAR, as neither mipmap.
@@ -3251,14 +3377,8 @@ function setDirectionUniform(direction) {
 
 // Generate a kernel
 function getKernel(size) {
-	/*if (newWidth === kernelWidth) return;
-	kernelWidth = newWidth;*/
-
 	const kernel1D = generate1DKernel(size);
-	console.log("kernel1D", kernel1D);
 	const kernel = convertKernelToOffsetsAndScales(kernel1D);
-	console.log("kernel", kernel);
-
 	return kernel;
 }
 
@@ -3267,11 +3387,9 @@ function setKernelUniforms(kernel) {
 	const { gl, program } = appContext;
 
 	const offsetScaleLocation = gl.getUniformLocation(program, "offsetAndScale");
-
 	gl.uniform2fv(offsetScaleLocation, kernel);
-	const kernelWidthLocation = gl.getUniformLocation(program, "kernelWidth");
-	console.log("kernelWidth", kernel.length / 2);
 
+	const kernelWidthLocation = gl.getUniformLocation(program, "kernelWidth");
 	gl.uniform1i(kernelWidthLocation, kernel.length / 2);
 }
 
@@ -3298,7 +3416,7 @@ function createContactShadowPass(groundMatrix, depth, width, height, textureSize
 	const aspect = width / height;
 	const textureWidth = textureSize * aspect;
 	const textureHeight = textureSize / aspect;
-	console.log("creating contact shadow pass", width, height, depth, groundMatrix, blurSize);
+	//log("creating contact shadow pass", width, height, depth, groundMatrix, blurSize);
 
 	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
 
@@ -3448,7 +3566,6 @@ function selectBlurProgram(blurDirection, getTexture) {
 function setSourceTexture(getTexture) {
 	const { gl } = appContext;
 	const texture = getTexture();
-	console.log("setting source texture", getTexture, texture);
 	gl.bindTexture(gl.TEXTURE_2D, texture);
 }
 
@@ -3458,7 +3575,7 @@ function setFrameBuffer(getFBO = null, width, height) {
 		const fbo = getFBO ? getFBO() : null;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
 		if (appContext.fbo !== fbo && fbo != null) {
-			console.log("framebuffer change clearing from", appContext.fbo, "to", fbo, [0, 0, 0, 1], width, height);
+			//log("framebuffer change clearing from", appContext.fbo, "to", fbo, [0, 0, 0, 1], width, height);
 			gl.viewport(0, 0, width, height);
 			appContext.frameBufferWidth = width;
 			appContext.frameBufferHeight = height;
@@ -3474,7 +3591,6 @@ function setupShadowCamera(projection, view) {
 		const { gl, program } = appContext;
 
 		const projectionLocation = gl.getUniformLocation(program, "projection");
-		console.log("setupShadowCamera projectionLocation", projectionLocation);
 
 		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
@@ -3567,8 +3683,6 @@ function createShadowProgram(textureWidth, textureHeight) {
 function createFBO(width, height, setFBO, setTexture) {
 	return function createFBO() {
 		const { gl } = appContext;
-		console.log("creating FBO", width, height);
-
 		// The geometry texture will be sampled during the HORIZONTAL pass
 		const texture = gl.createTexture();
 		setTexture(texture);
@@ -3672,7 +3786,6 @@ function instance($$self, $$props, $$invalidate) {
 
 		const secondCubePos = identity(new Float32Array(16));
 		translate(secondCubePos, secondCubePos, [3, 0, 0]);
-		const sameMaterial = { diffuse: [1, 0.5, 0.5], metalness: 0 };
 		const groundMesh = createPlane(10, 10, 1, 1);
 
 		const groundDiffuseMap = await createTexture({
@@ -3686,6 +3799,12 @@ function instance($$self, $$props, $$invalidate) {
 			diffuseMap: groundDiffuseMap
 		};
 
+		const transparentMaterial = {
+			diffuse: [1, 1, 0.5],
+			metalness: 0,
+			opacity: 0.5
+		};
+
 		set_store_value(
 			scene,
 			$scene = [
@@ -3693,12 +3812,12 @@ function instance($$self, $$props, $$invalidate) {
 				{
 					...sphereMesh,
 					matrix: identity(new Float32Array(16)),
-					material: { diffuse: [1, 1, 0.5], metalness: 0 }
+					material: transparentMaterial
 				},
 				{
 					...cubeMesh,
 					matrix: secondCubePos,
-					material: sameMaterial
+					material: transparentMaterial
 				},
 				{
 					...groundMesh,

@@ -89,7 +89,7 @@ function setupTexture(texture, type, id, normalScale = [1, 1]) {
 		gl.bindTexture(gl.TEXTURE_2D, textureBuffer);
 		gl.uniform1i(textureLocation, id);
 		if (typeof texture !== "function") {
-			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureBuffer);
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture);
 		}
 
 		// gl.NEAREST is also allowed, instead of gl.LINEAR, as neither mipmap.

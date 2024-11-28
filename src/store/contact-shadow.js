@@ -38,7 +38,7 @@ export function createContactShadowPass(groundMatrix, depth, width, height, text
 	const aspect = width / height;
 	const textureWidth = textureSize * aspect;
 	const textureHeight = textureSize / aspect;
-	console.log("creating contact shadow pass", width, height, depth, groundMatrix, blurSize);
+	//log("creating contact shadow pass", width, height, depth, groundMatrix, blurSize);
 
 	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
 
@@ -202,7 +202,6 @@ function selectBlurProgram(blurDirection, getTexture) {
 function setSourceTexture(getTexture) {
 	const { gl } = appContext;
 	const texture = getTexture();
-	console.log("setting source texture", getTexture, texture);
 	gl.bindTexture(gl.TEXTURE_2D, texture);
 }
 
@@ -212,7 +211,7 @@ function setFrameBuffer(getFBO = null, width, height) {
 		const fbo = getFBO ? getFBO() : null;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
 		if (appContext.fbo !== fbo && fbo != null) {
-			console.log("framebuffer change clearing from", appContext.fbo, "to", fbo, [0, 0, 0, 1], width, height);
+			//log("framebuffer change clearing from", appContext.fbo, "to", fbo, [0, 0, 0, 1], width, height);
 			gl.viewport(0, 0, width, height);
 			appContext.frameBufferWidth = width;
 			appContext.frameBufferHeight = height;
@@ -228,7 +227,6 @@ function setupShadowCamera(projection, view) {
 		const { gl, program } = appContext;
 
 		const projectionLocation = gl.getUniformLocation(program, "projection");
-		console.log("setupShadowCamera projectionLocation", projectionLocation);
 
 		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
@@ -321,8 +319,6 @@ function createShadowProgram(textureWidth, textureHeight) {
 function createFBO(width, height, setFBO, setTexture) {
 	return function createFBO() {
 		const { gl } = appContext;
-		console.log("creating FBO", width, height);
-
 		// The geometry texture will be sampled during the HORIZONTAL pass
 		const texture = gl.createTexture();
 		setTexture(texture);

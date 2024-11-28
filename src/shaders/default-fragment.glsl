@@ -6,6 +6,7 @@ ${defines}
 #define RECIPROCAL_PI 0.3183098861837907
 
 uniform vec3 diffuse;
+uniform float opacity;
 uniform float metalness;
 uniform vec3 ambientLightColor;
 uniform vec3 cameraPosition;
@@ -64,7 +65,7 @@ void main() {
     vec3 totalIrradiance = vec3(0.0f);
     ${irradiance}
 	vec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;
-    fragColor = vec4(outgoingLight, 1.0f);
+    fragColor = vec4(outgoingLight, opacity);
     //fragColor = vec4(totalIrradiance, 1.0f);
     ${toneMapping}
 	fragColor = linearToOutputTexel(fragColor);

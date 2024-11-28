@@ -31,7 +31,6 @@ function toRadian(a) {
 }
 
 export function initRenderer() {
-	console.log("initRenderer", appContext);
 	const canvasRect = appContext.canvas.getBoundingClientRect();
 	appContext.canvas.width = canvasRect.width;
 	appContext.canvas.height = canvasRect.height;
@@ -43,6 +42,13 @@ export function initRenderer() {
 	gl.viewportHeight = canvasRect.height;*/
 
 	gl.enable(gl.DEPTH_TEST);
+
+	/*
+	gl.disable(gl.DEPTH_TEST);
+	*/
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
 	gl.enable(gl.CULL_FACE);
 	gl.frontFace(gl.CCW);
 	gl.cullFace(gl.BACK);
@@ -258,7 +264,7 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 	};
 }
 
-export function setupMeshColor({ diffuse, metalness }) {
+export function setupMeshColor({ diffuse, metalness, opacity }) {
 	return function setupMeshColor() {
 		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program } = appContext;
@@ -269,6 +275,8 @@ export function setupMeshColor({ diffuse, metalness }) {
 		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
 		const metalnessLocation = gl.getUniformLocation(program, "metalness");
 		gl.uniform1f(metalnessLocation, metalness);
+		const opacityLocation = gl.getUniformLocation(program, "opacity");
+		gl.uniform1f(opacityLocation, opacity ?? 1);
 	};
 }
 
@@ -584,8 +592,6 @@ export function setupAttributes(programStore, mesh) {
 			if (normalLocation != -1) {
 				gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
 				gl.enableVertexAttribArray(normalLocation);
-			} else {
-				console.log("normal attribute not found");
 			}
 		}
 		if (mesh.attributes.elements) {
@@ -604,8 +610,6 @@ export function setupAttributes(programStore, mesh) {
 				gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
 				gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
 				gl.enableVertexAttribArray(uvLocation);
-			} else {
-				console.log("uv attribute not found");
 			}
 		}
 

@@ -157,14 +157,8 @@ export function setDirectionUniform(direction) {
 
 // Generate a kernel
 export function getKernel(size) {
-	/*if (newWidth === kernelWidth) return;
-	kernelWidth = newWidth;*/
-
 	const kernel1D = generate1DKernel(size);
-	console.log("kernel1D", kernel1D);
 	const kernel = convertKernelToOffsetsAndScales(kernel1D);
-	console.log("kernel", kernel);
-
 	return kernel;
 }
 
@@ -173,10 +167,8 @@ export function setKernelUniforms(kernel) {
 	const { gl, program } = appContext;
 
 	const offsetScaleLocation = gl.getUniformLocation(program, "offsetAndScale");
-
 	gl.uniform2fv(offsetScaleLocation, kernel);
-	const kernelWidthLocation = gl.getUniformLocation(program, "kernelWidth");
-	console.log("kernelWidth", kernel.length / 2);
 
+	const kernelWidthLocation = gl.getUniformLocation(program, "kernelWidth");
 	gl.uniform1i(kernelWidthLocation, kernel.length / 2);
 }

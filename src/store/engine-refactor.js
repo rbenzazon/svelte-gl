@@ -22,11 +22,14 @@ import {
 	bindVAO,
 	clearFrame,
 	bindDefaultFramebuffer,
+	getCameraProjectionView,
 } from "./gl-refactor.js";
 import { hasSameShallow } from "../utils/set.js";
 import { hasSameShallow as arrayHasSameShallow, optionalPropsDeepEqual } from "../utils/array.js";
 import { isLight } from "../lights/lights.js";
 import { convertToVector3 } from "../color/color-space.js";
+import { getTranslation, invert, multiply } from "gl-matrix/esm/mat4.js";
+import { transformMat4 } from "gl-matrix/esm/vec3.js";
 
 function createRenderer() {
 	const initialValue = {
@@ -273,6 +276,42 @@ export const RENDER_PASS_TYPES = {
 	FRAMEBUFFER_TO_TEXTURE: 0,
 };
 
+function isTransparent(material) {
+	return material.opacity < 1 || material.transparent;
+}
+
+function sortTransparency(a, b) {
+	return (isTransparent(a.material) ? 1 : -1) - (isTransparent(b.material) ? 1 : -1);
+}
+
+function sortMeshesByZ(programs) {
+	if (programs.length === 0 || get(renderer).canvas == null) {
+		return;
+	}
+	let transparent = false;
+	const canvas = get(renderer).canvas;
+	const { projection, view } = getCameraProjectionView(get(camera), canvas.width, canvas.height);
+	const inverseView = invert([], view);
+	const projScreen = multiply([], projection, inverseView);
+	programs.forEach((program) => {
+		if (program.material && (transparent || isTransparent(program.material))) {
+			transparent = true;
+			let logText = "";
+			program.meshes.forEach((mesh, i) => {
+				const meshPosition = getTranslation([], mesh.matrix);
+				mesh.clipSpacePosition = transformMat4([], meshPosition, projScreen);
+			});
+			program.meshes.sort((a, b) => {
+				return b.clipSpacePosition[2] - a.clipSpacePosition[2];
+			});
+			program.meshes.forEach((mesh) => {
+				logText += get(meshes).indexOf(mesh) + " " + mesh.clipSpacePosition[2] + " ";
+			});
+			console.log("clipSpacePosition", logText);
+		}
+	});
+}
+
 export const programs = derived(
 	[meshes, lights, materials, renderPasses],
 	([$meshes, $lights, $materials, $renderPasses]) => {
@@ -326,6 +365,9 @@ export const programs = derived(
 			});
 			return acc;
 		}, []);
+
+		programs = programs.sort(sortTransparency);
+		sortMeshesByZ(programs);
 		const pointLights = $lights.filter((l) => get(l).type === "point");
 		const numPointLights = pointLights.length;
 		let pointLightShader;
@@ -518,6 +560,7 @@ const renderPipeline = derived(
 			pipeline.push(initRenderer);
 		}
 		/*!init &&*/
+		sortMeshesByZ($programs);
 		pipeline.push(
 			...$programs.reduce((acc, program) => {
 				return [
