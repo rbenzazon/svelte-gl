@@ -24,16 +24,25 @@ import { mat4 } from "gl-matrix";
 
 /**
  *
+ * @param {mat4} groundMatrix plane ground matrix used as orthographic camera for the shadow rendering
+ * @param {number} depth how far objects in height are see from the shadow camera
  * @param {number} width width of the plane that will receive the shadow
  * @param {number} height height of the plane that will receive the shadow
- * @param {number} depth how far objects in height are see from the shadow camera
- * @param {mat4} groundMatrix plane ground matrix used as orthographic camera for the shadow rendering
  * @param {number} textureSize size of the texture used to render the shadow
  * @param {number} blurSize size of the blur
+ * @param {number} darkness darkness of the shadow
  * @returns {ContactShadowPass} object containing the shadow pass
  *
  */
-export function createContactShadowPass(groundMatrix, depth, width, height, textureSize = 1024, blurSize = 128) {
+export function createContactShadowPass(
+	groundMatrix,
+	depth,
+	width,
+	height,
+	textureSize = 1024,
+	blurSize = 128,
+	darkness = 1,
+) {
 	const groundTranslation = getTranslation([], groundMatrix);
 	const aspect = width / height;
 	const textureWidth = textureSize * aspect;
@@ -123,7 +132,7 @@ export function createContactShadowPass(groundMatrix, depth, width, height, text
 					validateProgram,
 					createFBO(textureWidth, textureHeight, setGeometryFBO, setGeometryTexture),
 				],
-				setupMaterial: [],
+				setupMaterial: [setupDarknessUniform(darkness)],
 				useProgram,
 				selectProgram,
 				bindTextures: [],
@@ -170,6 +179,14 @@ export function createContactShadowPass(groundMatrix, depth, width, height, text
 		],
 		getTexture: getVerticalBlurTexture,
 		order: -1,
+	};
+}
+
+function setupDarknessUniform(darkness) {
+	return function setupDarknessUniform() {
+		const { gl, program } = appContext;
+		const darknessLocation = gl.getUniformLocation(program, "darkness");
+		gl.uniform1f(darknessLocation, darkness);
 	};
 }
 

@@ -299,20 +299,13 @@ function sortMeshesByZ(programs) {
 	programs.forEach((program) => {
 		if (transparent || isTransparent(program.material)) {
 			transparent = true;
-			let logText = "";
 			program.meshes.forEach((mesh, i) => {
 				const meshPosition = getTranslation([], mesh.matrix);
 				mesh.clipSpacePosition = transformMat4([], meshPosition, projScreen);
 			});
-			program.meshes.sort((a, b) => {
+			program.meshes = program.meshes.sort((a, b) => {
 				return b.clipSpacePosition[2] - a.clipSpacePosition[2];
 			});
-			// reporting
-			program.meshes.forEach((mesh) => {
-				const meshPosition = mesh.clipSpacePosition.map((v) => v.toFixed(5));
-				logText += get(meshes).indexOf(mesh) + " " + meshPosition + " ";
-			});
-			console.log("clipSpacePosition", logText);
 		}
 	});
 
@@ -327,16 +320,7 @@ function sortMeshesByZ(programs) {
 		}
 		return b.meshes[0].clipSpacePosition[2] - a.meshes[0].clipSpacePosition[2];
 	});
-	// log
-	let logText = "";
-	sortedPrograms.forEach((program) => {
-		if (!program.material || !program.meshes[0].clipSpacePosition) {
-			return;
-		}
-		const meshPosition = program.meshes[0].clipSpacePosition.map((v) => v.toFixed(5));
-		logText += get(meshes).indexOf(program.meshes[0]) + " " + meshPosition + " ";
-	});
-	console.log("programs", logText);
+
 	return sortedPrograms;
 }
 
@@ -590,8 +574,6 @@ const renderPipeline = derived(
 		if (!init) {
 			pipeline.push(initRenderer);
 		}
-		/*!init &&*/
-		console.log("programs", $programs);
 
 		const sortedPrograms = sortMeshesByZ($programs);
 		let transparent = false;

@@ -1010,6 +1010,81 @@ function translate(out, a, v) {
   return out;
 }
 /**
+ * Scales the mat4 by the dimensions in the given vec3 not using vectorization
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the matrix to scale
+ * @param {ReadonlyVec3} v the vec3 to scale the matrix by
+ * @returns {mat4} out
+ **/
+
+function scale(out, a, v) {
+  var x = v[0],
+      y = v[1],
+      z = v[2];
+  out[0] = a[0] * x;
+  out[1] = a[1] * x;
+  out[2] = a[2] * x;
+  out[3] = a[3] * x;
+  out[4] = a[4] * y;
+  out[5] = a[5] * y;
+  out[6] = a[6] * y;
+  out[7] = a[7] * y;
+  out[8] = a[8] * z;
+  out[9] = a[9] * z;
+  out[10] = a[10] * z;
+  out[11] = a[11] * z;
+  out[12] = a[12];
+  out[13] = a[13];
+  out[14] = a[14];
+  out[15] = a[15];
+  return out;
+}
+/**
+ * Rotates a matrix by the given angle around the Z axis
+ *
+ * @param {mat4} out the receiving matrix
+ * @param {ReadonlyMat4} a the matrix to rotate
+ * @param {Number} rad the angle to rotate the matrix by
+ * @returns {mat4} out
+ */
+
+function rotateZ(out, a, rad) {
+  var s = Math.sin(rad);
+  var c = Math.cos(rad);
+  var a00 = a[0];
+  var a01 = a[1];
+  var a02 = a[2];
+  var a03 = a[3];
+  var a10 = a[4];
+  var a11 = a[5];
+  var a12 = a[6];
+  var a13 = a[7];
+
+  if (a !== out) {
+    // If the source and destination differ, copy the unchanged last row
+    out[8] = a[8];
+    out[9] = a[9];
+    out[10] = a[10];
+    out[11] = a[11];
+    out[12] = a[12];
+    out[13] = a[13];
+    out[14] = a[14];
+    out[15] = a[15];
+  } // Perform axis-specific matrix multiplication
+
+
+  out[0] = a00 * c + a10 * s;
+  out[1] = a01 * c + a11 * s;
+  out[2] = a02 * c + a12 * s;
+  out[3] = a03 * c + a13 * s;
+  out[4] = a10 * c - a00 * s;
+  out[5] = a11 * c - a01 * s;
+  out[6] = a12 * c - a02 * s;
+  out[7] = a13 * c - a03 * s;
+  return out;
+}
+/**
  * Returns the translation vector component of a transformation
  *  matrix. If a matrix is built with fromRotationTranslation,
  *  the returned vector will be the same as the translation vector
@@ -1023,6 +1098,89 @@ function getTranslation(out, mat) {
   out[0] = mat[12];
   out[1] = mat[13];
   out[2] = mat[14];
+  return out;
+}
+/**
+ * Returns the scaling factor component of a transformation
+ *  matrix. If a matrix is built with fromRotationTranslationScale
+ *  with a normalized Quaternion paramter, the returned vector will be
+ *  the same as the scaling vector
+ *  originally supplied.
+ * @param  {vec3} out Vector to receive scaling factor component
+ * @param  {ReadonlyMat4} mat Matrix to be decomposed (input)
+ * @return {vec3} out
+ */
+
+function getScaling(out, mat) {
+  var m11 = mat[0];
+  var m12 = mat[1];
+  var m13 = mat[2];
+  var m21 = mat[4];
+  var m22 = mat[5];
+  var m23 = mat[6];
+  var m31 = mat[8];
+  var m32 = mat[9];
+  var m33 = mat[10];
+  out[0] = Math.hypot(m11, m12, m13);
+  out[1] = Math.hypot(m21, m22, m23);
+  out[2] = Math.hypot(m31, m32, m33);
+  return out;
+}
+/**
+ * Creates a matrix from a quaternion rotation, vector translation and vector scale
+ * This is equivalent to (but much faster than):
+ *
+ *     mat4.identity(dest);
+ *     mat4.translate(dest, vec);
+ *     let quatMat = mat4.create();
+ *     quat4.toMat4(quat, quatMat);
+ *     mat4.multiply(dest, quatMat);
+ *     mat4.scale(dest, scale)
+ *
+ * @param {mat4} out mat4 receiving operation result
+ * @param {quat4} q Rotation quaternion
+ * @param {ReadonlyVec3} v Translation vector
+ * @param {ReadonlyVec3} s Scaling vector
+ * @returns {mat4} out
+ */
+
+function fromRotationTranslationScale(out, q, v, s) {
+  // Quaternion math
+  var x = q[0],
+      y = q[1],
+      z = q[2],
+      w = q[3];
+  var x2 = x + x;
+  var y2 = y + y;
+  var z2 = z + z;
+  var xx = x * x2;
+  var xy = x * y2;
+  var xz = x * z2;
+  var yy = y * y2;
+  var yz = y * z2;
+  var zz = z * z2;
+  var wx = w * x2;
+  var wy = w * y2;
+  var wz = w * z2;
+  var sx = s[0];
+  var sy = s[1];
+  var sz = s[2];
+  out[0] = (1 - (yy + zz)) * sx;
+  out[1] = (xy + wz) * sx;
+  out[2] = (xz - wy) * sx;
+  out[3] = 0;
+  out[4] = (xy - wz) * sy;
+  out[5] = (1 - (xx + zz)) * sy;
+  out[6] = (yz + wx) * sy;
+  out[7] = 0;
+  out[8] = (xz + wy) * sz;
+  out[9] = (yz - wx) * sz;
+  out[10] = (1 - (xx + yy)) * sz;
+  out[11] = 0;
+  out[12] = v[0];
+  out[13] = v[1];
+  out[14] = v[2];
+  out[15] = 1;
   return out;
 }
 /**
@@ -1288,7 +1446,7 @@ function initRenderer() {
 function enableBlend() {
 	const { gl } = appContext;
 	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 }
 
 function disableBlend() {
@@ -2218,20 +2376,13 @@ function sortMeshesByZ(programs) {
 	programs.forEach((program) => {
 		if (transparent || isTransparent(program.material)) {
 			transparent = true;
-			let logText = "";
 			program.meshes.forEach((mesh, i) => {
 				const meshPosition = getTranslation([], mesh.matrix);
 				mesh.clipSpacePosition = transformMat4([], meshPosition, projScreen);
 			});
-			program.meshes.sort((a, b) => {
+			program.meshes = program.meshes.sort((a, b) => {
 				return b.clipSpacePosition[2] - a.clipSpacePosition[2];
 			});
-			// reporting
-			program.meshes.forEach((mesh) => {
-				const meshPosition = mesh.clipSpacePosition.map((v) => v.toFixed(5));
-				logText += get_store_value(meshes).indexOf(mesh) + " " + meshPosition + " ";
-			});
-			console.log("clipSpacePosition", logText);
 		}
 	});
 
@@ -2246,16 +2397,7 @@ function sortMeshesByZ(programs) {
 		}
 		return b.meshes[0].clipSpacePosition[2] - a.meshes[0].clipSpacePosition[2];
 	});
-	// log
-	let logText = "";
-	sortedPrograms.forEach((program) => {
-		if (!program.material || !program.meshes[0].clipSpacePosition) {
-			return;
-		}
-		const meshPosition = program.meshes[0].clipSpacePosition.map((v) => v.toFixed(5));
-		logText += get_store_value(meshes).indexOf(program.meshes[0]) + " " + meshPosition + " ";
-	});
-	console.log("programs", logText);
+
 	return sortedPrograms;
 }
 
@@ -2508,8 +2650,6 @@ const renderPipeline = derived(
 		if (!init) {
 			pipeline.push(initRenderer);
 		}
-		/*!init &&*/
-		console.log("programs", $programs);
 
 		const sortedPrograms = sortMeshesByZ($programs);
 		let transparent = false;
@@ -3287,7 +3427,7 @@ function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
 
 var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 world;\r\n\r\nin vec3 position;\r\n\r\nout vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tgl_Position = projection * view * world * vec4( position, 1.0 );\r\n\tvHighPrecisionZW = gl_Position.zw;\r\n}";
 
-var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n//uniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * 1.0 );\r\n\t//fragColor = vec4( vec3( fragCoordZ ), 1.0 );\r\n\t//debug fragColor = vec4( vec3(( 1.0  ) ) ,1.0);\r\n}\r\n\t\t\t\t\t";
+var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\nuniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * darkness );\r\n\t//fragColor = vec4( vec3( fragCoordZ ), 1.0 );\r\n\t//debug fragColor = vec4( vec3(( 1.0  ) ) ,1.0);\r\n}\r\n\t\t\t\t\t";
 
 var vertexShaderSource = "#version 300 es\r\n\r\nin vec4 position;\r\nin vec2 uv;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = position;\r\n    vTexCoord = uv;\r\n}";
 
@@ -3472,16 +3612,25 @@ function setKernelUniforms(kernel) {
 
 /**
  *
+ * @param {mat4} groundMatrix plane ground matrix used as orthographic camera for the shadow rendering
+ * @param {number} depth how far objects in height are see from the shadow camera
  * @param {number} width width of the plane that will receive the shadow
  * @param {number} height height of the plane that will receive the shadow
- * @param {number} depth how far objects in height are see from the shadow camera
- * @param {mat4} groundMatrix plane ground matrix used as orthographic camera for the shadow rendering
  * @param {number} textureSize size of the texture used to render the shadow
  * @param {number} blurSize size of the blur
+ * @param {number} darkness darkness of the shadow
  * @returns {ContactShadowPass} object containing the shadow pass
  *
  */
-function createContactShadowPass(groundMatrix, depth, width, height, textureSize = 1024, blurSize = 128) {
+function createContactShadowPass(
+	groundMatrix,
+	depth,
+	width,
+	height,
+	textureSize = 1024,
+	blurSize = 128,
+	darkness = 1,
+) {
 	const groundTranslation = getTranslation([], groundMatrix);
 	const aspect = width / height;
 	const textureWidth = textureSize * aspect;
@@ -3557,7 +3706,7 @@ function createContactShadowPass(groundMatrix, depth, width, height, textureSize
 					validateProgram,
 					createFBO(textureWidth, textureHeight, setGeometryFBO, setGeometryTexture),
 				],
-				setupMaterial: [],
+				setupMaterial: [setupDarknessUniform(darkness)],
 				useProgram,
 				selectProgram,
 				bindTextures: [],
@@ -3604,6 +3753,14 @@ function createContactShadowPass(groundMatrix, depth, width, height, textureSize
 		],
 		getTexture: getVerticalBlurTexture,
 		order: -1,
+	};
+}
+
+function setupDarknessUniform(darkness) {
+	return function setupDarknessUniform() {
+		const { gl, program } = appContext;
+		const darknessLocation = gl.getUniformLocation(program, "darkness");
+		gl.uniform1f(darknessLocation, darkness);
 	};
 }
 
@@ -3774,6 +3931,584 @@ function createFBO(width, height, setFBO, setTexture) {
 	};
 }
 
+/**
+ * @typedef {Object} GLTFFile
+ * @property {Array<GLTFAsset>} asset
+ * @property {Number} scene
+ * @property {Array<GLTFScene>} scenes
+ * @property {Array<GLTFNode>} nodes
+ * @property {Array<GLTFMesh>} meshes
+ * @property {Array<GLTFAccessor>} accessors
+ * @property {Array<GLTFBufferView>} bufferViews
+ * @property {Array<GLTFBuffer>} buffers
+ * @property {Array<GLTFCamera>} cameras
+ * @property {Array<GLTFMaterial>} materials
+ */
+
+/**
+ * @typedef {Object} GLTFAsset
+ * @property {String} version
+ * @property {String} generator
+ * @property {String} minVersion
+ * @property {String} extensions
+ * @property {String} extras
+ * @property {String} profile
+ * @property {String} extensionsUsed
+ */
+
+/**
+ * @typedef {Object} GLTFScene
+ * @property {Array<Number>} nodes
+ */
+
+/**
+ * @typedef {Object} GLTFMeshNode
+ * @property {Number} mesh
+ */
+
+/**
+ * @typedef {Object} GLTFCameraNode
+ * @property {Number} camera
+ */
+
+/**
+ * @typedef {Object} GLTFGroupNode
+ * @property {Array<Number>} children
+ * @property {mat4} matrix
+ */
+
+/**
+ * @typedef {Object} GLTFBaseNode
+ * @property {string} name
+ * @property {vec3} translation
+ * @property {vec4} rotation
+ * @property {vec3} scale
+ */
+
+/**
+ * @typedef {GLTFBaseNode & (GLTFMeshNode|GLTFGroupNode|GLTFCameraNode)} GLTFNode
+ */
+
+/*
+fov,
+near,
+far,
+position,
+target,
+up,
+*/
+
+/**
+ * @typedef {Object} SvelteGLCamera
+ * @property {Number} fov
+ * @property {Number} near
+ * @property {Number} far
+ * @property {vec3} position
+ * @property {vec3} target
+ * @property {vec3} up
+ */
+
+/**
+ * @typedef {Object} GLTFMesh
+ * @property {Array<GLTFPrimitive>} primitives
+ * @property {String} name
+ */
+/**
+ * @typedef {Object} GLTFPrimitive
+ * @property {GLTFAttribute} attributes
+ * @property {Number} indices
+ * @property {Number} material
+ * @property {Number} mode
+ */
+/**
+ * @typedef {Object} GLTFAttribute
+ * @property {Number} POSITION
+ * @property {Number} NORMAL
+ * @property {Number} TEXCOORD_0
+ * @property {Number} TEXCOORD_1
+ */
+/**
+ * @typedef {keyof typeof WEBGL_COMPONENT_TYPES} WEBGLComponentType
+ */
+/**
+ * @typedef {Object} GLTFAccessor
+ * @property {Number} bufferView
+ * @property {Number} byteOffset
+ * @property {WEBGLComponentType} componentType
+ * @property {Number} count
+ * @property {
+ * 		"VEC2"|
+ * 		"VEC3"|
+ * 		"VEC4"|
+ * 		"MAT2"|
+ * 		"MAT3"|
+ * 		"MAT4"|
+ * 		"SCALAR"
+ * } type
+ * @property {Array<Number>} min
+ * @property {Array<Number>} max
+ * @property {String} name
+ * @property {String} normalized
+ */
+/**
+ * @typedef {Object} GLTFBufferView
+ * @property {Number} buffer
+ * @property {Number} byteOffset
+ * @property {Number} byteLength
+ * @property {Number} byteStride
+ * @property {String} target
+ */
+/**
+ * @typedef {Object} GLTFBuffer
+ * @property {String} uri
+ * @property {Number} byteLength
+ */
+
+/**
+ * @typedef {Object} GLTFCamera
+ * @property {String} type
+ * @property {String} name
+ * @property {GLTFCameraPerspective} perspective
+ */
+
+/**
+ * @typedef {Object} GLTFCameraPerspective
+ * @property {Number} aspectRatio
+ * @property {Number} yfov
+ * @property {Number} znear
+ * @property {Number} zfar
+ */
+/**
+ * @typedef {Object} GLTFMaterial
+ * @property {GLTFPBRMetallicRoughness} pbrMetallicRoughness
+ * @property {String} name
+ * @property {GLTFTexture} normalTexture
+ * @property {GLTFTexture} baseColorTexture
+ * @property {GLTFTexture} metallicRoughnessTexture
+ * @property {GLTFTexture} specularGlossinessTexture
+ * @property {GLTFTexture} diffuseTexture
+ * @property {GLTFTexture} ambientTexture
+ */
+/**
+ * @typedef {Object} GLTFPBRMetallicRoughness
+ * @property {vec4} baseColorFactor
+ * @property {Number} metallicFactor
+ * @property {Number} roughnessFactor
+ */
+/**
+ * @typedef {Object} GLTFTexture
+ * @property {Number} index
+ * @property {Number} texCoord
+ * @property {String} name
+ */
+
+const WEBGL_COMPONENT_TYPES = {
+	5120: Int8Array,
+	5121: Uint8Array,
+	5122: Int16Array,
+	5123: Uint16Array,
+	5125: Uint32Array,
+	5126: Float32Array,
+};
+const WEBGL_TYPE_SIZES = {
+	MAT2: 4,
+	MAT3: 9,
+	MAT4: 16,
+	SCALAR: 1,
+	VEC2: 2,
+	VEC3: 3,
+	VEC4: 4,
+};
+
+async function loadGLTFFile(url, binUrlPreload = undefined) {
+	try {
+		let binPreloadMap = new Map();
+		if (binUrlPreload) {
+			binPreloadMap.set(binUrlPreload, loadBinary(binUrlPreload));
+		}
+
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch GLB file: ${response.statusText}`);
+		}
+		/** @type {GLTFFile} **/
+		const content = await response.json();
+		return await parseGLTF(content, url, binPreloadMap);
+	} catch (error) {
+		console.error("Error loading GLTF file:", error);
+	}
+}
+
+async function loadBinary(url) {
+	let bin;
+	if (url) {
+		bin = await fetch(url);
+		if (!bin.ok) {
+			throw new Error(`Failed to fetch GLTF Binary file: ${bin.statusText}`);
+		}
+		return await bin.arrayBuffer();
+	}
+}
+/**
+ *
+ * @param {GLTFFile} content
+ * @param {String} url
+ * @returns
+ */
+async function parseGLTF(content, url, binPreloadMap) {
+	const baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
+	const { buffers, bufferViews, accessors, scenes, nodes, meshes, cameras, materials, scene } = content;
+
+	/**
+	 * buffers can be either :
+	 *  -base64 data uri
+	 * 	-a path to a :
+	 *  	1/uncompressed binary file
+	 * 		2/Draco compressed file
+	 * for now Draco is not supported, it requires a huge webassembly module
+	 */
+	const buffersData = await Promise.all(
+		buffers.map(async (buffer) => {
+			const { uri } = buffer;
+			const filePath = baseUrl + uri;
+			if (binPreloadMap.has(filePath)) {
+				return binPreloadMap.get(filePath);
+			}
+			return loadBinary(filePath);
+		}),
+	);
+
+	/**
+	 * bufferViews are used to describe a subset of a buffer
+	 * they are referenced by accessors
+	 */
+	const dataViews = await Promise.all(
+		bufferViews.map(async (bufferView) => {
+			const { buffer, byteOffset, byteLength, byteStride } = bufferView;
+			const bufferData = buffersData[buffer];
+			return {
+				dataView: bufferData.slice(byteOffset, byteOffset + byteLength),
+				byteStride,
+			};
+		}),
+	);
+
+	/**
+	 * Buffer cache is used to store buffers that are interleaved
+	 */
+	const bufferCache = {};
+	function getBufferCache(dataView, offset) {
+		return bufferCache[dataView] && bufferCache[dataView][offset];
+	}
+	function setBufferCache(buffer, dataView, offset) {
+		bufferCache[dataView] = bufferCache[dataView] || {};
+		bufferCache[dataView][offset] = buffer;
+	}
+	function hasBufferCache(dataView, offset) {
+		return bufferCache[dataView] && bufferCache[dataView][offset] != null;
+	}
+
+	/**
+	 * Accessors are used to describe how to read data from a bufferView
+	 * They are read by using a typed array constructor.
+	 * Note that each accessor uses a dataview but not necesarily all of it,
+	 * the accessor can use a subset of the dataview
+	 */
+	const accessorsData = accessors.map((accessor) => {
+		const { bufferView, byteOffset } = accessor;
+
+		const { dataView, byteStride } = dataViews[bufferView];
+		const { type, componentType, count, min, max } = accessor;
+
+		const itemSize = WEBGL_TYPE_SIZES[type];
+		const TypedArray = WEBGL_COMPONENT_TYPES[componentType];
+		const elementBytes = TypedArray.BYTES_PER_ELEMENT;
+		const itemBytes = elementBytes * itemSize;
+		let offset;
+		let length;
+		let interleaved = false;
+		if (byteStride != null && byteStride !== itemBytes) {
+			const ibSlice = Math.floor(byteOffset / byteStride);
+			offset = ibSlice * byteStride;
+			length = (count * byteStride) / elementBytes;
+			interleaved = true;
+		} else {
+			offset = byteOffset;
+			length = count * itemSize;
+		}
+
+		let data;
+		if (interleaved && hasBufferCache(dataView, offset)) {
+			data = getBufferCache(dataView, offset);
+		} else {
+			data = new TypedArray(dataView, offset, length);
+			if (interleaved) {
+				setBufferCache(data, dataView, offset);
+			}
+		}
+
+		return {
+			type,
+			componentType,
+			count,
+			min,
+			max,
+			data,
+			interleaved,
+			...(interleaved ? { byteOffset, byteStride } : {}),
+		};
+	});
+
+	const meshesData = meshes.map((mesh) => parseMesh(mesh));
+
+	let nodesData = nodes.map((node) => {
+		if (node.mesh != null) {
+			return {
+				...meshesData[node.mesh],
+				matrix: createMatrixFromGLTFTransform(node),
+			};
+		} else if (node.camera != null) {
+			return parseCameraNode(node);
+		} else if (node.children != null) {
+			return node;
+		}
+	});
+
+	/**
+	 * requires 2 passes because groups reference other nodes that are not yet parsed
+	 */
+	nodesData = nodesData.map((node) => {
+		if (node.children != null) {
+			return parseGroupNode(node);
+		} else {
+			return node;
+		}
+	});
+
+	// the file can contain multiple scenes but the scene prop indicates the main scene index
+	const mainScene = scenes[scene];
+
+	let { nodes: sceneNodes } = mainScene;
+	let sceneNodesData = sceneNodes.map((nodeID) => nodesData[nodeID]);
+
+	sceneNodesData.forEach((node) => {
+		recurseNodes(node);
+	});
+
+	const lights = {};
+
+	return {
+		scene: sceneNodesData,
+		materials,
+		lights,
+		cameras,
+	};
+
+	/**
+	 *
+	 * @param {GLTFMeshNode} nodeData
+	 * @returns
+	 */
+	function parseMesh(meshData) {
+		const { primitives } = meshData;
+		const primitivesData = primitives.map((primitive) => {
+			const { attributes, indices } = primitive;
+			const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
+			const positionAccessor = accessorsData[POSITION];
+			const normalAccessor = accessorsData[NORMAL];
+			const uvAccessor = accessorsData[TEXCOORD_0];
+			const indexAccessor = accessorsData[indices];
+
+			return {
+				position: positionAccessor,
+				normal: normalAccessor,
+				indices: indexAccessor,
+				uv: uvAccessor,
+				material: primitive.material,
+				drawMode: drawModes[primitive.mode],
+			};
+		});
+		return primitivesData[0];
+	}
+
+	function parseCameraNode(nodeData) {
+		if (
+			nodeData.matrix == null &&
+			(nodeData.scale != null || nodeData.translation != null || nodeData.rotation != null)
+		) {
+			nodeData.matrix = createMatrixFromGLTFTransform(nodeData);
+		} else if (nodeData.matrix == null) {
+			nodeData.matrix = identity(new Float32Array(16));
+		}
+		return {
+			...nodeData,
+			...cameras[nodeData.camera],
+		};
+	}
+
+	function recurseNodes(nodeData, parent = null) {
+		const { children } = nodeData;
+		if (parent != null) nodeData.parent = parent;
+		if (children != null) {
+			return children.map((child) => {
+				recurseNodes(child, nodeData);
+			});
+		}
+	}
+
+	function parseGroupNode(nodeData) {
+		const { children, matrix, scale, translation, rotation } = nodeData;
+		let nodeMatrix;
+
+		if (matrix == null && (scale != null || translation != null || rotation != null)) {
+			nodeMatrix = createMatrixFromGLTFTransform(nodeData);
+		} else if (matrix != null) {
+			nodeMatrix = matrix;
+		} else {
+			nodeMatrix = identity(new Float32Array(16));
+		}
+		return {
+			children: children.map((child) => {
+				if (nodesData[child].children != null) {
+					return parseGroupNode(nodesData[child]);
+				} else {
+					return nodesData[child];
+				}
+			}),
+			matrix: nodeMatrix,
+		};
+	}
+}
+
+function createMeshFromGLTF(gltfScene, gltfObject) {
+	const mesh = gltfObject;
+	const gltfMaterial = gltfScene.materials[mesh.material];
+	const material = {};
+	if (gltfMaterial.pbrMetallicRoughness) {
+		const { baseColorFactor, metallicFactor, roughnessFactor } = gltfMaterial.pbrMetallicRoughness;
+		material.diffuse = baseColorFactor.slice(0, 3);
+		material.metalness = 0;
+	}
+	return {
+		attributes: {
+			positions: mesh.position.interleaved
+				? {
+						data: mesh.position.data,
+						interleaved: mesh.position.interleaved,
+						byteOffset: mesh.position.byteOffset,
+						byteStride: mesh.position.byteStride,
+					}
+				: mesh.position.data,
+			normals: mesh.normal.interleaved
+				? {
+						data: mesh.normal.data,
+						interleaved: mesh.normal.interleaved,
+						byteOffset: mesh.normal.byteOffset,
+						byteStride: mesh.normal.byteStride,
+					}
+				: mesh.normal.data,
+			elements: mesh.indices.data,
+		},
+		drawMode: mesh.drawMode,
+		material,
+		matrix: mesh.matrix,
+	};
+}
+/**
+ *
+ * @param {GLTFCamera & GLTFBaseNode & GLTFCameraNode} gltfObject
+ * @returns {SvelteGLCamera}
+ */
+/*
+Example of a camera object in a gltf file
+{
+	camera: 0,
+	name: "Camera",
+	perspective:{
+		"znear": 0.10000000149011612,
+		"zfar": 1000,
+		"yfov": 0.39959652046304894,
+		"aspectRatio": 1.7777777777777777
+	},
+	type: "perspective",
+	rotation: [0, 0, 0, 1],
+	translation: [0, 0, 0],
+}
+*/
+/*
+Example of a camera object in svelte-gl
+{
+	fov: 0.39959652046304894,
+	near: 0.10000000149011612,
+	far: 1000,
+	position: [0, 0, 0],
+	target: [0, 0, 0],
+	up: [0, 1, 0],
+}
+*/
+
+function createCameraFromGLTF(gltfObject) {
+	const { perspective, translation /*, rotation*/ } = gltfObject;
+	/*const matrix = createMatrixFromGLTFTransform(gltfObject);
+	const dist = distance([0, 0, 0], translation);*/
+	/*
+	const target = [0, 0, -1];
+	transformQuat(target, target, rotation);
+	scale(target, target, dist);
+	add(target, target, translation);
+	*/
+	/*
+	position = [0, 0, -1],
+	target = [0, 0, 0],
+	fov = 80,
+	near = 0.1,
+	far = 1000,
+	up = [0, 1, 0],
+	matrix = null,
+	*/
+	return {
+		position: translation,
+		target: [0, 0, 0],
+		fov: (perspective.yfov / Math.PI) * 180,
+		near: perspective.znear,
+		far: perspective.zfar,
+		up: [0, 1, 0], // Assuming the up vector is always [0, 1, 0]
+	};
+}
+
+/**
+ *
+ * @param {Object} node
+ * @param {Array} parentMatrix
+ * @param {Object} target
+ */
+function getAbsoluteNodeMatrix(node) {
+	const matrices = [];
+	let currentNode = node;
+
+	while (currentNode.parent != null) {
+		matrices.unshift(currentNode.matrix);
+		currentNode = currentNode.parent;
+	}
+	return matrices.reduce((acc, matrix) => multiply(acc, acc, matrix), identity(new Float32Array(16)));
+}
+
+function createMatrixFromGLTFTransform(object) {
+	const { translation, rotation, scale } = object;
+	const matrix = identity(new Float32Array(16));
+	fromRotationTranslationScale(matrix, rotation || [0, 0, 0, 0], translation || [0, 0, 0], scale || [1, 1, 1]);
+	return matrix;
+}
+
+function traverseScene(scene, callback) {
+	scene.forEach((node) => {
+		callback(node);
+		if (node.children != null) {
+			traverseScene(node.children, callback);
+		}
+	});
+}
+
 /* src\main-refactor.svelte generated by Svelte v4.2.18 */
 
 function create_fragment(ctx) {
@@ -3818,6 +4553,35 @@ function instance($$self, $$props, $$invalidate) {
 	let canvas;
 
 	onMount(async () => {
+		const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf", "models/v2/md-blend6-mdlvw.bin");
+		let meshObject;
+		let cameraGLTF;
+
+		traverseScene(file.scene, o => {
+			if (o.position != null) {
+				meshObject = o;
+			} else if (o.camera != null) {
+				cameraGLTF = o;
+			}
+		});
+
+		const cameraAbsoluteMatrix = getAbsoluteNodeMatrix(cameraGLTF);
+		const cameraFromFile = createCameraFromGLTF(cameraGLTF);
+		transformMat4(cameraFromFile.position, cameraFromFile.position, cameraAbsoluteMatrix);
+		const meshAbsoluteMatrix = getAbsoluteNodeMatrix(meshObject);
+		console.log("meshAbsoluteMatrix", meshAbsoluteMatrix);
+		console.log("meshAbsoluteMatrix scale", getScaling(new Float32Array(3), meshAbsoluteMatrix));
+		console.log("meshAbsoluteMatrix translation", getTranslation(new Float32Array(3), meshAbsoluteMatrix));
+		rotateZ(meshAbsoluteMatrix, meshAbsoluteMatrix, Math.PI);
+		scale(meshAbsoluteMatrix, meshAbsoluteMatrix, [200, 200, 200]);
+		translate(meshAbsoluteMatrix, meshAbsoluteMatrix, [0, 0, -500]);
+		console.log("meshAbsoluteMatrix", meshAbsoluteMatrix);
+		console.log("meshAbsoluteMatrix scale", getScaling(new Float32Array(3), meshAbsoluteMatrix));
+		console.log("meshAbsoluteMatrix translation", getTranslation(new Float32Array(3), meshAbsoluteMatrix));
+		meshObject.matrix = meshAbsoluteMatrix;
+		const loadedMesh = createMeshFromGLTF(file, meshObject);
+		loadedMesh.matrix = meshAbsoluteMatrix;
+		console.log("loadedMesh", loadedMesh);
 		const groundMatrix = identity(new Float32Array(16));
 		translate(groundMatrix, groundMatrix, [0, -1.5, 0]);
 
@@ -3832,9 +4596,10 @@ function instance($$self, $$props, $$invalidate) {
 			$renderer
 		);
 
-		const shadowPass = createContactShadowPass(groundMatrix, 1, 10, 10, 1024, 128);
+		const shadowPass = createContactShadowPass(groundMatrix, 1, 10, 10, 1024, 128, 50);
 		const { getTexture: shadowTexture } = shadowPass;
 		set_store_value(renderPasses, $renderPasses = [shadowPass], $renderPasses);
+		console.log(cameraFromFile);
 
 		set_store_value(
 			camera,
@@ -3842,12 +4607,12 @@ function instance($$self, $$props, $$invalidate) {
 				position: [0, 5, -5],
 				target: [0, 0, 0],
 				fov: 75
-			},
+			}, //...cameraFromFile
 			$camera
 		);
 
-		const cubeMesh = createCube();
-		const sphereMesh = createPolyhedron(1, 5, createSmoothShadedNormals);
+		createCube();
+		createPolyhedron(1, 5, createSmoothShadedNormals);
 
 		const light = createLightStore(createPointLight({
 			position: [-2, 3, 0],
@@ -3859,7 +4624,6 @@ function instance($$self, $$props, $$invalidate) {
 
 		const secondCubePos = identity(new Float32Array(16));
 		translate(secondCubePos, secondCubePos, [3, 0, 0]);
-		const sameMaterial = { diffuse: [1, 0.5, 0.5], metalness: 0 };
 		const groundMesh = createPlane(10, 10, 1, 1);
 
 		const groundDiffuseMap = await createTexture({
@@ -3880,26 +4644,21 @@ function instance($$self, $$props, $$invalidate) {
 			transparent: true
 		};
 
-		const transparentMaterial = {
-			diffuse: [1, 1, 0.5],
-			metalness: 0,
-			opacity: 0.5
-		};
-
 		set_store_value(
 			scene,
 			$scene = [
 				...$scene,
-				{
-					...sphereMesh,
-					matrix: identity(new Float32Array(16)),
-					material: transparentMaterial
-				},
-				{
-					...cubeMesh,
-					matrix: secondCubePos,
-					material: sameMaterial
-				},
+				loadedMesh,
+				/*{
+	...sphereMesh,
+	matrix: identity(new Float32Array(16)),
+	material: transparentMaterial,
+},
+{
+	...cubeMesh,
+	matrix: secondCubePos,
+	material: sameMaterial,
+},*/
 				{
 					...groundMesh,
 					matrix: groundMatrix,
