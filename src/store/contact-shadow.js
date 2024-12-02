@@ -46,7 +46,7 @@ export function createContactShadowPass(groundMatrix, depth, width, height, text
 		new Float32Array(16),
 		groundTranslation,
 		[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
-		[0, 0, -1],
+		[0, 0, 1],
 	);
 
 	const offsetsAndScales = new Float32Array(256); // Supports gaussian blurs up to 255x255

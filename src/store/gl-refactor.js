@@ -75,7 +75,7 @@ export function clearFrame() {
 	const { gl, backgroundColor } = appContext;
 
 	gl.clearColor(...backgroundColor);
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT | gl.DEPTH_BUFFER_BIT);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
 
 export function render(mesh, instances, drawMode) {

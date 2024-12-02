@@ -3494,7 +3494,7 @@ function createContactShadowPass(groundMatrix, depth, width, height, textureSize
 		new Float32Array(16),
 		groundTranslation,
 		[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
-		[0, 0, -1],
+		[0, 0, 1],
 	);
 
 	let horizontalBlurFBO;
