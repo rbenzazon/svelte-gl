@@ -1198,7 +1198,7 @@ function lookAt(out, eye, center, up) {
 
 var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin vec3 position;\r\nin vec3 normal;\r\nin vec2 uv;\r\n${instances ?\r\n`\r\nin mat4 world;\r\nin mat4 normalMatrix;\r\n` : `\r\nuniform mat4 world;\r\nuniform mat4 normalMatrix;\r\n`}\r\n\r\n\r\nuniform float time;\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\n\r\n// Pass the color attribute down to the fragment shader\r\nout vec3 vertexColor;\r\nout vec3 vNormal;\r\nout vec3 vertex;\r\nout vec3 vViewPosition;\r\nout highp vec2 vUv;\r\n\r\n${declarations}\r\n\r\nvoid main() {\r\n    vec3 modifiedNormal = normal;\r\n    vec3 animatedPosition = position;\r\n    ${positionModifier}\r\n\r\n    vUv = vec3( uv, 1 ).xy;\r\n    // Pass the color down to the fragment shader\r\n    vertexColor = vec3(1.27,1.27,1.27);\r\n    // Pass the vertex down to the fragment shader\r\n    //vertex = vec3(world * vec4(position, 1.0));\r\n    vertex = vec3(world * vec4(animatedPosition, 1.0));\r\n    // Pass the normal down to the fragment shader\r\n    // todo : use modifiedNormal when effect is done\r\n    vNormal = vec3(normalMatrix * vec4(modifiedNormal , 1.0));\r\n    //vNormal = normal;\r\n    \r\n    // Pass the position down to the fragment shader\r\n    gl_Position = projection * view * world * vec4(animatedPosition, 1.0);\r\n    vViewPosition = -gl_Position.xyz;\r\n}";
 
-var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float opacity;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n//uniform mat3 normalMatrix;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\nin highp vec2 vUv;\r\nin vec3 vViewPosition;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\t${diffuseMapSample}\r\n\t\r\n\r\n\tvec3 normal = normalize( vNormal );\r\n\t${normalMapSample}\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, opacity);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
+var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float opacity;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n//uniform mat3 normalMatrix;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\nin highp vec2 vUv;\r\nin vec3 vViewPosition;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat diffuseAlpha;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseAlpha = 1.0;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\t${diffuseMapSample}\r\n\t\r\n\r\n\tvec3 normal = normalize( vNormal );\r\n\t${normalMapSample}\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, opacity*material.diffuseAlpha);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
 
 const templateLiteralRenderer = (template, parameters) => {
 	const fn = Function.constructor(
@@ -1276,13 +1276,24 @@ function initRenderer() {
 
 	/*
 	gl.disable(gl.DEPTH_TEST);
-	*/
+	
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
+*/
 	gl.enable(gl.CULL_FACE);
 	gl.frontFace(gl.CCW);
 	gl.cullFace(gl.BACK);
+}
+
+function enableBlend() {
+	const { gl } = appContext;
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+}
+
+function disableBlend() {
+	const { gl } = appContext;
+	gl.disable(gl.BLEND);
 }
 
 function setupTime() {
@@ -2187,7 +2198,7 @@ const materials = derived([meshes], ([$meshes]) => {
 });
 
 function isTransparent(material) {
-	return material.opacity < 1 || material.transparent;
+	return material?.opacity < 1 || material?.transparent;
 }
 
 function sortTransparency(a, b) {
@@ -2201,10 +2212,11 @@ function sortMeshesByZ(programs) {
 	let transparent = false;
 	const canvas = get_store_value(renderer).canvas;
 	const { projection, view } = getCameraProjectionView(get_store_value(camera), canvas.width, canvas.height);
-	const inverseView = invert([], view);
-	const projScreen = multiply([], projection, inverseView);
+	//const inverseView = invert([], view);
+	const projScreen = multiply([], projection, view);
+
 	programs.forEach((program) => {
-		if (program.material && (transparent || isTransparent(program.material))) {
+		if (transparent || isTransparent(program.material)) {
 			transparent = true;
 			let logText = "";
 			program.meshes.forEach((mesh, i) => {
@@ -2214,12 +2226,37 @@ function sortMeshesByZ(programs) {
 			program.meshes.sort((a, b) => {
 				return b.clipSpacePosition[2] - a.clipSpacePosition[2];
 			});
+			// reporting
 			program.meshes.forEach((mesh) => {
-				logText += get_store_value(meshes).indexOf(mesh) + " " + mesh.clipSpacePosition[2] + " ";
+				const meshPosition = mesh.clipSpacePosition.map((v) => v.toFixed(5));
+				logText += get_store_value(meshes).indexOf(mesh) + " " + meshPosition + " ";
 			});
 			console.log("clipSpacePosition", logText);
 		}
 	});
+
+	const sortedPrograms = programs.sort((a, b) => {
+		if (
+			a.material == null ||
+			b.material == null ||
+			a.meshes[0].clipSpacePosition == null ||
+			b.meshes[0].clipSpacePosition == null
+		) {
+			return 0;
+		}
+		return b.meshes[0].clipSpacePosition[2] - a.meshes[0].clipSpacePosition[2];
+	});
+	// log
+	let logText = "";
+	sortedPrograms.forEach((program) => {
+		if (!program.material || !program.meshes[0].clipSpacePosition) {
+			return;
+		}
+		const meshPosition = program.meshes[0].clipSpacePosition.map((v) => v.toFixed(5));
+		logText += get_store_value(meshes).indexOf(program.meshes[0]) + " " + meshPosition + " ";
+	});
+	console.log("programs", logText);
+	return sortedPrograms;
 }
 
 const programs = derived(
@@ -2293,6 +2330,7 @@ const programs = derived(
 					...p,
 					useProgram,
 					setupMaterial: [setupAmbientLight],
+					bindTextures: [],
 					createProgram,
 					selectProgram,
 				};
@@ -2309,9 +2347,11 @@ const programs = derived(
 				}
 				if (p.material?.diffuseMap) {
 					program.setupMaterial.push(p.material.diffuseMap.setupTexture);
+					program.bindTextures.push(p.material.diffuseMap.bindTexture);
 				}
 				if (p.material?.normalMap) {
 					program.setupMaterial.push(p.material.normalMap.setupTexture);
+					program.bindTextures.push(p.material.normalMap.bindTexture);
 				}
 				if (p.requireTime) {
 					program.setupMaterial.push(setupTime);
@@ -2469,13 +2509,22 @@ const renderPipeline = derived(
 			pipeline.push(initRenderer);
 		}
 		/*!init &&*/
-		sortMeshesByZ($programs);
+		console.log("programs", $programs);
+
+		const sortedPrograms = sortMeshesByZ($programs);
+		let transparent = false;
+
+		pipeline.push(disableBlend);
 		pipeline.push(
-			...$programs.reduce((acc, program) => {
+			...sortedPrograms.reduce((acc, program) => {
+				if (isTransparent(program.material) && !transparent) {
+					transparent = true;
+					acc.push(enableBlend);
+				}
 				return [
 					...acc,
 					...(appContext.programMap.has(program)
-						? [program.selectProgram(program), program.useProgram]
+						? [program.selectProgram(program), program.useProgram, ...program.bindTextures]
 						: [program.createProgram(program), ...program.setupProgram, program.useProgram, ...program.setupMaterial]),
 					...(program.setupCamera ? [program.setupCamera] : [...(updateMap.has(camera) ? [setupCamera($camera)] : [])]),
 					...(program.setFrameBuffer ? [program.setFrameBuffer] : []),
@@ -3108,7 +3157,7 @@ function createOrbitControls(canvas, camera) {
 	}
 }
 
-var textureShader = "${declaration?\r\n`\r\nuniform sampler2D ${mapType};\r\nuniform vec2 normalScale;\r\n\r\n\r\nmat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {\r\n    vec3 q0 = dFdx( eye_pos.xyz );\r\n    vec3 q1 = dFdy( eye_pos.xyz );\r\n    vec2 st0 = dFdx( uv.st );\r\n    vec2 st1 = dFdy( uv.st );\r\n    vec3 N = surf_norm;\r\n    vec3 q1perp = cross( q1, N );\r\n    vec3 q0perp = cross( N, q0 );\r\n    vec3 T = q1perp * st0.x + q0perp * st1.x;\r\n    vec3 B = q1perp * st0.y + q0perp * st1.y;\r\n    float det = max( dot( T, T ), dot( B, B ) );\r\n    float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );\r\n    return mat3( T * scale, B * scale, N );\r\n}\r\n` : ''\r\n}\r\n${diffuseMapSample?\r\n`\r\n    //atan(uv.y, uv.x)\r\n    ${coordinateSpace === 'circular' ?\r\n`   vec2 uv = vec2(vUv.x/vUv.y, vUv.y);\r\n` :\r\n`   vec2 uv = vUv;\r\n`}\r\n    material.diffuseColor *= texture( ${mapType}, uv ).xyz;\r\n` : ''\r\n}\r\n${normalMapSample?\r\n`\r\n    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );\r\n    normal = texture( normalMap, vUv ).xyz * 2.0 - 1.0;\r\n    normal.xy *= normalScale;\r\n    normal = normalize(tbn * normal);\r\n\t//normal = normalize( normalMatrix * normal );\r\n` : ''\r\n}\r\n";
+var textureShader = "${declaration?\r\n`\r\nuniform sampler2D ${mapType};\r\nuniform vec2 normalScale;\r\n\r\n\r\nmat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {\r\n    vec3 q0 = dFdx( eye_pos.xyz );\r\n    vec3 q1 = dFdy( eye_pos.xyz );\r\n    vec2 st0 = dFdx( uv.st );\r\n    vec2 st1 = dFdy( uv.st );\r\n    vec3 N = surf_norm;\r\n    vec3 q1perp = cross( q1, N );\r\n    vec3 q0perp = cross( N, q0 );\r\n    vec3 T = q1perp * st0.x + q0perp * st1.x;\r\n    vec3 B = q1perp * st0.y + q0perp * st1.y;\r\n    float det = max( dot( T, T ), dot( B, B ) );\r\n    float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );\r\n    return mat3( T * scale, B * scale, N );\r\n}\r\n` : ''\r\n}\r\n${diffuseMapSample?\r\n`\r\n    //atan(uv.y, uv.x)\r\n    ${coordinateSpace === 'circular' ?\r\n`   vec2 uv = vec2(vUv.x/vUv.y, vUv.y);\r\n` :\r\n`   vec2 uv = vUv;\r\n`}\r\n    vec4 textureColor = texture( ${mapType}, uv );\r\n    material.diffuseColor *= textureColor.rgb;\r\n    material.diffuseAlpha = textureColor.a;\r\n    \r\n` : ''\r\n}\r\n${normalMapSample?\r\n`\r\n    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );\r\n    normal = texture( normalMap, vUv ).xyz * 2.0 - 1.0;\r\n    normal.xy *= normalScale;\r\n    normal = normalize(tbn * normal);\r\n\t//normal = normalize( normalMatrix * normal );\r\n` : ''\r\n}\r\n";
 
 const types = {
 	diffuse: "diffuseMap",
@@ -3141,6 +3190,14 @@ const createTexture = async (props) => {
 		image = props.textureBuffer;
 	}
 
+	let buffer;
+	function setBuffer(value) {
+		buffer = value;
+	}
+	function getBuffer() {
+		return buffer;
+	}
+
 	let output = {
 		type: types[props.type],
 		coordinateSpace: props.coordinateSpace,
@@ -3151,7 +3208,8 @@ const createTexture = async (props) => {
 			mapType: undefined,
 			coordinateSpace: undefined,
 		}),
-		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale),
+		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale, setBuffer),
+		bindTexture: bindTexture(id[props.type], getBuffer, types[props.type]),
 	};
 	if (typeof image === "function") {
 		output = {
@@ -3180,7 +3238,18 @@ function loadTexture(url) {
 	});
 }
 
-function setupTexture(texture, type, id, normalScale = [1, 1]) {
+function bindTexture(id, getBuffer, type) {
+	return function bindTexture() {
+		/** @type {{gl: WebGL2RenderingContext}} **/
+		const { gl, program } = appContext;
+		const textureLocation = gl.getUniformLocation(program, type);
+		gl.activeTexture(gl["TEXTURE" + id]);
+		gl.bindTexture(gl.TEXTURE_2D, getBuffer());
+		gl.uniform1i(textureLocation, id);
+	};
+}
+
+function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
 	return function setupTexture() {
 		/** @type {{gl: WebGL2RenderingContext}} **/
 		const { gl, program } = appContext;
@@ -3191,6 +3260,7 @@ function setupTexture(texture, type, id, normalScale = [1, 1]) {
 		} else {
 			textureBuffer = gl.createTexture();
 		}
+		setBuffer(textureBuffer);
 		const textureLocation = gl.getUniformLocation(program, type);
 		gl.activeTexture(gl["TEXTURE" + id]);
 		gl.bindTexture(gl.TEXTURE_2D, textureBuffer);
@@ -3217,7 +3287,7 @@ function setupTexture(texture, type, id, normalScale = [1, 1]) {
 
 var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 world;\r\n\r\nin vec3 position;\r\n\r\nout vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tgl_Position = projection * view * world * vec4( position, 1.0 );\r\n\tvHighPrecisionZW = gl_Position.zw;\r\n}";
 
-var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n//uniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * 1.0 );\r\n\t//fragColor = vec4( vec3( fragCoordZ ), 1.0 );\r\n\t//debug fragColor = vec4( vec3(( 1.0  ) ) ,1.0);\r\n}\r\n\t\t\t\t\t";
+var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n//uniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.5 ), ( 1.0 - fragCoordZ ) * 1.0 );\r\n\t//fragColor = vec4( vec3( fragCoordZ ), 1.0 );\r\n\t//debug fragColor = vec4( vec3(( 1.0  ) ) ,1.0);\r\n}\r\n\t\t\t\t\t";
 
 var vertexShaderSource = "#version 300 es\r\n\r\nin vec4 position;\r\nin vec2 uv;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = position;\r\n    vTexCoord = uv;\r\n}";
 
@@ -3490,6 +3560,7 @@ function createContactShadowPass(groundMatrix, depth, width, height, textureSize
 				setupMaterial: [],
 				useProgram,
 				selectProgram,
+				bindTextures: [],
 				setupCamera: setupShadowCamera(projection, view),
 				setFrameBuffer: setFrameBuffer(getGeometryFBO, textureWidth, textureHeight),
 				allMeshes: true,
@@ -3509,6 +3580,7 @@ function createContactShadowPass(groundMatrix, depth, width, height, textureSize
 				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL, getGeometryTexture),
+				bindTextures: [],
 				setupCamera: () => {},
 				setFrameBuffer: setFrameBuffer(getHorizontalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
@@ -3523,6 +3595,7 @@ function createContactShadowPass(groundMatrix, depth, width, height, textureSize
 				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL, getHorizontalBlurTexture),
+				bindTextures: [],
 				setupCamera: () => {},
 				setFrameBuffer: setFrameBuffer(getVerticalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
@@ -3786,17 +3859,25 @@ function instance($$self, $$props, $$invalidate) {
 
 		const secondCubePos = identity(new Float32Array(16));
 		translate(secondCubePos, secondCubePos, [3, 0, 0]);
+		const sameMaterial = { diffuse: [1, 0.5, 0.5], metalness: 0 };
 		const groundMesh = createPlane(10, 10, 1, 1);
 
-		const groundDiffuseMap = await createTexture({
+		await createTexture({
 			textureBuffer: shadowTexture,
+			type: "diffuse"
+		});
+
+		const diffuseMap = await createTexture({
+			url: "transparent-texture.png",
 			type: "diffuse"
 		});
 
 		const groundMaterial = {
 			diffuse: [1, 1, 1],
 			metalness: 0,
-			diffuseMap: groundDiffuseMap
+			diffuseMap,
+			//diffuseMap: groundDiffuseMap,
+			transparent: true
 		};
 
 		const transparentMaterial = {
@@ -3817,7 +3898,7 @@ function instance($$self, $$props, $$invalidate) {
 				{
 					...cubeMesh,
 					matrix: secondCubePos,
-					material: transparentMaterial
+					material: sameMaterial
 				},
 				{
 					...groundMesh,

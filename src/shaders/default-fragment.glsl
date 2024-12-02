@@ -28,6 +28,7 @@ struct ReflectedLight {
 
 struct PhysicalMaterial {
 	vec3 diffuseColor;
+	float diffuseAlpha;
 	float roughness;
 	vec3 specularColor;
 	float specularF90;
@@ -51,6 +52,7 @@ vec4 linearToOutputTexel(vec4 value) {
 
 void main() {
     PhysicalMaterial material;
+	material.diffuseAlpha = 1.0;
 	material.diffuseColor = diffuse.rgb * (1.0 - metalness);
 	${diffuseMapSample}
 	
@@ -65,7 +67,7 @@ void main() {
     vec3 totalIrradiance = vec3(0.0f);
     ${irradiance}
 	vec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;
-    fragColor = vec4(outgoingLight, opacity);
+    fragColor = vec4(outgoingLight, opacity*material.diffuseAlpha);
     //fragColor = vec4(totalIrradiance, 1.0f);
     ${toneMapping}
 	fragColor = linearToOutputTexel(fragColor);

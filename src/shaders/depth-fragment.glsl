@@ -10,7 +10,7 @@ in vec2 vHighPrecisionZW;
 
 void main() {
 	float fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;
-	fragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * 1.0 );
+	fragColor = vec4( vec3( 0.5 ), ( 1.0 - fragCoordZ ) * 1.0 );
 	//fragColor = vec4( vec3( fragCoordZ ), 1.0 );
 	//debug fragColor = vec4( vec3(( 1.0  ) ) ,1.0);
 }

@@ -68,10 +68,16 @@ onMount(async () => {
 		textureBuffer: shadowTexture,
 		type: "diffuse",
 	});
+	const diffuseMap = await createTexture({
+		url: "transparent-texture.png",
+		type: "diffuse",
+	});
 	const groundMaterial = {
 		diffuse: [1, 1, 1],
 		metalness: 0,
-		diffuseMap: groundDiffuseMap,
+		diffuseMap,
+		//diffuseMap: groundDiffuseMap,
+		transparent: true,
 	};
 	const transparentMaterial = {
 		diffuse: [1, 1, 0.5],
@@ -88,7 +94,7 @@ onMount(async () => {
 		{
 			...cubeMesh,
 			matrix: secondCubePos,
-			material: transparentMaterial,
+			material: sameMaterial,
 		},
 		{
 			...groundMesh,

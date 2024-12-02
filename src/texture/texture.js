@@ -34,6 +34,14 @@ export const createTexture = async (props) => {
 		image = props.textureBuffer;
 	}
 
+	let buffer;
+	function setBuffer(value) {
+		buffer = value;
+	}
+	function getBuffer() {
+		return buffer;
+	}
+
 	let output = {
 		type: types[props.type],
 		coordinateSpace: props.coordinateSpace,
@@ -44,7 +52,8 @@ export const createTexture = async (props) => {
 			mapType: undefined,
 			coordinateSpace: undefined,
 		}),
-		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale),
+		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale, setBuffer),
+		bindTexture: bindTexture(id[props.type], getBuffer, types[props.type]),
 	};
 	if (typeof image === "function") {
 		output = {
@@ -73,7 +82,18 @@ function loadTexture(url) {
 	});
 }
 
-function setupTexture(texture, type, id, normalScale = [1, 1]) {
+function bindTexture(id, getBuffer, type) {
+	return function bindTexture() {
+		/** @type {{gl: WebGL2RenderingContext}} **/
+		const { gl, program } = appContext;
+		const textureLocation = gl.getUniformLocation(program, type);
+		gl.activeTexture(gl["TEXTURE" + id]);
+		gl.bindTexture(gl.TEXTURE_2D, getBuffer());
+		gl.uniform1i(textureLocation, id);
+	};
+}
+
+function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
 	return function setupTexture() {
 		/** @type {{gl: WebGL2RenderingContext}} **/
 		const { gl, program } = appContext;
@@ -84,6 +104,7 @@ function setupTexture(texture, type, id, normalScale = [1, 1]) {
 		} else {
 			textureBuffer = gl.createTexture();
 		}
+		setBuffer(textureBuffer);
 		const textureLocation = gl.getUniformLocation(program, type);
 		gl.activeTexture(gl["TEXTURE" + id]);
 		gl.bindTexture(gl.TEXTURE_2D, textureBuffer);

@@ -45,13 +45,24 @@ export function initRenderer() {
 
 	/*
 	gl.disable(gl.DEPTH_TEST);
-	*/
+	
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
+*/
 	gl.enable(gl.CULL_FACE);
 	gl.frontFace(gl.CCW);
 	gl.cullFace(gl.BACK);
+}
+
+export function enableBlend() {
+	const { gl } = appContext;
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+}
+
+export function disableBlend() {
+	const { gl } = appContext;
+	gl.disable(gl.BLEND);
 }
 
 export function setupTime() {

@@ -23,6 +23,8 @@ import {
 	clearFrame,
 	bindDefaultFramebuffer,
 	getCameraProjectionView,
+	enableBlend,
+	disableBlend,
 } from "./gl-refactor.js";
 import { hasSameShallow } from "../utils/set.js";
 import { hasSameShallow as arrayHasSameShallow, optionalPropsDeepEqual } from "../utils/array.js";
@@ -277,7 +279,7 @@ export const RENDER_PASS_TYPES = {
 };
 
 function isTransparent(material) {
-	return material.opacity < 1 || material.transparent;
+	return material?.opacity < 1 || material?.transparent;
 }
 
 function sortTransparency(a, b) {
@@ -291,10 +293,11 @@ function sortMeshesByZ(programs) {
 	let transparent = false;
 	const canvas = get(renderer).canvas;
 	const { projection, view } = getCameraProjectionView(get(camera), canvas.width, canvas.height);
-	const inverseView = invert([], view);
-	const projScreen = multiply([], projection, inverseView);
+	//const inverseView = invert([], view);
+	const projScreen = multiply([], projection, view);
+
 	programs.forEach((program) => {
-		if (program.material && (transparent || isTransparent(program.material))) {
+		if (transparent || isTransparent(program.material)) {
 			transparent = true;
 			let logText = "";
 			program.meshes.forEach((mesh, i) => {
@@ -304,12 +307,37 @@ function sortMeshesByZ(programs) {
 			program.meshes.sort((a, b) => {
 				return b.clipSpacePosition[2] - a.clipSpacePosition[2];
 			});
+			// reporting
 			program.meshes.forEach((mesh) => {
-				logText += get(meshes).indexOf(mesh) + " " + mesh.clipSpacePosition[2] + " ";
+				const meshPosition = mesh.clipSpacePosition.map((v) => v.toFixed(5));
+				logText += get(meshes).indexOf(mesh) + " " + meshPosition + " ";
 			});
 			console.log("clipSpacePosition", logText);
 		}
 	});
+
+	const sortedPrograms = programs.sort((a, b) => {
+		if (
+			a.material == null ||
+			b.material == null ||
+			a.meshes[0].clipSpacePosition == null ||
+			b.meshes[0].clipSpacePosition == null
+		) {
+			return 0;
+		}
+		return b.meshes[0].clipSpacePosition[2] - a.meshes[0].clipSpacePosition[2];
+	});
+	// log
+	let logText = "";
+	sortedPrograms.forEach((program) => {
+		if (!program.material || !program.meshes[0].clipSpacePosition) {
+			return;
+		}
+		const meshPosition = program.meshes[0].clipSpacePosition.map((v) => v.toFixed(5));
+		logText += get(meshes).indexOf(program.meshes[0]) + " " + meshPosition + " ";
+	});
+	console.log("programs", logText);
+	return sortedPrograms;
 }
 
 export const programs = derived(
@@ -383,6 +411,7 @@ export const programs = derived(
 					...p,
 					useProgram,
 					setupMaterial: [setupAmbientLight],
+					bindTextures: [],
 					createProgram,
 					selectProgram,
 				};
@@ -399,9 +428,11 @@ export const programs = derived(
 				}
 				if (p.material?.diffuseMap) {
 					program.setupMaterial.push(p.material.diffuseMap.setupTexture);
+					program.bindTextures.push(p.material.diffuseMap.bindTexture);
 				}
 				if (p.material?.normalMap) {
 					program.setupMaterial.push(p.material.normalMap.setupTexture);
+					program.bindTextures.push(p.material.normalMap.bindTexture);
 				}
 				if (p.requireTime) {
 					program.setupMaterial.push(setupTime);
@@ -560,13 +591,23 @@ const renderPipeline = derived(
 			pipeline.push(initRenderer);
 		}
 		/*!init &&*/
-		sortMeshesByZ($programs);
+		console.log("programs", $programs);
+
+		const sortedPrograms = sortMeshesByZ($programs);
+		let transparent = false;
+
+		pipeline.push(disableBlend);
 		pipeline.push(
-			...$programs.reduce((acc, program) => {
+			...sortedPrograms.reduce((acc, program) => {
+				let transitionTransparent = false;
+				if (isTransparent(program.material) && !transparent) {
+					transparent = true;
+					acc.push(enableBlend);
+				}
 				return [
 					...acc,
 					...(appContext.programMap.has(program)
-						? [program.selectProgram(program), program.useProgram]
+						? [program.selectProgram(program), program.useProgram, ...program.bindTextures]
 						: [program.createProgram(program), ...program.setupProgram, program.useProgram, ...program.setupMaterial]),
 					...(program.setupCamera ? [program.setupCamera] : [...(updateMap.has(camera) ? [setupCamera($camera)] : [])]),
 					...(program.setFrameBuffer ? [program.setFrameBuffer] : []),

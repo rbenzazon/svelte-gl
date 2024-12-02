@@ -28,7 +28,10 @@ ${diffuseMapSample?
 ` :
 `   vec2 uv = vUv;
 `}
-    material.diffuseColor *= texture( ${mapType}, uv ).xyz;
+    vec4 textureColor = texture( ${mapType}, uv );
+    material.diffuseColor *= textureColor.rgb;
+    material.diffuseAlpha = textureColor.a;
+    
 ` : ''
 }
 ${normalMapSample?
