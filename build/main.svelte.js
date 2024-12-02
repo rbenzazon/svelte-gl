@@ -3287,7 +3287,7 @@ function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
 
 var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 world;\r\n\r\nin vec3 position;\r\n\r\nout vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tgl_Position = projection * view * world * vec4( position, 1.0 );\r\n\tvHighPrecisionZW = gl_Position.zw;\r\n}";
 
-var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n//uniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.5 ), ( 1.0 - fragCoordZ ) * 1.0 );\r\n\t//fragColor = vec4( vec3( fragCoordZ ), 1.0 );\r\n\t//debug fragColor = vec4( vec3(( 1.0  ) ) ,1.0);\r\n}\r\n\t\t\t\t\t";
+var depthFragmentShader = "#version 300 es\r\n\r\nout highp vec4 fragColor;\r\n\r\nprecision highp float;\r\nprecision highp int;\r\n\r\n//uniform float darkness;\r\nin vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tfloat fragCoordZ = 0.5 * vHighPrecisionZW[0] / vHighPrecisionZW[1] + 0.5;\r\n\tfragColor = vec4( vec3( 0.0 ), ( 1.0 - fragCoordZ ) * 1.0 );\r\n\t//fragColor = vec4( vec3( fragCoordZ ), 1.0 );\r\n\t//debug fragColor = vec4( vec3(( 1.0  ) ) ,1.0);\r\n}\r\n\t\t\t\t\t";
 
 var vertexShaderSource = "#version 300 es\r\n\r\nin vec4 position;\r\nin vec2 uv;\r\n\r\nout vec2 vTexCoord;\r\n\r\nvoid main()\r\n{\r\n    gl_Position = position;\r\n    vTexCoord = uv;\r\n}";
 
@@ -3862,12 +3862,12 @@ function instance($$self, $$props, $$invalidate) {
 		const sameMaterial = { diffuse: [1, 0.5, 0.5], metalness: 0 };
 		const groundMesh = createPlane(10, 10, 1, 1);
 
-		await createTexture({
+		const groundDiffuseMap = await createTexture({
 			textureBuffer: shadowTexture,
 			type: "diffuse"
 		});
 
-		const diffuseMap = await createTexture({
+		await createTexture({
 			url: "transparent-texture.png",
 			type: "diffuse"
 		});
@@ -3875,8 +3875,8 @@ function instance($$self, $$props, $$invalidate) {
 		const groundMaterial = {
 			diffuse: [1, 1, 1],
 			metalness: 0,
-			diffuseMap,
-			//diffuseMap: groundDiffuseMap,
+			//diffuseMap,
+			diffuseMap: groundDiffuseMap,
 			transparent: true
 		};
 

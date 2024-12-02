@@ -75,8 +75,8 @@ onMount(async () => {
 	const groundMaterial = {
 		diffuse: [1, 1, 1],
 		metalness: 0,
-		diffuseMap,
-		//diffuseMap: groundDiffuseMap,
+		//diffuseMap,
+		diffuseMap: groundDiffuseMap,
 		transparent: true,
 	};
 	const transparentMaterial = {
