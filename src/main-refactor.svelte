@@ -36,6 +36,7 @@ import {
 	loadGLTFFile,
 	traverseScene,
 } from "./loaders/gltf-loader.js";
+import { loadOBJFile } from "./loaders/obj-loader.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 
 let canvas;
@@ -54,20 +55,14 @@ onMount(async () => {
 	const cameraFromFile = createCameraFromGLTF(cameraGLTF);
 	transformMat4(cameraFromFile.position, cameraFromFile.position, cameraAbsoluteMatrix);
 	const meshAbsoluteMatrix = getAbsoluteNodeMatrix(meshObject);
-	console.log("meshAbsoluteMatrix", meshAbsoluteMatrix);
-	console.log("meshAbsoluteMatrix scale", getScaling(new Float32Array(3), meshAbsoluteMatrix));
-	console.log("meshAbsoluteMatrix translation", getTranslation(new Float32Array(3), meshAbsoluteMatrix));
 
 	rotateZ(meshAbsoluteMatrix, meshAbsoluteMatrix, Math.PI);
 	scale(meshAbsoluteMatrix, meshAbsoluteMatrix, [200, 200, 200]);
 	translate(meshAbsoluteMatrix, meshAbsoluteMatrix, [0, 0, -500]);
-	console.log("meshAbsoluteMatrix", meshAbsoluteMatrix);
-	console.log("meshAbsoluteMatrix scale", getScaling(new Float32Array(3), meshAbsoluteMatrix));
-	console.log("meshAbsoluteMatrix translation", getTranslation(new Float32Array(3), meshAbsoluteMatrix));
+
 	meshObject.matrix = meshAbsoluteMatrix;
 	const loadedMesh = createMeshFromGLTF(file, meshObject);
 	loadedMesh.matrix = meshAbsoluteMatrix;
-	console.log("loadedMesh", loadedMesh);
 
 	const groundMatrix = identity(new Float32Array(16));
 	translate(groundMatrix, groundMatrix, [0, -1.5, 0]);
@@ -83,7 +78,6 @@ onMount(async () => {
 	const { getTexture: shadowTexture } = shadowPass;
 
 	$renderPasses = [shadowPass];
-	console.log(cameraFromFile);
 
 	$camera = {
 		position: [0, 5, -5],
@@ -108,6 +102,7 @@ onMount(async () => {
 
 	const secondCubePos = identity(new Float32Array(16));
 	translate(secondCubePos, secondCubePos, [3, 0, 0]);
+	scale(secondCubePos, secondCubePos, [0.1, 0.1, 0.1]);
 
 	const sameMaterial = {
 		diffuse: [1, 0.5, 0.5],
@@ -134,15 +129,18 @@ onMount(async () => {
 		metalness: 0,
 		opacity: 0.5,
 	};
+	const venus = await loadOBJFile("venus.obj");
+	venus.matrix = scale(venus.matrix, venus.matrix, [0.001, 0.001, 0.001]);
+	venus.matrix = translate(venus.matrix, venus.matrix, [0, -1000, 0]);
 	$scene = [
 		...$scene,
 		loadedMesh,
-		/*{
+		{
 			...sphereMesh,
-			matrix: identity(new Float32Array(16)),
+			matrix: secondCubePos,
 			material: transparentMaterial,
 		},
-		{
+		/*{
 			...cubeMesh,
 			matrix: secondCubePos,
 			material: sameMaterial,
@@ -152,6 +150,7 @@ onMount(async () => {
 			matrix: groundMatrix,
 			material: groundMaterial,
 		},
+		venus,
 		light,
 	];
 
