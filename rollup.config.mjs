@@ -3,6 +3,7 @@ import resolve from '@rollup/plugin-node-resolve';
 import { terser } from 'rollup-plugin-terser';
 import glsl from 'rollup-plugin-glsl';
 import commonjs from '@rollup/plugin-commonjs';
+import del from 'rollup-plugin-delete';
 
 export default {
     input: {
@@ -16,6 +17,7 @@ export default {
         format: 'esm',
     },
     plugins: [
+        del({ targets: 'build/js/*' }),
         glsl({
             // By default, everything gets included
             include: 'src/**/*.glsl',
@@ -29,6 +31,7 @@ export default {
             extensions: ['.svelte']
           }),
         commonjs(),
-        terser(),
+        //terser(),
+            
     ]
 };

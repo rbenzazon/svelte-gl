@@ -199,8 +199,6 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 		if (material.specular) {
 			specularDeclaration = material.specular.shader({ declaration: true });
 			specularIrradiance = material.specular.shader({ irradiance: true });
-			console.log("specularIrradiance", specularIrradiance);
-			console.log("specularDeclaration", specularDeclaration);
 		}
 		let diffuseMapDeclaration = "";
 		let diffuseMapSample = "";
@@ -286,6 +284,9 @@ export function setupMeshColor({ diffuse, metalness, opacity }) {
 			return;
 		}
 		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
+		if(metalness == null) {
+			console.log("metalness is null, material won't display correctly");
+		}	
 		const metalnessLocation = gl.getUniformLocation(program, "metalness");
 		gl.uniform1f(metalnessLocation, metalness);
 		const opacityLocation = gl.getUniformLocation(program, "opacity");

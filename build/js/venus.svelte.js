@@ -1,1 +1,302 @@
-import{A as t,l as a,B as s,C as e,D as n,S as r,i as o,s as i,e as l,a as c,n as u,d as p,c as f,o as m,r as d,b as h,f as x,g as w,t as y,h as g,j as F,k as b,m as v,p as A,q as E,u as I,v as j,w as B,E as M,x as W,y as k,z as C}from"./texture-B1gA2w_v.js";import{l as D,t as J,g as O,c as P,a as T,b as q,d as z,e as L}from"./gltf-loader-DiZWQKLS.js";async function S(r){try{const o=await fetch(r);if(!o.ok)throw new Error(`Failed to fetch OBJ file: ${o.statusText}`);const i=await o.text();return await async function(r,o){const i=r.split("\n"),l=[],c=[],u=[],p=[],f=[],m={attributes:{},drawMode:t[4],material:{diffuse:[1,1,1],metalness:0},matrix:a(new Float32Array(16))};for(let t=0;t<i.length;t++){const a=i[t];if(a.startsWith("v ")){const[,t,s,e]=a.split(" ");l.push(parseFloat(t),parseFloat(s),parseFloat(e))}if(a.startsWith("vn ")){const[,t,s,e]=a.split(" ");u.push(parseFloat(t),parseFloat(s),parseFloat(e))}if(a.startsWith("vt ")){const[,t,s]=a.split(" ");p.push(parseFloat(t),parseFloat(s))}if(a.startsWith("f ")){const[,t,r,o]=a.split(" "),i=3*(parseInt(t)-1),p=3*(parseInt(r)-1),f=3*(parseInt(o)-1),m=[l[i],l[i+1],l[i+2]],d=[l[p],l[p+1],l[p+2]],h=[l[f],l[f+1],l[f+2]];c.push(...m),c.push(...d),c.push(...h);const x=s([],e([],h,d),e([],m,d));n(x,x),u.push(...x,...x,...x)}}c.length>0&&(m.attributes.positions=new Float32Array(c));u.length>0&&(m.attributes.normals=new Float32Array(u));p.length>0&&(m.attributes.uvs=new Float32Array(p));f.length>0&&(m.attributes.elements=new Uint16Array(f),console.log("indices used",f.slice(0,3)));return m}(i)}catch(t){console.error("Error loading OBJ file:",t)}}function U(t){let a;return{c(){a=l("canvas")},m(s,e){c(s,a,e),t[1](a)},p:u,i:u,o:u,d(s){s&&p(a),t[1](null)}}}function $(){performance.now()}function G(t,s,e){let n,r,o,i,l;return f(t,d,(t=>e(2,n=t))),f(t,h,(t=>e(3,r=t))),f(t,x,(t=>e(4,o=t))),f(t,w,(t=>e(5,i=t))),m((async()=>{const t=await D("models/v2/md-blend6-mdlvw.gltf","models/v2/md-blend6-mdlvw.bin");let s,e;J(t.scene,(t=>{null!=t.position?s=t:null!=t.camera&&(e=t)}));const c=O(e),u=P(e);y(u.position,u.position,c);const p=O(s);g(p,p,Math.PI),F(p,p,[200,200,200]),b(p,p,[0,0,-500]),s.matrix=p;T(t,s).matrix=p;const f=a(new Float32Array(16));b(f,f,[0,-1.5,0]),v(d,n={...n,canvas:l,backgroundColor:A,ambientLightColor:[16777215,.1]},n);const m=q(f,1,10,10,1024,128,.5),{getTexture:k}=m;v(w,i=[m],i),v(x,o={position:[0,5,-5],target:[0,2,0],fov:75},o),z();const U=E(1,5,C),G=I(j({position:[-2,3,-3],color:[1,1,1],intensity:20,cutoffDistance:0,decayExponent:2})),H=I(j({position:[2,-1,-1],color:[1,1,1],intensity:20,cutoffDistance:0,decayExponent:2})),K=a(new Float32Array(16));b(K,K,[3,0,0]),F(K,K,[.1,.1,.1]);const N=L(10,10,1,1),Q=await B({textureBuffer:k,type:"diffuse"});await B({url:"transparent-texture.png",type:"diffuse"});const R={diffuse:[1,1,1],metalness:0,diffuseMap:Q,transparent:!0},V=await S("venus.obj");V.matrix=M(V.matrix,V.matrix,Math.PI),V.matrix=F(V.matrix,V.matrix,[.003,.003,.003]),V.matrix=b(V.matrix,V.matrix,[0,-450,0]),v(h,r=[...r,{...U,matrix:K,material:{diffuse:[1,1,.5],metalness:0,opacity:.5}},{...N,matrix:f,material:R},V,G,H],r),v(d,n={...n,loop:$,enabled:!0},n),W(l,x)})),[l,function(t){k[t?"unshift":"push"]((()=>{l=t,e(0,l)}))}]}class H extends r{constructor(t){super(),o(this,t,G,U,i,{})}}export{H as default};
+import { A as drawModes, l as identity, B as cross, C as subtract, D as normalize, S as SvelteComponent, i as init, s as safe_not_equal, e as element, a as insert, n as noop, d as detach, c as component_subscribe, o as onMount, r as renderer, b as scene, f as camera, g as renderPasses, t as transformMat4, h as rotateZ, j as scale, k as translate, m as set_store_value, p as skyblue, q as createPolyhedron, u as createLightStore, v as createPointLight, w as createTexture, E as rotateY, x as createOrbitControls, y as binding_callbacks, z as createSmoothShadedNormals } from './texture-C302gKqD.js';
+import { l as loadGLTFFile, t as traverseScene, g as getAbsoluteNodeMatrix, c as createCameraFromGLTF, a as createMeshFromGLTF, b as createContactShadowPass, d as createCube, e as createPlane } from './gltf-loader-DG6nzK4C.js';
+
+async function loadOBJFile(url) {
+	try {
+		const response = await fetch(url);
+		if (!response.ok) {
+			throw new Error(`Failed to fetch OBJ file: ${response.statusText}`);
+		}
+		const content = await response.text();
+		return await parseOBJ(content, url);
+	} catch (error) {
+		console.error("Error loading OBJ file:", error);
+	}
+}
+
+/**
+ *
+ * @param {string} content
+ * @param {string} url
+ * @returns
+ */
+async function parseOBJ(content, url) {
+	const rows = content.split("\n");
+	const vertex = [];
+	const positions = [];
+	const normals = [];
+	const uvs = [];
+	const indices = [];
+	const object = {
+		attributes: {},
+		drawMode: drawModes[4],
+		material: {
+			diffuse: [1, 1, 1],
+			metalness: 0,
+		},
+		matrix: identity(new Float32Array(16)),
+	};
+	for (let i = 0; i < rows.length; i++) {
+		const row = rows[i];
+		if (row.startsWith("v ")) {
+			const [, x, y, z] = row.split(" ");
+			vertex.push(parseFloat(x), parseFloat(y), parseFloat(z));
+		}
+		if (row.startsWith("vn ")) {
+			const [, x, y, z] = row.split(" ");
+			normals.push(parseFloat(x), parseFloat(y), parseFloat(z));
+		}
+		if (row.startsWith("vt ")) {
+			const [, x, y] = row.split(" ");
+			uvs.push(parseFloat(x), parseFloat(y));
+		}
+		if (row.startsWith("f ")) {
+			const [, a, b, c] = row.split(" ");
+
+			//indices.push(parseInt(a)-1, parseInt(b)-1, parseInt(c)-1);
+			const aAddress = (parseInt(a) - 1) * 3;
+			const bAddress = (parseInt(b) - 1) * 3;
+			const cAddress = (parseInt(c) - 1) * 3;
+
+			const v1 = [vertex[aAddress], vertex[aAddress + 1], vertex[aAddress + 2]];
+			const v2 = [vertex[bAddress], vertex[bAddress + 1], vertex[bAddress + 2]];
+			const v3 = [vertex[cAddress], vertex[cAddress + 1], vertex[cAddress + 2]];
+
+			positions.push(...v1);
+			positions.push(...v2);
+			positions.push(...v3);
+
+			//add normal
+			const normal = cross([], subtract([], v3, v2), subtract([], v1, v2));
+			normalize(normal, normal);
+			normals.push(...normal, ...normal, ...normal);
+		}
+	}
+
+	if (positions.length > 0) {
+		object.attributes.positions = new Float32Array(positions);
+	}
+	if (normals.length > 0) {
+		object.attributes.normals = new Float32Array(normals);
+	}
+	if (uvs.length > 0) {
+		object.attributes.uvs = new Float32Array(uvs);
+	}
+	if (indices.length > 0) {
+		object.attributes.elements = new Uint16Array(indices);
+
+		console.log("indices used", indices.slice(0, 3));
+	}
+
+	return object;
+}
+
+/* src\venus.svelte generated by Svelte v4.2.18 */
+
+function create_fragment(ctx) {
+	let canvas_1;
+
+	return {
+		c() {
+			canvas_1 = element("canvas");
+		},
+		m(target, anchor) {
+			insert(target, canvas_1, anchor);
+			/*canvas_1_binding*/ ctx[1](canvas_1);
+		},
+		p: noop,
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) {
+				detach(canvas_1);
+			}
+
+			/*canvas_1_binding*/ ctx[1](null);
+		}
+	};
+}
+
+function animate() {
+	performance.now() / 1000;
+} /*$camera = {
+	position: [0, 5, -zpos],
+};*/ //console.log("animate", $camera.position);
+
+function instance($$self, $$props, $$invalidate) {
+	let $renderer;
+	let $scene;
+	let $camera;
+	let $renderPasses;
+	component_subscribe($$self, renderer, $$value => $$invalidate(2, $renderer = $$value));
+	component_subscribe($$self, scene, $$value => $$invalidate(3, $scene = $$value));
+	component_subscribe($$self, camera, $$value => $$invalidate(4, $camera = $$value));
+	component_subscribe($$self, renderPasses, $$value => $$invalidate(5, $renderPasses = $$value));
+	let canvas;
+
+	onMount(async () => {
+		const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf", "models/v2/md-blend6-mdlvw.bin");
+		let meshObject;
+		let cameraGLTF;
+
+		traverseScene(file.scene, o => {
+			if (o.position != null) {
+				meshObject = o;
+			} else if (o.camera != null) {
+				cameraGLTF = o;
+			}
+		});
+
+		const cameraAbsoluteMatrix = getAbsoluteNodeMatrix(cameraGLTF);
+		const cameraFromFile = createCameraFromGLTF(cameraGLTF);
+		transformMat4(cameraFromFile.position, cameraFromFile.position, cameraAbsoluteMatrix);
+		const meshAbsoluteMatrix = getAbsoluteNodeMatrix(meshObject);
+		rotateZ(meshAbsoluteMatrix, meshAbsoluteMatrix, Math.PI);
+		scale(meshAbsoluteMatrix, meshAbsoluteMatrix, [200, 200, 200]);
+		translate(meshAbsoluteMatrix, meshAbsoluteMatrix, [0, 0, -500]);
+		meshObject.matrix = meshAbsoluteMatrix;
+		const loadedMesh = createMeshFromGLTF(file, meshObject);
+		loadedMesh.matrix = meshAbsoluteMatrix;
+		const groundMatrix = identity(new Float32Array(16));
+		translate(groundMatrix, groundMatrix, [0, -1.5, 0]);
+
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				canvas,
+				backgroundColor: skyblue,
+				ambientLightColor: [0xffffff, 0.1]
+			},
+			$renderer
+		);
+
+		const shadowPass = createContactShadowPass(groundMatrix, 1, 10, 10, 1024, 128, 0.5);
+		const { getTexture: shadowTexture } = shadowPass;
+		set_store_value(renderPasses, $renderPasses = [shadowPass], $renderPasses);
+
+		set_store_value(
+			camera,
+			$camera = {
+				position: [0, 5, -5],
+				target: [0, 2, 0],
+				fov: 75
+			}, //...cameraFromFile
+			$camera
+		);
+
+		createCube();
+		const sphereMesh = createPolyhedron(1, 5, createSmoothShadedNormals);
+
+		const light = createLightStore(createPointLight({
+			position: [-2, 3, -3],
+			color: [1, 1, 1],
+			intensity: 20,
+			cutoffDistance: 0,
+			decayExponent: 2
+		}));
+
+		const light2 = createLightStore(createPointLight({
+			position: [2, -1, -1],
+			color: [1, 1, 1],
+			intensity: 20,
+			cutoffDistance: 0,
+			decayExponent: 2
+		}));
+
+		const secondCubePos = identity(new Float32Array(16));
+		translate(secondCubePos, secondCubePos, [3, 0, 0]);
+		scale(secondCubePos, secondCubePos, [0.1, 0.1, 0.1]);
+		const groundMesh = createPlane(10, 10, 1, 1);
+
+		const groundDiffuseMap = await createTexture({
+			textureBuffer: shadowTexture,
+			type: "diffuse"
+		});
+
+		await createTexture({
+			url: "transparent-texture.png",
+			type: "diffuse"
+		});
+
+		const groundMaterial = {
+			diffuse: [1, 1, 1],
+			metalness: 0,
+			//diffuseMap,
+			diffuseMap: groundDiffuseMap,
+			transparent: true
+		};
+
+		const transparentMaterial = {
+			diffuse: [1, 1, 0.5],
+			metalness: 0,
+			opacity: 0.5
+		};
+
+		const venus = await loadOBJFile("venus.obj");
+		venus.matrix = rotateY(venus.matrix, venus.matrix, Math.PI);
+		venus.matrix = scale(venus.matrix, venus.matrix, [0.003, 0.003, 0.003]);
+		venus.matrix = translate(venus.matrix, venus.matrix, [0, -450, 0]);
+
+		set_store_value(
+			scene,
+			$scene = [
+				...$scene,
+				//loadedMesh,
+				{
+					...sphereMesh,
+					matrix: secondCubePos,
+					material: transparentMaterial
+				},
+				/*{
+	...cubeMesh,
+	matrix: secondCubePos,
+	material: sameMaterial,
+},*/
+				{
+					...groundMesh,
+					matrix: groundMatrix,
+					material: groundMaterial
+				},
+				venus,
+				light,
+				light2
+			],
+			$scene
+		);
+
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				loop: animate,
+				enabled: true
+			},
+			$renderer
+		);
+
+		createOrbitControls(canvas, camera);
+	}); /*setTimeout(() => {
+	$camera = {
+		position: [0, 5, -4],
+	};
+}, 1000);*/
+
+	function canvas_1_binding($$value) {
+		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+			canvas = $$value;
+			$$invalidate(0, canvas);
+		});
+	}
+
+	return [canvas, canvas_1_binding];
+}
+
+class Venus extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance, create_fragment, safe_not_equal, {});
+	}
+}
+
+export { Venus as default };

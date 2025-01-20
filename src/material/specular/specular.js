@@ -24,12 +24,12 @@ export const createSpecular = (props) => {
 			declaration: false,
 			irradiance: false,
 		}),
-		setupSpecular: () => setupSpecular(props),
+		setupSpecular: setupSpecular(props),
 	};
 };
 
 function setupSpecular({ roughness, ior, intensity, color }) {
-	return function () {
+	return function setupSpecular () {
 		/** @type {{gl: WebGL2RenderingContext}} **/
 		const { gl, program } = appContext;
 
