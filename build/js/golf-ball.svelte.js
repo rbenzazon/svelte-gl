@@ -1,4 +1,4 @@
-import { P as templateLiteralRenderer, F as appContext, S as SvelteComponent, i as init, s as safe_not_equal, e as element, a as insert, n as noop, d as detach, c as component_subscribe, o as onMount, r as renderer, b as scene, f as camera, w as createTexture, m as set_store_value, p as skyblue, q as createPolyhedron, Q as generateUVs, l as identity, u as createLightStore, v as createPointLight, x as createOrbitControls, y as binding_callbacks, z as createSmoothShadedNormals } from './texture-C302gKqD.js';
+import { X as templateLiteralRenderer, L as appContext, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, j as scene, k as camera, C as createTexture, x as set_store_value, y as skyblue, z as createPolyhedron, Y as generateUVs, w as identity, A as createLightStore, B as createPointLight, D as createOrbitControls, E as binding_callbacks, F as createSmoothShadedNormals } from './Menu-CH7cVwl1.js';
 
 var specularShader = "${declaration?\r\n`\r\n\r\nuniform float roughness;\r\nuniform float ior;\r\nuniform float specularIntensity;\r\nuniform vec3 specularColor;\r\n\r\n\r\n\r\n#define EPSILON 1e-6\r\n\r\nvec3 F_Schlick( const in vec3 f0, const in float f90, const in float dotVH ) {\r\n\r\n\t// Original approximation by Christophe Schlick '94\r\n\t// float fresnel = pow( 1.0 - dotVH, 5.0 );\r\n\r\n\t// Optimized variant (presented by Epic at SIGGRAPH '13)\r\n\t// https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf\r\n\tfloat fresnel = exp2( ( - 5.55473 * dotVH - 6.98316 ) * dotVH );\r\n\r\n\treturn f0 * ( 1.0 - fresnel ) + ( f90 * fresnel );\r\n\r\n} \r\n\r\n// Moving Frostbite to Physically Based Rendering 3.0 - page 12, listing 2\r\n// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\nfloat V_GGX_SmithCorrelated( const in float alpha, const in float dotNL, const in float dotNV ) {\r\n\r\n\tfloat a2 = pow2( alpha );\r\n\r\n\tfloat gv = dotNL * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNV ) );\r\n\tfloat gl = dotNV * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNL ) );\r\n\r\n\treturn 0.5 / max( gv + gl, EPSILON );\r\n\r\n}\r\n\r\n// Microfacet Models for Refraction through Rough Surfaces - equation (33)\r\n// http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html\r\n// alpha is \"roughness squared\" in Disney’s reparameterization\r\nfloat D_GGX( const in float alpha, const in float dotNH ) {\r\n\r\n\tfloat a2 = pow2( alpha );\r\n\r\n\tfloat denom = pow2( dotNH ) * ( a2 - 1.0 ) + 1.0; // avoid alpha = 0 with dotNH = 1\r\n\r\n\treturn RECIPROCAL_PI * a2 / pow2( denom );\r\n\r\n}\r\n\r\nvec3 BRDF_GGX( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in vec3 specularColor, const in float specularF90, const in float roughness) {\r\n\r\n\tfloat alpha = pow2( roughness ); // UE4's roughness\r\n\r\n\tvec3 halfDir = normalize( lightDir + viewDir );\r\n\r\n\tfloat dotNL = saturate( dot( normal, lightDir ) );\r\n\tfloat dotNV = saturate( dot( normal, viewDir ) );\r\n\tfloat dotNH = saturate( dot( normal, halfDir ) );\r\n\tfloat dotVH = saturate( dot( viewDir, halfDir ) );\r\n\r\n\tvec3 F = F_Schlick( specularColor, specularF90, dotVH );\r\n\r\n\tfloat V = V_GGX_SmithCorrelated( alpha, dotNL, dotNV );\r\n\r\n\tfloat D = D_GGX( alpha, dotNH );\r\n\r\n\treturn F * ( V * D );\r\n\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n\tmaterial.roughness = clamp(roughness, 0.0525, 1.0);\r\n\tmaterial.ior = ior;\r\n\tmaterial.specularF90 = mix(specularIntensity, 1.0, metalness);\r\n\tmaterial.specularColor = mix(min(pow2((material.ior - 1.0) / (material.ior + 1.0)) * specularColor, vec3(1.0)) * specularIntensity, diffuse.rgb, metalness);\r\n\r\n        vec3 geometryViewDir = normalize( cameraPosition - vertex );\r\n        reflectedLight.directSpecular += lightParams.irradiance * BRDF_GGX( lightParams.direction, geometryViewDir, normal, material.specularColor, material.specularF90, material.roughness);//lightParams.irradiance; //* \r\n        //totalIrradiance = -vec3(geometryViewDir.z,geometryViewDir.z,geometryViewDir.z);//BRDF_GGX( lightParams.direction, geometryViewDir, normalize(vNormal), specularColor, specularF90, roughness);\r\n\t\t//totalIrradiance = lightParams.irradiance;//vec3(-lightParams.direction.z,-lightParams.direction.z,-lightParams.direction.z);\r\n` : ''\r\n}";
 
@@ -28,7 +28,7 @@ const createSpecular = (props) => {
 };
 
 function setupSpecular({ roughness, ior, intensity, color }) {
-	return function setupSpecular () {
+	return function setupSpecular() {
 		/** @type {{gl: WebGL2RenderingContext}} **/
 		const { gl, program } = appContext;
 
@@ -48,24 +48,42 @@ function setupSpecular({ roughness, ior, intensity, color }) {
 
 function create_fragment(ctx) {
 	let canvas_1;
+	let t;
+	let menu;
+	let current;
+	menu = new Menu({});
 
 	return {
 		c() {
 			canvas_1 = element("canvas");
+			t = space();
+			create_component(menu.$$.fragment);
 		},
 		m(target, anchor) {
 			insert(target, canvas_1, anchor);
 			/*canvas_1_binding*/ ctx[1](canvas_1);
+			insert(target, t, anchor);
+			mount_component(menu, target, anchor);
+			current = true;
 		},
 		p: noop,
-		i: noop,
-		o: noop,
+		i(local) {
+			if (current) return;
+			transition_in(menu.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(menu.$$.fragment, local);
+			current = false;
+		},
 		d(detaching) {
 			if (detaching) {
 				detach(canvas_1);
+				detach(t);
 			}
 
 			/*canvas_1_binding*/ ctx[1](null);
+			destroy_component(menu, detaching);
 		}
 	};
 }

@@ -73,6 +73,54 @@ function set_store_value(store, ret, value) {
 /**
  * @param {Node} target
  * @param {Node} node
+ * @returns {void}
+ */
+function append(target, node) {
+	target.appendChild(node);
+}
+
+/**
+ * @param {Node} target
+ * @param {string} style_sheet_id
+ * @param {string} styles
+ * @returns {void}
+ */
+function append_styles(target, style_sheet_id, styles) {
+	const append_styles_to = get_root_for_style(target);
+	if (!append_styles_to.getElementById(style_sheet_id)) {
+		const style = element('style');
+		style.id = style_sheet_id;
+		style.textContent = styles;
+		append_stylesheet(append_styles_to, style);
+	}
+}
+
+/**
+ * @param {Node} node
+ * @returns {ShadowRoot | Document}
+ */
+function get_root_for_style(node) {
+	if (!node) return document;
+	const root = node.getRootNode ? node.getRootNode() : node.ownerDocument;
+	if (root && /** @type {ShadowRoot} */ (root).host) {
+		return /** @type {ShadowRoot} */ (root);
+	}
+	return node.ownerDocument;
+}
+
+/**
+ * @param {ShadowRoot | Document} node
+ * @param {HTMLStyleElement} style
+ * @returns {CSSStyleSheet}
+ */
+function append_stylesheet(node, style) {
+	append(/** @type {Document} */ (node).head || node, style);
+	return style.sheet;
+}
+
+/**
+ * @param {Node} target
+ * @param {Node} node
  * @param {Node} [anchor]
  * @returns {void}
  */
@@ -91,6 +139,14 @@ function detach(node) {
 }
 
 /**
+ * @returns {void} */
+function destroy_each(iterations, detaching) {
+	for (let i = 0; i < iterations.length; i += 1) {
+		if (iterations[i]) iterations[i].d(detaching);
+	}
+}
+
+/**
  * @template {keyof HTMLElementTagNameMap} K
  * @param {K} name
  * @returns {HTMLElementTagNameMap[K]}
@@ -100,11 +156,61 @@ function element(name) {
 }
 
 /**
+ * @param {string} data
+ * @returns {Text}
+ */
+function text(data) {
+	return document.createTextNode(data);
+}
+
+/**
+ * @returns {Text} */
+function space() {
+	return text(' ');
+}
+
+/**
+ * @returns {Text} */
+function empty() {
+	return text('');
+}
+
+/**
+ * @param {EventTarget} node
+ * @param {string} event
+ * @param {EventListenerOrEventListenerObject} handler
+ * @param {boolean | AddEventListenerOptions | EventListenerOptions} [options]
+ * @returns {() => void}
+ */
+function listen(node, event, handler, options) {
+	node.addEventListener(event, handler, options);
+	return () => node.removeEventListener(event, handler, options);
+}
+
+/**
+ * @param {Element} node
+ * @param {string} attribute
+ * @param {string} [value]
+ * @returns {void}
+ */
+function attr(node, attribute, value) {
+	if (value == null) node.removeAttribute(attribute);
+	else if (node.getAttribute(attribute) !== value) node.setAttribute(attribute, value);
+}
+
+/**
  * @param {Element} element
  * @returns {ChildNode[]}
  */
 function children(element) {
 	return Array.from(element.childNodes);
+}
+
+/**
+ * @returns {void} */
+function toggle_class(element, name, toggle) {
+	// The `!!` is required because an `undefined` flag means flipping the current state.
+	element.classList.toggle(name, !!toggle);
 }
 
 /**
@@ -283,6 +389,11 @@ function flush_render_callbacks(fns) {
 const outroing = new Set();
 
 /**
+ * @type {Outro}
+ */
+let outros;
+
+/**
  * @param {import('./private.js').Fragment} block
  * @param {0 | 1} [local]
  * @returns {void}
@@ -291,6 +402,24 @@ function transition_in(block, local) {
 	if (block && block.i) {
 		outroing.delete(block);
 		block.i(local);
+	}
+}
+
+/**
+ * @param {import('./private.js').Fragment} block
+ * @param {0 | 1} local
+ * @param {0 | 1} [detach]
+ * @param {() => void} [callback]
+ * @returns {void}
+ */
+function transition_out(block, local, detach, callback) {
+	if (block && block.o) {
+		if (outroing.has(block)) return;
+		outroing.add(block);
+		outros.c.push(() => {
+			outroing.delete(block);
+		});
+		block.o(local);
 	}
 }
 
@@ -323,6 +452,19 @@ function transition_in(block, local) {
  * @property {number} end
  * @property {Outro} [group]
  */
+
+// general each functions:
+
+function ensure_array_like(array_like_or_iterator) {
+	return array_like_or_iterator?.length !== undefined
+		? array_like_or_iterator
+		: Array.from(array_like_or_iterator);
+}
+
+/** @returns {void} */
+function create_component(block) {
+	block && block.c();
+}
 
 /** @returns {void} */
 function mount_component(component, target, anchor) {
@@ -1684,9 +1826,9 @@ function setupMeshColor({ diffuse, metalness, opacity }) {
 			return;
 		}
 		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
-		if(metalness == null) {
+		if (metalness == null) {
 			console.log("metalness is null, material won't display correctly");
-		}	
+		}
 		const metalnessLocation = gl.getUniformLocation(program, "metalness");
 		gl.uniform1f(metalnessLocation, metalness);
 		const opacityLocation = gl.getUniformLocation(program, "opacity");
@@ -3556,4 +3698,217 @@ function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
 	};
 }
 
-export { drawModes as A, cross as B, subtract as C, normalize as D, rotateY as E, appContext as F, getTranslation as G, orthoNO as H, lookAt as I, linkProgram as J, validateProgram as K, useProgram as L, selectProgram as M, multiply as N, fromRotationTranslationScale as O, templateLiteralRenderer as P, generateUVs as Q, SvelteComponent as S, insert as a, scene as b, component_subscribe as c, detach as d, element as e, camera as f, renderPasses as g, rotateZ as h, init as i, scale as j, translate as k, identity as l, set_store_value as m, noop as n, onMount as o, skyblue as p, createPolyhedron as q, renderer as r, safe_not_equal as s, transformMat4 as t, createLightStore as u, createPointLight as v, createTexture as w, createOrbitControls as x, binding_callbacks as y, createSmoothShadedNormals as z };
+/* src\Menu.svelte generated by Svelte v4.2.18 */
+
+function add_css(target) {
+	append_styles(target, "svelte-7mcxv8", "button.svelte-7mcxv8.svelte-7mcxv8{position:relative;font-family:Arial;font-size:20px;padding:10px}ul.svelte-7mcxv8.svelte-7mcxv8{position:relative;display:none;font-family:Arial;font-size:20px}li.svelte-7mcxv8.svelte-7mcxv8{padding:10px;background-color:white;width:fit-content}li.svelte-7mcxv8 a.svelte-7mcxv8{text-decoration:none;color:black}.menuOpened.svelte-7mcxv8.svelte-7mcxv8{display:block}.current.svelte-7mcxv8.svelte-7mcxv8{color:red}");
+}
+
+function get_each_context(ctx, list, i) {
+	const child_ctx = ctx.slice();
+	child_ctx[3] = list[i];
+	return child_ctx;
+}
+
+// (18:8) {:else}
+function create_else_block(ctx) {
+	let li;
+	let a;
+	let t_value = /*link*/ ctx[3].name + "";
+	let t;
+
+	return {
+		c() {
+			li = element("li");
+			a = element("a");
+			t = text(t_value);
+			attr(a, "href", /*link*/ ctx[3].href);
+			attr(a, "class", "svelte-7mcxv8");
+			attr(li, "class", "svelte-7mcxv8");
+		},
+		m(target, anchor) {
+			insert(target, li, anchor);
+			append(li, a);
+			append(a, t);
+		},
+		p: noop,
+		d(detaching) {
+			if (detaching) {
+				detach(li);
+			}
+		}
+	};
+}
+
+// (16:8) {#if window.location.pathname===link.href}
+function create_if_block(ctx) {
+	let li;
+
+	return {
+		c() {
+			li = element("li");
+			li.textContent = `${/*link*/ ctx[3].name}`;
+			attr(li, "class", "current svelte-7mcxv8");
+		},
+		m(target, anchor) {
+			insert(target, li, anchor);
+		},
+		p: noop,
+		d(detaching) {
+			if (detaching) {
+				detach(li);
+			}
+		}
+	};
+}
+
+// (15:4) {#each links as link}
+function create_each_block(ctx) {
+	let if_block_anchor;
+
+	function select_block_type(ctx, dirty) {
+		if (window.location.pathname === /*link*/ ctx[3].href) return create_if_block;
+		return create_else_block;
+	}
+
+	let current_block_type = select_block_type(ctx);
+	let if_block = current_block_type(ctx);
+
+	return {
+		c() {
+			if_block.c();
+			if_block_anchor = empty();
+		},
+		m(target, anchor) {
+			if_block.m(target, anchor);
+			insert(target, if_block_anchor, anchor);
+		},
+		p(ctx, dirty) {
+			if_block.p(ctx, dirty);
+		},
+		d(detaching) {
+			if (detaching) {
+				detach(if_block_anchor);
+			}
+
+			if_block.d(detaching);
+		}
+	};
+}
+
+function create_fragment(ctx) {
+	let button;
+	let t1;
+	let ul;
+	let mounted;
+	let dispose;
+	let each_value = ensure_array_like(/*links*/ ctx[2]);
+	let each_blocks = [];
+
+	for (let i = 0; i < each_value.length; i += 1) {
+		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+	}
+
+	return {
+		c() {
+			button = element("button");
+			button.textContent = "examples";
+			t1 = space();
+			ul = element("ul");
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				each_blocks[i].c();
+			}
+
+			attr(button, "class", "svelte-7mcxv8");
+			attr(ul, "class", "svelte-7mcxv8");
+			toggle_class(ul, "menuOpened", /*menuOpened*/ ctx[0]);
+		},
+		m(target, anchor) {
+			insert(target, button, anchor);
+			insert(target, t1, anchor);
+			insert(target, ul, anchor);
+
+			for (let i = 0; i < each_blocks.length; i += 1) {
+				if (each_blocks[i]) {
+					each_blocks[i].m(ul, null);
+				}
+			}
+
+			if (!mounted) {
+				dispose = listen(button, "click", /*toggleMenu*/ ctx[1]);
+				mounted = true;
+			}
+		},
+		p(ctx, [dirty]) {
+			if (dirty & /*links, window*/ 4) {
+				each_value = ensure_array_like(/*links*/ ctx[2]);
+				let i;
+
+				for (i = 0; i < each_value.length; i += 1) {
+					const child_ctx = get_each_context(ctx, each_value, i);
+
+					if (each_blocks[i]) {
+						each_blocks[i].p(child_ctx, dirty);
+					} else {
+						each_blocks[i] = create_each_block(child_ctx);
+						each_blocks[i].c();
+						each_blocks[i].m(ul, null);
+					}
+				}
+
+				for (; i < each_blocks.length; i += 1) {
+					each_blocks[i].d(1);
+				}
+
+				each_blocks.length = each_value.length;
+			}
+
+			if (dirty & /*menuOpened*/ 1) {
+				toggle_class(ul, "menuOpened", /*menuOpened*/ ctx[0]);
+			}
+		},
+		i: noop,
+		o: noop,
+		d(detaching) {
+			if (detaching) {
+				detach(button);
+				detach(t1);
+				detach(ul);
+			}
+
+			destroy_each(each_blocks, detaching);
+			mounted = false;
+			dispose();
+		}
+	};
+}
+
+function instance($$self, $$props, $$invalidate) {
+	let menuOpened = false;
+
+	function toggleMenu() {
+		console.log("toggleMenu", menuOpened);
+		$$invalidate(0, menuOpened = !menuOpened);
+	}
+
+	const links = [
+		{
+			name: "Normal map and specular",
+			href: "/golf-ball"
+		},
+		{ name: "GLTF loader", href: "/" },
+		{ name: "Obj loader", href: "/venus" }
+	];
+
+	return [menuOpened, toggleMenu, links];
+}
+
+class Menu extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance, create_fragment, safe_not_equal, {}, add_css);
+	}
+}
+
+export { createLightStore as A, createPointLight as B, createTexture as C, createOrbitControls as D, binding_callbacks as E, createSmoothShadedNormals as F, drawModes as G, cross as H, subtract as I, normalize as J, rotateY as K, appContext as L, Menu as M, getTranslation as N, orthoNO as O, lookAt as P, linkProgram as Q, validateProgram as R, SvelteComponent as S, useProgram as T, selectProgram as U, multiply as V, fromRotationTranslationScale as W, templateLiteralRenderer as X, generateUVs as Y, space as a, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, camera as k, renderPasses as l, mount_component as m, noop as n, onMount as o, transformMat4 as p, rotateZ as q, renderer as r, safe_not_equal as s, transition_in as t, scale as u, translate as v, identity as w, set_store_value as x, skyblue as y, createPolyhedron as z };

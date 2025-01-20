@@ -284,9 +284,9 @@ export function setupMeshColor({ diffuse, metalness, opacity }) {
 			return;
 		}
 		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
-		if(metalness == null) {
+		if (metalness == null) {
 			console.log("metalness is null, material won't display correctly");
-		}	
+		}
 		const metalnessLocation = gl.getUniformLocation(program, "metalness");
 		gl.uniform1f(metalnessLocation, metalness);
 		const opacityLocation = gl.getUniformLocation(program, "opacity");

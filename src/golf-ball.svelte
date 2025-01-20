@@ -17,6 +17,7 @@ import {
 } from "./loaders/gltf-loader.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import { createSpecular } from "./material/specular/specular.js";
+import Menu from "./Menu.svelte";
 
 let canvas;
 let light1;
@@ -144,3 +145,4 @@ function animate() {
 }*/
 </script>
 <canvas bind:this={canvas}></canvas>
+<Menu />

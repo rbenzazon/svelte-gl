@@ -24,13 +24,16 @@ export default {
             /*sourceMap: false*/
             compress: false,
         }),
-        svelte(),
+        svelte({
+            emitCss: false,
+        }),
         resolve({
             browser: true,
             exportConditions: ['svelte'],
             extensions: ['.svelte']
           }),
         commonjs(),
+
         //terser(),
             
     ]

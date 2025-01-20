@@ -1,5 +1,5 @@
-import { A as drawModes, l as identity, B as cross, C as subtract, D as normalize, S as SvelteComponent, i as init, s as safe_not_equal, e as element, a as insert, n as noop, d as detach, c as component_subscribe, o as onMount, r as renderer, b as scene, f as camera, g as renderPasses, t as transformMat4, h as rotateZ, j as scale, k as translate, m as set_store_value, p as skyblue, q as createPolyhedron, u as createLightStore, v as createPointLight, w as createTexture, E as rotateY, x as createOrbitControls, y as binding_callbacks, z as createSmoothShadedNormals } from './texture-C302gKqD.js';
-import { l as loadGLTFFile, t as traverseScene, g as getAbsoluteNodeMatrix, c as createCameraFromGLTF, a as createMeshFromGLTF, b as createContactShadowPass, d as createCube, e as createPlane } from './gltf-loader-DG6nzK4C.js';
+import { G as drawModes, w as identity, H as cross, I as subtract, J as normalize, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, j as scene, k as camera, l as renderPasses, p as transformMat4, q as rotateZ, u as scale, v as translate, x as set_store_value, y as skyblue, z as createPolyhedron, A as createLightStore, B as createPointLight, C as createTexture, K as rotateY, D as createOrbitControls, E as binding_callbacks, F as createSmoothShadedNormals } from './Menu-CH7cVwl1.js';
+import { l as loadGLTFFile, t as traverseScene, g as getAbsoluteNodeMatrix, c as createCameraFromGLTF, a as createMeshFromGLTF, b as createContactShadowPass, d as createCube, e as createPlane } from './gltf-loader-D_JGsHAy.js';
 
 async function loadOBJFile(url) {
 	try {
@@ -95,24 +95,42 @@ async function parseOBJ(content, url) {
 
 function create_fragment(ctx) {
 	let canvas_1;
+	let t;
+	let menu;
+	let current;
+	menu = new Menu({});
 
 	return {
 		c() {
 			canvas_1 = element("canvas");
+			t = space();
+			create_component(menu.$$.fragment);
 		},
 		m(target, anchor) {
 			insert(target, canvas_1, anchor);
 			/*canvas_1_binding*/ ctx[1](canvas_1);
+			insert(target, t, anchor);
+			mount_component(menu, target, anchor);
+			current = true;
 		},
 		p: noop,
-		i: noop,
-		o: noop,
+		i(local) {
+			if (current) return;
+			transition_in(menu.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(menu.$$.fragment, local);
+			current = false;
+		},
 		d(detaching) {
 			if (detaching) {
 				detach(canvas_1);
+				detach(t);
 			}
 
 			/*canvas_1_binding*/ ctx[1](null);
+			destroy_component(menu, detaching);
 		}
 	};
 }

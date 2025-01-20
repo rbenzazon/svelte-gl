@@ -18,6 +18,7 @@ import {
 	traverseScene,
 } from "./loaders/gltf-loader.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
+import Menu from "./Menu.svelte";
 
 let canvas;
 onMount(async () => {
@@ -165,3 +166,4 @@ function animate() {
 }
 </script>
 <canvas bind:this={canvas}></canvas>
+<Menu />
