@@ -1,7 +1,25 @@
 <script type="module">
 import { onMount } from "svelte";
-import { createLightStore, renderer, scene, camera, renderPasses } from "./store/engine-refactor.js";
-import { identity, rotateY, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
+import {
+	createAmbientLight,
+	createBackgroundColor,
+	createLightStore,
+	renderer,
+	scene,
+	camera,
+	renderPasses,
+} from "./store/engine-refactor.js";
+import {
+	getRotation,
+	getScaling,
+	getTranslation,
+	identity,
+	rotateX,
+	rotateY,
+	rotateZ,
+	scale,
+	translate,
+} from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
@@ -10,6 +28,7 @@ import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import { createTexture } from "./texture/texture.js";
 import { createContactShadowPass } from "./store/contact-shadow.js";
+import { getCameraProjectionView } from "./store/gl-refactor.js";
 import {
 	createCameraFromGLTF,
 	createMeshFromGLTF,
@@ -17,6 +36,7 @@ import {
 	loadGLTFFile,
 	traverseScene,
 } from "./loaders/gltf-loader.js";
+import { loadOBJFile } from "./loaders/obj-loader.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 
 let canvas;
@@ -109,6 +129,7 @@ onMount(async () => {
 	const groundMaterial = {
 		diffuse: [1, 1, 1],
 		metalness: 0,
+		//diffuseMap,
 		diffuseMap: groundDiffuseMap,
 		transparent: true,
 	};
@@ -117,10 +138,13 @@ onMount(async () => {
 		metalness: 0,
 		opacity: 0.5,
 	};
-
+	const venus = await loadOBJFile("venus.obj");
+	venus.matrix = rotateY(venus.matrix, venus.matrix, Math.PI);
+	venus.matrix = scale(venus.matrix, venus.matrix, [0.003, 0.003, 0.003]);
+	venus.matrix = translate(venus.matrix, venus.matrix, [0, -450, 0]);
 	$scene = [
 		...$scene,
-		loadedMesh,
+		//loadedMesh,
 		{
 			...sphereMesh,
 			matrix: secondCubePos,
@@ -136,6 +160,7 @@ onMount(async () => {
 			matrix: groundMatrix,
 			material: groundMaterial,
 		},
+		venus,
 		light,
 		light2,
 	];

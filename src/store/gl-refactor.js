@@ -199,6 +199,8 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 		if (material.specular) {
 			specularDeclaration = material.specular.shader({ declaration: true });
 			specularIrradiance = material.specular.shader({ irradiance: true });
+			console.log("specularIrradiance", specularIrradiance);
+			console.log("specularDeclaration", specularDeclaration);
 		}
 		let diffuseMapDeclaration = "";
 		let diffuseMapSample = "";

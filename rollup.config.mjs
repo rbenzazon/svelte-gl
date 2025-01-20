@@ -5,9 +5,14 @@ import glsl from 'rollup-plugin-glsl';
 import commonjs from '@rollup/plugin-commonjs';
 
 export default {
-    input: 'src/main-refactor.svelte',
+    input: {
+        main:'src/main-refactor.svelte',
+        venus:'src/venus.svelte',
+        'golf-ball':'src/golf-ball.svelte',
+    },
     output: {
-        file: 'build/main.svelte.js',
+        dir: 'build/js',
+        entryFileNames: '[name].svelte.js',
         format: 'esm',
     },
     plugins: [
@@ -24,6 +29,6 @@ export default {
             extensions: ['.svelte']
           }),
         commonjs(),
-        //terser(),
+        terser(),
     ]
 };

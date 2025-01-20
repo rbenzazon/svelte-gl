@@ -1,21 +1,26 @@
 <script type="module">
 import { onMount } from "svelte";
-import { renderer } from "./store/engine.js";
-//import { createCube } from "./geometries/cube.js";
-import { identity, rotateX, rotateY, rotateZ, translate, scale } from "gl-matrix/esm/mat4.js";
-import { createPolyhedron, createSmoothShadedNormals, generateUVs } from "./geometries/polyhedron.js";
+import { createLightStore, renderer, scene, camera, renderPasses } from "./store/engine-refactor.js";
+import { identity, rotateY, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
-import { createAGXToneMapping } from "./tone-mapping/agx.js";
-import { createOrbitControls } from "./interactivity/orbit-controls.js";
-import { /*createFlatShadedNormals,*/ distributeCirclePoints, toRadian } from "./geometries/common.js";
-import { createSpecular } from "./material/specular/specular.js";
 import { skyblue } from "./color/color-keywords.js";
+import { createPolyhedron, createSmoothShadedNormals, generateUVs } from "./geometries/polyhedron.js";
+import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import { createTexture } from "./texture/texture.js";
+import { createContactShadowPass } from "./store/contact-shadow.js";
+import {
+	createCameraFromGLTF,
+	createMeshFromGLTF,
+	getAbsoluteNodeMatrix,
+	loadGLTFFile,
+	traverseScene,
+} from "./loaders/gltf-loader.js";
+import { transformMat4 } from "gl-matrix/esm/vec3.js";
+import { createSpecular } from "./material/specular/specular.js";
 
 let canvas;
 let light1;
 let mesh1;
-let camera;
 let once = false;
 const numInstances = 20;
 const radius = 1;
@@ -26,18 +31,25 @@ onMount(async () => {
 		normalScale: [1, 1],
 		type: "normal",
 	});
-	renderer.setCanvas(canvas);
+	$renderer = {
+		...$renderer,
+		canvas,
+		backgroundColor: skyblue,
+		ambientLightColor: [0xffffff, 0.1],
+	};
 
-	renderer.setBackgroundColor(skyblue);
-	renderer.setAmbientLight(0xffffff, 0.5);
-	camera = renderer.setCamera([0, 0, -2], [0, 0, 0], 70);
+	$camera = {
+		position: [0, 5, -5],
+		target: [0, 0, 0],
+		fov: 75,
+	};
 
 	const sphereMesh = createPolyhedron(1.5, 7, createSmoothShadedNormals);
 	sphereMesh.attributes.uvs = generateUVs(sphereMesh.attributes);
 
 	let identityMatrix = new Array(16).fill(0);
 	identity(identityMatrix);
-	let matrices = new Array(numInstances).fill(0).map((_, index) => {
+	/*let matrices = new Array(numInstances).fill(0).map((_, index) => {
 		const count = index - Math.floor(numInstances / 2);
 		let mat = [...identityMatrix];
 		//transform the model matrix
@@ -50,81 +62,75 @@ onMount(async () => {
 		//rotateY(mat, mat, toRadian(count * 10));
 		scale(mat, mat, [scaleFactor, scaleFactor, scaleFactor]);
 		return new Float32Array(mat);
-	});
+	});*/
 
-	mesh1 = renderer.addMesh({
-		...sphereMesh,
-		instances: numInstances,
-		matrices,
-		material: {
-			diffuse: [1, 0.5, 0.5],
-			specular: createSpecular({
-				roughness: 0.12,
-				ior: 1,
-				intensity: 2,
-				color: [1, 1, 1],
-			}),
-			normalMap,
+	const light = createLightStore(
+		createPointLight({
+			position: [-2, 3, -3],
+			color: [1, 1, 1],
+			intensity: 20,
+			cutoffDistance: 0,
+			decayExponent: 2,
+		}),
+	);
+	const light2 = createLightStore(
+		createPointLight({
+			position: [2, -1, -1],
+			color: [1, 1, 1],
+			intensity: 20,
+			cutoffDistance: 0,
+			decayExponent: 2,
+		}),
+	);
+
+	$scene = [
+		...$scene,
+		{
+			...sphereMesh,
+			matrix: identityMatrix,
+			material: {
+				diffuse: [1, 0.5, 0.5],
+				metalness: 0,
+				specular: createSpecular({
+					roughness: 0.12,
+					ior: 1,
+					intensity: 2,
+					color: [1, 1, 1],
+				}),
+				normalMap,
+			},
 		},
-	});
+		light,
+		light2,
+	];
 
-	light1 = renderer.addLight(
-		createPointLight({
-			position: [-2, 2, -4],
-			color: [1, 1, 1],
-			intensity: 1,
-			cutoffDistance: 3,
-			decayExponent: 1,
-		}),
-	);
-	renderer.addLight(
-		createPointLight({
-			position: [1, 1, -2],
-			color: [1, 1, 1],
-			intensity: 2,
-			cutoffDistance: 4,
-			decayExponent: 2,
-		}),
-	);
-	renderer.addLight(
-		createPointLight({
-			position: [-1, 1, -2],
-			color: [1, 1, 1],
-			intensity: 2,
-			cutoffDistance: 4,
-			decayExponent: 2,
-		}),
-	);
+	$renderer = {
+		...$renderer,
+		loop: animate,
+		enabled: true,
+	};
 
-	renderer.addLight(
-		createPointLight({
-			position: [0, 0, -5],
-			color: [1, 1, 1],
-			intensity: 3,
-			cutoffDistance: 10,
-			decayExponent: 2,
-		}),
-	);
-	renderer.addToneMapping(
-		createAGXToneMapping({
-			exposure: 1,
-		}),
-	);
-
-	renderer.setLoop(animate);
-	renderer.start();
 	createOrbitControls(canvas, camera);
 });
 
 function animate() {
-	/*const rotation = 0.001 * Math.PI;
+	const time = performance.now() / 1000;
+	const zpos = Math.sin(time) * 2 - 5;
+	/*$camera = {
+		position: [0, 5, -zpos],
+	};*/
+	//console.log("animate", $camera.position);
+}
+/*
+function animate() {
+	const rotation = 0.001 * Math.PI;
 	for (let i = 0; i < numInstances; i++) {
 		const tmp = get(mesh1.matrices[i]);
 		rotateY(tmp, tmp, rotation / 2);
 		rotateX(tmp, tmp, rotation);
 		rotateZ(tmp, tmp, rotation / 3);
 		mesh1.matrices[i].set(tmp);
-	}*/
+	}
 
 	const lightX = Math.sin(performance.now() / 2000) * 0.5;
 	const lightY = Math.cos(performance.now() / 2000) * 0.5;
@@ -135,6 +141,6 @@ function animate() {
 		position: [lightX, lightY, -0.4],
 		color: [r, g, b],
 	});
-}
+}*/
 </script>
 <canvas bind:this={canvas}></canvas>

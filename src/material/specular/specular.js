@@ -1,7 +1,7 @@
 import specularShader from "./specular.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
 import { get } from "svelte/store";
-import { appContext } from "../store/engine-refactor.js";
+import { appContext } from "../../store/engine-refactor.js";
 
 //{ roughness = 0, ior = 1.5, intensity = 1, color = [1, 1, 1] } =
 /**
