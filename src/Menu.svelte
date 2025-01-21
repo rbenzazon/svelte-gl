@@ -10,6 +10,7 @@ const links = [
 	{ name: "Obj loader", href: "/venus" },
 	{ name: "Cube", href: "/cube" },
 	{ name: "GLTF", href: "/gltf" },
+	{ name: "Contact Shadow", href: "/contact-shadow" },
 ];
 </script>
 <button on:click={toggleMenu}>examples</button>

@@ -3192,7 +3192,7 @@ function get_each_context(ctx, list, i) {
 	return child_ctx;
 }
 
-// (20:8) {:else}
+// (21:8) {:else}
 function create_else_block(ctx) {
 	let li;
 	let a;
@@ -3222,7 +3222,7 @@ function create_else_block(ctx) {
 	};
 }
 
-// (18:8) {#if window.location.pathname===link.href}
+// (19:8) {#if window.location.pathname===link.href}
 function create_if_block(ctx) {
 	let li;
 
@@ -3244,7 +3244,7 @@ function create_if_block(ctx) {
 	};
 }
 
-// (17:4) {#each links as link}
+// (18:4) {#each links as link}
 function create_each_block(ctx) {
 	let if_block_anchor;
 
@@ -3382,7 +3382,11 @@ function instance($$self, $$props, $$invalidate) {
 		{ name: "GLTF loader", href: "/" },
 		{ name: "Obj loader", href: "/venus" },
 		{ name: "Cube", href: "/cube" },
-		{ name: "GLTF", href: "/gltf" }
+		{ name: "GLTF", href: "/gltf" },
+		{
+			name: "Contact Shadow",
+			href: "/contact-shadow"
+		}
 	];
 
 	return [menuOpened, toggleMenu, links];
@@ -3395,4 +3399,4 @@ class Menu extends SvelteComponent {
 	}
 }
 
-export { createPointLight as A, createOrbitControls as B, binding_callbacks as C, drawModes as D, cross as E, subtract as F, normalize as G, rotateY as H, appContext as I, getTranslation as J, orthoNO as K, lookAt as L, Menu as M, linkProgram as N, validateProgram as O, useProgram as P, selectProgram as Q, templateLiteralRenderer as R, SvelteComponent as S, ARRAY_TYPE as T, createVec3 as U, lerp as V, multiplyScalarVec3 as W, normalizeNormals as X, multiply as Y, fromRotationTranslationScale as Z, space as a, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, camera as k, renderPasses as l, mount_component as m, noop as n, onMount as o, transformMat4 as p, rotateZ as q, renderer as r, safe_not_equal as s, transition_in as t, scale as u, translate as v, identity as w, set_store_value as x, skyblue as y, createLightStore as z };
+export { createPointLight as A, createOrbitControls as B, binding_callbacks as C, drawModes as D, cross as E, subtract as F, normalize as G, rotateY as H, templateLiteralRenderer as I, appContext as J, getTranslation as K, orthoNO as L, Menu as M, lookAt as N, linkProgram as O, validateProgram as P, useProgram as Q, selectProgram as R, SvelteComponent as S, ARRAY_TYPE as T, createVec3 as U, lerp as V, multiplyScalarVec3 as W, normalizeNormals as X, multiply as Y, fromRotationTranslationScale as Z, space as a, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, camera as k, renderPasses as l, mount_component as m, noop as n, onMount as o, transformMat4 as p, rotateZ as q, renderer as r, safe_not_equal as s, transition_in as t, scale as u, translate as v, identity as w, set_store_value as x, skyblue as y, createLightStore as z };

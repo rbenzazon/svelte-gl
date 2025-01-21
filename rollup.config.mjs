@@ -12,6 +12,7 @@ export default {
         'golf-ball':'src/golf-ball.svelte',
         cube:'src/cube.svelte',
         gltf:'src/gltf.svelte',
+        'contact-shadow':'src/contact-shadow.svelte',
     },
     output: {
         dir: 'build/js',

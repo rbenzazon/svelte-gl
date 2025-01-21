@@ -1,4 +1,4 @@
-import { D as drawModes } from './Menu-CYbrznUt.js';
+import { D as drawModes } from './Menu-DoYCXcTV.js';
 
 function createCube() {
 	return {
