@@ -8,6 +8,8 @@ const links = [
 	{ name: "Normal map and specular", href: "/golf-ball" },
 	{ name: "GLTF loader", href: "/" },
 	{ name: "Obj loader", href: "/venus" },
+	{ name: "Cube", href: "/cube" },
+	{ name: "GLTF", href: "/gltf" },
 ];
 </script>
 <button on:click={toggleMenu}>examples</button>

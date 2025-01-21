@@ -1,5 +1,8 @@
-import { G as drawModes, w as identity, H as cross, I as subtract, J as normalize, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, j as scene, k as camera, l as renderPasses, p as transformMat4, q as rotateZ, u as scale, v as translate, x as set_store_value, y as skyblue, z as createPolyhedron, A as createLightStore, B as createPointLight, C as createTexture, K as rotateY, D as createOrbitControls, E as binding_callbacks, F as createSmoothShadedNormals } from './Menu-CH7cVwl1.js';
-import { l as loadGLTFFile, t as traverseScene, g as getAbsoluteNodeMatrix, c as createCameraFromGLTF, a as createMeshFromGLTF, b as createContactShadowPass, d as createCube, e as createPlane } from './gltf-loader-D_JGsHAy.js';
+import { D as drawModes, w as identity, E as cross, F as subtract, G as normalize, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, j as scene, k as camera, l as renderPasses, p as transformMat4, q as rotateZ, u as scale, v as translate, x as set_store_value, y as skyblue, z as createLightStore, A as createPointLight, H as rotateY, B as createOrbitControls, C as binding_callbacks } from './Menu-CYbrznUt.js';
+import { c as createPolyhedron, a as createTexture, b as createSmoothShadedNormals } from './texture-16dUnVqp.js';
+import { c as createCube } from './cube-lfOikb9K.js';
+import { c as createContactShadowPass, a as createPlane } from './contact-shadow-D1U1DqAH.js';
+import { l as loadGLTFFile, t as traverseScene, g as getAbsoluteNodeMatrix, c as createCameraFromGLTF, a as createMeshFromGLTF } from './gltf-loader-BXOf5dqG.js';
 
 async function loadOBJFile(url) {
 	try {

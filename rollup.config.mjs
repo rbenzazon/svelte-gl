@@ -10,6 +10,8 @@ export default {
         main:'src/main-refactor.svelte',
         venus:'src/venus.svelte',
         'golf-ball':'src/golf-ball.svelte',
+        cube:'src/cube.svelte',
+        gltf:'src/gltf.svelte',
     },
     output: {
         dir: 'build/js',
