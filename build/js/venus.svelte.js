@@ -1,8 +1,6 @@
-import { D as drawModes, w as identity, E as cross, F as subtract, G as normalize, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, j as scene, k as camera, l as renderPasses, p as transformMat4, q as rotateZ, u as scale, v as translate, x as set_store_value, y as skyblue, z as createLightStore, A as createPointLight, H as rotateY, B as createOrbitControls, C as binding_callbacks } from './Menu-DoYCXcTV.js';
-import { c as createPolyhedron, a as createTexture, b as createSmoothShadedNormals } from './texture-BOsoKRNz.js';
-import { c as createCube } from './cube-CINuEix-.js';
+import { D as drawModes, w as identity, E as cross, F as subtract, G as normalize, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, j as scene, k as camera, l as renderPasses, v as translate, x as set_store_value, y as skyblue, z as createLightStore, A as createPointLight, u as scale, H as rotateY, B as createOrbitControls, C as binding_callbacks } from './Menu-DoYCXcTV.js';
 import { c as createContactShadowPass, a as createPlane } from './contact-shadow-zwk_xbUC.js';
-import { l as loadGLTFFile, t as traverseScene, g as getAbsoluteNodeMatrix, c as createCameraFromGLTF, a as createMeshFromGLTF } from './gltf-loader-DmdwT1be.js';
+import { c as createTexture } from './texture-Dkh8WrsI.js';
 
 async function loadOBJFile(url) {
 	try {
@@ -139,10 +137,8 @@ function create_fragment(ctx) {
 }
 
 function animate() {
-	performance.now() / 1000;
-} /*$camera = {
-	position: [0, 5, -zpos],
-};*/ //console.log("animate", $camera.position);
+	
+} // animate here
 
 function instance($$self, $$props, $$invalidate) {
 	let $renderer;
@@ -156,28 +152,6 @@ function instance($$self, $$props, $$invalidate) {
 	let canvas;
 
 	onMount(async () => {
-		const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf", "models/v2/md-blend6-mdlvw.bin");
-		let meshObject;
-		let cameraGLTF;
-
-		traverseScene(file.scene, o => {
-			if (o.position != null) {
-				meshObject = o;
-			} else if (o.camera != null) {
-				cameraGLTF = o;
-			}
-		});
-
-		const cameraAbsoluteMatrix = getAbsoluteNodeMatrix(cameraGLTF);
-		const cameraFromFile = createCameraFromGLTF(cameraGLTF);
-		transformMat4(cameraFromFile.position, cameraFromFile.position, cameraAbsoluteMatrix);
-		const meshAbsoluteMatrix = getAbsoluteNodeMatrix(meshObject);
-		rotateZ(meshAbsoluteMatrix, meshAbsoluteMatrix, Math.PI);
-		scale(meshAbsoluteMatrix, meshAbsoluteMatrix, [200, 200, 200]);
-		translate(meshAbsoluteMatrix, meshAbsoluteMatrix, [0, 0, -500]);
-		meshObject.matrix = meshAbsoluteMatrix;
-		const loadedMesh = createMeshFromGLTF(file, meshObject);
-		loadedMesh.matrix = meshAbsoluteMatrix;
 		const groundMatrix = identity(new Float32Array(16));
 		translate(groundMatrix, groundMatrix, [0, -1.5, 0]);
 
@@ -202,12 +176,9 @@ function instance($$self, $$props, $$invalidate) {
 				position: [0, 5, -5],
 				target: [0, 2, 0],
 				fov: 75
-			}, //...cameraFromFile
+			},
 			$camera
 		);
-
-		createCube();
-		const sphereMesh = createPolyhedron(1, 5, createSmoothShadedNormals);
 
 		const light = createLightStore(createPointLight({
 			position: [-2, 3, -3],
@@ -235,23 +206,11 @@ function instance($$self, $$props, $$invalidate) {
 			type: "diffuse"
 		});
 
-		await createTexture({
-			url: "transparent-texture.png",
-			type: "diffuse"
-		});
-
 		const groundMaterial = {
 			diffuse: [1, 1, 1],
 			metalness: 0,
-			//diffuseMap,
 			diffuseMap: groundDiffuseMap,
 			transparent: true
-		};
-
-		const transparentMaterial = {
-			diffuse: [1, 1, 0.5],
-			metalness: 0,
-			opacity: 0.5
 		};
 
 		const venus = await loadOBJFile("venus.obj");
@@ -263,17 +222,6 @@ function instance($$self, $$props, $$invalidate) {
 			scene,
 			$scene = [
 				...$scene,
-				//loadedMesh,
-				{
-					...sphereMesh,
-					matrix: secondCubePos,
-					material: transparentMaterial
-				},
-				/*{
-	...cubeMesh,
-	matrix: secondCubePos,
-	material: sameMaterial,
-},*/
 				{
 					...groundMesh,
 					matrix: groundMatrix,
@@ -297,11 +245,7 @@ function instance($$self, $$props, $$invalidate) {
 		);
 
 		createOrbitControls(canvas, camera);
-	}); /*setTimeout(() => {
-	$camera = {
-		position: [0, 5, -4],
-	};
-}, 1000);*/
+	});
 
 	function canvas_1_binding($$value) {
 		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
