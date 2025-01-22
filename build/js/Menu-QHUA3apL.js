@@ -2969,6 +2969,40 @@ function normalizeNormals(normals) {
 	}
 }
 
+function createFlatShadedNormals(positions) {
+	const normals = [];
+	for (let i = 0; i < positions.length; i += 9) {
+		const a = createVec3();
+		const b = createVec3();
+		const c = createVec3();
+
+		a[0] = positions[i];
+		a[1] = positions[i + 1];
+		a[2] = positions[i + 2];
+
+		b[0] = positions[i + 3];
+		b[1] = positions[i + 4];
+		b[2] = positions[i + 5];
+
+		c[0] = positions[i + 6];
+		c[1] = positions[i + 7];
+		c[2] = positions[i + 8];
+
+		const cb = createVec3();
+		subtract(cb, c, b);
+
+		const ab = createVec3();
+		subtract(ab, a, b);
+
+		const normal = createVec3();
+		cross(normal, cb, ab);
+		normalize(normal, normal);
+		// todo, replace with
+		normals.push(...normal, ...normal, ...normal);
+	}
+	return normals;
+}
+
 const createPointLight = (props) => {
 	return {
 		type: "point",
@@ -3192,7 +3226,7 @@ function get_each_context(ctx, list, i) {
 	return child_ctx;
 }
 
-// (21:8) {:else}
+// (22:8) {:else}
 function create_else_block(ctx) {
 	let li;
 	let a;
@@ -3222,7 +3256,7 @@ function create_else_block(ctx) {
 	};
 }
 
-// (19:8) {#if window.location.pathname===link.href}
+// (20:8) {#if window.location.pathname===link.href.substring(1)}
 function create_if_block(ctx) {
 	let li;
 
@@ -3244,12 +3278,12 @@ function create_if_block(ctx) {
 	};
 }
 
-// (18:4) {#each links as link}
+// (19:4) {#each links as link}
 function create_each_block(ctx) {
 	let if_block_anchor;
 
 	function select_block_type(ctx, dirty) {
-		if (window.location.pathname === /*link*/ ctx[3].href) return create_if_block;
+		if (window.location.pathname === /*link*/ ctx[3].href.substring(1)) return create_if_block;
 		return create_else_block;
 	}
 
@@ -3377,15 +3411,19 @@ function instance($$self, $$props, $$invalidate) {
 	const links = [
 		{
 			name: "Normal map and specular",
-			href: "/golf-ball"
+			href: "./golf-ball"
 		},
-		{ name: "GLTF loader", href: "/" },
-		{ name: "Obj loader", href: "/venus" },
-		{ name: "Cube", href: "/cube" },
-		{ name: "GLTF", href: "/gltf" },
+		{ name: "GLTF loader", href: "./" },
+		{ name: "Obj loader", href: "./venus" },
+		{ name: "Cube", href: "./cube" },
+		{ name: "GLTF", href: "./gltf" },
 		{
 			name: "Contact Shadow",
-			href: "/contact-shadow"
+			href: "./contact-shadow"
+		},
+		{
+			name: "Transparency",
+			href: "./transparency"
 		}
 	];
 
@@ -3399,4 +3437,4 @@ class Menu extends SvelteComponent {
 	}
 }
 
-export { createPointLight as A, createOrbitControls as B, binding_callbacks as C, drawModes as D, cross as E, subtract as F, normalize as G, rotateY as H, templateLiteralRenderer as I, appContext as J, getTranslation as K, orthoNO as L, Menu as M, lookAt as N, linkProgram as O, validateProgram as P, useProgram as Q, selectProgram as R, SvelteComponent as S, ARRAY_TYPE as T, createVec3 as U, lerp as V, multiplyScalarVec3 as W, normalizeNormals as X, multiply as Y, fromRotationTranslationScale as Z, space as a, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, camera as k, renderPasses as l, mount_component as m, noop as n, onMount as o, transformMat4 as p, rotateZ as q, renderer as r, safe_not_equal as s, transition_in as t, scale as u, translate as v, identity as w, set_store_value as x, skyblue as y, createLightStore as z };
+export { createPointLight as A, createOrbitControls as B, binding_callbacks as C, drawModes as D, cross as E, subtract as F, normalize as G, rotateY as H, templateLiteralRenderer as I, appContext as J, getTranslation as K, orthoNO as L, Menu as M, lookAt as N, linkProgram as O, validateProgram as P, useProgram as Q, selectProgram as R, SvelteComponent as S, multiply as T, fromRotationTranslationScale as U, createFlatShadedNormals as V, ARRAY_TYPE as W, createVec3 as X, lerp as Y, multiplyScalarVec3 as Z, normalizeNormals as _, space as a, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, camera as k, renderPasses as l, mount_component as m, noop as n, onMount as o, transformMat4 as p, rotateZ as q, renderer as r, safe_not_equal as s, transition_in as t, scale as u, translate as v, identity as w, set_store_value as x, skyblue as y, createLightStore as z };

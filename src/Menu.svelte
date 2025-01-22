@@ -5,18 +5,19 @@ function toggleMenu() {
 	menuOpened = !menuOpened;
 }
 const links = [
-	{ name: "Normal map and specular", href: "/golf-ball" },
-	{ name: "GLTF loader", href: "/" },
-	{ name: "Obj loader", href: "/venus" },
-	{ name: "Cube", href: "/cube" },
-	{ name: "GLTF", href: "/gltf" },
-	{ name: "Contact Shadow", href: "/contact-shadow" },
+	{ name: "Normal map and specular", href: "./golf-ball" },
+	{ name: "GLTF loader", href: "./" },
+	{ name: "Obj loader", href: "./venus" },
+	{ name: "Cube", href: "./cube" },
+	{ name: "GLTF", href: "./gltf" },
+	{ name: "Contact Shadow", href: "./contact-shadow" },
+	{ name: "Transparency", href: "./transparency" },
 ];
 </script>
 <button on:click={toggleMenu}>examples</button>
 <ul class:menuOpened>
     {#each links as link}
-        {#if window.location.pathname===link.href}
+        {#if window.location.pathname===link.href.substring(1)}
             <li class="current">{link.name}</li>
         {:else}
             <li><a href={link.href} >{link.name}</a></li>

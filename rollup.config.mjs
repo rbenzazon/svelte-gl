@@ -13,6 +13,7 @@ export default {
         cube:'src/cube.svelte',
         gltf:'src/gltf.svelte',
         'contact-shadow':'src/contact-shadow.svelte',
+        'transparency':'src/transparency.svelte',
     },
     output: {
         dir: 'build/js',
