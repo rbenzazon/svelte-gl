@@ -1568,15 +1568,15 @@ function SRGBToLinear(c, index) {
 // Uniform Buffer Objects, must have unique binding points
 const UBO_BINDING_POINT_POINTLIGHT = 0;
 
-const degree = Math.PI / 180;
+const degree$1 = Math.PI / 180;
 /**
  * Convert Degree To Radian
  *
  * @param {Number} a Angle in Degrees
  */
 
-function toRadian(a) {
-	return a * degree;
+function toRadian$1(a) {
+	return a * degree$1;
 }
 
 function initRenderer() {
@@ -1845,7 +1845,7 @@ function setupAmbientLight() {
 
 function getCameraProjectionView(camera, width, height) {
 	return {
-		projection: perspective(new Float32Array(16), toRadian(camera.fov), width / height, camera.near, camera.far),
+		projection: perspective(new Float32Array(16), toRadian$1(camera.fov), width / height, camera.near, camera.far),
 		view: lookAt(new Float32Array(16), camera.position, camera.target, camera.up),
 	};
 }
@@ -1869,8 +1869,11 @@ function setupCamera(camera) {
 }
 
 function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances) {
+	//("setupTransformMatrix", numInstances);
+
 	if (numInstances == null) {
 		return function setupTransformMatrix() {
+			//("setupTransformMatrix", numInstances);
 			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 			const { gl, program } = appContext;
 			const worldLocation = gl.getUniformLocation(program, "world");
@@ -1883,10 +1886,11 @@ function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances)
 			}
 			// TODO store this in a map
 			appContext.transformMatrix = transformMatrix;
-			gl.uniformMatrix4fv(worldLocation, false, transformMatrix);
+			gl.uniformMatrix4fv(worldLocation, false, get_store_value(transformMatrix));
 		};
 	} else {
 		return function setupTransformMatrix() {
+			//("setupTransformMatrix", transformMatrix);
 			if (transformMatrix == null) {
 				return;
 			}
@@ -1924,6 +1928,7 @@ function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances)
 */
 			gl.bindVertexArray(appContext.vao);
 			const matrixBuffer = gl.createBuffer();
+			//("setupTransformMatrix");
 
 			setAppContext({
 				matrixBuffer,
@@ -1962,12 +1967,12 @@ function setupNormalMatrix(programStore, mesh, numInstances) {
 	if (numInstances == null) {
 		return function setupNormalMatrix() {
 			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
-			const { gl, program, transformMatrix } = appContext;
+			const { gl, program } = appContext;
 			const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
 			if (normalMatrixLocation == null) {
 				return;
 			}
-			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(transformMatrix));
+			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(get_store_value(mesh.matrix)));
 		};
 	} else {
 		return function setupNormalMatrix() {
@@ -2411,6 +2416,7 @@ function createRenderer() {
 		},
 	};
 }
+
 /**
  * Camera
  * @typedef {Object} Camera
@@ -2478,11 +2484,15 @@ function createSceneStore() {
 	const revisionStore = writable(0);
 	const { subscribe, update } = store;
 	function customUpdate(updater) {
-		update((scene) => {
-			const next = updater(scene);
-			revisionStore.update((revision) => revision + 1);
-			return next;
-		});
+		try {
+			update((scene) => {
+				const next = updater(scene);
+				revisionStore.update((revision) => revision + 1);
+				return next;
+			});
+		} catch (e) {
+			console.log(e);
+		}
 	}
 	function customSet(next) {
 		customUpdate((scene) => next);
@@ -2498,6 +2508,25 @@ function createSceneStore() {
 	};
 }
 const scene = createSceneStore();
+
+const defaultWorldMatrix = new Float32Array(16);
+identity(defaultWorldMatrix);
+
+const createMeshMatricesStore = (rendererUpdate, object, initialValue) => {
+	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
+	const transformMatrix = {
+		subscribe,
+		set: (nextMatrix) => {
+			set(nextMatrix);
+			rendererUpdate(get_store_value(renderer));
+		},
+	};
+	return transformMatrix;
+};
+function create3DObject(value) {
+	value.matrix = createMeshMatricesStore(renderer.set, value, value.matrix);
+	return value;
+}
 
 const createLightStore = (initialProps) => {
 	const { subscribe, set } = writable(initialProps);
@@ -2515,6 +2544,8 @@ let meshCache;
 const meshes = derived([scene], ([$scene]) => {
 	const meshNodes = $scene.filter((node) => node.attributes != null);
 	//using throw to cancel update flow when unchanged
+	// maybe when matrix change we need to update renderer and not programs, because the programs are the same
+	//&& objectsHaveSameMatrix(meshCache, meshNodes)
 	if (hasSameShallow(meshCache, meshNodes)) {
 		throw new Error("meshes unchanged");
 	} else {
@@ -2529,6 +2560,7 @@ const lights = derived([scene], ([$scene]) => {
 	const lightNodes = $scene.filter(isStore).filter(isLight);
 	//using throw to cancel update flow when unchanged
 	if (hasSameShallow(lightCache, lightNodes)) {
+		// TODO, study this, maybe not required, only mesh unchanged could be useful
 		throw new Error("lights unchanged");
 	} else {
 		lightCache = lightNodes;
@@ -2547,6 +2579,7 @@ const materials = derived([meshes], ([$meshes]) => {
 	});
 	//using throw to cancel update flow when unchanged
 	if (hasSameShallow$1(materialCache, materials)) {
+		// TODO, study this, maybe not required, only mesh unchanged could be useful
 		throw new Error("materials unchanged");
 	} else {
 		materialCache = materials;
@@ -2875,7 +2908,7 @@ const renderPipeline = derived(
 										selectMesh(program, mesh),
 										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
 										...(mesh.instances == null
-											? [setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix()]
+											? [setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)]
 											: []),
 									]
 								: [
@@ -3001,6 +3034,17 @@ function createFlatShadedNormals(positions) {
 		normals.push(...normal, ...normal, ...normal);
 	}
 	return normals;
+}
+
+const degree = Math.PI / 180;
+/**
+ * Convert Degree To Radian
+ *
+ * @param {Number} a Angle in Degrees
+ */
+
+function toRadian(a) {
+	return a * degree;
 }
 
 const createPointLight = (props) => {
@@ -3226,7 +3270,7 @@ function get_each_context(ctx, list, i) {
 	return child_ctx;
 }
 
-// (22:8) {:else}
+// (24:8) {:else}
 function create_else_block(ctx) {
 	let li;
 	let a;
@@ -3256,7 +3300,7 @@ function create_else_block(ctx) {
 	};
 }
 
-// (20:8) {#if window.location.pathname===link.href.substring(1)}
+// (22:8) {#if window.location.pathname===link.href.substring(1)}
 function create_if_block(ctx) {
 	let li;
 
@@ -3278,7 +3322,7 @@ function create_if_block(ctx) {
 	};
 }
 
-// (19:4) {#each links as link}
+// (21:4) {#each links as link}
 function create_each_block(ctx) {
 	let if_block_anchor;
 
@@ -3424,7 +3468,9 @@ function instance($$self, $$props, $$invalidate) {
 		{
 			name: "Transparency",
 			href: "./transparency"
-		}
+		},
+		/*{ name: "Instances", href: "./instances" },*/
+		{ name: "Matrix", href: "./matrix" }
 	];
 
 	return [menuOpened, toggleMenu, links];
@@ -3437,4 +3483,4 @@ class Menu extends SvelteComponent {
 	}
 }
 
-export { createPointLight as A, createOrbitControls as B, binding_callbacks as C, drawModes as D, cross as E, subtract as F, normalize as G, rotateY as H, templateLiteralRenderer as I, appContext as J, getTranslation as K, orthoNO as L, Menu as M, lookAt as N, linkProgram as O, validateProgram as P, useProgram as Q, selectProgram as R, SvelteComponent as S, multiply as T, fromRotationTranslationScale as U, createFlatShadedNormals as V, ARRAY_TYPE as W, createVec3 as X, lerp as Y, multiplyScalarVec3 as Z, normalizeNormals as _, space as a, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, camera as k, renderPasses as l, mount_component as m, noop as n, onMount as o, transformMat4 as p, rotateZ as q, renderer as r, safe_not_equal as s, transition_in as t, scale as u, translate as v, identity as w, set_store_value as x, skyblue as y, createLightStore as z };
+export { normalizeNormals as $, createPointLight as A, create3DObject as B, createOrbitControls as C, binding_callbacks as D, drawModes as E, cross as F, subtract as G, normalize as H, rotateY as I, templateLiteralRenderer as J, appContext as K, getTranslation as L, Menu as M, orthoNO as N, lookAt as O, linkProgram as P, validateProgram as Q, useProgram as R, SvelteComponent as S, selectProgram as T, multiply as U, fromRotationTranslationScale as V, createFlatShadedNormals as W, ARRAY_TYPE as X, createVec3 as Y, lerp as Z, multiplyScalarVec3 as _, space as a, toRadian as a0, get_store_value as a1, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, camera as k, renderPasses as l, mount_component as m, noop as n, onMount as o, transformMat4 as p, rotateZ as q, renderer as r, safe_not_equal as s, transition_in as t, scale as u, translate as v, identity as w, set_store_value as x, skyblue as y, createLightStore as z };

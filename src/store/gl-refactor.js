@@ -358,8 +358,11 @@ function getEuler(out, quat) {
 }
 
 export function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances) {
+	//("setupTransformMatrix", numInstances);
+
 	if (numInstances == null) {
 		return function setupTransformMatrix() {
+			//("setupTransformMatrix", numInstances);
 			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 			const { gl, program } = appContext;
 			const worldLocation = gl.getUniformLocation(program, "world");
@@ -372,10 +375,11 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 			}
 			// TODO store this in a map
 			appContext.transformMatrix = transformMatrix;
-			gl.uniformMatrix4fv(worldLocation, false, transformMatrix);
+			gl.uniformMatrix4fv(worldLocation, false, get(transformMatrix));
 		};
 	} else {
 		return function setupTransformMatrix() {
+			//("setupTransformMatrix", transformMatrix);
 			if (transformMatrix == null) {
 				return;
 			}
@@ -413,6 +417,7 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 */
 			gl.bindVertexArray(appContext.vao);
 			const matrixBuffer = gl.createBuffer();
+			//("setupTransformMatrix");
 
 			setAppContext({
 				matrixBuffer,
@@ -467,12 +472,12 @@ export function setupNormalMatrix(programStore, mesh, numInstances) {
 	if (numInstances == null) {
 		return function setupNormalMatrix() {
 			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
-			const { gl, program, transformMatrix } = appContext;
+			const { gl, program } = appContext;
 			const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
 			if (normalMatrixLocation == null) {
 				return;
 			}
-			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(transformMatrix));
+			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(get(mesh.matrix)));
 		};
 	} else {
 		return function setupNormalMatrix() {

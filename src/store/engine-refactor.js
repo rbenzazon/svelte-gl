@@ -30,7 +30,7 @@ import { hasSameShallow } from "../utils/set.js";
 import { hasSameShallow as arrayHasSameShallow, optionalPropsDeepEqual } from "../utils/array.js";
 import { isLight } from "../lights/lights.js";
 import { convertToVector3 } from "../color/color-space.js";
-import { getTranslation, invert, multiply } from "gl-matrix/esm/mat4.js";
+import { getTranslation, identity, invert, multiply } from "gl-matrix/esm/mat4.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 
 function createRenderer() {
@@ -131,6 +131,7 @@ function createRenderer() {
 		},
 	};
 }
+
 /**
  * Camera
  * @typedef {Object} Camera
@@ -198,11 +199,15 @@ function createSceneStore() {
 	const revisionStore = writable(0);
 	const { subscribe, update } = store;
 	function customUpdate(updater) {
-		update((scene) => {
-			const next = updater(scene);
-			revisionStore.update((revision) => revision + 1);
-			return next;
-		});
+		try {
+			update((scene) => {
+				const next = updater(scene);
+				revisionStore.update((revision) => revision + 1);
+				return next;
+			});
+		} catch (e) {
+			console.log(e);
+		}
 	}
 	function customSet(next) {
 		customUpdate((scene) => next);
@@ -219,6 +224,25 @@ function createSceneStore() {
 }
 export const scene = createSceneStore();
 
+const defaultWorldMatrix = new Float32Array(16);
+identity(defaultWorldMatrix);
+
+const createMeshMatricesStore = (rendererUpdate, object, initialValue) => {
+	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
+	const transformMatrix = {
+		subscribe,
+		set: (nextMatrix) => {
+			set(nextMatrix);
+			rendererUpdate(get(renderer));
+		},
+	};
+	return transformMatrix;
+};
+export function create3DObject(value) {
+	value.matrix = createMeshMatricesStore(renderer.set, value, value.matrix);
+	return value;
+}
+
 export const createLightStore = (initialProps) => {
 	const { subscribe, set } = writable(initialProps);
 	return {
@@ -232,9 +256,20 @@ export const createLightStore = (initialProps) => {
 
 let meshCache;
 
+function objectsHaveSameMatrix(a, b) {
+	for (let i = 0; i < a.length; i++) {
+		if (arrayHasSameShallow(get(a[i].matrix), get(b[i].matrix))) {
+			return false;
+		}
+	}
+	return true;
+}
+
 export const meshes = derived([scene], ([$scene]) => {
 	const meshNodes = $scene.filter((node) => node.attributes != null);
 	//using throw to cancel update flow when unchanged
+	// maybe when matrix change we need to update renderer and not programs, because the programs are the same
+	//&& objectsHaveSameMatrix(meshCache, meshNodes)
 	if (arrayHasSameShallow(meshCache, meshNodes)) {
 		throw new Error("meshes unchanged");
 	} else {
@@ -249,6 +284,7 @@ export const lights = derived([scene], ([$scene]) => {
 	const lightNodes = $scene.filter(isStore).filter(isLight);
 	//using throw to cancel update flow when unchanged
 	if (arrayHasSameShallow(lightCache, lightNodes)) {
+		// TODO, study this, maybe not required, only mesh unchanged could be useful
 		throw new Error("lights unchanged");
 	} else {
 		lightCache = lightNodes;
@@ -267,6 +303,7 @@ export const materials = derived([meshes], ([$meshes]) => {
 	});
 	//using throw to cancel update flow when unchanged
 	if (hasSameShallow(materialCache, materials)) {
+		// TODO, study this, maybe not required, only mesh unchanged could be useful
 		throw new Error("materials unchanged");
 	} else {
 		materialCache = materials;

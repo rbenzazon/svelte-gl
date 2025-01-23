@@ -14,6 +14,8 @@ export default {
         gltf:'src/gltf.svelte',
         'contact-shadow':'src/contact-shadow.svelte',
         'transparency':'src/transparency.svelte',
+        'instances':'src/instances.svelte',
+        'matrix':'src/matrix.svelte',
     },
     output: {
         dir: 'build/js',

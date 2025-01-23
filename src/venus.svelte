@@ -1,7 +1,7 @@
 <script type="module">
 import { onMount } from "svelte";
-import { createLightStore, renderer, scene, camera, renderPasses } from "./store/engine-refactor.js";
-import { identity, rotateY, scale, translate } from "gl-matrix/esm/mat4.js";
+import { createLightStore, renderer, scene, camera, renderPasses, create3DObject } from "./store/engine-refactor.js";
+import { create, identity, rotateY, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createPlane } from "./geometries/plane.js";
@@ -74,12 +74,12 @@ onMount(async () => {
 	venus.matrix = translate(venus.matrix, venus.matrix, [0, -450, 0]);
 	$scene = [
 		...$scene,
-		{
+		create3DObject({
 			...groundMesh,
 			matrix: groundMatrix,
 			material: groundMaterial,
-		},
-		venus,
+		}),
+		create3DObject(venus),
 		light,
 		light2,
 	];
