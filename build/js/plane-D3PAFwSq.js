@@ -1,4 +1,4 @@
-import { E as drawModes } from './Menu-BcfjqkvW.js';
+import { E as drawModes } from './Menu-UFopFIWZ.js';
 
 function createPlane(
 	width = 1,

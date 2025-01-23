@@ -1,4 +1,4 @@
-import { X as ARRAY_TYPE, E as drawModes, Y as createVec3, Z as lerp, H as normalize, _ as multiplyScalarVec3, $ as normalizeNormals } from './Menu-BcfjqkvW.js';
+import { Y as ARRAY_TYPE, E as drawModes, Z as createVec3, _ as lerp, H as normalize, $ as multiplyScalarVec3, a0 as normalizeNormals } from './Menu-UFopFIWZ.js';
 
 /**
  * 2 Dimensional Vector

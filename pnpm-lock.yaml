@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  easing-utils:
+    specifier: ^1.0.0
+    version: 1.0.0
   gl-matrix:
     specifier: ^3.4.3
     version: 3.4.3
@@ -1161,6 +1164,10 @@ packages:
   /earcut@3.0.0:
     resolution: {integrity: sha512-41Fs7Q/PLq1SDbqjsgcY7GA42T0jvaCNGXgGtsNdvg+Yv8eIu06bxv4/PoREkZ9nMDNwnUSG9OFB9+yv8eKhDg==}
     dev: true
+
+  /easing-utils@1.0.0:
+    resolution: {integrity: sha512-9oabISTqjTJSZyu85nJMfYtlV2tT/Uwo0M3uqODrBWCxme0eyLqEXRuG2/uYpyqzc7iSHjV/KW2mEKTqhdtESA==}
+    dev: false
 
   /eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
