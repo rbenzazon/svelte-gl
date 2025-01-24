@@ -448,8 +448,8 @@ function instance($$self, $$props, $$invalidate) {
 	});
 
 	function animate() {
-		const moveTime = 1;
-		const bounceTime = 0.1;
+		const moveTime = 1.6;
+		const bounceTime = 0.5;
 		const elasticDeformation = 0.5;
 
 		// time goes from 0 to (moveTime + bounceTime) in cycle using the modulo operator
