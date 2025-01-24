@@ -1,5 +1,6 @@
-import { S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, j as scene, k as camera, x as set_store_value, y as skyblue, w as identity, z as createLightStore, A as createPointLight, B as create3DObject, C as createOrbitControls, v as translate, u as scale, D as binding_callbacks } from './Menu-UFopFIWZ.js';
+import { S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, j as scene, k as camera, x as set_store_value, y as skyblue, w as identity, v as translate, z as createLightStore, A as createPointLight, B as create3DObject, C as createOrbitControls, u as scale, D as binding_callbacks } from './Menu-UFopFIWZ.js';
 import { c as createPolyhedron, a as createSmoothShadedNormals } from './polyhedron-Cd9snOK7.js';
+import { c as createPlane } from './plane-D3PAFwSq.js';
 
 var easing = {};
 
@@ -398,9 +399,11 @@ function instance($$self, $$props, $$invalidate) {
 
 		const sphereMesh = createPolyhedron(1, 5, createSmoothShadedNormals);
 		const spherePos = identity(new Float32Array(16));
-
-		//translate(cubePos, cubePos, [3, 1.5, 0]);
 		const material = { diffuse: [1, 0.5, 0.5], metalness: 0 };
+		const groundMesh = createPlane(10, 10, 1, 1);
+		const groundMatrix = identity(new Float32Array(16));
+		translate(groundMatrix, groundMatrix, [0, -1, 0]);
+		const groundMaterial = { diffuse: [1, 1, 1], metalness: 0 };
 
 		const light = createLightStore(createPointLight({
 			position: [-2, 3, -3],
@@ -410,11 +413,26 @@ function instance($$self, $$props, $$invalidate) {
 			decayExponent: 2
 		}));
 
-		(sphere = create3DObject({
+		sphere = create3DObject({
 			...sphereMesh,
 			matrix: spherePos,
 			material
-		}), set_store_value(scene, $scene = [...$scene, sphere, light], $scene));
+		});
+
+		set_store_value(
+			scene,
+			$scene = [
+				...$scene,
+				sphere,
+				create3DObject({
+					...groundMesh,
+					matrix: groundMatrix,
+					material: groundMaterial
+				}),
+				light
+			],
+			$scene
+		);
 
 		set_store_value(
 			renderer,
@@ -430,27 +448,53 @@ function instance($$self, $$props, $$invalidate) {
 	});
 
 	function animate() {
-		const time = performance.now() / 1000 % 1.5;
+		const moveTime = 1;
+		const bounceTime = 0.1;
+		const elasticDeformation = 0.5;
 
-		//console.log("time",time);
-		const sphereScaleY = Math.abs((Math.max(time, 1) - 1.25) * 3) + 0.25;
+		// time goes from 0 to (moveTime + bounceTime) in cycle using the modulo operator
+		const time = performance.now() / 1000 % (moveTime + bounceTime);
 
-		const sphereScaleXZ = -Math.abs((Math.max(time, 1) - 1.25) * 3) + 1.85;
+		/*
+this equation creates the elastic deformation using time as input
+equation description (-> is a range) :
+[max] => moveTime->moveTime+bounceTime
+[-moveTime] => 0->bounceTime
+[-bounceTime/2] => -bounceTime/2->0->0->bounceTime/2
+[abs] => bounceTime/2->0->0->bounceTime/2
+[* 1/bounceTime] => 1->0->0->1
+[1-] => 0->1->1->0
+*/
+		const sphereScaleNormalized = 1 - Math.abs((Math.max(time, moveTime) - moveTime - bounceTime / 2) * 1 / (bounceTime / 2));
 
-		//console.log("sphereScaleY",sphereScaleY);
-		const posYNormalized = Math.abs(Math.min(time, 1) - 0.5) * -2 + 1;
+		/*
+[*elasticDeformation] => 0->elasticDeformation->elasticDeformation->0
+[+1] => 1.3->1->1->1.3
+*/
+		const sphereScaleXZ = easeOutCubic_1(sphereScaleNormalized) * elasticDeformation + 1;
+
+		const sphereScaleY = 1 - easeOutCubic_1(sphereScaleNormalized) * elasticDeformation;
+		const sphereCrushY = easeOutCubic_1(sphereScaleNormalized) * elasticDeformation;
+
+		/*
+this equation creates the bounce effect movement using time as input
+equation description (-> is a range) :
+
+[min] => 0->moveTime
+[-moveTime/2] => -moveTime/2->moveTime/2
+[abs] => moveTime/2->0->0->moveTime/2
+[* 1/(moveTime/2)] => 1->0->0->1
+[* -1] => -1->0->0->-1
+[+1] => 0->1->1->0
+
+*/
+		const posYNormalized = Math.abs(Math.min(time, moveTime) - moveTime / 2) * 1 / (moveTime / 2) * -1 + 1; //* (-2*moveTime) + 1;
 
 		const posY = easeOutCubic_1(posYNormalized) * 3;
-		console.log("posYNormalized", posYNormalized);
-
-		//const value = get(sphere.matrix);
-		const value = identity(new Float32Array(16));
-
-		translate(value, value, [0, posY, 0]);
-		scale(value, value, [sphereScaleXZ, sphereScaleY, sphereScaleXZ]);
-
-		//rotateY(value, value, rotation);
-		sphere.matrix.set(value);
+		const newMatrix = identity(new Float32Array(16));
+		translate(newMatrix, newMatrix, [0, posY - sphereCrushY, 0]);
+		scale(newMatrix, newMatrix, [sphereScaleXZ, sphereScaleY, sphereScaleXZ]);
+		sphere.matrix.set(newMatrix);
 	}
 
 	function canvas_1_binding($$value) {
