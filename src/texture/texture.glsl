@@ -1,9 +1,11 @@
 ${declaration?
 `
 uniform sampler2D ${mapType};
+` : ''
+}
+${declarationNormal?
+`
 uniform vec2 normalScale;
-
-
 mat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {
     vec3 q0 = dFdx( eye_pos.xyz );
     vec3 q1 = dFdy( eye_pos.xyz );

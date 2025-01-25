@@ -48,3 +48,77 @@ export function createCube() {
 		drawMode: drawModes[4],
 	};
 }
+
+const third = 0.3333333333333333;
+const twoThirds = 0.6666666666666666;
+export const defaultUVS = [
+	//top
+	0.75,
+	third,
+	1,
+	third,
+	1,
+	twoThirds,
+	0.75,
+	twoThirds,
+	//left
+	0,
+	third,
+	0.25,
+	third,
+	0.25,
+	twoThirds,
+	0,
+	twoThirds,
+	//right
+	0.5,
+	third,
+	0.75,
+	third,
+	0.75,
+	twoThirds,
+	0.5,
+	twoThirds,
+	//front
+	0.25,
+	twoThirds,
+	0.5,
+	twoThirds,
+	0.5,
+	1,
+	0.25,
+	1,
+	//back
+	0.25,
+	0,
+	0.5,
+	0,
+	0.5,
+	third,
+	0.25,
+	third,
+	//bottom
+	0.25,
+	third,
+	0.5,
+	third,
+	0.5,
+	twoThirds,
+	0.25,
+	twoThirds,
+];
+
+export const sameFaceUVS = [
+	//top
+	0, 0, 1, 0, 1, 1, 0, 1,
+	//left
+	0, 0, 1, 0, 1, 1, 0, 1,
+	//right
+	0, 0, 1, 0, 1, 1, 0, 1,
+	//front
+	0, 0, 1, 0, 1, 1, 0, 1,
+	//back
+	0, 0, 1, 0, 1, 1, 0, 1,
+	//bottom
+	0, 0, 1, 0, 1, 1, 0, 1,
+];

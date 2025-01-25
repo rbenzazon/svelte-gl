@@ -205,6 +205,7 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 		if (material.diffuseMap) {
 			diffuseMapDeclaration = material.diffuseMap.shader({
 				declaration: true,
+				declarationNormal: false,
 				mapType: material.diffuseMap.type,
 			});
 			diffuseMapSample = material.diffuseMap.shader({
@@ -218,6 +219,7 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 		if (material.normalMap) {
 			normalMapDeclaration = material.normalMap.shader({
 				declaration: true,
+				declarationNormal: true,
 				mapType: material.normalMap.type,
 			});
 			normalMapSample = material.normalMap.shader({
@@ -264,6 +266,8 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			numPointLights,
 		});
 		const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+		console.log(fragmentShaderSource);
+
 		gl.shaderSource(fragmentShader, fragmentShaderSource);
 		//(fragmentShaderSource);
 		gl.compileShader(fragmentShader);

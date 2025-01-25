@@ -16,6 +16,7 @@ export default {
         'transparency':'src/transparency.svelte',
         'instances':'src/instances.svelte',
         'matrix':'src/matrix.svelte',
+        'texture':'src/texture.svelte',
     },
     output: {
         dir: 'build/js',
@@ -40,7 +41,7 @@ export default {
           }),
         commonjs(),
 
-        //terser(),
+        terser(),
             
     ]
 };

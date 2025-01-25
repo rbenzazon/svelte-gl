@@ -47,6 +47,7 @@ export const createTexture = async (props) => {
 		coordinateSpace: props.coordinateSpace,
 		shader: templateLiteralRenderer(textureShader, {
 			declaration: false,
+			declarationNormal: false,
 			diffuseMapSample: false,
 			normalMapSample: false,
 			mapType: undefined,
