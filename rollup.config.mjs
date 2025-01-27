@@ -17,6 +17,7 @@ export default {
         'instances':'src/instances.svelte',
         'matrix':'src/matrix.svelte',
         'texture':'src/texture.svelte',
+        'lights':'src/lights.svelte',
     },
     output: {
         dir: 'build/js',

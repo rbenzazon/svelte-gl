@@ -103,7 +103,7 @@ export function updateOneLight(lights, light) {
 		const lightData = new Float32Array(12);
 		const offset = lightIndex * 12;
 		const lightValue = get(light);
-		writeLightBuffer(lightData, lightValue, offset);
+		writeLightBuffer(lightData, lightValue, 0);
 		gl.bindBuffer(gl.UNIFORM_BUFFER, pointLightsUBO);
 		gl.bufferSubData(gl.UNIFORM_BUFFER, offset * Float32Array.BYTES_PER_ELEMENT, lightData);
 	}

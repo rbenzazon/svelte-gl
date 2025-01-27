@@ -32,6 +32,7 @@ import { isLight } from "../lights/lights.js";
 import { convertToVector3 } from "../color/color-space.js";
 import { getTranslation, identity, invert, multiply } from "gl-matrix/esm/mat4.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
+import { updateOneLight } from "../lights/point-light.js";
 
 function createRenderer() {
 	const initialValue = {
@@ -245,13 +246,16 @@ export function create3DObject(value) {
 
 export const createLightStore = (initialProps) => {
 	const { subscribe, set } = writable(initialProps);
-	return {
+	const light = {
 		subscribe,
 		set: (props) => {
 			//update buffers here
 			set(props);
+			updateOneLight(get(lights),light);
+			renderer.set(get(renderer));
 		},
 	};
+	return light;
 };
 
 let meshCache;

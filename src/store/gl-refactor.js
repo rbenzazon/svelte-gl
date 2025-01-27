@@ -266,10 +266,7 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			numPointLights,
 		});
 		const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-		console.log(fragmentShaderSource);
-
 		gl.shaderSource(fragmentShader, fragmentShaderSource);
-		//(fragmentShaderSource);
 		gl.compileShader(fragmentShader);
 		if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
 			console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));

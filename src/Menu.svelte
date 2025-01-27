@@ -15,6 +15,7 @@ const links = [
 	/*{ name: "Instances", href: "./instances" },*/
 	{ name: "Matrix", href: "./matrix" },
 	{ name: "Texture", href: "./texture" },
+	{ name: "Lights", href: "./lights" },
 ];
 </script>
 <button on:click={toggleMenu}>examples</button>
