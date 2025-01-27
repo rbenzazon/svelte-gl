@@ -251,7 +251,7 @@ export const createLightStore = (initialProps) => {
 		set: (props) => {
 			//update buffers here
 			set(props);
-			updateOneLight(get(lights),light);
+			updateOneLight(get(lights), light);
 			renderer.set(get(renderer));
 		},
 	};

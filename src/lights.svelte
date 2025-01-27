@@ -12,15 +12,13 @@ import { createTexture } from "./texture/texture.js";
 import { createContactShadowPass } from "./store/contact-shadow.js";
 
 import Menu from "./Menu.svelte";
-  import { get } from "svelte/store";
+import { get } from "svelte/store";
+import { createSpecular } from "./material/specular/specular.js";
 
 let canvas;
 let light;
 let light2;
 onMount(async () => {
-
-	
-
 	$renderer = {
 		...$renderer,
 		canvas,
@@ -52,12 +50,28 @@ onMount(async () => {
 			decayExponent: 0,
 		}),
 	);
-	
+
 	const groundMesh = createPlane(10, 10, 1, 1);
 	const groundMatrix = identity(new Float32Array(16));
+	const diffuseMap = await createTexture({
+		url: "peeling-painted-metal-diffuse.jpg",
+		type: "diffuse",
+	});
+	const normalMap = await createTexture({
+		url: "peeling-painted-metal-normal.jpg",
+		type: "normal",
+	});
 	const groundMaterial = {
 		diffuse: [1, 1, 1],
 		metalness: 0,
+		specular: createSpecular({
+			roughness: 0.1,
+			ior: 1.4,
+			intensity: 0.5,
+			color: [1, 1, 1],
+		}),
+		diffuseMap,
+		normalMap,
 	};
 
 	$scene = [
@@ -84,7 +98,7 @@ function animate() {
 	light.set({
 		...get(light),
 		position: [Math.sin(performance.now() / 1000) * 3, 1, Math.cos(performance.now() / 1000) * 3],
-	})
+	});
 	//animate hue
 	const color1 = Math.sin(performance.now() / 1000) * 0.5 + 0.5;
 	const color2 = Math.sin(performance.now() / 1000 + 2) * 0.5 + 0.5;
@@ -92,7 +106,7 @@ function animate() {
 	light2.set({
 		...get(light2),
 		color: [color1, color2, color3],
-	})
+	});
 }
 </script>
 <canvas bind:this={canvas}></canvas>
