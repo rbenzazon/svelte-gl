@@ -45,3 +45,15 @@ ${normalMapSample?
 	//normal = normalize( normalMatrix * normal );
 ` : ''
 }
+${roughnessMapSample?
+`
+    //atan(uv.y, uv.x)
+    ${coordinateSpace === 'circular' ?
+`   vec2 roughnessUv = vec2(vUv.x/vUv.y, vUv.y);
+` :
+`   vec2 roughnessUv = vUv;
+`}
+    vec4 texelRoughness = texture( ${mapType}, roughnessUv );
+    roughnessFactor = texelRoughness.g;
+` : ''
+}

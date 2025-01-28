@@ -2,6 +2,7 @@ ${declaration?
 `
 
 uniform float roughness;
+float roughnessFactor;
 uniform float ior;
 uniform float specularIntensity;
 uniform vec3 specularColor;
@@ -73,7 +74,7 @@ vec3 BRDF_GGX( const in vec3 lightDir, const in vec3 viewDir, const in vec3 norm
 }
 ${irradiance?
 `
-	material.roughness = clamp(roughness, 0.0525, 1.0);
+	material.roughness = clamp(roughness * roughnessFactor, 0.0525, 1.0);
 	material.ior = ior;
 	material.specularF90 = mix(specularIntensity, 1.0, metalness);
 	material.specularColor = mix(min(pow2((material.ior - 1.0) / (material.ior + 1.0)) * specularColor, vec3(1.0)) * specularIntensity, diffuse.rgb, metalness);

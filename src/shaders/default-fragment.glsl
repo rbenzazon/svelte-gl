@@ -59,6 +59,7 @@ void main() {
 
 	vec3 normal = normalize( vNormal );
 	${normalMapSample}
+	${roughnessMapSample}
 
     ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
 

@@ -459,6 +459,10 @@ export const programs = derived(
 					program.setupMaterial.push(p.material.normalMap.setupTexture);
 					program.bindTextures.push(p.material.normalMap.bindTexture);
 				}
+				if (p.material?.roughnessMap) {
+					program.setupMaterial.push(p.material.roughnessMap.setupTexture);
+					program.bindTextures.push(p.material.roughnessMap.bindTexture);
+				}
 				if (p.requireTime) {
 					program.setupMaterial.push(setupTime);
 				}

@@ -61,17 +61,22 @@ onMount(async () => {
 		url: "peeling-painted-metal-normal.jpg",
 		type: "normal",
 	});
+	const roughnessMap = await createTexture({
+		url: "peeling-painted-metal-roughness.jpg",
+		type: "roughness",
+	});
 	const groundMaterial = {
 		diffuse: [1, 1, 1],
 		metalness: 0,
 		specular: createSpecular({
-			roughness: 0.1,
+			roughness: 0.8,
 			ior: 1.4,
 			intensity: 0.5,
 			color: [1, 1, 1],
 		}),
 		diffuseMap,
 		normalMap,
+		roughnessMap,
 	};
 
 	$scene = [

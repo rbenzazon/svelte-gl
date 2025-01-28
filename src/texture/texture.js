@@ -6,17 +6,19 @@ import { appContext } from "../store/engine-refactor.js";
 const types = {
 	diffuse: "diffuseMap",
 	normal: "normalMap",
+	roughness: "roughnessMap",
 };
 
 const id = {
 	diffuse: 0,
 	normal: 1,
+	roughness: 2,
 };
 
 /**
  * @typedef TextureProps
  * @property {string} url
- * @property {"diffuse" | "normal"} type
+ * @property {"diffuse" | "normal" | "roughness" } type
  * @property {number[]} [normalScale=[1, 1]]
  * @property {"square" | "circular"} [coordinateSpace="square"]
  */
@@ -50,12 +52,14 @@ export const createTexture = async (props) => {
 			declarationNormal: false,
 			diffuseMapSample: false,
 			normalMapSample: false,
+			roughnessMapSample: false,
 			mapType: undefined,
 			coordinateSpace: undefined,
 		}),
 		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale, setBuffer),
 		bindTexture: bindTexture(id[props.type], getBuffer, types[props.type]),
 	};
+
 	if (typeof image === "function") {
 		output = {
 			...output,

@@ -227,11 +227,26 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 				mapType: material.normalMap.type,
 			});
 		}
+		let roughnessMapDeclaration = "";
+		let roughnessMapSample = "";
+		if (material.roughnessMap) {
+			roughnessMapDeclaration = material.roughnessMap.shader({
+				declaration: true,
+				declarationNormal: false,
+				mapType: material.roughnessMap.type,
+			});
+			roughnessMapSample = material.roughnessMap.shader({
+				roughnessMapSample: true,
+				mapType: material.roughnessMap.type,
+			});
+		}
+
 		const fragmentShaderSource = templateLiteralRenderer(defaultFragment, {
 			defines: "",
 			declarations: "",
 			diffuseMapSample: "",
 			normalMapSample: "",
+			roughnessMapSample: "",
 			irradiance: "",
 			toneMapping: "",
 			numPointLights: 0,
@@ -251,9 +266,11 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 				...(material.specular ? [specularDeclaration] : []),
 				...(material.diffuseMap ? [diffuseMapDeclaration] : []),
 				...(material.normalMap ? [normalMapDeclaration] : []),
+				...(material.roughnessMap ? [roughnessMapDeclaration] : []),
 			].join("\n"),
 			diffuseMapSample,
 			normalMapSample,
+			roughnessMapSample,
 			irradiance: [
 				...(numPointLights ? [pointLightShader({ declaration: false, irradiance: true, specularIrradiance })] : []),
 			].join("\n"),
