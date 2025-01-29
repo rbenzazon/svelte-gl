@@ -436,6 +436,7 @@ export const programs = derived(
 					...p,
 					useProgram,
 					setupMaterial: [setupAmbientLight],
+					updateProgram: [],
 					bindTextures: [],
 					createProgram,
 					selectProgram,
@@ -464,7 +465,7 @@ export const programs = derived(
 					program.bindTextures.push(p.material.roughnessMap.bindTexture);
 				}
 				if (p.requireTime) {
-					program.setupMaterial.push(setupTime);
+					program.updateProgram.push(setupTime);
 				}
 				program.setupMaterial.push(
 					...Array.from(
@@ -634,8 +635,14 @@ const renderPipeline = derived(
 				return [
 					...acc,
 					...(appContext.programMap.has(program)
-						? [program.selectProgram(program), program.useProgram, ...program.bindTextures]
-						: [program.createProgram(program), ...program.setupProgram, program.useProgram, ...program.setupMaterial]),
+						? [program.selectProgram(program), program.useProgram, ...program.bindTextures, ...program.updateProgram]
+						: [
+								program.createProgram(program),
+								...program.setupProgram,
+								program.useProgram,
+								...program.setupMaterial,
+								...program.updateProgram,
+							]),
 					...(program.setupCamera ? [program.setupCamera] : [...(updateMap.has(camera) ? [setupCamera($camera)] : [])]),
 					...(program.setFrameBuffer ? [program.setFrameBuffer] : []),
 					...program.meshes.reduce(
