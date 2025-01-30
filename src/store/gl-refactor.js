@@ -497,6 +497,8 @@ export function updateInstanceTransformMatrix(programStore, mesh, newMatrix, ins
 	const bytesPerMatrix = 4 * 16;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, newMatrix);
 	gl.bindVertexArray(null);
+
+	updateInstanceNormalMatrix(programStore, mesh, derivateNormalMatrix(newMatrix), instanceIndex);
 }
 
 export function setupNormalMatrix(programStore, mesh, numInstances) {

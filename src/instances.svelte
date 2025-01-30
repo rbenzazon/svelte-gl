@@ -78,14 +78,19 @@ onMount(async () => {
 
 	createOrbitControls(canvas, camera);
 });
-
-function animate() {
+function rotateCube(cube, index) {
 	const rotation = 0.001 * Math.PI;
-	const tmp = get(cube.matrices[0]);
+	const tmp = get(cube.matrices[index]);
 	rotateY(tmp, tmp, rotation / 2);
 	rotateX(tmp, tmp, rotation);
 	rotateZ(tmp, tmp, rotation / 3);
-	cube.matrices[0].set(tmp);
+	cube.matrices[index].set(tmp);
+}
+function animate() {
+	for(let i = 0;i<3;i++){
+		rotateCube(cube,i);
+	}
+	
 }
 </script>
 <canvas bind:this={canvas}></canvas>
