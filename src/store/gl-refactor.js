@@ -476,20 +476,27 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 		};
 	}
 }
-export function updateTransformMatrix(worldMatrix) {
+export function updateTransformMatrix(program, worldMatrix) {
 	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
-	const { gl, program } = appContext;
+	const { gl } = appContext;
 	const worldLocation = gl.getUniformLocation(program, "world");
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 }
-
-export function updateInstanceTransformMatrix(programStore, mesh, worldMatrix, instanceIndex) {
+function findProgramStore(program) {
+	for (const [programStore, programValue] of appContext.programMap) {
+		if (programValue === program) {
+			return programStore;
+		}
+	}
+}
+export function updateInstanceTransformMatrix(program, mesh, newMatrix, instanceIndex) {
+	const programStore = findProgramStore(program);
 	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, vaoMap, matrixBuffer } = appContext;
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 	const bytesPerMatrix = 4 * 16;
-	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
+	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, newMatrix);
 	gl.bindVertexArray(null);
 }
 

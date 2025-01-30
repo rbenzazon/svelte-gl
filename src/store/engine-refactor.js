@@ -228,17 +228,36 @@ export const scene = createSceneStore();
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
 
-const createMeshMatrixStore = (rendererUpdate, initialValue) => {
+function findMesh(matrixStore) {
+	const mesh = get(scene).find((node) => node.matrix === matrixStore);
+	return mesh;
+}
+
+function findProgram(mesh) {
+	const program = get(programs).find((program) => program.allMeshes !== true && program.meshes.includes(mesh));
+	return program;
+}
+
+const createMeshMatrixStore = (rendererUpdate, initialValue, instanceIndex = NaN) => {
 	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
 	const transformMatrix = {
 		subscribe,
 		set: (nextMatrix) => {
 			set(nextMatrix);
+			const mesh = findMesh(transformMatrix);
+			const program = findProgram(mesh);
+			if (isNaN(instanceIndex)) {
+				updateTransformMatrix(program, nextMatrix);
+			} else {
+				updateInstanceTransformMatrix(program, mesh, nextMatrix, instanceIndex);
+			}
 			rendererUpdate(get(renderer));
 		},
 	};
 	return transformMatrix;
-}; /*
+};
+
+/*
 const createMeshMatricesStore = (rendererUpdate, initialValue) => {
 	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
 	const transformMatrix = {
@@ -254,7 +273,7 @@ export function create3DObject(value) {
 	if (value.matrix != null) {
 		value.matrix = createMeshMatrixStore(renderer.set, value.matrix);
 	} else if (value.matrices != null) {
-		value.matrices = value.matrices.map((matrix) => createMeshMatrixStore(renderer.set, matrix));
+		value.matrices = value.matrices.map((matrix, index) => createMeshMatrixStore(renderer.set, matrix, index));
 	}
 	return value;
 }
