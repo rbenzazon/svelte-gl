@@ -50,20 +50,6 @@ onMount(async () => {
 
 	let identityMatrix = new Array(16).fill(0);
 	identity(identityMatrix);
-	/*let matrices = new Array(numInstances).fill(0).map((_, index) => {
-		const count = index - Math.floor(numInstances / 2);
-		let mat = [...identityMatrix];
-		//transform the model matrix
-		const scaleFactor = 0.1;
-
-		const { x, y } = distributeCirclePoints(radius, index, numInstances);
-
-		translate(mat, mat, [x, y, 0]);
-		//translate(mat, mat, [count * -2, 0, 0]);
-		//rotateY(mat, mat, toRadian(count * 10));
-		scale(mat, mat, [scaleFactor, scaleFactor, scaleFactor]);
-		return new Float32Array(mat);
-	});*/
 
 	const light = createLightStore(
 		createPointLight({

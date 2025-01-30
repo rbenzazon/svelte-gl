@@ -228,7 +228,7 @@ export const scene = createSceneStore();
 const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
 
-const createMeshMatricesStore = (rendererUpdate, object, initialValue) => {
+const createMeshMatrixStore = (rendererUpdate, initialValue) => {
 	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
 	const transformMatrix = {
 		subscribe,
@@ -238,9 +238,24 @@ const createMeshMatricesStore = (rendererUpdate, object, initialValue) => {
 		},
 	};
 	return transformMatrix;
-};
+}; /*
+const createMeshMatricesStore = (rendererUpdate, initialValue) => {
+	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
+	const transformMatrix = {
+		subscribe,
+		set: (nextMatrix) => {
+			set(nextMatrix);
+			rendererUpdate(get(renderer));
+		},
+	};
+	return transformMatrix;
+};*/
 export function create3DObject(value) {
-	value.matrix = createMeshMatricesStore(renderer.set, value, value.matrix);
+	if (value.matrix != null) {
+		value.matrix = createMeshMatrixStore(renderer.set, value.matrix);
+	} else if (value.matrices != null) {
+		value.matrices = value.matrices.map((matrix) => createMeshMatrixStore(renderer.set, matrix));
+	}
 	return value;
 }
 
@@ -375,6 +390,7 @@ export const programs = derived(
 			}, [])
 			.map((program) => ({
 				...program,
+				updateProgram: [],
 				...(program.allMeshes ? { meshes: $meshes } : {}),
 			}));
 

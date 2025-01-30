@@ -1,6 +1,6 @@
 <script type="module">
 import { onMount } from "svelte";
-import { createLightStore, renderer, scene, camera } from "./store/engine-refactor.js";
+import { createLightStore, renderer, scene, camera, create3DObject } from "./store/engine-refactor.js";
 import { identity, rotateY, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
@@ -39,7 +39,6 @@ onMount(async () => {
 
 	let matrices = new Array(numInstances).fill(0).map((_, index) => {
 		const count = index - Math.floor(numInstances / 2);
-		console.log("count", count);
 		let mat = [...identityMatrix];
 
 		//transform the model matrix
@@ -60,12 +59,12 @@ onMount(async () => {
 		}),
 	);
 
-	const cube = {
+	const cube = create3DObject({
 		...cubeMesh,
 		instances: numInstances,
 		matrices: matrices,
 		material: material,
-	};
+	});
 
 	$scene = [...$scene, cube, light];
 

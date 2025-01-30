@@ -90,7 +90,11 @@ export function render(mesh, instances, drawMode) {
 			: mesh.attributes.positions.length / positionSize;
 
 		if (instances) {
-			gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
+			if (mesh.attributes.elements) {
+				gl.drawElementsInstanced(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0, instances);
+			} else {
+				gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
+			}
 		} else {
 			if (mesh.attributes.elements) {
 				gl.drawElements(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0);
@@ -387,11 +391,12 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 			if (worldLocation == null) {
 				return;
 			}
+			//todo check why we have that, we shouldn't need this
 			if (!transformMatrix) {
 				transformMatrix = new Float32Array(16);
 				identity(transformMatrix);
 			}
-			// TODO store this in a map
+			// TODO store this in a map, or not store it at all
 			appContext.transformMatrix = transformMatrix;
 			gl.uniformMatrix4fv(worldLocation, false, get(transformMatrix));
 		};
@@ -408,7 +413,7 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 
 			//TODO, clean that it's useless since we overwrite it anyway and storing this way is not good
 			let transformMatricesWindows;
-			if ((appContext.transformMatricesWindows = null)) {
+			if (appContext.transformMatricesWindows == null) {
 				transformMatricesWindows = [];
 			} else {
 				transformMatricesWindows = appContext.transformMatricesWindows;
@@ -432,8 +437,10 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 				rotateY(mat, mat, toRadian(count * 10));
 				scale(mat, mat, [0.5, 0.5, 0.5]);
 			});
-*/
-			gl.bindVertexArray(appContext.vao);
+			*/
+			const vao = vaoMap.get(programStore).get(mesh);
+
+			gl.bindVertexArray(vao);
 			const matrixBuffer = gl.createBuffer();
 			//("setupTransformMatrix");
 
@@ -505,8 +512,9 @@ export function setupNormalMatrix(programStore, mesh, numInstances) {
 			if (normalMatricesLocation == null) {
 				return;
 			}
+			const vao = vaoMap.get(programStore).get(mesh);
 
-			gl.bindVertexArray(appContext.vao);
+			gl.bindVertexArray(vao);
 			const normalMatricesValues = [];
 
 			for (let i = 0; i < numInstances; i++) {

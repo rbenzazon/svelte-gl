@@ -12,7 +12,7 @@ const links = [
 	{ name: "GLTF", href: "./gltf" },
 	{ name: "Contact Shadow", href: "./contact-shadow" },
 	{ name: "Transparency", href: "./transparency" },
-	/*{ name: "Instances", href: "./instances" },*/
+	{ name: "Instances", href: "./instances" },
 	{ name: "Matrix", href: "./matrix" },
 	{ name: "Texture", href: "./texture" },
 	{ name: "Lights", href: "./lights" },
