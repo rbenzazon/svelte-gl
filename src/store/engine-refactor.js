@@ -229,7 +229,9 @@ const defaultWorldMatrix = new Float32Array(16);
 identity(defaultWorldMatrix);
 
 function findMesh(matrixStore) {
-	const mesh = get(scene).find((node) => node.matrix === matrixStore);
+	const mesh = get(scene).find((node) => {
+		return (node.matrix && node.matrix === matrixStore) || (node.matrices && node.matrices.includes(matrixStore));
+	});
 	return mesh;
 }
 

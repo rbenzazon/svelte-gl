@@ -1,7 +1,7 @@
 <script type="module">
 import { onMount } from "svelte";
 import { createLightStore, renderer, scene, camera, create3DObject } from "./store/engine-refactor.js";
-import { identity, rotateY, scale, translate } from "gl-matrix/esm/mat4.js";
+import { identity, rotateX, rotateY, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
@@ -10,8 +10,10 @@ import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { createFlatShadedNormals, toRadian } from "./geometries/common.js";
+import { get } from "svelte/store";
 
 let canvas;
+let cube;
 onMount(async () => {
 	$renderer = {
 		...$renderer,
@@ -59,7 +61,7 @@ onMount(async () => {
 		}),
 	);
 
-	const cube = create3DObject({
+	cube = create3DObject({
 		...cubeMesh,
 		instances: numInstances,
 		matrices: matrices,
@@ -78,7 +80,12 @@ onMount(async () => {
 });
 
 function animate() {
-	// animate here
+	const rotation = 0.001 * Math.PI;
+	const tmp = get(cube.matrices[0]);
+	rotateY(tmp, tmp, rotation / 2);
+	rotateX(tmp, tmp, rotation);
+	rotateZ(tmp, tmp, rotation / 3);
+	cube.matrices[0].set(tmp);
 }
 </script>
 <canvas bind:this={canvas}></canvas>

@@ -489,8 +489,7 @@ function findProgramStore(program) {
 		}
 	}
 }
-export function updateInstanceTransformMatrix(program, mesh, newMatrix, instanceIndex) {
-	const programStore = findProgramStore(program);
+export function updateInstanceTransformMatrix(programStore, mesh, newMatrix, instanceIndex) {
 	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, vaoMap, matrixBuffer } = appContext;
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
