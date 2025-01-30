@@ -240,13 +240,12 @@ function findProgram(mesh) {
 	return program;
 }
 
-const createMeshMatrixStore = (rendererUpdate, initialValue, instanceIndex = NaN) => {
+const createMeshMatrixStore = (mesh, rendererUpdate, initialValue, instanceIndex = NaN) => {
 	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
 	const transformMatrix = {
 		subscribe,
 		set: (nextMatrix) => {
 			set(nextMatrix);
-			const mesh = findMesh(transformMatrix);
 			const program = findProgram(mesh);
 			if (isNaN(instanceIndex)) {
 				updateTransformMatrix(program, nextMatrix);
@@ -273,9 +272,9 @@ const createMeshMatricesStore = (rendererUpdate, initialValue) => {
 };*/
 export function create3DObject(value) {
 	if (value.matrix != null) {
-		value.matrix = createMeshMatrixStore(renderer.set, value.matrix);
+		value.matrix = createMeshMatrixStore(value, renderer.set, value.matrix);
 	} else if (value.matrices != null) {
-		value.matrices = value.matrices.map((matrix, index) => createMeshMatrixStore(renderer.set, matrix, index));
+		value.matrices = value.matrices.map((matrix, index) => createMeshMatrixStore(value, renderer.set, matrix, index));
 	}
 	return value;
 }

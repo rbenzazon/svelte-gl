@@ -87,10 +87,9 @@ function rotateCube(cube, index) {
 	cube.matrices[index].set(tmp);
 }
 function animate() {
-	for(let i = 0;i<3;i++){
-		rotateCube(cube,i);
+	for (let i = 0; i < 3; i++) {
+		rotateCube(cube, i);
 	}
-	
 }
 </script>
 <canvas bind:this={canvas}></canvas>

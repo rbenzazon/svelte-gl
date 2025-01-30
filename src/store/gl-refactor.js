@@ -476,18 +476,13 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 		};
 	}
 }
-export function updateTransformMatrix(program, worldMatrix) {
+export function updateTransformMatrix(programStore, worldMatrix) {
 	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
-	const { gl } = appContext;
+	const { gl, programMap } = appContext;
+	const program = programMap.get(programStore);
 	const worldLocation = gl.getUniformLocation(program, "world");
+	gl.useProgram(program);
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
-}
-function findProgramStore(program) {
-	for (const [programStore, programValue] of appContext.programMap) {
-		if (programValue === program) {
-			return programStore;
-		}
-	}
 }
 export function updateInstanceTransformMatrix(programStore, mesh, newMatrix, instanceIndex) {
 	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
