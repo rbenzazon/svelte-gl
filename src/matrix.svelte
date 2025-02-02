@@ -110,20 +110,38 @@ function animate() {
 	this equation creates the bounce effect movement using time as input
 	equation description (-> is a range) :
 
-	[min] => 0->moveTime
-	[-moveTime/2] => -moveTime/2->moveTime/2
-	[abs] => moveTime/2->0->0->moveTime/2
-	[* 1/(moveTime/2)] => 1->0->0->1
-	[* -1] => -1->0->0->-1
-	[+1] => 0->1->1->0
+	[min] => 0 -> moveTime
+	[-moveTime/2] => -moveTime/2 -> moveTime/2
+	[abs] => moveTime/2 -> 0 -> 0 -> moveTime/2
+	[* 1/(moveTime/2)] => 1 -> 0 -> 0 -> 1
+	[* -1] => -1 -> 0 -> 0 -> -1
+	[+1] => 0 -> 1 -> 1 ->0
 
 	*/
 	const posYNormalized = ((Math.abs(Math.min(time, moveTime) - moveTime / 2) * 1) / (moveTime / 2)) * -1 + 1;
 	const posY = easeOutCubic(posYNormalized) * 3;
 
+	/* 
+	elastic bounce effect factor
+	[min] => 0 -> moveTime
+	[/moveTime] => 0 -> 1
+	[min] => 0 -> 0.5 -> 0.5
+	[*2] => 0 -> 1 -> 1
+	[1-] => 1 -> 0 -> 0
+	*/
+	const elasticBounceFactor = 1 - Math.min(0.5, Math.min(time, moveTime) / moveTime) * 2;
+	const elasticBounceSinFrequency = 12;
+	const elasticBounceAmplitude = 0.5;
+	const elasticBounce =
+		Math.sin(time * Math.PI * elasticBounceSinFrequency) * elasticBounceFactor * elasticBounceAmplitude;
+
 	const newMatrix = identity(new Float32Array(16));
 	translate(newMatrix, newMatrix, [0, posY - sphereCrushY, 0]);
-	scale(newMatrix, newMatrix, [sphereScaleXZ, sphereScaleY, sphereScaleXZ]);
+	scale(newMatrix, newMatrix, [
+		sphereScaleXZ - elasticBounce / 2,
+		sphereScaleY + elasticBounce,
+		sphereScaleXZ - elasticBounce / 2,
+	]);
 	sphere.matrix.set(newMatrix);
 }
 </script>
