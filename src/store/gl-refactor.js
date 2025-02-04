@@ -316,11 +316,13 @@ export function setupMeshColor({ diffuse, metalness, opacity }) {
 	};
 }
 
-export function setupAmbientLight() {
+export function setupAmbientLight(programOverride, ambientLightColorOverride) {
 	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, program, ambientLightColor } = appContext;
-	const ambientLightColorLocation = gl.getUniformLocation(program, "ambientLightColor");
-	gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
+	const currentProgram = programOverride ?? program;
+	const currentAmbientLightColor = ambientLightColorOverride ?? ambientLightColor;
+	const ambientLightColorLocation = gl.getUniformLocation(currentProgram, "ambientLightColor");
+	gl.uniform3fv(ambientLightColorLocation, new Float32Array(currentAmbientLightColor));
 }
 
 export function getCameraProjectionView(camera, width, height) {

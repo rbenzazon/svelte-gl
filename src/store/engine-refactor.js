@@ -92,6 +92,10 @@ function createRenderer() {
 			}
 			if (!arrayHasSameShallow(next.ambientLightColor, cache.ambientLightColor)) {
 				updateAmbientLightColor(next.ambientLightColor);
+				const program = findMaterialProgram();
+				if (program) {
+					setupAmbientLight(appContext.programMap.get(program), processed.get("ambientLightColor"));
+				}
 			}
 			if (!arrayHasSameShallow(next.toneMappings, cache.toneMappings)) {
 				updateToneMappings(next.toneMappings);
@@ -240,6 +244,11 @@ function findProgram(mesh) {
 	return program;
 }
 
+function findMaterialProgram() {
+	const program = get(programs).find((program) => program.meshes?.length !== 0 && program.allMeshes !== true);
+	return program;
+}
+
 const createMeshMatrixStore = (mesh, rendererUpdate, initialValue, instanceIndex = NaN) => {
 	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
 	const transformMatrix = {
@@ -288,6 +297,8 @@ export const createLightStore = (initialProps) => {
 			set(props);
 			updateOneLight(get(lights), light);
 			renderer.set(get(renderer));
+
+			//scene.set(get(scene));
 		},
 	};
 	return light;
@@ -620,6 +631,7 @@ const renderPipeline = derived(
 		if(updateMap.has(renderer)){
 			console.log("update renderer");
 		}
+		
 		if(updateMap.has(scene)){
 			console.log("update scene");
 		}
