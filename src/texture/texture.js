@@ -58,6 +58,7 @@ export const createTexture = async (props) => {
 		}),
 		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale, setBuffer),
 		bindTexture: bindTexture(id[props.type], getBuffer, types[props.type]),
+		...(props.url ? { url: props.url } : {}),
 	};
 
 	if (typeof image === "function") {

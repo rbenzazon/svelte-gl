@@ -14,6 +14,7 @@ import { createContactShadowPass } from "./store/contact-shadow.js";
 import Menu from "./Menu.svelte";
 import { get } from "svelte/store";
 import { createSpecular } from "./material/specular/specular.js";
+import DebugPanel from "./DebugPanel.svelte";
 
 let canvas;
 let light;
@@ -116,3 +117,4 @@ function animate() {
 </script>
 <canvas bind:this={canvas}></canvas>
 <Menu />
+<DebugPanel />
