@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c rollup.config.mjs",
-    "watch": "rollup -c rollup.config.mjs -w",
+    "watch": "rollup -c rollup.config.mjs -w --environment DEV",
     "build2": "vite build",
     "format": "pnpm biome format --write ./src",
     "test": "watch-http-server build -p 8080 -a 127.0.0.1 -c-1"

@@ -5,6 +5,8 @@ import glsl from 'rollup-plugin-glsl';
 import commonjs from '@rollup/plugin-commonjs';
 import del from 'rollup-plugin-delete';
 
+const dev = process.env.DEV;
+
 export default {
     input: {
         main:'src/main-refactor.svelte',
@@ -42,8 +44,6 @@ export default {
             extensions: ['.svelte']
           }),
         commonjs(),
-
-        terser(),
-            
+        ...(dev ? []:[terser()]),
     ]
 };
