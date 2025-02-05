@@ -2,6 +2,13 @@
 import { get } from "svelte/store";
 import { renderer, camera, meshes, lights } from "./store/engine-refactor.js";
 
+const materialPropsRange = {
+	roughness: [0, 1],
+	metalness: [0, 1],
+	ior: [0, 2],
+	intensity: [0, 10],
+};
+
 function linearArrayToCSSHashColor(array) {
 	return array.map((num) => Math.floor(num * 255)).reduce((acc, num) => acc + num.toString(16).padStart(2, "0"), "#");
 }
@@ -70,74 +77,102 @@ function onLightIntensityChange(e, light) {
 	});
 }
 </script>
-<div on:click={collapse} class="openButton" class:collapsed="{!collapsed}">{'<<'}</div>
+<div on:click={collapse} class="collapseButton openButton" class:collapsed="{!collapsed}">{'<'}</div>
 <div class="panel" class:collapsed>
     <div class="panelContent" >
-    <button class="closeButton" on:click={collapse}>{'>>'}</button>
-    <p>Renderer</p>
-    <div class="renderer">
-        <p>Background Color</p>
-        <input type="color" value={hexNumToCSSStringColor($renderer.backgroundColor)} on:change={onBGColorChange}/>
-        <p>Ambient Light Color</p>
-        <input type="color" value={hexNumToCSSStringColor($renderer.ambientLightColor[0])} on:change={onAColorChange}/>
-        <p>Ambient Light Intensity</p>
+    <button class="collapseButton" on:click={collapse}>{'>'}</button>
+    <h2>Renderer</h2>
+    <div class="block">
+        <div class="row">
+            <h4>Background Color</h4>
+            <input type="color" value={hexNumToCSSStringColor($renderer.backgroundColor)} on:change={onBGColorChange}/>
+        </div>
+        <div class="row">
+            <h4>Ambient Light Color</h4>
+            <input type="color" value={hexNumToCSSStringColor($renderer.ambientLightColor[0])} on:change={onAColorChange}/>
+        </div>
+        <h4>Ambient Light Intensity</h4>
         <div class="row">
             <input type="range" min="0" max="1" step="0.01" value={$renderer.ambientLightColor[1]} on:change={onAIntensityChange}/>
             <input type="number" min="0" max="1" step="0.01" value={$renderer.ambientLightColor[1]} on:change={onAIntensityChange}/>
         </div>
     </div>
-    <p>Camera</p>
-    <div class="camera">
-        <p>Position</p>
+    <h2>Camera</h2>
+    <div class="block">
+        <h3>Position</h3>
         <div class="row">
-            <p>x</p><input type="number" value={$camera.position[0]} on:change={onCameraXPositionChange}/>
-            <p>y</p><input type="number" value={$camera.position[1]} on:change={onCameraYPositionChange}/>
-            <p>z</p><input type="number" value={$camera.position[2]} on:change={onCameraZPositionChange}/>
+            <span>x</span><input type="number" value={$camera.position[0]} on:change={onCameraXPositionChange}/>
+            <span>y</span><input type="number" value={$camera.position[1]} on:change={onCameraYPositionChange}/>
+            <span>z</span><input type="number" value={$camera.position[2]} on:change={onCameraZPositionChange}/>
         </div>
-        <p>Target</p>
+        <h3>Target</h3>
         <div class="row">
-            <p>x</p><input type="number" value={$camera.target[0]} on:change={onCameraXTargetChange}/>
-            <p>y</p><input type="number" value={$camera.target[1]} on:change={onCameraYTargetChange}/>
-            <p>z</p><input type="number" value={$camera.target[2]} on:change={onCameraZTargetChange}/>
+            <span>x</span><input type="number" value={$camera.target[0]} on:change={onCameraXTargetChange}/>
+            <span>y</span><input type="number" value={$camera.target[1]} on:change={onCameraYTargetChange}/>
+            <span>z</span><input type="number" value={$camera.target[2]} on:change={onCameraZTargetChange}/>
         </div>
-        <p>FOV</p>
+        <h3>FOV</h3>
         <div class="row"><input type="range" min="0" max="180" step="1" value={$camera.fov} on:change={onCameraFOVChange} /><input type="number" value={$camera.fov} on:change={onCameraFOVChange} /></div>
         
     </div>
-    <p>Meshes</p>
-    <div class="meshes">
+    <h2>Meshes</h2>
+    <div class="block">
         {#each $meshes as {attributes, drawMode, matrix, material}, i}
             <div class="mesh">
-                <p>Mesh {i}</p>
-                <p>Attributes</p>
+                <h3>Mesh {i}</h3>
+                <h3>Attributes</h3>
                 <div class="attributes">
                     {#each Object.entries(attributes) as [key, value]}
-                        <p>{key}: {value.length}</p>
+                        <span>{key}: {value.length}</span>
                     {/each}
                 </div>
-                <p>Draw Mode</p>
-                <p>{drawMode}</p>
-                <p>Matrix</p>
-                {#each matrix as num}
-                    <p>{num}</p>
-                {/each}
-                <p>Material</p>
-                
+                <h3 class="label">Draw Mode</h3>
+                <span>{drawMode}</span>
+                <h3>Matrix</h3>
+                <div class="matrix4x4">
+                    {#each get(matrix) as num}
+                        <span>{num}</span>
+                    {/each}
+                </div>
+                <h3>Material</h3>
                 {#each Object.entries(material) as [key, value]}
                     {#if key.includes("Map")}
                         <a href={'./'+value.url}>{key}</a>
                     {:else if colorProps.some(c=>c===key)}
-                        <p>{key}</p>
+                    <div class="row">
+                        <h4>{key}</h4>
                         <input type="color" value={linearArrayToCSSHashColor(value)} />
-                    {:else}
-                        <p>{key}: {value}</p>
+                    </div>
+                    {:else if key in materialPropsRange}
+                        <h4>{key}</h4>
+                        <div class="row">
+                            <input type="range" min={materialPropsRange[key][0]} max={materialPropsRange[key][1]} step={(materialPropsRange[key][1]-materialPropsRange[key][0])/20} value={value} />
+                            <input type="number" min={materialPropsRange[key][0]} max={materialPropsRange[key][1]} step={(materialPropsRange[key][1]-materialPropsRange[key][0])/20} value={value} />
+                        </div>
+                    {:else if Object.keys(value).length > 0}
+                        <h4>{key}</h4>
+                        {#each Object.entries(value).filter(p=>!(typeof p[1] === 'function')) as [k, v]} 
+                            {#if typeof v === 'number'}
+                            <h4>{k}</h4>
+                            <div class="row">
+                                <input type="range" min={materialPropsRange[k][0]} max={materialPropsRange[k][1]} step={(materialPropsRange[k][1]-materialPropsRange[k][0])/20} value={v} />
+                                <input type="number" min={materialPropsRange[k][0]} max={materialPropsRange[k][1]} step={(materialPropsRange[k][1]-materialPropsRange[k][0])/20} value={v} />
+                            </div>
+                            {:else if Array.isArray(v) && v.length === 3}
+                            <div class="row">
+                                <h4>{k}</h4>
+                                <input type="color" value={linearArrayToCSSHashColor(v)} />
+                            </div>
+                            {/if}
+                            
+                        {/each}
                     {/if}
                 {/each}
             </div>
         {/each}
     </div>
-    <p>Lights</p>
-        <div class="lights">
+    <h2>Lights</h2>
+        <div class="block">
             {#each $lights as light, i}
                 <div class="light">
                     <p>Light {i}</p>
@@ -167,82 +202,167 @@ function onLightIntensityChange(e, light) {
         right: 0;
         width: 350px;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        color: white;
         overflow-y: auto;
+        
+        color: white;
+        background-color: rgba(0, 0, 0, 0.8);
+        --input-thumb-color: white;
+        --input-track-color: #515151;
+        --input-thumb-size: 16px;
+        --input-track-size: 8px;
+        --panel-dark-color: #515151;
+        --panel-medium-color: #bdbdbd;
+        --panel-light-color: #efefef;
     }
     .panelContent {
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: left;
-        gap: 20px;
-        padding: 20px;
+        gap: 10px;
+        margin: 50px 0px 20px 0px;
+    }
+    .panelContent h2 {
+        /*all caps*/
+        text-transform: uppercase;
+        font-weight: bold;
+        font-size: 1em;
+        color: var(--panel-light-color);
+        /*only top and bottom border*/
+        border-top: 1px solid var(--panel-dark-color);
+        border-bottom: 1px solid var(--panel-dark-color);
+        padding: 4px 7px 2px 7px;
+    }
+    .panelContent h3 {
+        /*all caps*/
+        text-transform: uppercase;
+        font-size: 0.9em;
+        color: var(--panel-light-color);
+        border-top: 1px solid var(--panel-dark-color);
+        padding: 5px 7px 2px 7px;
+        /*
+        only top and bottom border
+        border-top: 1px solid var(--panel-dark-color);
+        padding: 4px 7px 2px 7px;
+        */
+    }
+    .panelContent h4 {
+        /* capitalize*/
+        text-transform: capitalize;
+
+        font-size: 0.8em;
+        color: var(--panel-medium-color);
+        padding: 15px 7px 2px 7px;
+        /*
+        only top and bottom border
+        border-top: 1px solid var(--panel-dark-color);
+        padding: 4px 7px 2px 7px;
+        */
+    }
+    .panelContent h3:first-child {
+        border-top: none;
+    }
+    .panelContent span {
+        color: var(--panel-light-color);
+        padding: 0px 10px;
     }
     .collapsed {
         display: none !important;
     }
-    .closeButton {
-        /*remove button style*/
+    .collapseButton {
+        font-size: 1.5em;
+        font-weight: bold;
         background: none;
         border: none;
         color: inherit;
         cursor: pointer;
-    }
-    .openButton {
         position: absolute;
         top: 0;
         right: 0;
         width: 50px;
         height: 50px;
-        background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .openButton {
+        background-color: rgba(0, 0, 0, 0.8);
         color: white;
-        display: flex;
+        display: flex;  
         justify-content: center;
         align-items: center;
-        cursor: pointer;
+        font-family: Arial, sans-serif;
     }
     .row {
         width: 100%;
         display: flex;
         justify-content: center;
-        align-items: left;
+        align-items: center;
+        padding: 0px 10px;
         gap: 10px;
     }
+    .row>input[type="range"],.row h4, .row span.label {
+        flex: 1;
+    }
+    input[type=range]:focus {
+        outline: none;
+    }
+    input[type=range] {
+        border-radius: 5px;
+        height: 5px;
+        outline: none;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    input[type=range]::-webkit-slider-runnable-track {
+        height: var(--input-track-size);
+        background-color: var(--panel-dark-color);
+        border-radius: calc(var(--input-track-size) / 2);
+    }
+    input[type=range]:focus::-webkit-slider-runnable-track {
+        background-color: var(--panel-dark-color);
+    }
+    input[type=range]::-moz-range-track {
+        height: var(--input-track-size);
+        background-color: var(--panel-dark-color);
+        border-radius: calc(var(--input-track-size) / 2);
+    }
+    input[type=range]::-webkit-slider-thumb {
+        border-radius: calc(var(--input-thumb-size) / 2);
+        height: var(--input-thumb-size);
+        width: var(--input-thumb-size);
+        background: var(--input-thumb-color);
+        cursor: pointer;
+        -webkit-appearance: none;
+        margin-top: calc((var(--input-track-size) - var(--input-thumb-size)) / 2);
+    }
+    input[type=range]::-moz-range-thumb {
+        border: none;
+        height: var(--input-thumb-size);
+        width: var(--input-thumb-size);
+        border-radius: calc(var(--input-thumb-size) / 2);
+        background: var(--input-thumb-color);
+        cursor: pointer;
+    }
+
     .row input[type="number"] {
-        flex: 1 1 auto;
+        /* make it grow less in flex width */
+        flex: 0.3;
+        padding: 3px 5px;
+        color: var(--panel-light-color);
+        background-color: var(--panel-dark-color);
+
         border: none;
         width: 0;
     }
-    .renderer {
+    .block {
         width: 100%;
         height: 100%;
         display: flex;
         justify-content: center;
         align-items: left;
         flex-direction: column;
-        gap: 10px;
-        padding: 20px;
-    }
-    .camera {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: left;
-        flex-direction: column;
-        gap: 20px;
-        padding: 20px;
-    }
-    .meshes {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: left;
-        flex-direction: column;
-        gap: 20px;
-        padding: 20px;
+        gap: 15px;
+        padding: 0px 10px;
+        font-size: 0.9em;
     }
     
     .mesh {
@@ -262,7 +382,18 @@ function onLightIntensityChange(e, light) {
         align-items: left;
         flex-direction: column;
         gap: 10px;
-        padding: 20px;
+        padding: 5px;
+    }
+    .matrix4x4{
+        /* 4x4 matrix */
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 5px;
+        padding: 5px 40px;
+    }
+    .matrix4x4>span{
+        color: var(--panel-light-color);
+        background: var(--panel-dark-color);
     }
     a {
         color: white;
