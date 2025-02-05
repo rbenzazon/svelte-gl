@@ -42,6 +42,7 @@ function onAColorChange(e) {
 function onAIntensityChange(e) {
 	$renderer = { ...$renderer, ambientLightColor: [$renderer.ambientLightColor[0], e.currentTarget.value] };
 }
+
 function onCameraXPositionChange(e) {
 	$camera = { ...$camera, position: [e.currentTarget.value, $camera.position[1], $camera.position[2]] };
 }
@@ -75,6 +76,24 @@ function onLightIntensityChange(e, light) {
 		...get(light),
 		intensity: e.currentTarget.value,
 	});
+}
+function onLightXChange(e, light) {
+	const lightValue = get(light);
+	light.set({ ...lightValue, position: [e.currentTarget.value, lightValue.position[1], lightValue.position[2]] });
+}
+function onLightYChange(e, light) {
+	const lightValue = get(light);
+	light.set({ ...lightValue, position: [lightValue.position[0], e.currentTarget.value, lightValue.position[2]] });
+}
+function onLightZChange(e, light) {
+	const lightValue = get(light);
+	light.set({ ...lightValue, position: [lightValue.position[0], lightValue.position[1], e.currentTarget.value] });
+}
+function onLightCutoffDistanceChange(e, light) {
+	light.set({ ...get(light), cutoffDistance: e.currentTarget.value });
+}
+function onLightDecayExponentChange(e, light) {
+	light.set({ ...get(light), decayExponent: e.currentTarget.value });
 }
 </script>
 <div on:click={collapse} class="collapseButton openButton" class:collapsed="{!collapsed}">{'<'}</div>
@@ -175,20 +194,32 @@ function onLightIntensityChange(e, light) {
         <div class="block">
             {#each $lights as light, i}
                 <div class="light">
-                    <p>Light {i}</p>
-                    <p>Color</p>
-                    <input type="color" value={linearArrayToCSSHashColor(get(light).color)} on:change={(e)=>onLightColorChange(e,light)} />
-                    <p>Intensity</p>
+                    <h3>Light {i}</h3>
+                    <div class="row">
+                        <h4>Color</h4>
+                        <input type="color" value={linearArrayToCSSHashColor(get(light).color)} on:change={(e)=>onLightColorChange(e,light)} />
+                    </div>
+                    <h4>Intensity</h4>
                     <div class="row">
                         <input type="range" min="0" max="10" step="0.1" value={get(light).intensity} on:change={(e)=>onLightIntensityChange(e,light)} />
                         <input type="number" min="0" max="10" step="0.1" value={get(light).intensity} on:change={(e)=>onLightIntensityChange(e,light)} />
                     </div>
-                    <p>Position</p>
-                    <p>{get(light).position}</p>
-                    <p>Cutoff Distance</p>
-                    <input type="range" min="0" max="30" step="0.1" value={get(light).cutoffDistance} />
-                    <p>Decay Exponent</p>
-                    <input type="range" min="0" max="5" step="0.1" value={get(light).decayExponent} />
+                    <h4>Position</h4>
+                    <div class="row">
+                        <span>x</span><input type="number" value={get(light).position[0]} on:change={(e)=>onLightXChange(e,light)}/>
+                        <span>y</span><input type="number" value={get(light).position[1]} on:change={(e)=>onLightYChange(e,light)}/>
+                        <span>z</span><input type="number" value={get(light).position[2]} on:change={(e)=>onLightZChange(e,light)}/>
+                    </div>
+                    <h4>Cutoff Distance</h4>
+                    <div class="row">
+                        <input type="range" min="0" max="30" step="0.1" value={get(light).cutoffDistance} on:change={(e)=>onLightCutoffDistanceChange(e,light)} />
+                        <input type="number" min="0" max="30" step="0.1" value={get(light).cutoffDistance} on:change={(e)=>onLightCutoffDistanceChange(e,light)}/>
+                    </div>
+                    <h4>Decay Exponent</h4>
+                    <div class="row">
+                        <input type="range" min="0" max="5" step="0.1" value={get(light).decayExponent} on:change={(e)=>onLightDecayExponentChange(e,light)}/>
+                        <input type="number" min="0" max="5" step="0.1" value={get(light).decayExponent} on:change={(e)=>onLightDecayExponentChange(e,light)}/>
+                    </div>
                 </div>
             {/each}
         </div>
