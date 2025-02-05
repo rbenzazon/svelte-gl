@@ -1,6 +1,6 @@
 <script type="module">
 import { onMount } from "svelte";
-import { createLightStore, renderer, scene, camera, create3DObject } from "./store/engine-refactor.js";
+import { createLightStore, renderer, scene, camera, create3DObject, lights } from "./store/engine-refactor.js";
 import { identity, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
@@ -65,8 +65,9 @@ onMount(async () => {
 			matrix: groundMatrix,
 			material: groundMaterial,
 		}),
-		light,
 	];
+
+	$lights = [...$lights, light];
 
 	$renderer = {
 		...$renderer,

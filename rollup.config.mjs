@@ -10,8 +10,8 @@ const dev = process.env.DEV;
 export default {
     input: {
         main:'src/main-refactor.svelte',
-        venus:'src/venus.svelte',
         'golf-ball':'src/golf-ball.svelte',
+        venus:'src/venus.svelte',
         cube:'src/cube.svelte',
         gltf:'src/gltf.svelte',
         'contact-shadow':'src/contact-shadow.svelte',

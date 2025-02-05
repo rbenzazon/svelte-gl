@@ -288,22 +288,6 @@ export function create3DObject(value) {
 	return value;
 }
 
-export const createLightStore = (initialProps) => {
-	const { subscribe, set } = writable(initialProps);
-	const light = {
-		subscribe,
-		set: (props) => {
-			//update buffers here
-			set(props);
-			updateOneLight(get(lights), light);
-			renderer.set(get(renderer));
-
-			//scene.set(get(scene));
-		},
-	};
-	return light;
-};
-
 let meshCache;
 
 function objectsHaveSameMatrix(a, b) {
@@ -328,19 +312,35 @@ export const meshes = derived([scene], ([$scene]) => {
 	return meshNodes;
 });
 
-let lightCache;
+function createLightsStore() {
+	const { subscribe, set } = writable([]);
+	const lights = {
+		subscribe,
+		set: (next) => {
+			set(next);
+		},
+	};
+	return lights;
+}
+export const lights = createLightsStore();
 
-export const lights = derived([scene], ([$scene]) => {
-	const lightNodes = $scene.filter(isStore).filter(isLight);
-	//using throw to cancel update flow when unchanged
-	if (arrayHasSameShallow(lightCache, lightNodes)) {
-		// TODO, study this, maybe not required, only mesh unchanged could be useful
-		throw new Error("lights unchanged");
-	} else {
-		lightCache = lightNodes;
-	}
-	return lightNodes;
+export const numLigths = derived([lights], ([$lights]) => {
+	return $lights.length;
 });
+
+export const createLightStore = (initialProps) => {
+	const { subscribe, set } = writable(initialProps);
+	const light = {
+		subscribe,
+		set: (props) => {
+			set(props);
+			updateOneLight(get(lights), light);
+			lights.set(get(lights));
+			renderer.set(get(renderer));
+		},
+	};
+	return light;
+};
 
 export const renderPasses = writable([]);
 
@@ -412,8 +412,8 @@ function sortMeshesByZ(programs) {
 }
 
 export const programs = derived(
-	[meshes, lights, materials, renderPasses],
-	([$meshes, $lights, $materials, $renderPasses]) => {
+	[meshes, numLigths, materials, renderPasses],
+	([$meshes, $numLigths, $materials, $renderPasses]) => {
 		let prePasses = $renderPasses
 			.filter((pass) => pass.order < 0)
 			.reduce((acc, pass) => {
@@ -468,11 +468,14 @@ export const programs = derived(
 
 		programs = programs.sort(sortTransparency);
 		sortMeshesByZ(programs);
-		const pointLights = $lights.filter((l) => get(l).type === "point");
-		const numPointLights = pointLights.length;
+
+		// TODO make two different numligth store, one for each light type, when spotlight is supported
+		//const pointLights = $lights.filter((l) => get(l).type === "point");
+		const numPointLights = $numLigths;
+
 		let pointLightShader;
 		if (numPointLights > 0) {
-			pointLightShader = get(pointLights[0]).shader;
+			pointLightShader = get(get(lights)[0]).shader;
 		}
 
 		return [
@@ -516,7 +519,7 @@ export const programs = derived(
 				}
 				program.setupMaterial.push(
 					...Array.from(
-						$lights.reduce((acc, light) => {
+						get(lights).reduce((acc, light) => {
 							const lightValue = get(light);
 							if (acc.has(lightValue.setupLights)) {
 								acc.set(lightValue.setupLights, [...acc.get(lightValue.setupLights), light]);
