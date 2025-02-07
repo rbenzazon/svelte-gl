@@ -12,6 +12,7 @@
     });
   }
 </script>
+
 <DebugRow>
   <input type="range" {min} {max} {step} {value} on:change={onChange} />
   <input type="number" {min} {max} {step} {value} on:change={onChange} />
@@ -61,12 +62,10 @@
   }
 
   input[type="number"] {
-    /* make it grow less in flex width */
     flex: 0.3;
     padding: 3px 5px;
     color: var(--panel-light-color);
     background-color: var(--panel-dark-color);
-
     border: none;
     width: 0;
   }

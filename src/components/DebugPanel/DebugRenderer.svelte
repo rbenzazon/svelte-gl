@@ -1,14 +1,12 @@
 <script type="module">
   import DebugBlock from "./DebugBlock.svelte";
   import DebugH2 from "./DebugH2.svelte";
-  import DebugH3 from "./DebugH3.svelte";
-  import DebugNumber from "./DebugNumber.svelte";
-  import DebugRow from "./DebugRow.svelte";
   import DebugSliderNumber from "./DebugSliderNumber.svelte";
-
   import { renderer } from "../../store/engine-refactor.js";
   import DebugColor from "./DebugColor.svelte";
   import DebugH4 from "./DebugH4.svelte";
+  import { cssStringColorToHexNum } from "../../color/color-space";
+
   const lightPropsRange = {
     intensity: [0, 30],
     ambientIntensity: [0, 1],
@@ -50,26 +48,22 @@
 
 <DebugH2>Renderer</DebugH2>
 <DebugBlock>
-  <DebugRow>
-    <DebugColor
-      label="Background Color"
-      color={$renderer.backgroundColor}
-      on:change={onBGColorChange}
-    />
-  </DebugRow>
-  <DebugRow>
-    <DebugColor
-      label="Ambient Light Color"
-      color={$renderer.ambientLightColor[0]}
-      on:change={onAColorChange}
-    />
-  </DebugRow>
+  <DebugColor
+    label="Background Color"
+    color={$renderer.backgroundColor}
+    on:change={onBGColorChange}
+  />
+  <DebugColor
+    label="Ambient Light Color"
+    color={$renderer.ambientLightColor[0]}
+    on:change={onAColorChange}
+  />
   <DebugH4>Ambient Light Intensity</DebugH4>
-    <DebugSliderNumber
-      min={getRangeMin("ambientIntensity")}
-      max={getRangeMax("ambientIntensity")}
-      step={getRangeStep("ambientIntensity")}
-      value={$renderer.ambientLightColor[1]}
-      on:change={onAIntensityChange}
-    />
+  <DebugSliderNumber
+    min={getRangeMin("ambientIntensity")}
+    max={getRangeMax("ambientIntensity")}
+    step={getRangeStep("ambientIntensity")}
+    value={$renderer.ambientLightColor[1]}
+    on:change={onAIntensityChange}
+  />
 </DebugBlock>

@@ -88,11 +88,11 @@
     />
   </DebugRow>
   <DebugH3>FOV</DebugH3>
-    <DebugSliderNumber
-      min="0"
-      max="180"
-      step="1"
-      value={$camera.fov}
-      on:change={onCameraFOVChange}
-    />
+  <DebugSliderNumber
+    min="0"
+    max="180"
+    step="1"
+    value={$camera.fov}
+    on:change={onCameraFOVChange}
+  />
 </DebugBlock>

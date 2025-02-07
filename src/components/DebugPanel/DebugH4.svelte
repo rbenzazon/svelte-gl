@@ -1,8 +1,9 @@
 <h4>
-    <slot/>
+  <slot />
 </h4>
+
 <style>
-    h4 {
+  h4 {
     text-transform: capitalize;
     font-size: 0.8rem;
     color: var(--panel-medium-color);
