@@ -92,9 +92,11 @@ function createRenderer() {
 			}
 			if (!arrayHasSameShallow(next.ambientLightColor, cache.ambientLightColor)) {
 				updateAmbientLightColor(next.ambientLightColor);
-				const program = findMaterialProgram();
-				if (program) {
-					setupAmbientLight(appContext.programMap.get(program), processed.get("ambientLightColor"));
+				const programs = findMaterialProgram();
+				if (programs) {
+					programs.forEach((program) => {
+						setupAmbientLight(appContext.programMap.get(program), processed.get("ambientLightColor"));
+					});
 				}
 			}
 			if (!arrayHasSameShallow(next.toneMappings, cache.toneMappings)) {
@@ -245,8 +247,8 @@ function findProgram(mesh) {
 }
 
 function findMaterialProgram() {
-	const program = get(programs).find((program) => program.meshes?.length !== 0 && program.allMeshes !== true);
-	return program;
+	const matPrograms = get(programs).filter((program) => program.meshes?.length !== 0 && program.allMeshes !== true);
+	return matPrograms;
 }
 
 const createMeshMatrixStore = (mesh, rendererUpdate, initialValue, instanceIndex = NaN) => {
@@ -346,7 +348,31 @@ export const renderPasses = writable([]);
 
 let materialCache;
 
-export const materials = derived([meshes], ([$meshes]) => {
+export function createMaterialStore(initialProps) {
+	const { subscribe, set } = writable(initialProps);
+	const material = {
+		subscribe,
+		set: (props) => {
+			set(props);
+			materials.set(get(materials));
+			//renderer.set(get(renderer));
+		},
+	};
+	return material;
+}
+
+function createMaterialsStore() {
+	const { subscribe, set } = writable([]);
+	const materials = {
+		subscribe,
+		set: (next) => {
+			set(next);
+		},
+	};
+	return materials;
+}
+export const materials = writable([]);
+/*derived([meshes], ([$meshes]) => {
 	const materials = new Set();
 	$meshes.forEach((node) => {
 		materials.add(node.material);
@@ -359,7 +385,7 @@ export const materials = derived([meshes], ([$meshes]) => {
 		materialCache = materials;
 	}
 	return materials;
-});
+});*/
 
 export const RENDER_PASS_TYPES = {
 	FRAMEBUFFER_TO_TEXTURE: 0,
@@ -451,7 +477,7 @@ export const programs = derived(
 
 			if (currentNormalMeshes.length > 0) {
 				acc.push({
-					material: current,
+					material: get(current),
 					meshes: currentNormalMeshes,
 				});
 			}
@@ -459,7 +485,7 @@ export const programs = derived(
 				const requireTime = mesh.animations?.some((animation) => animation.requireTime);
 				acc.push({
 					requireTime,
-					material: current,
+					material: get(current),
 					meshes: [mesh],
 				});
 			});

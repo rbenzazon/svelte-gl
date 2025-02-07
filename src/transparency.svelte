@@ -1,6 +1,15 @@
 <script type="module">
 import { onMount } from "svelte";
-import { createLightStore, renderer, scene, camera, create3DObject, lights } from "./store/engine-refactor.js";
+import {
+	createLightStore,
+	renderer,
+	scene,
+	camera,
+	create3DObject,
+	lights,
+	materials,
+	createMaterialStore,
+} from "./store/engine-refactor.js";
 import { identity, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
@@ -10,6 +19,7 @@ import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { createFlatShadedNormals } from "./geometries/common.js";
+import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 
 let canvas;
 onMount(async () => {
@@ -29,19 +39,19 @@ onMount(async () => {
 	const cubeMesh = createCube();
 	const cubePos = identity(new Float32Array(16));
 	translate(cubePos, cubePos, [3, 1.5, 0]);
-	const material = {
+	const material = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],
 		metalness: 0,
-	};
+	});
 
 	const sphereMesh = createPolyhedron(1, 5, createSmoothShadedNormals);
 	const spherePos = identity(new Float32Array(16));
 	translate(spherePos, spherePos, [-3, 1.5, 0]);
-	const transparentMaterial = {
+	const transparentMaterial = createMaterialStore({
 		diffuse: [1, 1, 0.5],
 		metalness: 0,
 		opacity: 0.5,
-	};
+	});
 
 	const polyhedronMesh = createPolyhedron(1, 2, createFlatShadedNormals);
 	const polyhedronPos = identity(new Float32Array(16));
@@ -50,10 +60,12 @@ onMount(async () => {
 	const groundMesh = createPlane(10, 10, 1, 1);
 	const groundMatrix = identity(new Float32Array(16));
 	translate(groundMatrix, groundMatrix, [0, 0, 0]);
-	const groundMaterial = {
+	const groundMaterial = createMaterialStore({
 		diffuse: [1, 1, 1],
 		metalness: 0,
-	};
+	});
+
+	$materials = [...$materials, material, transparentMaterial, groundMaterial];
 
 	const light = createLightStore(
 		createPointLight({
@@ -115,3 +127,4 @@ function animate() {
 </script>
 <canvas bind:this={canvas}></canvas>
 <Menu />
+<DebugPanel />

@@ -1,1 +1,390 @@
-import{S as t,i as e,s as n,a3 as o,a4 as l,e as i,a as s,a5 as a,a6 as r,b as c,a7 as u,a8 as p,n as v,f as g,a9 as f,aa as h,h as d,k as m,r as x,ab as b,l as y,X as C,ac as w,ad as k,y as z,ae as j,M as T,c as D,m as M,t as E,d as L,g as $,o as A,j as O,z as B,A as I,B as S,x as N,C as F,D as P,E as R}from"./Menu-BXmdIPfW.js";import{c as V}from"./plane-DhJQStR7.js";import{c as X}from"./texture-Bnj5NQ42.js";import{c as q}from"./specular-B2r2zAua.js";function G(t){o(t,"svelte-o3t02i",'.panel.svelte-o3t02i.svelte-o3t02i{font-family:Arial, sans-serif;position:absolute;top:0;right:0;width:350px;height:100%;overflow-y:auto;color:white;background-color:rgba(0, 0, 0, 0.8);--input-thumb-color:white;--input-track-color:#515151;--input-thumb-size:16px;--input-track-size:8px;--panel-dark-color:#515151;--panel-medium-color:#bdbdbd;--panel-light-color:#efefef}.panelContent.svelte-o3t02i.svelte-o3t02i{display:flex;flex-direction:column;justify-content:center;align-items:left;gap:10px;margin:50px 0px 20px 0px}.panelContent.svelte-o3t02i h2.svelte-o3t02i{text-transform:uppercase;font-weight:bold;font-size:1em;color:var(--panel-light-color);border-top:1px solid var(--panel-dark-color);border-bottom:1px solid var(--panel-dark-color);padding:4px 7px 2px 7px}.panelContent.svelte-o3t02i h3.svelte-o3t02i{text-transform:uppercase;font-size:0.9em;color:var(--panel-light-color);border-top:1px solid var(--panel-dark-color);padding:5px 7px 2px 7px}.panelContent.svelte-o3t02i h4.svelte-o3t02i{text-transform:capitalize;font-size:0.8em;color:var(--panel-medium-color);padding:15px 7px 2px 7px}.panelContent.svelte-o3t02i h3.svelte-o3t02i:first-child{border-top:none}.panelContent.svelte-o3t02i span.svelte-o3t02i{color:var(--panel-light-color);padding:0px 10px}.collapsed.svelte-o3t02i.svelte-o3t02i{display:none !important}.collapseButton.svelte-o3t02i.svelte-o3t02i{font-size:1.5em;font-weight:bold;background:none;border:none;color:inherit;cursor:pointer;position:absolute;top:0;right:0;width:50px;height:50px}.openButton.svelte-o3t02i.svelte-o3t02i{background-color:rgba(0, 0, 0, 0.8);color:white;display:flex;justify-content:center;align-items:center;font-family:Arial, sans-serif}.row.svelte-o3t02i.svelte-o3t02i{width:100%;display:flex;justify-content:center;align-items:center;padding:0px 10px;gap:10px}.row.svelte-o3t02i>input[type="range"].svelte-o3t02i,.row.svelte-o3t02i h4.svelte-o3t02i,.row.svelte-o3t02i span.label.svelte-o3t02i{flex:1}input[type="range"].svelte-o3t02i.svelte-o3t02i:focus{outline:none}input[type="range"].svelte-o3t02i.svelte-o3t02i{border-radius:5px;height:5px;outline:none;-webkit-appearance:none;appearance:none}input[type="range"].svelte-o3t02i.svelte-o3t02i::-webkit-slider-runnable-track{height:var(--input-track-size);background-color:var(--panel-dark-color);border-radius:calc(var(--input-track-size) / 2)}input[type="range"].svelte-o3t02i.svelte-o3t02i:focus::-webkit-slider-runnable-track{background-color:var(--panel-dark-color)}input[type="range"].svelte-o3t02i.svelte-o3t02i::-moz-range-track{height:var(--input-track-size);background-color:var(--panel-dark-color);border-radius:calc(var(--input-track-size) / 2)}input[type="range"].svelte-o3t02i.svelte-o3t02i::-webkit-slider-thumb{border-radius:calc(var(--input-thumb-size) / 2);height:var(--input-thumb-size);width:var(--input-thumb-size);background:var(--input-thumb-color);cursor:pointer;-webkit-appearance:none;margin-top:calc((var(--input-track-size) - var(--input-thumb-size)) / 2)}input[type="range"].svelte-o3t02i.svelte-o3t02i::-moz-range-thumb{border:none;height:var(--input-thumb-size);width:var(--input-thumb-size);border-radius:calc(var(--input-thumb-size) / 2);background:var(--input-thumb-color);cursor:pointer}.row.svelte-o3t02i input[type="number"].svelte-o3t02i{flex:0.3;padding:3px 5px;color:var(--panel-light-color);background-color:var(--panel-dark-color);border:none;width:0}.block.svelte-o3t02i.svelte-o3t02i{width:100%;height:100%;display:flex;justify-content:center;align-items:left;flex-direction:column;gap:15px;padding:0px 10px;font-size:0.9em}.mesh.svelte-o3t02i.svelte-o3t02i{width:100%;height:100%;display:flex;justify-content:center;align-items:left;flex-direction:column;gap:10px}.attributes.svelte-o3t02i.svelte-o3t02i{width:100%;height:100%;display:flex;justify-content:center;align-items:left;flex-direction:column;gap:10px;padding:5px}.matrix4x4.svelte-o3t02i.svelte-o3t02i{display:grid;grid-template-columns:repeat(4, 1fr);gap:5px;padding:5px 40px}.matrix4x4.svelte-o3t02i>span.svelte-o3t02i{color:var(--panel-light-color);background:var(--panel-dark-color)}a.svelte-o3t02i.svelte-o3t02i{color:white}.light.svelte-o3t02i.svelte-o3t02i{width:100%;height:100%;display:flex;justify-content:center;align-items:left;flex-direction:column;gap:10px}')}function H(t,e,n){const o=t.slice();return o[39]=e[n],o[41]=n,o}function J(t,e,n){const o=t.slice();return o[42]=e[n].attributes,o[43]=e[n].drawMode,o[44]=e[n].matrix,o[45]=e[n].material,o[41]=n,o}function K(t,e,n){const o=t.slice();return o[47]=e[n][0],o[48]=e[n][1],o}function Q(t,e,n){const o=t.slice();return o[51]=e[n][0],o[52]=e[n][1],o}function U(t,e,n){const o=t.slice();return o[55]=e[n],o}function W(t,e,n){const o=t.slice();return o[47]=e[n][0],o[48]=e[n][1],o}function Y(t){let e,n,o,l,s=t[47]+"",r=t[48].length+"";return{c(){e=i("span"),n=w(s),o=w(": "),l=w(r),a(e,"class","svelte-o3t02i")},m(t,i){c(t,e,i),u(e,n),u(e,o),u(e,l)},p(t,e){8&e[0]&&s!==(s=t[47]+"")&&k(n,s),8&e[0]&&r!==(r=t[48].length+"")&&k(l,r)},d(t){t&&g(e)}}}function Z(t){let e,n,o=t[55]+"";return{c(){e=i("span"),n=w(o),a(e,"class","svelte-o3t02i")},m(t,o){c(t,e,o),u(e,n)},p(t,e){8&e[0]&&o!==(o=t[55]+"")&&k(n,o)},d(t){t&&g(e)}}}function _(t){let e,n,o,r,p=t[47]+"",v=l(Object.entries(t[48]).filter(ft)),h=[];for(let e=0;e<v.length;e+=1)h[e]=it(Q(t,v,e));return{c(){e=i("h4"),n=w(p),o=s();for(let t=0;t<h.length;t+=1)h[t].c();r=j(),a(e,"class","svelte-o3t02i")},m(t,l){c(t,e,l),u(e,n),c(t,o,l);for(let e=0;e<h.length;e+=1)h[e]&&h[e].m(t,l);c(t,r,l)},p(t,e){if(8&e[0]&&p!==(p=t[47]+"")&&k(n,p),40&e[0]){let n;for(v=l(Object.entries(t[48]).filter(ft)),n=0;n<v.length;n+=1){const o=Q(t,v,n);h[n]?h[n].p(o,e):(h[n]=it(o),h[n].c(),h[n].m(r.parentNode,r))}for(;n<h.length;n+=1)h[n].d(1);h.length=v.length}},d(t){t&&(g(e),g(o),g(r)),f(h,t)}}}function tt(t){let e,n,o,l,r,p,v,f,h,d,m,x,b,y,C,z=t[47]+"";return{c(){e=i("h4"),n=w(z),o=s(),l=i("div"),r=i("input"),d=s(),m=i("input"),a(e,"class","svelte-o3t02i"),a(r,"type","range"),a(r,"min",p=t[5][t[47]][0]),a(r,"max",v=t[5][t[47]][1]),a(r,"step",f=(t[5][t[47]][1]-t[5][t[47]][0])/20),r.value=h=t[48],a(r,"class","svelte-o3t02i"),a(m,"type","number"),a(m,"min",x=t[5][t[47]][0]),a(m,"max",b=t[5][t[47]][1]),a(m,"step",y=(t[5][t[47]][1]-t[5][t[47]][0])/20),m.value=C=t[48],a(m,"class","svelte-o3t02i"),a(l,"class","row svelte-o3t02i")},m(t,i){c(t,e,i),u(e,n),c(t,o,i),c(t,l,i),u(l,r),u(l,d),u(l,m)},p(t,e){8&e[0]&&z!==(z=t[47]+"")&&k(n,z),8&e[0]&&p!==(p=t[5][t[47]][0])&&a(r,"min",p),8&e[0]&&v!==(v=t[5][t[47]][1])&&a(r,"max",v),8&e[0]&&f!==(f=(t[5][t[47]][1]-t[5][t[47]][0])/20)&&a(r,"step",f),8&e[0]&&h!==(h=t[48])&&(r.value=h),8&e[0]&&x!==(x=t[5][t[47]][0])&&a(m,"min",x),8&e[0]&&b!==(b=t[5][t[47]][1])&&a(m,"max",b),8&e[0]&&y!==(y=(t[5][t[47]][1]-t[5][t[47]][0])/20)&&a(m,"step",y),8&e[0]&&C!==(C=t[48])&&m.value!==C&&(m.value=C)},d(t){t&&(g(e),g(o),g(l))}}}function et(t){let e,n,o,l,r,p,v=t[47]+"";return{c(){e=i("div"),n=i("span"),o=w(v),l=s(),r=i("input"),a(n,"class","label svelte-o3t02i"),a(r,"type","color"),r.value=p=ut(t[48]),a(e,"class","row svelte-o3t02i")},m(t,i){c(t,e,i),u(e,n),u(n,o),u(e,l),u(e,r)},p(t,e){8&e[0]&&v!==(v=t[47]+"")&&k(o,v),8&e[0]&&p!==(p=ut(t[48]))&&(r.value=p)},d(t){t&&g(e)}}}function nt(t){let e,n,o,l=t[47]+"";return{c(){e=i("a"),n=w(l),a(e,"href",o="./"+t[48].url),a(e,"class","svelte-o3t02i")},m(t,o){c(t,e,o),u(e,n)},p(t,i){8&i[0]&&l!==(l=t[47]+"")&&k(n,l),8&i[0]&&o!==(o="./"+t[48].url)&&a(e,"href",o)},d(t){t&&g(e)}}}function ot(t){let e,n,o,l,r,p,v=t[51]+"";return{c(){e=i("div"),n=i("span"),o=w(v),l=s(),r=i("input"),a(n,"class","label svelte-o3t02i"),a(r,"type","color"),r.value=p=ut(t[52]),a(e,"class","row svelte-o3t02i")},m(t,i){c(t,e,i),u(e,n),u(n,o),u(e,l),u(e,r)},p(t,e){8&e[0]&&v!==(v=t[51]+"")&&k(o,v),8&e[0]&&p!==(p=ut(t[52]))&&(r.value=p)},d(t){t&&g(e)}}}function lt(t){let e,n,o,l,r,p,v,f,h,d,m,x,b,y,C,z=t[51]+"";return{c(){e=i("h4"),n=w(z),o=s(),l=i("div"),r=i("input"),d=s(),m=i("input"),a(e,"class","svelte-o3t02i"),a(r,"type","range"),a(r,"min",p=t[5][t[51]][0]),a(r,"max",v=t[5][t[51]][1]),a(r,"step",f=(t[5][t[51]][1]-t[5][t[51]][0])/20),r.value=h=t[52],a(r,"class","svelte-o3t02i"),a(m,"type","number"),a(m,"min",x=t[5][t[51]][0]),a(m,"max",b=t[5][t[51]][1]),a(m,"step",y=(t[5][t[51]][1]-t[5][t[51]][0])/20),m.value=C=t[52],a(m,"class","svelte-o3t02i"),a(l,"class","row svelte-o3t02i")},m(t,i){c(t,e,i),u(e,n),c(t,o,i),c(t,l,i),u(l,r),u(l,d),u(l,m)},p(t,e){8&e[0]&&z!==(z=t[51]+"")&&k(n,z),8&e[0]&&p!==(p=t[5][t[51]][0])&&a(r,"min",p),8&e[0]&&v!==(v=t[5][t[51]][1])&&a(r,"max",v),8&e[0]&&f!==(f=(t[5][t[51]][1]-t[5][t[51]][0])/20)&&a(r,"step",f),8&e[0]&&h!==(h=t[52])&&(r.value=h),8&e[0]&&x!==(x=t[5][t[51]][0])&&a(m,"min",x),8&e[0]&&b!==(b=t[5][t[51]][1])&&a(m,"max",b),8&e[0]&&y!==(y=(t[5][t[51]][1]-t[5][t[51]][0])/20)&&a(m,"step",y),8&e[0]&&C!==(C=t[52])&&m.value!==C&&(m.value=C)},d(t){t&&(g(e),g(o),g(l))}}}function it(t){let e,n;function o(t,n){return 8&n[0]&&(e=null),"number"==typeof t[52]?lt:(null==e&&(e=!(!Array.isArray(t[52])||3!==t[52].length)),e?ot:void 0)}let l=o(t,[-1,-1]),i=l&&l(t);return{c(){i&&i.c(),n=j()},m(t,e){i&&i.m(t,e),c(t,n,e)},p(t,e){l===(l=o(t,e))&&i?i.p(t,e):(i&&i.d(1),i=l&&l(t),i&&(i.c(),i.m(n.parentNode,n)))},d(t){t&&g(n),i&&i.d(t)}}}function st(t){let e,n,o,l;function i(...e){return t[28](t[47],...e)}function s(t,l){return 8&l[0]&&(e=null),8&l[0]&&(n=null),8&l[0]&&(o=null),null==e&&(e=!!t[47].includes("Map")),e?nt:(null==n&&(n=!!t[9].some(i)),n?et:t[47]in t[5]?tt:(null==o&&(o=!!(Object.keys(t[48]).length>0)),o?_:void 0))}let a=s(t,[-1,-1]),r=a&&a(t);return{c(){r&&r.c(),l=j()},m(t,e){r&&r.m(t,e),c(t,l,e)},p(e,n){a===(a=s(t=e,n))&&r?r.p(t,n):(r&&r.d(1),r=a&&a(t),r&&(r.c(),r.m(l.parentNode,l)))},d(t){t&&g(l),r&&r.d(t)}}}function at(t){let e,n,o,r,p,v,h,d,m,x,b,y,z,j,T,D,M,E,L,$=t[43]+"",A=l(Object.entries(t[42])),O=[];for(let e=0;e<A.length;e+=1)O[e]=Y(W(t,A,e));let B=l(C(t[44])),I=[];for(let e=0;e<B.length;e+=1)I[e]=Z(U(t,B,e));let S=l(Object.entries(t[45])),N=[];for(let e=0;e<S.length;e+=1)N[e]=st(K(t,S,e));return{c(){e=i("div"),n=i("h3"),n.textContent=`Mesh ${t[41]}`,o=s(),r=i("h3"),r.textContent="Attributes",p=s(),v=i("div");for(let t=0;t<O.length;t+=1)O[t].c();h=s(),d=i("h3"),d.textContent="Draw Mode",m=s(),x=i("span"),b=w($),y=s(),z=i("h3"),z.textContent="Matrix",j=s(),T=i("div");for(let t=0;t<I.length;t+=1)I[t].c();D=s(),M=i("h3"),M.textContent="Material",E=s();for(let t=0;t<N.length;t+=1)N[t].c();L=s(),a(n,"class","svelte-o3t02i"),a(r,"class","svelte-o3t02i"),a(v,"class","attributes svelte-o3t02i"),a(d,"class","svelte-o3t02i"),a(x,"class","svelte-o3t02i"),a(z,"class","svelte-o3t02i"),a(T,"class","matrix4x4 svelte-o3t02i"),a(M,"class","svelte-o3t02i"),a(e,"class","mesh svelte-o3t02i")},m(t,l){c(t,e,l),u(e,n),u(e,o),u(e,r),u(e,p),u(e,v);for(let t=0;t<O.length;t+=1)O[t]&&O[t].m(v,null);u(e,h),u(e,d),u(e,m),u(e,x),u(x,b),u(e,y),u(e,z),u(e,j),u(e,T);for(let t=0;t<I.length;t+=1)I[t]&&I[t].m(T,null);u(e,D),u(e,M),u(e,E);for(let t=0;t<N.length;t+=1)N[t]&&N[t].m(e,null);u(e,L)},p(t,n){if(8&n[0]){let e;for(A=l(Object.entries(t[42])),e=0;e<A.length;e+=1){const o=W(t,A,e);O[e]?O[e].p(o,n):(O[e]=Y(o),O[e].c(),O[e].m(v,null))}for(;e<O.length;e+=1)O[e].d(1);O.length=A.length}if(8&n[0]&&$!==($=t[43]+"")&&k(b,$),8&n[0]){let e;for(B=l(C(t[44])),e=0;e<B.length;e+=1){const o=U(t,B,e);I[e]?I[e].p(o,n):(I[e]=Z(o),I[e].c(),I[e].m(T,null))}for(;e<I.length;e+=1)I[e].d(1);I.length=B.length}if(552&n[0]){let o;for(S=l(Object.entries(t[45])),o=0;o<S.length;o+=1){const l=K(t,S,o);N[o]?N[o].p(l,n):(N[o]=st(l),N[o].c(),N[o].m(e,L))}for(;o<N.length;o+=1)N[o].d(1);N.length=S.length}},d(t){t&&g(e),f(O,t),f(I,t),f(N,t)}}}function rt(t){let e,n,o,l,r,v,f,d,m,x,b,y,w,k,z,j,T,D,M,E,L,$,A,O,B,I,S,N,F,P,R,V,X,q,G,H,J,K,Q,U,W,Y,Z,_,tt,et,nt,ot,lt,it,st,at,rt;function ct(...e){return t[29](t[39],...e)}function pt(...e){return t[30](t[39],...e)}function vt(...e){return t[31](t[39],...e)}function gt(...e){return t[32](t[39],...e)}function ft(...e){return t[33](t[39],...e)}function ht(...e){return t[34](t[39],...e)}function dt(...e){return t[35](t[39],...e)}function mt(...e){return t[36](t[39],...e)}function xt(...e){return t[37](t[39],...e)}function bt(...e){return t[38](t[39],...e)}return{c(){e=i("div"),n=i("h3"),n.textContent=`Light ${t[41]}`,o=s(),l=i("div"),r=i("h4"),r.textContent="Color",v=s(),f=i("input"),m=s(),x=i("h4"),x.textContent="Intensity",b=s(),y=i("div"),w=i("input"),z=s(),j=i("input"),D=s(),M=i("h4"),M.textContent="Position",E=s(),L=i("div"),$=i("span"),$.textContent="x",A=i("input"),B=s(),I=i("span"),I.textContent="y",S=i("input"),F=s(),P=i("span"),P.textContent="z",R=i("input"),X=s(),q=i("h4"),q.textContent="Cutoff Distance",G=s(),H=i("div"),J=i("input"),Q=s(),U=i("input"),Y=s(),Z=i("h4"),Z.textContent="Decay Exponent",_=s(),tt=i("div"),et=i("input"),ot=s(),lt=i("input"),st=s(),a(n,"class","svelte-o3t02i"),a(r,"class","svelte-o3t02i"),a(f,"type","color"),f.value=d=ut(C(t[39]).color),a(l,"class","row svelte-o3t02i"),a(x,"class","svelte-o3t02i"),a(w,"type","range"),a(w,"min",t[6]("intensity")),a(w,"max",t[7]("intensity")),a(w,"step",t[8]("intensity")),w.value=k=C(t[39]).intensity,a(w,"class","svelte-o3t02i"),a(j,"type","number"),a(j,"min",t[6]("intensity")),a(j,"max",t[7]("intensity")),a(j,"step",t[8]("intensity")),j.value=T=C(t[39]).intensity,a(j,"class","svelte-o3t02i"),a(y,"class","row svelte-o3t02i"),a(M,"class","svelte-o3t02i"),a($,"class","svelte-o3t02i"),a(A,"type","number"),A.value=O=C(t[39]).position[0],a(A,"class","svelte-o3t02i"),a(I,"class","svelte-o3t02i"),a(S,"type","number"),S.value=N=C(t[39]).position[1],a(S,"class","svelte-o3t02i"),a(P,"class","svelte-o3t02i"),a(R,"type","number"),R.value=V=C(t[39]).position[2],a(R,"class","svelte-o3t02i"),a(L,"class","row svelte-o3t02i"),a(q,"class","svelte-o3t02i"),a(J,"type","range"),a(J,"min",t[6]("cutoffDistance")),a(J,"max",t[7]("cutoffDistance")),a(J,"step",t[8]("cutoffDistance")),J.value=K=C(t[39]).cutoffDistance,a(J,"class","svelte-o3t02i"),a(U,"type","number"),a(U,"min",t[6]("cutoffDistance")),a(U,"max",t[7]("cutoffDistance")),a(U,"step",t[8]("cutoffDistance")),U.value=W=C(t[39]).cutoffDistance,a(U,"class","svelte-o3t02i"),a(H,"class","row svelte-o3t02i"),a(Z,"class","svelte-o3t02i"),a(et,"type","range"),a(et,"min",t[6]("decayExponent")),a(et,"max",t[7]("decayExponent")),a(et,"step",t[8]("decayExponent")),et.value=nt=C(t[39]).decayExponent,a(et,"class","svelte-o3t02i"),a(lt,"type","number"),a(lt,"min",t[6]("decayExponent")),a(lt,"max",t[7]("decayExponent")),a(lt,"step",t[8]("decayExponent")),lt.value=it=C(t[39]).decayExponent,a(lt,"class","svelte-o3t02i"),a(tt,"class","row svelte-o3t02i"),a(e,"class","light svelte-o3t02i")},m(t,i){c(t,e,i),u(e,n),u(e,o),u(e,l),u(l,r),u(l,v),u(l,f),u(e,m),u(e,x),u(e,b),u(e,y),u(y,w),u(y,z),u(y,j),u(e,D),u(e,M),u(e,E),u(e,L),u(L,$),u(L,A),u(L,B),u(L,I),u(L,S),u(L,F),u(L,P),u(L,R),u(e,X),u(e,q),u(e,G),u(e,H),u(H,J),u(H,Q),u(H,U),u(e,Y),u(e,Z),u(e,_),u(e,tt),u(tt,et),u(tt,ot),u(tt,lt),u(e,st),at||(rt=[p(f,"change",ct),p(w,"change",pt),p(j,"change",vt),p(A,"change",gt),p(S,"change",ft),p(R,"change",ht),p(J,"change",dt),p(U,"change",mt),p(et,"change",xt),p(lt,"change",bt)],at=!0)},p(e,n){t=e,16&n[0]&&d!==(d=ut(C(t[39]).color))&&(f.value=d),16&n[0]&&k!==(k=C(t[39]).intensity)&&(w.value=k),16&n[0]&&T!==(T=C(t[39]).intensity)&&j.value!==T&&(j.value=T),16&n[0]&&O!==(O=C(t[39]).position[0])&&A.value!==O&&(A.value=O),16&n[0]&&N!==(N=C(t[39]).position[1])&&S.value!==N&&(S.value=N),16&n[0]&&V!==(V=C(t[39]).position[2])&&R.value!==V&&(R.value=V),16&n[0]&&K!==(K=C(t[39]).cutoffDistance)&&(J.value=K),16&n[0]&&W!==(W=C(t[39]).cutoffDistance)&&U.value!==W&&(U.value=W),16&n[0]&&nt!==(nt=C(t[39]).decayExponent)&&(et.value=nt),16&n[0]&&it!==(it=C(t[39]).decayExponent)&&lt.value!==it&&(lt.value=it)},d(t){t&&g(e),at=!1,h(rt)}}}function ct(t){let e,n,o,d,m,x,b,y,C,w,k,z,j,T,D,M,E,L,$,A,O,B,I,S,N,F,P,R,V,X,q,G,K,Q,U,W,Y,Z,_,tt,et,nt,ot,lt,it,st,ct,ut,vt,gt,ft,ht,dt,mt,xt,bt,yt,Ct,wt,kt,zt,jt,Tt,Dt,Mt,Et,Lt,$t,At,Ot,Bt,It,St,Nt,Ft,Pt,Rt,Vt,Xt,qt,Gt=l(t[3]),Ht=[];for(let e=0;e<Gt.length;e+=1)Ht[e]=at(J(t,Gt,e));let Jt=l(t[4]),Kt=[];for(let e=0;e<Jt.length;e+=1)Kt[e]=rt(H(t,Jt,e));return{c(){e=i("div"),e.textContent="<",n=s(),o=i("div"),d=i("div"),m=i("button"),m.textContent=">",x=s(),b=i("h2"),b.textContent="Renderer",y=s(),C=i("div"),w=i("div"),k=i("h4"),k.textContent="Background Color",z=s(),j=i("input"),D=s(),M=i("div"),E=i("h4"),E.textContent="Ambient Light Color",L=s(),$=i("input"),O=s(),B=i("h4"),B.textContent="Ambient Light Intensity",I=s(),S=i("div"),N=i("input"),P=s(),R=i("input"),X=s(),q=i("h2"),q.textContent="Camera",G=s(),K=i("div"),Q=i("h3"),Q.textContent="Position",U=s(),W=i("div"),Y=i("span"),Y.textContent="x",Z=i("input"),tt=s(),et=i("span"),et.textContent="y",nt=i("input"),lt=s(),it=i("span"),it.textContent="z",st=i("input"),ut=s(),vt=i("h3"),vt.textContent="Target",gt=s(),ft=i("div"),ht=i("span"),ht.textContent="x",dt=i("input"),xt=s(),bt=i("span"),bt.textContent="y",yt=i("input"),wt=s(),kt=i("span"),kt.textContent="z",zt=i("input"),Tt=s(),Dt=i("h3"),Dt.textContent="FOV",Mt=s(),Et=i("div"),Lt=i("input"),At=i("input"),Bt=s(),It=i("h2"),It.textContent="Meshes",St=s(),Nt=i("div");for(let t=0;t<Ht.length;t+=1)Ht[t].c();Ft=s(),Pt=i("h2"),Pt.textContent="Lights",Rt=s(),Vt=i("div");for(let t=0;t<Kt.length;t+=1)Kt[t].c();a(e,"class","collapseButton openButton svelte-o3t02i"),r(e,"collapsed",!t[0]),a(m,"class","collapseButton svelte-o3t02i"),a(b,"class","svelte-o3t02i"),a(k,"class","svelte-o3t02i"),a(j,"type","color"),j.value=T=pt(t[2].backgroundColor),a(w,"class","row svelte-o3t02i"),a(E,"class","svelte-o3t02i"),a($,"type","color"),$.value=A=pt(t[2].ambientLightColor[0]),a(M,"class","row svelte-o3t02i"),a(B,"class","svelte-o3t02i"),a(N,"type","range"),a(N,"min","0"),a(N,"max","1"),a(N,"step","0.01"),N.value=F=t[2].ambientLightColor[1],a(N,"class","svelte-o3t02i"),a(R,"type","number"),a(R,"min","0"),a(R,"max","1"),a(R,"step","0.01"),R.value=V=t[2].ambientLightColor[1],a(R,"class","svelte-o3t02i"),a(S,"class","row svelte-o3t02i"),a(C,"class","block svelte-o3t02i"),a(q,"class","svelte-o3t02i"),a(Q,"class","svelte-o3t02i"),a(Y,"class","svelte-o3t02i"),a(Z,"type","number"),Z.value=_=t[1].position[0],a(Z,"class","svelte-o3t02i"),a(et,"class","svelte-o3t02i"),a(nt,"type","number"),nt.value=ot=t[1].position[1],a(nt,"class","svelte-o3t02i"),a(it,"class","svelte-o3t02i"),a(st,"type","number"),st.value=ct=t[1].position[2],a(st,"class","svelte-o3t02i"),a(W,"class","row svelte-o3t02i"),a(vt,"class","svelte-o3t02i"),a(ht,"class","svelte-o3t02i"),a(dt,"type","number"),dt.value=mt=t[1].target[0],a(dt,"class","svelte-o3t02i"),a(bt,"class","svelte-o3t02i"),a(yt,"type","number"),yt.value=Ct=t[1].target[1],a(yt,"class","svelte-o3t02i"),a(kt,"class","svelte-o3t02i"),a(zt,"type","number"),zt.value=jt=t[1].target[2],a(zt,"class","svelte-o3t02i"),a(ft,"class","row svelte-o3t02i"),a(Dt,"class","svelte-o3t02i"),a(Lt,"type","range"),a(Lt,"min","0"),a(Lt,"max","180"),a(Lt,"step","1"),Lt.value=$t=t[1].fov,a(Lt,"class","svelte-o3t02i"),a(At,"type","number"),At.value=Ot=t[1].fov,a(At,"class","svelte-o3t02i"),a(Et,"class","row svelte-o3t02i"),a(K,"class","block svelte-o3t02i"),a(It,"class","svelte-o3t02i"),a(Nt,"class","block svelte-o3t02i"),a(Pt,"class","svelte-o3t02i"),a(Vt,"class","block svelte-o3t02i"),a(d,"class","panelContent svelte-o3t02i"),a(o,"class","panel svelte-o3t02i"),r(o,"collapsed",t[0])},m(l,i){c(l,e,i),c(l,n,i),c(l,o,i),u(o,d),u(d,m),u(d,x),u(d,b),u(d,y),u(d,C),u(C,w),u(w,k),u(w,z),u(w,j),u(C,D),u(C,M),u(M,E),u(M,L),u(M,$),u(C,O),u(C,B),u(C,I),u(C,S),u(S,N),u(S,P),u(S,R),u(d,X),u(d,q),u(d,G),u(d,K),u(K,Q),u(K,U),u(K,W),u(W,Y),u(W,Z),u(W,tt),u(W,et),u(W,nt),u(W,lt),u(W,it),u(W,st),u(K,ut),u(K,vt),u(K,gt),u(K,ft),u(ft,ht),u(ft,dt),u(ft,xt),u(ft,bt),u(ft,yt),u(ft,wt),u(ft,kt),u(ft,zt),u(K,Tt),u(K,Dt),u(K,Mt),u(K,Et),u(Et,Lt),u(Et,At),u(d,Bt),u(d,It),u(d,St),u(d,Nt);for(let t=0;t<Ht.length;t+=1)Ht[t]&&Ht[t].m(Nt,null);u(d,Ft),u(d,Pt),u(d,Rt),u(d,Vt);for(let t=0;t<Kt.length;t+=1)Kt[t]&&Kt[t].m(Vt,null);Xt||(qt=[p(e,"click",t[10]),p(m,"click",t[10]),p(j,"change",t[11]),p($,"change",t[12]),p(N,"change",t[13]),p(R,"change",t[13]),p(Z,"change",t[14]),p(nt,"change",t[15]),p(st,"change",t[16]),p(dt,"change",t[17]),p(yt,"change",t[18]),p(zt,"change",t[19]),p(Lt,"change",t[20]),p(At,"change",t[20])],Xt=!0)},p(t,n){if(1&n[0]&&r(e,"collapsed",!t[0]),4&n[0]&&T!==(T=pt(t[2].backgroundColor))&&(j.value=T),4&n[0]&&A!==(A=pt(t[2].ambientLightColor[0]))&&($.value=A),4&n[0]&&F!==(F=t[2].ambientLightColor[1])&&(N.value=F),4&n[0]&&V!==(V=t[2].ambientLightColor[1])&&R.value!==V&&(R.value=V),2&n[0]&&_!==(_=t[1].position[0])&&Z.value!==_&&(Z.value=_),2&n[0]&&ot!==(ot=t[1].position[1])&&nt.value!==ot&&(nt.value=ot),2&n[0]&&ct!==(ct=t[1].position[2])&&st.value!==ct&&(st.value=ct),2&n[0]&&mt!==(mt=t[1].target[0])&&dt.value!==mt&&(dt.value=mt),2&n[0]&&Ct!==(Ct=t[1].target[1])&&yt.value!==Ct&&(yt.value=Ct),2&n[0]&&jt!==(jt=t[1].target[2])&&zt.value!==jt&&(zt.value=jt),2&n[0]&&$t!==($t=t[1].fov)&&(Lt.value=$t),2&n[0]&&Ot!==(Ot=t[1].fov)&&At.value!==Ot&&(At.value=Ot),552&n[0]){let e;for(Gt=l(t[3]),e=0;e<Gt.length;e+=1){const o=J(t,Gt,e);Ht[e]?Ht[e].p(o,n):(Ht[e]=at(o),Ht[e].c(),Ht[e].m(Nt,null))}for(;e<Ht.length;e+=1)Ht[e].d(1);Ht.length=Gt.length}if(266338768&n[0]){let e;for(Jt=l(t[4]),e=0;e<Jt.length;e+=1){const o=H(t,Jt,e);Kt[e]?Kt[e].p(o,n):(Kt[e]=rt(o),Kt[e].c(),Kt[e].m(Vt,null))}for(;e<Kt.length;e+=1)Kt[e].d(1);Kt.length=Jt.length}1&n[0]&&r(o,"collapsed",t[0])},i:v,o:v,d(t){t&&(g(e),g(n),g(o)),f(Ht,t),f(Kt,t),Xt=!1,h(qt)}}}function ut(t){return t.map((t=>Math.floor(255*t))).reduce(((t,e)=>t+e.toString(16).padStart(2,"0")),"#")}function pt(t){return"#"+t.toString(16).padStart(6,"0")}function vt(t){return parseInt(t.slice(1),16)}function gt(t){return[parseInt(t.slice(1,3),16)/255,parseInt(t.slice(3,5),16)/255,parseInt(t.slice(5,7),16)/255]}const ft=t=>!("function"==typeof t[1]);function ht(t,e,n){let o,l,i,s;d(t,m,(t=>n(1,o=t))),d(t,x,(t=>n(2,l=t))),d(t,b,(t=>n(3,i=t))),d(t,y,(t=>n(4,s=t)));const a={roughness:[0,1],metalness:[0,1],ior:[0,2],intensity:[0,30],cutoffDistance:[0,30],decayExponent:[0,5]};let r=!1;function c(t,e){console.log(gt(t.currentTarget.value)),e.set({...C(e),color:gt(t.currentTarget.value)})}function u(t,e){e.set({...C(e),intensity:t.currentTarget.value})}function p(t,e){const n=C(e);e.set({...n,position:[t.currentTarget.value,n.position[1],n.position[2]]})}function v(t,e){const n=C(e);e.set({...n,position:[n.position[0],t.currentTarget.value,n.position[2]]})}function g(t,e){const n=C(e);e.set({...n,position:[n.position[0],n.position[1],t.currentTarget.value]})}function f(t,e){e.set({...C(e),cutoffDistance:t.currentTarget.value})}function h(t,e){e.set({...C(e),decayExponent:t.currentTarget.value})}return[r,o,l,i,s,a,function(t){return a[t][0]},function(t){return a[t][1]},function(t){return(a[t][1]-a[t][0])/20},["diffuse","color"],function(){n(0,r=!r)},function(t){z(x,l={...l,backgroundColor:vt(t.currentTarget.value)},l)},function(t){z(x,l={...l,ambientLightColor:[vt(t.currentTarget.value),l.ambientLightColor[1]]},l)},function(t){z(x,l={...l,ambientLightColor:[l.ambientLightColor[0],t.currentTarget.value]},l)},function(t){z(m,o={...o,position:[t.currentTarget.value,o.position[1],o.position[2]]},o)},function(t){z(m,o={...o,position:[o.position[0],t.currentTarget.value,o.position[2]]},o)},function(t){z(m,o={...o,position:[o.position[0],o.position[1],t.currentTarget.value]},o)},function(t){z(m,o={...o,target:[t.currentTarget.value,o.target[1],o.target[2]]},o)},function(t){z(m,o={...o,target:[o.target[0],t.currentTarget.value,o.target[2]]},o)},function(t){z(m,o={...o,target:[o.target[0],o.target[1],t.currentTarget.value]},o)},function(t){z(m,o={...o,fov:t.currentTarget.value},o)},c,u,p,v,g,f,h,(t,e)=>e===t,(t,e)=>c(e,t),(t,e)=>u(e,t),(t,e)=>u(e,t),(t,e)=>p(e,t),(t,e)=>v(e,t),(t,e)=>g(e,t),(t,e)=>f(e,t),(t,e)=>f(e,t),(t,e)=>h(e,t),(t,e)=>h(e,t)]}class dt extends t{constructor(t){super(),e(this,t,ht,ct,n,{},G,[-1,-1])}}function mt(t){let e,n,o,l,a,r;return o=new T({}),a=new dt({}),{c(){e=i("canvas"),n=s(),D(o.$$.fragment),l=s(),D(a.$$.fragment)},m(i,s){c(i,e,s),t[1](e),c(i,n,s),M(o,i,s),c(i,l,s),M(a,i,s),r=!0},p:v,i(t){r||(E(o.$$.fragment,t),E(a.$$.fragment,t),r=!0)},o(t){L(o.$$.fragment,t),L(a.$$.fragment,t),r=!1},d(i){i&&(g(e),g(n),g(l)),t[1](null),$(o,i),$(a,i)}}}function xt(t,e,n){let o,l,i,s,a,r,c;function u(){r.set({...C(r),position:[3*Math.sin(performance.now()/1e3),1,3*Math.cos(performance.now()/1e3)]});const t=.5*Math.sin(performance.now()/1e3)+.5,e=.5*Math.sin(performance.now()/1e3+2)+.5,n=.5*Math.sin(performance.now()/1e3+4)+.5;c.set({...C(c),color:[t,e,n]})}return d(t,x,(t=>n(4,o=t))),d(t,y,(t=>n(5,l=t))),d(t,O,(t=>n(6,i=t))),d(t,m,(t=>n(7,s=t))),A((async()=>{z(x,o={...o,canvas:a,backgroundColor:B,ambientLightColor:[16777215,.1]},o),z(m,s={position:[0,5,-5],target:[0,1,0],fov:75},s),r=I(S({position:[0,1,0],color:[1,1,1],intensity:2,cutoffDistance:3,decayExponent:0})),c=I(S({position:[0,1,0],color:[1,1,1],intensity:5,cutoffDistance:10,decayExponent:0}));const t=V(10,10,1,1),e=N(new Float32Array(16)),n=await X({url:"peeling-painted-metal-diffuse.jpg",type:"diffuse"}),p=await X({url:"peeling-painted-metal-normal.jpg",type:"normal"}),v=await X({url:"peeling-painted-metal-roughness.jpg",type:"roughness"}),g={diffuse:[1,1,1],metalness:0,specular:q({roughness:.8,ior:1.4,intensity:.5,color:[1,1,1]}),diffuseMap:n,normalMap:p,roughnessMap:v};z(O,i=[...i,F({...t,matrix:e,material:g})],i),z(y,l=[...l,r,c],l),z(x,o={...o,loop:u,enabled:!0},o),P(a,m)})),[a,function(t){R[t?"unshift":"push"]((()=>{a=t,n(0,a)}))}]}class bt extends t{constructor(t){super(),e(this,t,xt,mt,n,{})}}export{bt as default};
+import { N as templateLiteralRenderer, O as appContext, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, D as DebugPanel, e as element, b as space, f as create_component, g as insert, h as mount_component, j as noop, t as transition_in, k as transition_out, o as detach, p as destroy_component, q as component_subscribe, r as onMount, u as renderer, v as lights, w as scene, x as materials, y as camera, z as set_store_value, A as skyblue, E as createLightStore, F as createPointLight, B as identity, J as createMaterialStore, G as create3DObject, H as createOrbitControls, P as get_store_value, I as binding_callbacks, L as createPlane } from './DebugPanel-B48mEiF_.js';
+
+var textureShader = "${declaration?\r\n`\r\nuniform sampler2D ${mapType};\r\n` : ''\r\n}\r\n${declarationNormal?\r\n`\r\nuniform vec2 normalScale;\r\nmat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {\r\n    vec3 q0 = dFdx( eye_pos.xyz );\r\n    vec3 q1 = dFdy( eye_pos.xyz );\r\n    vec2 st0 = dFdx( uv.st );\r\n    vec2 st1 = dFdy( uv.st );\r\n    vec3 N = surf_norm;\r\n    vec3 q1perp = cross( q1, N );\r\n    vec3 q0perp = cross( N, q0 );\r\n    vec3 T = q1perp * st0.x + q0perp * st1.x;\r\n    vec3 B = q1perp * st0.y + q0perp * st1.y;\r\n    float det = max( dot( T, T ), dot( B, B ) );\r\n    float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );\r\n    return mat3( T * scale, B * scale, N );\r\n}\r\n` : ''\r\n}\r\n${diffuseMapSample?\r\n`\r\n    //atan(uv.y, uv.x)\r\n    ${coordinateSpace === 'circular' ?\r\n`   vec2 uv = vec2(vUv.x/vUv.y, vUv.y);\r\n` :\r\n`   vec2 uv = vUv;\r\n`}\r\n    vec4 textureColor = texture( ${mapType}, uv );\r\n    material.diffuseColor *= textureColor.rgb;\r\n    material.diffuseAlpha = textureColor.a;\r\n    \r\n` : ''\r\n}\r\n${normalMapSample?\r\n`\r\n    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );\r\n    vec2 rotatedUv = vec2(vUv.x, 1.0-vUv.y);\r\n    normal = texture( ${mapType}, rotatedUv ).xyz * 2.0 - 1.0;\r\n    normal.xy *= normalScale;\r\n    normal = normalize(tbn * normal);\r\n\t//normal = normalize( normalMatrix * normal );\r\n` : ''\r\n}\r\n${roughnessMapSample?\r\n`\r\n    //atan(uv.y, uv.x)\r\n    ${coordinateSpace === 'circular' ?\r\n`   vec2 roughnessUv = vec2(vUv.x/vUv.y, vUv.y);\r\n` :\r\n`   vec2 roughnessUv = vec2(vUv.x, 1.0-vUv.y);\r\n`}\r\n    vec4 texelRoughness = texture( ${mapType}, roughnessUv );\r\n    roughnessFactor = texelRoughness.g;\r\n` : ''\r\n}\r\n";
+
+const types = {
+	diffuse: "diffuseMap",
+	normal: "normalMap",
+	roughness: "roughnessMap",
+};
+
+const id = {
+	diffuse: 0,
+	normal: 1,
+	roughness: 2,
+};
+
+/**
+ * @typedef TextureProps
+ * @property {string} url
+ * @property {"diffuse" | "normal" | "roughness" } type
+ * @property {number[]} [normalScale=[1, 1]]
+ * @property {"square" | "circular"} [coordinateSpace="square"]
+ */
+
+/**
+ *
+ * @param {TextureProps} props
+ * @returns
+ */
+const createTexture = async (props) => {
+	let image;
+	if (props.url) {
+		image = await loadTexture(props.url);
+	} else if (typeof props.textureBuffer === "function") {
+		image = props.textureBuffer;
+	}
+
+	let buffer;
+	function setBuffer(value) {
+		buffer = value;
+	}
+	function getBuffer() {
+		return buffer;
+	}
+
+	let output = {
+		type: types[props.type],
+		coordinateSpace: props.coordinateSpace,
+		shader: templateLiteralRenderer(textureShader, {
+			declaration: false,
+			declarationNormal: false,
+			diffuseMapSample: false,
+			normalMapSample: false,
+			roughnessMapSample: false,
+			mapType: undefined,
+			coordinateSpace: undefined,
+		}),
+		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale, setBuffer),
+		bindTexture: bindTexture(id[props.type], getBuffer, types[props.type]),
+		...(props.url ? { url: props.url } : {}),
+	};
+
+	if (typeof image === "function") {
+		output = {
+			...output,
+			get textureBuffer() {
+				return image();
+			},
+		};
+	} else {
+		output = {
+			...output,
+			texture: image,
+		};
+	}
+	return output;
+};
+
+function loadTexture(url) {
+	return new Promise((resolve, reject) => {
+		const image = new Image();
+		image.onload = () => {
+			resolve(image);
+		};
+		image.onerror = reject;
+		image.src = url;
+	});
+}
+
+function bindTexture(id, getBuffer, type) {
+	return function bindTexture() {
+		/** @type {{gl: WebGL2RenderingContext}} **/
+		const { gl, program } = appContext;
+		const textureLocation = gl.getUniformLocation(program, type);
+		gl.activeTexture(gl["TEXTURE" + id]);
+		gl.bindTexture(gl.TEXTURE_2D, getBuffer());
+		gl.uniform1i(textureLocation, id);
+	};
+}
+
+function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
+	return function setupTexture() {
+		/** @type {{gl: WebGL2RenderingContext}} **/
+		const { gl, program } = appContext;
+		//uniform sampler2D diffuseMap;
+		let textureBuffer;
+		if (typeof texture === "function") {
+			textureBuffer = texture();
+		} else {
+			textureBuffer = gl.createTexture();
+		}
+		setBuffer(textureBuffer);
+		const textureLocation = gl.getUniformLocation(program, type);
+		gl.activeTexture(gl["TEXTURE" + id]);
+		gl.bindTexture(gl.TEXTURE_2D, textureBuffer);
+		gl.uniform1i(textureLocation, id);
+		if (typeof texture !== "function") {
+			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture);
+		}
+
+		// gl.NEAREST is also allowed, instead of gl.LINEAR, as neither mipmap.
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		// Prevents s-coordinate wrapping (repeating).
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		// Prevents t-coordinate wrapping (repeating).
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		//gl.getExtension("EXT_texture_filter_anisotropic");
+		if (normalScale != null) {
+			const normalScaleLocation = gl.getUniformLocation(program, "normalScale");
+			gl.uniform2fv(normalScaleLocation, normalScale);
+		}
+	};
+}
+
+var specularShader = "${declaration?\r\n`\r\n\r\nuniform float roughness;\r\nfloat roughnessFactor;\r\nuniform float ior;\r\nuniform float specularIntensity;\r\nuniform vec3 specularColor;\r\n\r\n\r\n\r\n#define EPSILON 1e-6\r\n\r\nvec3 F_Schlick( const in vec3 f0, const in float f90, const in float dotVH ) {\r\n\r\n\t// Original approximation by Christophe Schlick '94\r\n\t// float fresnel = pow( 1.0 - dotVH, 5.0 );\r\n\r\n\t// Optimized variant (presented by Epic at SIGGRAPH '13)\r\n\t// https://cdn2.unrealengine.com/Resources/files/2013SiggraphPresentationsNotes-26915738.pdf\r\n\tfloat fresnel = exp2( ( - 5.55473 * dotVH - 6.98316 ) * dotVH );\r\n\r\n\treturn f0 * ( 1.0 - fresnel ) + ( f90 * fresnel );\r\n\r\n} \r\n\r\n// Moving Frostbite to Physically Based Rendering 3.0 - page 12, listing 2\r\n// https://seblagarde.files.wordpress.com/2015/07/course_notes_moving_frostbite_to_pbr_v32.pdf\r\nfloat V_GGX_SmithCorrelated( const in float alpha, const in float dotNL, const in float dotNV ) {\r\n\r\n\tfloat a2 = pow2( alpha );\r\n\r\n\tfloat gv = dotNL * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNV ) );\r\n\tfloat gl = dotNV * sqrt( a2 + ( 1.0 - a2 ) * pow2( dotNL ) );\r\n\r\n\treturn 0.5 / max( gv + gl, EPSILON );\r\n\r\n}\r\n\r\n// Microfacet Models for Refraction through Rough Surfaces - equation (33)\r\n// http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html\r\n// alpha is \"roughness squared\" in Disney’s reparameterization\r\nfloat D_GGX( const in float alpha, const in float dotNH ) {\r\n\r\n\tfloat a2 = pow2( alpha );\r\n\r\n\tfloat denom = pow2( dotNH ) * ( a2 - 1.0 ) + 1.0; // avoid alpha = 0 with dotNH = 1\r\n\r\n\treturn RECIPROCAL_PI * a2 / pow2( denom );\r\n\r\n}\r\n\r\nvec3 BRDF_GGX( const in vec3 lightDir, const in vec3 viewDir, const in vec3 normal, const in vec3 specularColor, const in float specularF90, const in float roughness) {\r\n\r\n\tfloat alpha = pow2( roughness ); // UE4's roughness\r\n\r\n\tvec3 halfDir = normalize( lightDir + viewDir );\r\n\r\n\tfloat dotNL = saturate( dot( normal, lightDir ) );\r\n\tfloat dotNV = saturate( dot( normal, viewDir ) );\r\n\tfloat dotNH = saturate( dot( normal, halfDir ) );\r\n\tfloat dotVH = saturate( dot( viewDir, halfDir ) );\r\n\r\n\tvec3 F = F_Schlick( specularColor, specularF90, dotVH );\r\n\r\n\tfloat V = V_GGX_SmithCorrelated( alpha, dotNL, dotNV );\r\n\r\n\tfloat D = D_GGX( alpha, dotNH );\r\n\r\n\treturn F * ( V * D );\r\n\r\n}\r\n` : ''\r\n}\r\n${irradiance?\r\n`\r\n\tmaterial.roughness = clamp(roughness * roughnessFactor, 0.0525, 1.0);\r\n\tmaterial.ior = ior;\r\n\tmaterial.specularF90 = mix(specularIntensity, 1.0, metalness);\r\n\tmaterial.specularColor = mix(min(pow2((material.ior - 1.0) / (material.ior + 1.0)) * specularColor, vec3(1.0)) * specularIntensity, diffuse.rgb, metalness);\r\n\r\n        vec3 geometryViewDir = normalize( cameraPosition - vertex );\r\n        reflectedLight.directSpecular += lightParams.irradiance * BRDF_GGX( lightParams.direction, geometryViewDir, normal, material.specularColor, material.specularF90, material.roughness);//lightParams.irradiance; //* \r\n        //totalIrradiance = -vec3(geometryViewDir.z,geometryViewDir.z,geometryViewDir.z);//BRDF_GGX( lightParams.direction, geometryViewDir, normalize(vNormal), specularColor, specularF90, roughness);\r\n\t\t//totalIrradiance = lightParams.irradiance;//vec3(-lightParams.direction.z,-lightParams.direction.z,-lightParams.direction.z);\r\n` : ''\r\n}";
+
+//{ roughness = 0, ior = 1.5, intensity = 1, color = [1, 1, 1] } =
+/**
+ * @typedef SpecularProps
+ * @property {number} [roughness=0]
+ * @property {number} [ior=1.5]
+ * @property {number} [intensity=1]
+ * @property {number[]} [color=[1, 1, 1]]
+ */
+
+/**
+ *
+ * @param {SpecularProps} props
+ * @returns
+ */
+const createSpecular = (props) => {
+	return {
+		...props,
+		shader: templateLiteralRenderer(specularShader, {
+			declaration: false,
+			irradiance: false,
+		}),
+		setupSpecular: setupSpecular(props),
+	};
+};
+
+function setupSpecular({ roughness, ior, intensity, color }) {
+	return function setupSpecular() {
+		/** @type {{gl: WebGL2RenderingContext}} **/
+		const { gl, program } = appContext;
+
+		const colorLocation = gl.getUniformLocation(program, "specularColor");
+		const roughnessLocation = gl.getUniformLocation(program, "roughness");
+		const iorLocation = gl.getUniformLocation(program, "ior");
+		const specularIntensityLocation = gl.getUniformLocation(program, "specularIntensity");
+
+		gl.uniform3fv(colorLocation, color);
+		gl.uniform1f(roughnessLocation, roughness);
+		gl.uniform1f(iorLocation, ior);
+		gl.uniform1f(specularIntensityLocation, intensity);
+	};
+}
+
+/* src\lights.svelte generated by Svelte v4.2.18 */
+
+function create_fragment(ctx) {
+	let canvas_1;
+	let t0;
+	let menu;
+	let t1;
+	let debugpanel;
+	let current;
+	menu = new Menu({});
+	debugpanel = new DebugPanel({});
+
+	return {
+		c() {
+			canvas_1 = element("canvas");
+			t0 = space();
+			create_component(menu.$$.fragment);
+			t1 = space();
+			create_component(debugpanel.$$.fragment);
+		},
+		m(target, anchor) {
+			insert(target, canvas_1, anchor);
+			/*canvas_1_binding*/ ctx[1](canvas_1);
+			insert(target, t0, anchor);
+			mount_component(menu, target, anchor);
+			insert(target, t1, anchor);
+			mount_component(debugpanel, target, anchor);
+			current = true;
+		},
+		p: noop,
+		i(local) {
+			if (current) return;
+			transition_in(menu.$$.fragment, local);
+			transition_in(debugpanel.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(menu.$$.fragment, local);
+			transition_out(debugpanel.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) {
+				detach(canvas_1);
+				detach(t0);
+				detach(t1);
+			}
+
+			/*canvas_1_binding*/ ctx[1](null);
+			destroy_component(menu, detaching);
+			destroy_component(debugpanel, detaching);
+		}
+	};
+}
+
+function instance($$self, $$props, $$invalidate) {
+	let $renderer;
+	let $lights;
+	let $scene;
+	let $materials;
+	let $camera;
+	component_subscribe($$self, renderer, $$value => $$invalidate(4, $renderer = $$value));
+	component_subscribe($$self, lights, $$value => $$invalidate(5, $lights = $$value));
+	component_subscribe($$self, scene, $$value => $$invalidate(6, $scene = $$value));
+	component_subscribe($$self, materials, $$value => $$invalidate(7, $materials = $$value));
+	component_subscribe($$self, camera, $$value => $$invalidate(8, $camera = $$value));
+	let canvas;
+	let light;
+	let light2;
+
+	onMount(async () => {
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				canvas,
+				backgroundColor: skyblue,
+				ambientLightColor: [0xffffff, 0.1]
+			},
+			$renderer
+		);
+
+		set_store_value(
+			camera,
+			$camera = {
+				position: [0, 5, -5],
+				target: [0, 1, 0],
+				fov: 75
+			},
+			$camera
+		);
+
+		light = createLightStore(createPointLight({
+			position: [0, 1, 0],
+			color: [1, 1, 1],
+			intensity: 2,
+			cutoffDistance: 3,
+			decayExponent: 0
+		}));
+
+		light2 = createLightStore(createPointLight({
+			position: [0, 1, 0],
+			color: [1, 1, 1],
+			intensity: 5,
+			cutoffDistance: 10,
+			decayExponent: 0
+		}));
+
+		const groundMesh = createPlane(10, 10, 1, 1);
+		const groundMatrix = identity(new Float32Array(16));
+
+		const diffuseMap = await createTexture({
+			url: "peeling-painted-metal-diffuse.jpg",
+			type: "diffuse"
+		});
+
+		const normalMap = await createTexture({
+			url: "peeling-painted-metal-normal.jpg",
+			type: "normal"
+		});
+
+		const roughnessMap = await createTexture({
+			url: "peeling-painted-metal-roughness.jpg",
+			type: "roughness"
+		});
+
+		const groundMaterial = createMaterialStore({
+			diffuse: [1, 1, 1],
+			metalness: 0,
+			specular: createSpecular({
+				roughness: 0.8,
+				ior: 1.4,
+				intensity: 0.5,
+				color: [1, 1, 1]
+			}),
+			diffuseMap,
+			normalMap,
+			roughnessMap
+		});
+
+		set_store_value(materials, $materials = [...$materials, groundMaterial], $materials);
+
+		set_store_value(
+			scene,
+			$scene = [
+				...$scene,
+				create3DObject({
+					...groundMesh,
+					matrix: groundMatrix,
+					material: groundMaterial
+				})
+			],
+			$scene
+		);
+
+		set_store_value(lights, $lights = [...$lights, light, light2], $lights);
+
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				loop: animate,
+				enabled: true
+			},
+			$renderer
+		);
+
+		createOrbitControls(canvas, camera);
+	});
+
+	function animate() {
+		light.set({
+			...get_store_value(light),
+			position: [
+				Math.sin(performance.now() / 1000) * 3,
+				1,
+				Math.cos(performance.now() / 1000) * 3
+			]
+		});
+
+		//animate hue
+		const color1 = Math.sin(performance.now() / 1000) * 0.5 + 0.5;
+
+		const color2 = Math.sin(performance.now() / 1000 + 2) * 0.5 + 0.5;
+		const color3 = Math.sin(performance.now() / 1000 + 4) * 0.5 + 0.5;
+
+		light2.set({
+			...get_store_value(light2),
+			color: [color1, color2, color3]
+		});
+	}
+
+	function canvas_1_binding($$value) {
+		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+			canvas = $$value;
+			$$invalidate(0, canvas);
+		});
+	}
+
+	return [canvas, canvas_1_binding];
+}
+
+class Lights extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance, create_fragment, safe_not_equal, {});
+	}
+}
+
+export { Lights as default };

@@ -8,6 +8,8 @@ import {
 	camera,
 	renderPasses,
 	create3DObject,
+	materials,
+	createMaterialStore,
 } from "./store/engine-refactor.js";
 import { identity, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
@@ -22,7 +24,7 @@ import { createContactShadowPass } from "./store/contact-shadow.js";
 import Menu from "./Menu.svelte";
 import { get } from "svelte/store";
 import { createSpecular } from "./material/specular/specular.js";
-import DebugPanel from "./DebugPanel.svelte";
+import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 
 let canvas;
 let light;
@@ -74,7 +76,7 @@ onMount(async () => {
 		url: "peeling-painted-metal-roughness.jpg",
 		type: "roughness",
 	});
-	const groundMaterial = {
+	const groundMaterial = createMaterialStore({
 		diffuse: [1, 1, 1],
 		metalness: 0,
 		specular: createSpecular({
@@ -86,7 +88,9 @@ onMount(async () => {
 		diffuseMap,
 		normalMap,
 		roughnessMap,
-	};
+	});
+
+	$materials = [...$materials, groundMaterial];
 
 	$scene = [
 		...$scene,
@@ -96,6 +100,7 @@ onMount(async () => {
 			material: groundMaterial,
 		}),
 	];
+
 	$lights = [...$lights, light, light2];
 
 	$renderer = {

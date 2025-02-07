@@ -9,18 +9,23 @@ const dev = process.env.DEV;
 
 export default {
     input: {
+        /*
         main:'src/main-refactor.svelte',
         'golf-ball':'src/golf-ball.svelte',
         venus:'src/venus.svelte',
         cube:'src/cube.svelte',
         gltf:'src/gltf.svelte',
         'contact-shadow':'src/contact-shadow.svelte',
+        */
         transparency:'src/transparency.svelte',
+        /*
         instances:'src/instances.svelte',
         matrix:'src/matrix.svelte',
         texture:'src/texture.svelte',
+        */
         lights:'src/lights.svelte',
-        'vertex-anim':'src/vertex-anim.svelte',
+
+        //'vertex-anim':'src/vertex-anim.svelte',
     },
     output: {
         dir: 'build/js',

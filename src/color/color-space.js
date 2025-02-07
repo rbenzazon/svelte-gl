@@ -51,3 +51,22 @@ export function SRGBToLinear(c, index) {
 	}
 	return c < 0.04045 ? c * 0.0773993808 : Math.pow(c * 0.9478672986 + 0.0521327014, 2.4);
 }
+
+export function linearArrayToCSSHashColor(array) {
+	return array.map((num) => Math.floor(num * 255)).reduce((acc, num) => acc + num.toString(16).padStart(2, "0"), "#");
+}
+export function hexNumToCSSStringColor(hex) {
+	return "#" + hex.toString(16).padStart(6, "0");
+}
+export function cssStringColorToHexNum(color) {
+	return parseInt(color.slice(1), 16);
+}
+export function cssStringColorToLinearArray(color) {
+	return [
+		parseInt(color.slice(1, 3), 16) / 255,
+		parseInt(color.slice(3, 5), 16) / 255,
+		parseInt(color.slice(5, 7), 16) / 255,
+	];
+}
+
+export const colorProps = ["diffuse", "color"];
