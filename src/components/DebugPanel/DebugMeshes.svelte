@@ -21,10 +21,18 @@
         {/each}
       </DebugBlock>
       <DebugH3>Draw Mode</DebugH3>
-      <span>{drawMode}</span>
+      <DebugBlock>
+        <span>{drawMode}</span>
+      </DebugBlock>
       <DebugH3>Matrix</DebugH3>
       <DebugMatrix matrix={get(matrix)} />
       <DebugMaterial {material} />
     </DebugBlock>
   {/each}
 </DebugBlock>
+
+<style>
+  span {
+    padding: 0px 7px;
+  }
+</style>

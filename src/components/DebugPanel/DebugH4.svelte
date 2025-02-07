@@ -1,4 +1,7 @@
-<h4>
+<script type="module">
+  export let padding = 0;
+</script>
+<h4 class="{'padding'+padding}">
   <slot />
 </h4>
 
@@ -7,7 +10,20 @@
     text-transform: capitalize;
     font-size: 0.8rem;
     color: var(--panel-medium-color);
-    padding: 15px 7px 2px 7px;
+    padding: 1px 0px 2px 0px;
     flex: 1;
   }
+  .padding0 {
+    padding-left: 0px;
+  }
+  .padding1 {
+    padding-left: 7px;
+  }
+  .padding2 {
+    padding-left: 14px;
+  }
+  .padding3 {
+    padding-left: 21px;
+  }
+  
 </style>

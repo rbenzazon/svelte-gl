@@ -89,15 +89,15 @@
 <DebugH2>Lights</DebugH2>
 <DebugBlock>
   {#each $lights as light, i}
+    <DebugH3>Light {i}</DebugH3>
     <DebugBlock>
-      <DebugH3>Light {i}</DebugH3>
       <DebugColor
         label="Color"
         color={get(light).color}
         on:change={(e) => onLightColorChange(e, light)}
       />
 
-      <DebugH4>Intensity</DebugH4>
+      <DebugH4 padding="1">Intensity</DebugH4>
       <DebugSliderNumber
         min={getRangeMin("intensity")}
         max={getRangeMax("intensity")}
@@ -105,7 +105,7 @@
         value={get(light).intensity}
         on:change={(e) => onLightIntensityChange(e, light)}
       />
-      <DebugH4>Position</DebugH4>
+      <DebugH4 padding="1">Position</DebugH4>
       <DebugRow>
         <DebugNumber
           label="x"
@@ -123,7 +123,7 @@
           on:change={(e) => onLightZChange(e, light)}
         />
       </DebugRow>
-      <DebugH4>Cutoff Distance</DebugH4>
+      <DebugH4 padding="1">Cutoff Distance</DebugH4>
       <DebugSliderNumber
         min={getRangeMin("cutoffDistance")}
         max={getRangeMax("cutoffDistance")}
@@ -131,8 +131,7 @@
         value={get(light).cutoffDistance}
         on:change={(e) => onLightCutoffDistanceChange(e, light)}
       />
-
-      <DebugH4>Decay Exponent</DebugH4>
+      <DebugH4 padding="1">Decay Exponent</DebugH4>
       <DebugSliderNumber
         min={getRangeMin("decayExponent")}
         max={getRangeMax("decayExponent")}

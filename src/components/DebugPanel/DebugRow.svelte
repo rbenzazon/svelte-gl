@@ -8,7 +8,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0px 10px;
+    padding: 0px 7px;
     gap: 10px;
   }
 </style>

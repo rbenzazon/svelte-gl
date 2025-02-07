@@ -7,6 +7,7 @@
   import DebugSliderNumber from "./DebugSliderNumber.svelte";
 
   import { camera } from "../../store/engine-refactor.js";
+  import DebugH4 from "./DebugH4.svelte";
 
   function onCameraXPositionChange(e) {
     $camera = {
@@ -51,7 +52,7 @@
 
 <DebugH2>Camera</DebugH2>
 <DebugBlock>
-  <DebugH3>Position</DebugH3>
+  <DebugH4 padding="1">Position</DebugH4>
   <DebugRow>
     <DebugNumber
       label="x"
@@ -69,7 +70,7 @@
       on:change={onCameraZPositionChange}
     />
   </DebugRow>
-  <DebugH3>Target</DebugH3>
+  <DebugH4 padding="1">Target</DebugH4>
   <DebugRow>
     <DebugNumber
       label="x"
@@ -87,7 +88,7 @@
       on:change={onCameraZTargetChange}
     />
   </DebugRow>
-  <DebugH3>FOV</DebugH3>
+  <DebugH4 padding="1">FOV</DebugH4>
   <DebugSliderNumber
     min="0"
     max="180"

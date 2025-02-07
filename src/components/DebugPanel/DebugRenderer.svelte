@@ -58,7 +58,7 @@
     color={$renderer.ambientLightColor[0]}
     on:change={onAColorChange}
   />
-  <DebugH4>Ambient Light Intensity</DebugH4>
+  <DebugH4 padding="1">Ambient Light Intensity</DebugH4>
   <DebugSliderNumber
     min={getRangeMin("ambientIntensity")}
     max={getRangeMax("ambientIntensity")}
