@@ -1,13 +1,13 @@
 <script type="module">
-import DebugCamera from "./DebugCamera.svelte";
-import DebugRenderer from "./DebugRenderer.svelte";
-import DebugLights from "./DebugLights.svelte";
-import DebugMeshes from "./DebugMeshes.svelte";
+  import DebugCamera from "./DebugCamera.svelte";
+  import DebugRenderer from "./DebugRenderer.svelte";
+  import DebugLights from "./DebugLights.svelte";
+  import DebugMeshes from "./DebugMeshes.svelte";
 
-function collapse() {
-	collapsed = !collapsed;
-}
-let collapsed = false;
+  function collapse() {
+    collapsed = !collapsed;
+  }
+  let collapsed = false;
 </script>
 
 <div
@@ -38,21 +38,26 @@ let collapsed = false;
     overflow-y: auto;
 
     color: white;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: var(--panel-darkest-color);
     --input-thumb-color: white;
     --input-track-color: #515151;
     --input-thumb-size: 16px;
     --input-track-size: 8px;
-    --panel-dark-color: #515151;
-    --panel-medium-color: #bdbdbd;
+    --panel-darkest-color: #252525;
+    --panel-dark-color: #393939;
+    --panel-medium-color: #777777;
+    --panel-medium-light-color: #b7b7b7;
     --panel-light-color: #efefef;
+
+    --panel-vertical-padding: 7px;
+    --panel-horizontal-padding: 5px;
   }
   .panelContent {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: left;
-    gap: 10px;
+    gap: 0px;
     margin: 50px 0px 20px 0px;
   }
   .collapsed {

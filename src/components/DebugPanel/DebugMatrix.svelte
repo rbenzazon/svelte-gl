@@ -1,4 +1,6 @@
 <script type="module">
+  import DebugBlock from "./DebugBlock.svelte";
+
   export let matrix;
 </script>
 
@@ -16,7 +18,10 @@
     padding: 5px 40px;
   }
   span {
+    font-size: 0.8rem;
     color: var(--panel-light-color);
     background: var(--panel-dark-color);
+    padding: var(--panel-horizontal-padding) var(--panel-vertical-padding);
+    border-radius: 0.3125rem;
   }
 </style>

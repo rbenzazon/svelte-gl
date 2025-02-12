@@ -86,17 +86,16 @@
   }
 </script>
 
-<DebugH2>Lights</DebugH2>
 <DebugBlock>
+  <DebugH2 slot="title">Lights</DebugH2>
   {#each $lights as light, i}
-    <DebugH3>Light {i}</DebugH3>
-    <DebugBlock>
+    <DebugBlock level={2}>
+      <DebugH3 slot="title">Light {i}</DebugH3>
       <DebugColor
         label="Color"
         color={get(light).color}
         on:change={(e) => onLightColorChange(e, light)}
       />
-
       <DebugH4 padding="1">Intensity</DebugH4>
       <DebugSliderNumber
         min={getRangeMin("intensity")}

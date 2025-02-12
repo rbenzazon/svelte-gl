@@ -9,23 +9,25 @@
   import DebugMatrix from "./DebugMatrix.svelte";
 </script>
 
-<DebugH2>Meshes</DebugH2>
 <DebugBlock>
+  <DebugH2 slot="title">Meshes</DebugH2>
   {#each $meshes as { attributes, drawMode, matrix, material }, i}
-    <DebugBlock>
-      <DebugH3>Mesh {i}</DebugH3>
-      <DebugH3>Attributes</DebugH3>
-      <DebugBlock>
+    <DebugBlock level={2}>
+      <DebugH3 slot="title">Mesh {i}</DebugH3>
+      <DebugBlock level={3}>
+        <DebugH3 slot="title">Attributes</DebugH3>
         {#each Object.entries(attributes) as [key, value]}
           <span>{key}: {value.length}</span>
         {/each}
       </DebugBlock>
-      <DebugH3>Draw Mode</DebugH3>
-      <DebugBlock>
+      <DebugBlock level={3}>
+        <DebugH3 slot="title">Draw Mode</DebugH3>
         <span>{drawMode}</span>
       </DebugBlock>
-      <DebugH3>Matrix</DebugH3>
-      <DebugMatrix matrix={get(matrix)} />
+      <DebugBlock level={3}>
+        <DebugH3 slot="title">Matrix</DebugH3>
+        <DebugMatrix matrix={get(matrix)} />
+      </DebugBlock>
       <DebugMaterial {material} />
     </DebugBlock>
   {/each}

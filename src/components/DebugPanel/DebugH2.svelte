@@ -6,10 +6,8 @@
   h2 {
     text-transform: uppercase;
     font-weight: bold;
-    font-size: 1rem;
+    font-size: 0.9rem;
     color: var(--panel-light-color);
-    border-top: 1px solid var(--panel-dark-color);
-    border-bottom: 1px solid var(--panel-dark-color);
-    padding: 4px 7px 2px 7px;
+    padding: var(--panel-vertical-padding) var(--panel-horizontal-padding);
   }
 </style>

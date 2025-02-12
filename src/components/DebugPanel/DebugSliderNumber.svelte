@@ -67,6 +67,7 @@
     color: var(--panel-light-color);
     background-color: var(--panel-dark-color);
     border: none;
+    border-radius: 0.3125rem;
     width: 0;
   }
 </style>

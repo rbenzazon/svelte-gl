@@ -46,8 +46,8 @@
   }
 </script>
 
-<DebugH2>Renderer</DebugH2>
 <DebugBlock>
+  <DebugH2 slot="title">Renderer</DebugH2>
   <DebugColor
     label="Background Color"
     color={$renderer.backgroundColor}

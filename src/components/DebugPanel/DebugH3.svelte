@@ -5,10 +5,10 @@
 <style>
   h3 {
     text-transform: uppercase;
-    font-size: 0.9rem;
-    color: var(--panel-light-color);
-    border-top: 1px solid var(--panel-dark-color);
-    padding: 5px 7px 2px 7px;
+    font-size: 0.8rem;
+    color: var(--panel-medium-color);
+    /*border-top: 1px solid var(--panel-dark-color);*/
+    padding: var(--panel-vertical-padding) var(--panel-horizontal-padding);
   }
   h3:first-child {
     border-top: none;

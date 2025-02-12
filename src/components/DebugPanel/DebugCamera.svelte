@@ -50,8 +50,8 @@
   }
 </script>
 
-<DebugH2>Camera</DebugH2>
 <DebugBlock>
+  <DebugH2 slot="title">Camera</DebugH2>
   <DebugH4 padding="1">Position</DebugH4>
   <DebugRow>
     <DebugNumber
