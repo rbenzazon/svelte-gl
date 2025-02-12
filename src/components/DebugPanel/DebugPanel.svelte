@@ -39,15 +39,15 @@
 
     color: white;
     background-color: var(--panel-darkest-color);
-    --input-thumb-color: white;
-    --input-track-color: #515151;
+    --input-thumb-color: #cfcfcf;
+    --input-track-color: #393939;
     --input-thumb-size: 16px;
     --input-track-size: 8px;
     --panel-darkest-color: #252525;
     --panel-dark-color: #393939;
     --panel-medium-color: #777777;
     --panel-medium-light-color: #b7b7b7;
-    --panel-light-color: #efefef;
+    --panel-light-color: #cfcfcf;
 
     --panel-vertical-padding: 7px;
     --panel-horizontal-padding: 5px;

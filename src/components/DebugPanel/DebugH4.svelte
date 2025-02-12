@@ -8,10 +8,10 @@
 
 <style>
   h4 {
-    text-transform: capitalize;
+    text-transform: uppercase;
     font-size: 0.7rem;
     color: var(--panel-medium-color);
-    padding: 1px 0px 2px 0px;
+    padding: calc(var(--panel-horizontal-padding) / 2) 0px calc(var(--panel-horizontal-padding) / 2) 0px;
     flex: 1;
   }
   .padding0 {

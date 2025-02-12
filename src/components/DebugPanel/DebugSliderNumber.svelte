@@ -47,7 +47,7 @@
     border-radius: calc(var(--input-thumb-size) / 2);
     height: var(--input-thumb-size);
     width: var(--input-thumb-size);
-    background: var(--input-thumb-color);
+    background: var(--panel-light-color);
     cursor: pointer;
     -webkit-appearance: none;
     margin-top: calc((var(--input-track-size) - var(--input-thumb-size)) / 2);
@@ -57,7 +57,7 @@
     height: var(--input-thumb-size);
     width: var(--input-thumb-size);
     border-radius: calc(var(--input-thumb-size) / 2);
-    background: var(--input-thumb-color);
+    background: var(--panel-light-color);
     cursor: pointer;
   }
 

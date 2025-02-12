@@ -1,4 +1,4 @@
-<script>
+<script type="module">
   import { get } from "svelte/store";
   import { colorProps } from "../../color/color-space";
   import DebugH3 from "./DebugH3.svelte";
@@ -23,15 +23,19 @@
   function getRangeStep(key) {
     return (materialPropsRange[key][1] - materialPropsRange[key][0]) / 20;
   }
+  function getFileName(url) {
+    return url.split("/").pop();
+  }
 
   export let material;
 </script>
 
 <DebugBlock level={3}>
-  <DebugH3 slot="title">Material</DebugH3>
+  <DebugH4 slot="title">Material</DebugH4>
   {#each Object.entries(get(material)) as [key, value]}
     {#if key.includes("Map")}
-      <a href={"./" + value.url}>{key}</a>
+      <DebugH4 padding="1">{key}</DebugH4>
+      <a href={"./" + value.url}>{getFileName(value.url)}</a>
     {:else if colorProps.some((c) => c === key)}
       <DebugColor label={key} color={value} />
     {:else if key in materialPropsRange}
