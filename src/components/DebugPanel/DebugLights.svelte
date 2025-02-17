@@ -1,89 +1,74 @@
 <script type="module">
-  import { get } from "svelte/store";
-  import {
-    cssStringColorToLinearArray,
-    linearArrayToCSSHashColor,
-  } from "../../color/color-space";
-  import { lights } from "../../store/engine-refactor";
+import { get } from "svelte/store";
+import { cssStringColorToLinearArray, linearArrayToCSSHashColor } from "../../color/color-space";
+import { lights } from "../../store/engine-refactor";
 
-  import DebugBlock from "./DebugBlock.svelte";
-  import DebugColor from "./DebugColor.svelte";
-  import DebugH2 from "./DebugH2.svelte";
-  import DebugH3 from "./DebugH3.svelte";
-  import DebugH4 from "./DebugH4.svelte";
-  import DebugNumber from "./DebugNumber.svelte";
-  import DebugRow from "./DebugRow.svelte";
-  import DebugSliderNumber from "./DebugSliderNumber.svelte";
+import DebugBlock from "./DebugBlock.svelte";
+import DebugColor from "./DebugColor.svelte";
+import DebugH2 from "./DebugH2.svelte";
+import DebugH3 from "./DebugH3.svelte";
+import DebugH4 from "./DebugH4.svelte";
+import DebugNumber from "./DebugNumber.svelte";
+import DebugRow from "./DebugRow.svelte";
+import DebugSliderNumber from "./DebugSliderNumber.svelte";
 
-  const lightPropsRange = {
-    intensity: [0, 30],
-    ambientIntensity: [0, 1],
-    cutoffDistance: [0, 30],
-    decayExponent: [0, 5],
-  };
+const lightPropsRange = {
+	intensity: [0, 30],
+	ambientIntensity: [0, 1],
+	cutoffDistance: [0, 30],
+	decayExponent: [0, 5],
+};
 
-  function getRangeMin(key) {
-    return lightPropsRange[key][0];
-  }
-  function getRangeMax(key) {
-    return lightPropsRange[key][1];
-  }
-  function getRangeStep(key) {
-    return (lightPropsRange[key][1] - lightPropsRange[key][0]) / 20;
-  }
+function getRangeMin(key) {
+	return lightPropsRange[key][0];
+}
+function getRangeMax(key) {
+	return lightPropsRange[key][1];
+}
+function getRangeStep(key) {
+	return (lightPropsRange[key][1] - lightPropsRange[key][0]) / 20;
+}
 
-  function onLightColorChange(e, light) {
-    console.log(cssStringColorToLinearArray(e.detail.color));
-    light.set({
-      ...get(light),
-      color: cssStringColorToLinearArray(e.detail.color),
-    });
-  }
-  function onLightIntensityChange(e, light) {
-    light.set({
-      ...get(light),
-      intensity: e.detail.number,
-    });
-  }
-  function onLightXChange(e, light) {
-    const lightValue = get(light);
-    light.set({
-      ...lightValue,
-      position: [
-        e.detail.number,
-        lightValue.position[1],
-        lightValue.position[2],
-      ],
-    });
-  }
-  function onLightYChange(e, light) {
-    const lightValue = get(light);
-    light.set({
-      ...lightValue,
-      position: [
-        lightValue.position[0],
-        e.detail.number,
-        lightValue.position[2],
-      ],
-    });
-  }
-  function onLightZChange(e, light) {
-    const lightValue = get(light);
-    light.set({
-      ...lightValue,
-      position: [
-        lightValue.position[0],
-        lightValue.position[1],
-        e.detail.number,
-      ],
-    });
-  }
-  function onLightCutoffDistanceChange(e, light) {
-    light.set({ ...get(light), cutoffDistance: e.detail.number });
-  }
-  function onLightDecayExponentChange(e, light) {
-    light.set({ ...get(light), decayExponent: e.detail.number });
-  }
+function onLightColorChange(e, light) {
+	console.log(cssStringColorToLinearArray(e.detail.color));
+	light.set({
+		...get(light),
+		color: cssStringColorToLinearArray(e.detail.color),
+	});
+}
+function onLightIntensityChange(e, light) {
+	light.set({
+		...get(light),
+		intensity: e.detail.number,
+	});
+}
+function onLightXChange(e, light) {
+	const lightValue = get(light);
+	light.set({
+		...lightValue,
+		position: [e.detail.number, lightValue.position[1], lightValue.position[2]],
+	});
+}
+function onLightYChange(e, light) {
+	const lightValue = get(light);
+	light.set({
+		...lightValue,
+		position: [lightValue.position[0], e.detail.number, lightValue.position[2]],
+	});
+}
+function onLightZChange(e, light) {
+	const lightValue = get(light);
+	light.set({
+		...lightValue,
+		position: [lightValue.position[0], lightValue.position[1], e.detail.number],
+	});
+}
+function onLightCutoffDistanceChange(e, light) {
+	light.set({ ...get(light), cutoffDistance: e.detail.number });
+}
+function onLightDecayExponentChange(e, light) {
+	light.set({ ...get(light), decayExponent: e.detail.number });
+}
 </script>
 
 <DebugBlock>

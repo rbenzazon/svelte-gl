@@ -1,33 +1,33 @@
 <script type="module">
-  import { get } from "svelte/store";
-  import { colorProps } from "../../color/color-space";
-  import DebugH3 from "./DebugH3.svelte";
-  import DebugH4 from "./DebugH4.svelte";
-  import DebugSliderNumber from "./DebugSliderNumber.svelte";
-  import DebugColor from "./DebugColor.svelte";
-  import DebugBlock from "./DebugBlock.svelte";
+import { get } from "svelte/store";
+import { colorProps } from "../../color/color-space";
+import DebugH3 from "./DebugH3.svelte";
+import DebugH4 from "./DebugH4.svelte";
+import DebugSliderNumber from "./DebugSliderNumber.svelte";
+import DebugColor from "./DebugColor.svelte";
+import DebugBlock from "./DebugBlock.svelte";
 
-  const materialPropsRange = {
-    opacity: [0, 1],
-    roughness: [0, 1],
-    metalness: [0, 1],
-    ior: [0, 2],
-    intensity: [0, 30],
-  };
-  function getRangeMin(key) {
-    return materialPropsRange[key][0];
-  }
-  function getRangeMax(key) {
-    return materialPropsRange[key][1];
-  }
-  function getRangeStep(key) {
-    return (materialPropsRange[key][1] - materialPropsRange[key][0]) / 20;
-  }
-  function getFileName(url) {
-    return url.split("/").pop();
-  }
+const materialPropsRange = {
+	opacity: [0, 1],
+	roughness: [0, 1],
+	metalness: [0, 1],
+	ior: [0, 2],
+	intensity: [0, 30],
+};
+function getRangeMin(key) {
+	return materialPropsRange[key][0];
+}
+function getRangeMax(key) {
+	return materialPropsRange[key][1];
+}
+function getRangeStep(key) {
+	return (materialPropsRange[key][1] - materialPropsRange[key][0]) / 20;
+}
+function getFileName(url) {
+	return url.split("/").pop();
+}
 
-  export let material;
+export let material;
 </script>
 
 <DebugBlock level={3}>

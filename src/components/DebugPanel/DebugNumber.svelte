@@ -1,16 +1,16 @@
 <script type="module">
-  import { createEventDispatcher } from "svelte";
-  export let label;
-  export let value;
-  export let min;
-  export let max;
-  export let step;
-  const dispatch = createEventDispatcher();
-  function onChange(event) {
-    dispatch("change", {
-      number: parseFloat(event.target.value),
-    });
-  }
+import { createEventDispatcher } from "svelte";
+export let label;
+export let value;
+export let min;
+export let max;
+export let step;
+const dispatch = createEventDispatcher();
+function onChange(event) {
+	dispatch("change", {
+		number: parseFloat(event.target.value),
+	});
+}
 </script>
 
 <div>

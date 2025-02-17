@@ -1,5 +1,5 @@
 <script type="module">
-  export let padding = 0;
+export let padding = 0;
 </script>
 
 <h4 class={"padding" + padding}>

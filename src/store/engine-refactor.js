@@ -440,6 +440,8 @@ function sortMeshesByZ(programs) {
 export const programs = derived(
 	[meshes, numLigths, materials, renderPasses],
 	([$meshes, $numLigths, $materials, $renderPasses]) => {
+		//console.log("###programs derived");
+
 		let prePasses = $renderPasses
 			.filter((pass) => pass.order < 0)
 			.reduce((acc, pass) => {
@@ -517,6 +519,24 @@ export const programs = derived(
 					createProgram,
 					selectProgram,
 				};
+				const { programMap, vaoMap } = appContext;
+				let cachedProgram, cachedGLProgram;
+				programMap.forEach((glProgram, programStore) => {
+					if (programStore.material === p.material) {
+						cachedProgram = programStore;
+						cachedGLProgram = glProgram;
+					}
+				});
+				if (cachedProgram != null) {
+					const existingVAOMap = vaoMap.get(cachedProgram);
+					if (existingVAOMap != null) {
+						vaoMap.delete(cachedProgram);
+						vaoMap.set(program, existingVAOMap);
+					}
+					programMap.delete(cachedProgram);
+					programMap.set(program, cachedGLProgram);
+				}
+
 				program.setupProgram = [
 					createShaders(p.material, p.meshes, numPointLights, pointLightShader),
 					linkProgram,
@@ -646,6 +666,8 @@ const renderPipeline = derived(
 	([$renderer, $programs, $scene, $camera, $running]) => {
 		// if renderer.enabled is false, the scene is being setup, we should not render
 		// if running is 4, we delay the pipeline updates as a way to batch scene updates
+		//console.log("render pipeline derived");
+
 		if (!$renderer.enabled || $running === 4 || $running === 1) {
 			//TODO maybe throw here to cancel the update flow
 			return emptyRenderPipeline;
@@ -674,6 +696,7 @@ const renderPipeline = derived(
 		if (updateMap.length === 0) {
 			return emptyRenderPipeline;
 		}
+		//console.log("update map", updateMap.has(renderer), updateMap.has(scene), updateMap.has(camera));
 
 		const rendererValues = renderer.processed;
 		let rendererContext = {
@@ -702,6 +725,11 @@ const renderPipeline = derived(
 		let transparent = false;
 
 		pipeline.push(disableBlend);
+		/*
+		if(updateMap.has(scene)){
+			debugger;
+		}
+			*/
 		pipeline.push(
 			...sortedPrograms.reduce((acc, program) => {
 				let transitionTransparent = false;
@@ -749,6 +777,7 @@ const renderPipeline = derived(
 				];
 			}, []),
 		);
+
 		return pipeline;
 	},
 	emptyRenderPipeline,

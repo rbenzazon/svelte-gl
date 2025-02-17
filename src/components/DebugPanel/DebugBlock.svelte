@@ -1,5 +1,5 @@
 <script type="module">
-  export let level = 1;
+export let level = 1;
 </script>
 
 <div class="block level{level}">

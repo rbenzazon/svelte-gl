@@ -1,13 +1,13 @@
 <script type="module">
-  import { get } from "svelte/store";
-  import { meshes } from "../../store/engine-refactor";
-  import DebugBlock from "./DebugBlock.svelte";
+import { get } from "svelte/store";
+import { meshes } from "../../store/engine-refactor";
+import DebugBlock from "./DebugBlock.svelte";
 
-  import DebugH2 from "./DebugH2.svelte";
-  import DebugH3 from "./DebugH3.svelte";
-  import DebugMaterial from "./DebugMaterial.svelte";
-  import DebugMatrix from "./DebugMatrix.svelte";
-  import DebugH4 from "./DebugH4.svelte";
+import DebugH2 from "./DebugH2.svelte";
+import DebugH3 from "./DebugH3.svelte";
+import DebugMaterial from "./DebugMaterial.svelte";
+import DebugMatrix from "./DebugMatrix.svelte";
+import DebugH4 from "./DebugH4.svelte";
 </script>
 
 <DebugBlock>

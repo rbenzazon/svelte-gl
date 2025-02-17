@@ -1,13 +1,13 @@
 <script type="module">
-  import DebugCamera from "./DebugCamera.svelte";
-  import DebugRenderer from "./DebugRenderer.svelte";
-  import DebugLights from "./DebugLights.svelte";
-  import DebugMeshes from "./DebugMeshes.svelte";
+import DebugCamera from "./DebugCamera.svelte";
+import DebugRenderer from "./DebugRenderer.svelte";
+import DebugLights from "./DebugLights.svelte";
+import DebugMeshes from "./DebugMeshes.svelte";
 
-  function collapse() {
-    collapsed = !collapsed;
-  }
-  let collapsed = false;
+function collapse() {
+	collapsed = !collapsed;
+}
+let collapsed = false;
 </script>
 
 <div

@@ -1,7 +1,7 @@
 <script type="module">
-  import DebugBlock from "./DebugBlock.svelte";
+import DebugBlock from "./DebugBlock.svelte";
 
-  export let matrix;
+export let matrix;
 </script>
 
 <div>
