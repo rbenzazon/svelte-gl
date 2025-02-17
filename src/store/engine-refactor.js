@@ -506,7 +506,7 @@ export const programs = derived(
 			pointLightShader = get(get(lights)[0]).shader;
 		}
 
-		return [
+		const next = [
 			...prePasses,
 			...programs.map((p, index) => {
 				const firstCall = index === 0;
@@ -519,23 +519,7 @@ export const programs = derived(
 					createProgram,
 					selectProgram,
 				};
-				const { programMap, vaoMap } = appContext;
-				let cachedProgram, cachedGLProgram;
-				programMap.forEach((glProgram, programStore) => {
-					if (programStore.material === p.material) {
-						cachedProgram = programStore;
-						cachedGLProgram = glProgram;
-					}
-				});
-				if (cachedProgram != null) {
-					const existingVAOMap = vaoMap.get(cachedProgram);
-					if (existingVAOMap != null) {
-						vaoMap.delete(cachedProgram);
-						vaoMap.set(program, existingVAOMap);
-					}
-					programMap.delete(cachedProgram);
-					programMap.set(program, cachedGLProgram);
-				}
+				reconciliateCacheMap(p, program);
 
 				program.setupProgram = [
 					createShaders(p.material, p.meshes, numPointLights, pointLightShader),
@@ -579,12 +563,78 @@ export const programs = derived(
 				return program;
 			}),
 		];
+		clearUnusedCache(next);
+		return next;
 	},
 );
 
 export const renderState = writable({
 	init: false,
 });
+
+/**
+ * Clears the cache map of unused programs and VAOs
+ * @param {Object[]} next - The next programs
+ * @returns {void}
+ */
+function clearUnusedCache(next) {
+	const { programMap, vaoMap } = appContext;
+	programMap.forEach((glProgram, programStore) => {
+		if (!next.some((program) => program.material === programStore.material)) {
+			programMap.delete(programStore);
+			vaoMap.delete(programStore);
+		}
+	});
+	next.forEach((p) => {
+		let cachedProgram, cachedGLProgram;
+		programMap.forEach((glProgram, programStore) => {
+			if (programStore.material === p.material) {
+				cachedProgram = programStore;
+				cachedGLProgram = glProgram;
+			}
+		});
+		if (cachedProgram != null) {
+			const existingVAO = vaoMap.get(cachedProgram);
+			existingVAO.forEach((vao, mesh) => {
+				if (!p.meshes.includes(mesh)) {
+					console.log("delete mesh", mesh);
+
+					existingVAO.delete(mesh);
+				}
+			});
+		}
+	});
+}
+
+/**
+ * Assigns the new programstore to the corresponding WebGLProgram if the material is the same
+ * Then assigns the VAOs to the new programstore too.
+ * The previous programstore and vaos are deleted from the cache map
+ *
+ * @param {Object} p - The program object
+ * @param {Object} program - The program store
+ * @returns {void}
+ */
+
+function reconciliateCacheMap(p, program) {
+	const { programMap, vaoMap } = appContext;
+	let cachedProgram, cachedGLProgram;
+	programMap.forEach((glProgram, programStore) => {
+		if (programStore.material === p.material) {
+			cachedProgram = programStore;
+			cachedGLProgram = glProgram;
+		}
+	});
+	if (cachedProgram != null) {
+		const existingVAO = vaoMap.get(cachedProgram);
+		if (existingVAO != null) {
+			vaoMap.delete(cachedProgram);
+			vaoMap.set(program, existingVAO);
+		}
+		programMap.delete(cachedProgram);
+		programMap.set(program, cachedGLProgram);
+	}
+}
 
 function isStore(obj) {
 	return obj != null && obj.subscribe != null;

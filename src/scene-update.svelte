@@ -140,16 +140,26 @@ function addMesh() {
 	$scene = [...$scene, mesh];
 	meshCount++;
 }
+function removeMesh() {
+	$scene = $scene.slice(0, -1);
+	meshCount--;
+}
 </script>
 <canvas bind:this={canvas}></canvas>
 <Menu />
 <DebugPanel />
-<button on:click={addMesh}>add mesh</button>
+<button on:click={addMesh} class="add">add mesh</button>
+<button on:click={removeMesh} class="remove">remove mesh</button>
 
 <style>
 	button {
 		position: absolute;
-		top: 100px;
 		left: 0;
+	}
+	button.add {
+		top: 100px;
+	}
+	button.remove {
+		top: 200px;
 	}
 </style>

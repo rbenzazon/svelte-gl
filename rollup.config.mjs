@@ -20,8 +20,8 @@ export default {
         matrix:'src/matrix.svelte',
         texture:'src/texture.svelte',
         lights:'src/lights.svelte',
-        'scene-update':'src/scene-update.svelte',
         'vertex-anim':'src/vertex-anim.svelte',
+        'scene-update':'src/scene-update.svelte',
     },
     output: {
         dir: 'build/js',
