@@ -14,6 +14,7 @@ export default {
         venus:'src/venus.svelte',
         cube:'src/cube.svelte',
         gltf:'src/gltf.svelte',
+        rock:'src/rock.svelte',
         'contact-shadow':'src/contact-shadow.svelte',
         transparency:'src/transparency.svelte',
         instances:'src/instances.svelte',

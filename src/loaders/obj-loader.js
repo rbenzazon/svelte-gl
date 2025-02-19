@@ -85,8 +85,6 @@ async function parseOBJ(content, url) {
 	}
 	if (indices.length > 0) {
 		object.attributes.elements = new Uint16Array(indices);
-
-		console.log("indices used", indices.slice(0, 3));
 	}
 
 	return object;

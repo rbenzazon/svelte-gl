@@ -8,6 +8,8 @@ import {
 	renderPasses,
 	create3DObject,
 	lights,
+	createMaterialStore,
+	materials,
 } from "./store/engine-refactor.js";
 import { identity, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
@@ -45,10 +47,12 @@ onMount(async () => {
 
 	const matrix = identity(new Float32Array(16));
 
-	const material = {
+	const material = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],
 		metalness: 0,
-	};
+	});
+
+	$materials = [...$materials, material];
 
 	$scene = [
 		...$scene,

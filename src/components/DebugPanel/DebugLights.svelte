@@ -11,6 +11,7 @@ import DebugH4 from "./DebugH4.svelte";
 import DebugNumber from "./DebugNumber.svelte";
 import DebugRow from "./DebugRow.svelte";
 import DebugSliderNumber from "./DebugSliderNumber.svelte";
+import DebugCopy from "./DebugCopy.svelte";
 
 const lightPropsRange = {
 	intensity: [0, 30],
@@ -30,7 +31,6 @@ function getRangeStep(key) {
 }
 
 function onLightColorChange(e, light) {
-	console.log(cssStringColorToLinearArray(e.detail.color));
 	light.set({
 		...get(light),
 		color: cssStringColorToLinearArray(e.detail.color),
@@ -69,13 +69,24 @@ function onLightCutoffDistanceChange(e, light) {
 function onLightDecayExponentChange(e, light) {
 	light.set({ ...get(light), decayExponent: e.detail.number });
 }
+function onCopy(light) {
+	const { color, intensity, position, cutoffDistance, decayExponent } = get(light);
+	const lightData = {
+		color,
+		intensity,
+		position,
+		cutoffDistance,
+		decayExponent,
+	};
+	navigator.clipboard.writeText(JSON.stringify(lightData, null, 2));
+}
 </script>
 
 <DebugBlock>
   <DebugH2 slot="title">Lights</DebugH2>
   {#each $lights as light, i}
     <DebugBlock level={2}>
-      <DebugH3 slot="title">Light {i}</DebugH3>
+      <DebugRow slot="title"><DebugH3 >Light {i}</DebugH3><DebugCopy on:click={()=>onCopy(light)}/></DebugRow>
       <DebugColor
         label="Color"
         color={get(light).color}

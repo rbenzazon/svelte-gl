@@ -597,8 +597,6 @@ function clearUnusedCache(next) {
 			const existingVAO = vaoMap.get(cachedProgram);
 			existingVAO.forEach((vao, mesh) => {
 				if (!p.meshes.includes(mesh)) {
-					console.log("delete mesh", mesh);
-
 					existingVAO.delete(mesh);
 				}
 			});
@@ -718,7 +716,7 @@ const renderPipeline = derived(
 		// if running is 4, we delay the pipeline updates as a way to batch scene updates
 		//console.log("render pipeline derived");
 
-		if (!$renderer.enabled || $running === 4 || $running === 1) {
+		if (!$renderer.enabled || $running === 4 || $running === 1 || $programs.length === 0) {
 			//TODO maybe throw here to cancel the update flow
 			return emptyRenderPipeline;
 		}

@@ -458,7 +458,8 @@ export function createMeshFromGLTF(gltfScene, gltfObject) {
 	const material = {};
 	if (gltfMaterial.pbrMetallicRoughness) {
 		const { baseColorFactor, metallicFactor, roughnessFactor } = gltfMaterial.pbrMetallicRoughness;
-		material.diffuse = baseColorFactor.slice(0, 3);
+		material.diffuse = baseColorFactor?.slice(0, 3) ?? [1, 1, 1];
+		material.roughness = roughnessFactor ?? 1;
 		material.metalness = 0;
 	}
 	return {
@@ -480,8 +481,9 @@ export function createMeshFromGLTF(gltfScene, gltfObject) {
 					}
 				: mesh.normal.data,
 			elements: mesh.indices.data,
+			...(mesh.uv?.data ? { uvs: mesh.uv.data } : {}),
 		},
-		drawMode: mesh.drawMode,
+		drawMode: mesh.drawMode ?? "TRIANGLES",
 		material,
 		matrix: mesh.matrix,
 	};

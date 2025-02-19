@@ -12,7 +12,7 @@ import DebugH4 from "./DebugH4.svelte";
 
 <DebugBlock>
   <DebugH2 slot="title">Meshes</DebugH2>
-  {#each $meshes as { attributes, drawMode, matrix, material }, i}
+  {#each $meshes as { attributes, drawMode, matrix,matrices, material,instances }, i}
     <DebugBlock level={2}>
       <DebugH3 slot="title">Mesh {i}</DebugH3>
       <DebugBlock level={3}>
@@ -25,10 +25,25 @@ import DebugH4 from "./DebugH4.svelte";
         <DebugH4 slot="title">Draw Mode</DebugH4>
         <span>{drawMode}</span>
       </DebugBlock>
+      {#if instances}
+      <DebugBlock level={3}>
+        <DebugH4 slot="title">Instances</DebugH4>
+        <span>{instances}</span>
+      </DebugBlock>
+      {/if}
+      {#if matrix}
       <DebugBlock level={3}>
         <DebugH4 slot="title">Matrix</DebugH4>
         <DebugMatrix matrix={get(matrix)} />
       </DebugBlock>
+      {:else if matrices}
+      <DebugBlock level={3}>
+        <DebugH4 slot="title">Matrices</DebugH4>
+        {#each matrices as matrix}
+          <DebugMatrix matrix={get(matrix)} />
+        {/each}
+      </DebugBlock>
+      {/if}
       <DebugMaterial {material} />
     </DebugBlock>
   {/each}

@@ -1,7 +1,6 @@
 <script type="module">
 let menuOpened = false;
 function toggleMenu() {
-	console.log("toggleMenu", menuOpened);
 	menuOpened = !menuOpened;
 }
 const links = [
@@ -9,6 +8,7 @@ const links = [
 	{ name: "GLTF loader", href: "./" },
 	{ name: "Obj loader", href: "./venus" },
 	{ name: "Cube", href: "./cube" },
+	{ name: "rock", href: "./rock" },
 	{ name: "GLTF", href: "./gltf" },
 	{ name: "Contact Shadow", href: "./contact-shadow" },
 	{ name: "Transparency", href: "./transparency" },

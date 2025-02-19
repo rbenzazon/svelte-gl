@@ -8,6 +8,8 @@ import {
 	renderPasses,
 	create3DObject,
 	lights,
+	materials,
+	createMaterialStore,
 } from "./store/engine-refactor.js";
 import { identity, rotateY, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
@@ -53,6 +55,20 @@ onMount(async () => {
 		fov: 75,
 	};
 
+	const material = createMaterialStore({
+		diffuse: [1, 0.5, 0.5],
+		metalness: 0,
+		specular: createSpecular({
+			roughness: 0.05,
+			ior: 1,
+			intensity: 2,
+			color: [1, 1, 1],
+		}),
+		normalMap,
+	});
+
+	$materials = [...$materials, material];
+
 	const sphereMesh = createPolyhedron(1.5, 7, createSmoothShadedNormals);
 	sphereMesh.attributes.uvs = generateUVs(sphereMesh.attributes);
 
@@ -83,17 +99,7 @@ onMount(async () => {
 		create3DObject({
 			...sphereMesh,
 			matrix: identityMatrix,
-			material: {
-				diffuse: [1, 0.5, 0.5],
-				metalness: 0,
-				specular: createSpecular({
-					roughness: 0.05,
-					ior: 1,
-					intensity: 2,
-					color: [1, 1, 1],
-				}),
-				normalMap,
-			},
+			material,
 		}),
 		light,
 		light2,
@@ -110,12 +116,7 @@ onMount(async () => {
 });
 
 function animate() {
-	const time = performance.now() / 1000;
-	const zpos = Math.sin(time) * 2 - 5;
-	/*$camera = {
-		position: [0, 5, -zpos],
-	};*/
-	//console.log("animate", $camera.position);
+	// animate here
 }
 /*
 function animate() {

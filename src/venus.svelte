@@ -8,6 +8,8 @@ import {
 	renderPasses,
 	create3DObject,
 	lights,
+	createMaterialStore,
+	materials,
 } from "./store/engine-refactor.js";
 import { create, identity, rotateY, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
@@ -70,16 +72,19 @@ onMount(async () => {
 		textureBuffer: shadowTexture,
 		type: "diffuse",
 	});
-	const groundMaterial = {
+	const groundMaterial = createMaterialStore({
 		diffuse: [1, 1, 1],
 		metalness: 0,
 		diffuseMap: groundDiffuseMap,
 		transparent: true,
-	};
+	});
 	const venus = await loadOBJFile("venus.obj");
 	venus.matrix = rotateY(venus.matrix, venus.matrix, Math.PI);
 	venus.matrix = scale(venus.matrix, venus.matrix, [0.003, 0.003, 0.003]);
 	venus.matrix = translate(venus.matrix, venus.matrix, [0, -450, 0]);
+	const venusMaterial = createMaterialStore(venus.material);
+	venus.material = venusMaterial;
+	$materials = [...$materials, venusMaterial, groundMaterial];
 	$scene = [
 		...$scene,
 		create3DObject({

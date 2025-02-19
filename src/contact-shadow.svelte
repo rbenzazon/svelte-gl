@@ -8,8 +8,10 @@ import {
 	renderPasses,
 	create3DObject,
 	lights,
+	createMaterialStore,
+	materials,
 } from "./store/engine-refactor.js";
-import { identity, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
+import { create, identity, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
@@ -105,10 +107,10 @@ onMount(async () => {
 	translate(spherePos, spherePos, [-3, 0, 0]);
 	scale(spherePos, spherePos, [objScale, objScale, objScale]);
 
-	const sameMaterial = {
+	const sameMaterial = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],
 		metalness: 0,
-	};
+	});
 	const groundMesh = createPlane(10, 10, 1, 1);
 	const groundDiffuseMap = await createTexture({
 		textureBuffer: shadowTexture,
@@ -118,11 +120,16 @@ onMount(async () => {
 		url: "transparent-texture.png",
 		type: "diffuse",
 	});
-	const groundMaterial = {
+	const groundMaterial = createMaterialStore({
 		diffuse: [1, 1, 1],
 		metalness: 0,
 		diffuseMap: groundDiffuseMap,
-	};
+	});
+
+	const meshMaterial = createMaterialStore(loadedMesh.material);
+	loadedMesh.material = meshMaterial;
+
+	$materials = [...$materials, sameMaterial, meshMaterial, groundMaterial];
 
 	$scene = [
 		...$scene,
@@ -162,12 +169,7 @@ onMount(async () => {
 });
 
 function animate() {
-	const time = performance.now() / 1000;
-	const zpos = Math.sin(time) * 2 - 5;
-	/*$camera = {
-		position: [0, 5, -zpos],
-	};*/
-	//console.log("animate", $camera.position);
+	// animate here
 }
 </script>
 <canvas bind:this={canvas}></canvas>

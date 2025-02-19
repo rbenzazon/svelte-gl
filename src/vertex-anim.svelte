@@ -1,6 +1,15 @@
 <script type="module">
 import { onMount } from "svelte";
-import { createLightStore, renderer, scene, camera, create3DObject, lights } from "./store/engine-refactor.js";
+import {
+	createLightStore,
+	renderer,
+	scene,
+	camera,
+	create3DObject,
+	lights,
+	createMaterialStore,
+	materials,
+} from "./store/engine-refactor.js";
 import { identity, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
@@ -38,7 +47,7 @@ onMount(async () => {
 	const groundMesh = createPlane(10, 10, 200, 200);
 	const groundMatrix = identity(new Float32Array(16));
 
-	const groundMaterial = {
+	const groundMaterial = createMaterialStore({
 		diffuse: [0, 102 / 255, 204 / 255],
 		metalness: 0,
 		specular: createSpecular({
@@ -47,7 +56,9 @@ onMount(async () => {
 			intensity: 0.5,
 			color: [1, 1, 1],
 		}),
-	};
+	});
+
+	$materials = [...$materials, groundMaterial];
 
 	$scene = [
 		...$scene,

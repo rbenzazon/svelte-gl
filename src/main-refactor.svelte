@@ -8,6 +8,8 @@ import {
 	renderPasses,
 	create3DObject,
 	lights,
+	createMaterialStore,
+	materials,
 } from "./store/engine-refactor.js";
 import { identity, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
@@ -115,17 +117,21 @@ onMount(async () => {
 		url: "transparent-texture.png",
 		type: "diffuse",
 	});
-	const groundMaterial = {
+	const groundMaterial = createMaterialStore({
 		diffuse: [1, 1, 1],
 		metalness: 0,
 		diffuseMap: groundDiffuseMap,
 		transparent: true,
-	};
-	const transparentMaterial = {
+	});
+	const transparentMaterial = createMaterialStore({
 		diffuse: [1, 1, 0.5],
 		metalness: 0,
 		opacity: 0.5,
-	};
+	});
+	const meshMaterial = createMaterialStore(loadedMesh.material);
+	loadedMesh.material = meshMaterial;
+
+	$materials = [...$materials, groundMaterial, transparentMaterial, meshMaterial];
 
 	$scene = [
 		...$scene,
@@ -164,12 +170,7 @@ onMount(async () => {
 });
 
 function animate() {
-	const time = performance.now() / 1000;
-	const zpos = Math.sin(time) * 2 - 5;
-	/*$camera = {
-		position: [0, 5, -zpos],
-	};*/
-	//console.log("animate", $camera.position);
+	// animate here
 }
 </script>
 <canvas bind:this={canvas}></canvas>

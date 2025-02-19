@@ -23,5 +23,8 @@ export let matrix;
     background: var(--panel-dark-color);
     padding: var(--panel-horizontal-padding) var(--panel-vertical-padding);
     border-radius: 0.3125rem;
+    max-width: 3rem;
+    overflow:hidden;
+    white-space: nowrap;
   }
 </style>

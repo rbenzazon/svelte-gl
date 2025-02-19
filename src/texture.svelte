@@ -8,6 +8,8 @@ import {
 	renderPasses,
 	create3DObject,
 	lights,
+	createMaterialStore,
+	materials,
 } from "./store/engine-refactor.js";
 import { identity, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
@@ -64,7 +66,7 @@ onMount(async () => {
 		url: "granite-normal.jpg",
 		type: "normal",
 	});
-	const material = {
+	const material = createMaterialStore({
 		diffuse: [1, 1, 1],
 		metalness: 0,
 		specular: createSpecular({
@@ -75,7 +77,9 @@ onMount(async () => {
 		}),
 		diffuseMap,
 		normalMap,
-	};
+	});
+
+	$materials = [...$materials, material];
 
 	$scene = [
 		...$scene,

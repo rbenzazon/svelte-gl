@@ -1,6 +1,15 @@
 <script type="module">
 import { onMount } from "svelte";
-import { createLightStore, renderer, scene, camera, create3DObject, lights } from "./store/engine-refactor.js";
+import {
+	createLightStore,
+	renderer,
+	scene,
+	camera,
+	create3DObject,
+	lights,
+	createMaterialStore,
+	materials,
+} from "./store/engine-refactor.js";
 import { identity, rotateX, rotateY, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
@@ -31,10 +40,12 @@ onMount(async () => {
 	const cubeMesh = createCube();
 	const cubePos = identity(new Float32Array(16));
 	translate(cubePos, cubePos, [3, 1.5, 0]);
-	const material = {
+	const material = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],
 		metalness: 0,
-	};
+	});
+	$materials = [...$materials, material];
+
 	const numInstances = 3;
 	let identityMatrix = new Array(16).fill(0);
 	identity(identityMatrix);
