@@ -25,12 +25,13 @@ import {
 	getCameraProjectionView,
 	enableBlend,
 	disableBlend,
+	setFaceWinding,
 } from "./gl-refactor.js";
 import { hasSameShallow } from "../utils/set.js";
 import { hasSameShallow as arrayHasSameShallow, optionalPropsDeepEqual } from "../utils/array.js";
 import { isLight } from "../lights/lights.js";
 import { convertToVector3 } from "../color/color-space.js";
-import { getTranslation, identity, invert, multiply } from "gl-matrix/esm/mat4.js";
+import { determinant, getTranslation, identity, invert, multiply } from "gl-matrix/esm/mat4.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import { updateOneLight } from "../lights/point-light.js";
 
@@ -281,7 +282,30 @@ const createMeshMatricesStore = (rendererUpdate, initialValue) => {
 	};
 	return transformMatrix;
 };*/
-export function create3DObject(value) {
+export function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]) {
+	if (symmetry) {
+		console.log("symmetry");
+
+		const newPositions = [];
+		for (let i = 0; i < value.attributes.positions.length / 3; i++) {
+			const x = value.attributes.positions[i * 3];
+			const y = value.attributes.positions[i * 3 + 1];
+			const z = value.attributes.positions[i * 3 + 2];
+			const [sx, sy, sz] = symmetryAxis;
+			newPositions.push(x + 2 * (sx - x), y + 2 * (sy - y), z + 2 * (sz - z));
+		}
+		value.attributes.positions = newPositions;
+		const newNormals = [];
+		for (let i = 0; i < value.attributes.normals.length / 3; i++) {
+			const x = value.attributes.normals[i * 3];
+			const y = value.attributes.normals[i * 3 + 1];
+			const z = value.attributes.normals[i * 3 + 2];
+			//calculate normals in symmetry taking symmetryAxis into account
+			const [sx, sy, sz] = symmetryAxis;
+			newNormals.push(x * -sx, y * -sy, z * -1);
+		}
+		value.attributes.normals = newNormals;
+	}
 	if (value.matrix != null) {
 		value.matrix = createMeshMatrixStore(value, renderer.set, value.matrix);
 	} else if (value.matrices != null) {
@@ -816,6 +840,9 @@ const renderPipeline = derived(
 										setupNormalMatrix(program, mesh, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation) || []),
 									]),
+							...(mesh.instances != null
+								? [setFaceWinding(determinant(get(mesh.matrices[0])) > 0)]
+								: [setFaceWinding(determinant(get(mesh.matrix)) > 0)]),
 							bindVAO,
 							render(mesh, mesh.instances, mesh.drawMode),
 						],

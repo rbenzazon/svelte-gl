@@ -54,6 +54,13 @@ export function initRenderer() {
 	gl.cullFace(gl.BACK);
 }
 
+export function setFaceWinding(ccw = true) {
+	return function setFaceWinding() {
+		const { gl } = appContext;
+		gl.frontFace(ccw ? gl.CCW : gl.CW);
+	};
+}
+
 export function enableBlend() {
 	const { gl } = appContext;
 	gl.enable(gl.BLEND);
