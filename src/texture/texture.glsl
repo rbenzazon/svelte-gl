@@ -39,7 +39,7 @@ ${diffuseMapSample?
 ${normalMapSample?
 `
     mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );
-    vec2 rotatedUv = vec2(vUv.x, 1.0-vUv.y);
+    vec2 rotatedUv = vec2(vUv.x, vUv.y);
     normal = texture( ${mapType}, rotatedUv ).xyz * 2.0 - 1.0;
     normal.xy *= normalScale;
     normal = normalize(tbn * normal);
@@ -52,7 +52,7 @@ ${roughnessMapSample?
     ${coordinateSpace === 'circular' ?
 `   vec2 roughnessUv = vec2(vUv.x/vUv.y, vUv.y);
 ` :
-`   vec2 roughnessUv = vec2(vUv.x, 1.0-vUv.y);
+`   vec2 roughnessUv = vec2(vUv.x, vUv.y);
 `}
     vec4 texelRoughness = texture( ${mapType}, roughnessUv );
     roughnessFactor = texelRoughness.g;

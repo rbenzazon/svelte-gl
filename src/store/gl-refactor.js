@@ -514,7 +514,10 @@ export function setupNormalMatrix(programStore, mesh, numInstances) {
 			if (normalMatrixLocation == null) {
 				return;
 			}
-			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(get(mesh.matrix)));
+			const normalMatrix = derivateNormalMatrix(get(mesh.matrix));
+			console.log("normalMatrix", normalMatrix);
+
+			gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
 		};
 	} else {
 		return function setupNormalMatrix() {
@@ -563,10 +566,11 @@ export function setupNormalMatrix(programStore, mesh, numInstances) {
 		};
 	}
 }
-
-export function updateNormalMatrix({ gl, program }, normalMatrix) {
+export function updateNormalMatrix(programStore, worldMatrix) {
+	const { gl, programMap } = appContext;
+	const program = programMap.get(programStore);
 	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+	gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(worldMatrix));
 }
 
 export function updateInstanceNormalMatrix(programStore, mesh, normalMatrix, instanceIndex) {

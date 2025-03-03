@@ -139,39 +139,27 @@ function createRenderer() {
 		},
 	};
 }
-
 /**
- * Camera
- * @typedef {Object} Camera
- * @property {import('gl-matrix').vec3} position - The position of the camera
- * @property {import('gl-matrix').vec3} target - The target of the camera
- * @property {number} fov - The field of view of the camera in degrees
- * @property {number} near - The near clipping plane distance
- * @property {number} far - The far clipping plane distance
- * @property {import('gl-matrix').vec3} up - The up vector of the camera
- * @property {import('gl-matrix').mat4 | null} matrix - The view matrix of the camera
+ * @typedef {Object} SvelteGLCameraCustomStore
+ * @property {SvelteGLCameraStore['subscribe']} subscribe
+ * @property {SvelteGLCameraStore['set']} set
+ * @property {SvelteGLCameraStore['update']} update
+ * @property {number} revision
  */
 
 /**
- * Camera store
- * @typedef {import('svelte/store').Writable<Camera>} CameraStore
- * @property {number} revision - The revision of the store
- */
-
-/**
- * @return {CameraStore}
+ * @return {SvelteGLCameraCustomStore}
  */
 function createCameraStore() {
-	const initialCamera = {
+	/** @type {SvelteGLCameraStore} */
+	const store = writable({
 		position: [0, 0, -1],
 		target: [0, 0, 0],
 		fov: 80,
 		near: 0.1,
 		far: 1000,
 		up: [0, 1, 0],
-		matrix: null,
-	};
-	const store = writable(initialCamera);
+	});
 	const { subscribe, update } = store;
 	const revisionStore = writable(0);
 	function customUpdate(updater) {
@@ -203,7 +191,9 @@ export const camera = createCameraStore();
 export const renderer = createRenderer();
 
 function createSceneStore() {
+	/** @type {SvelteGLSceneStore} */
 	const store = writable([]);
+
 	const revisionStore = writable(0);
 	const { subscribe, update } = store;
 	function customUpdate(updater) {
@@ -261,6 +251,7 @@ const createMeshMatrixStore = (mesh, rendererUpdate, initialValue, instanceIndex
 			const program = findProgram(mesh);
 			if (isNaN(instanceIndex)) {
 				updateTransformMatrix(program, nextMatrix);
+				updateNormalMatrix(program, nextMatrix);
 			} else {
 				updateInstanceTransformMatrix(program, mesh, nextMatrix, instanceIndex);
 			}
@@ -282,11 +273,18 @@ const createMeshMatricesStore = (rendererUpdate, initialValue) => {
 	};
 	return transformMatrix;
 };*/
+/**
+ *
+ * @param {*} value
+ * @param {*} symmetry
+ * @param {*} symmetryAxis
+ * @returns {SvelteGLMesh}
+ */
 export function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]) {
 	if (symmetry) {
 		console.log("symmetry");
 
-		const newPositions = [];
+		/*const newPositions = [];
 		for (let i = 0; i < value.attributes.positions.length / 3; i++) {
 			const x = value.attributes.positions[i * 3];
 			const y = value.attributes.positions[i * 3 + 1];
@@ -294,7 +292,7 @@ export function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]
 			const [sx, sy, sz] = symmetryAxis;
 			newPositions.push(x + 2 * (sx - x), y + 2 * (sy - y), z + 2 * (sz - z));
 		}
-		value.attributes.positions = newPositions;
+		value.attributes.positions = newPositions;*/
 		const newNormals = [];
 		for (let i = 0; i < value.attributes.normals.length / 3; i++) {
 			const x = value.attributes.normals[i * 3];
@@ -302,7 +300,7 @@ export function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]
 			const z = value.attributes.normals[i * 3 + 2];
 			//calculate normals in symmetry taking symmetryAxis into account
 			const [sx, sy, sz] = symmetryAxis;
-			newNormals.push(x * -sx, y * -sy, z * -1);
+			newNormals.push(x * -sx, y * -sy, z * -sz);
 		}
 		value.attributes.normals = newNormals;
 	}
@@ -339,6 +337,7 @@ export const meshes = derived([scene], ([$scene]) => {
 });
 
 function createLightsStore() {
+	/** @type {import("svelte/store").Writable<Array<SvelteGLLightCustomStore>>} */
 	const { subscribe, set } = writable([]);
 	const lights = {
 		subscribe,
@@ -354,8 +353,26 @@ export const numLigths = derived([lights], ([$lights]) => {
 	return $lights.length;
 });
 
+//SvelteGLLightStore
+/**
+ * @typedef {import("svelte/store").Writable<import("../lights/point-light.js").SvelteGLLightValue>} SvelteGLLightStore
+ */
+
+/**
+ * @typedef {Object} SvelteGLLightCustomStore
+ * @property {SvelteGLLightStore['subscribe']} subscribe
+ * @property {SvelteGLLightStore['set']} set
+ */
+
+/**
+ *
+ * @param {import("../lights/point-light.js").SvelteGLLightValue} initialProps
+ * @returns {SvelteGLLightCustomStore}
+ */
 export const createLightStore = (initialProps) => {
-	const { subscribe, set } = writable(initialProps);
+	/** @type {SvelteGLLightStore} */
+	const store = writable(initialProps);
+	const { subscribe, set } = store;
 	const light = {
 		subscribe,
 		set: (props) => {
@@ -371,9 +388,19 @@ export const createLightStore = (initialProps) => {
 export const renderPasses = writable([]);
 
 let materialCache;
-
+/**
+ * @typedef {Object} MaterialCustomStore
+ * @property {MaterialStore['subscribe']} subscribe
+ * @property {MaterialStore['set']} set
+ */
+/**
+ * @param {SvelteGLMaterial} initialProps
+ * @return {MaterialCustomStore}
+ */
 export function createMaterialStore(initialProps) {
-	const { subscribe, set } = writable(initialProps);
+	/** @type {MaterialStore} */
+	const store = writable(initialProps);
+	const { subscribe, set } = store;
 	const material = {
 		subscribe,
 		set: (props) => {
@@ -830,7 +857,7 @@ const renderPipeline = derived(
 										selectMesh(program, mesh),
 										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
 										...(mesh.instances == null
-											? [setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)]
+											? [] //setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)
 											: []),
 									]
 								: [
@@ -840,9 +867,13 @@ const renderPipeline = derived(
 										setupNormalMatrix(program, mesh, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation) || []),
 									]),
-							...(mesh.instances != null
-								? [setFaceWinding(determinant(get(mesh.matrices[0])) > 0)]
-								: [setFaceWinding(determinant(get(mesh.matrix)) > 0)]),
+							...(mesh.matrix != null
+								? [
+										...(mesh.instances != null
+											? [setFaceWinding(determinant(get(mesh.matrices[0])) > 0)]
+											: [setFaceWinding(determinant(get(mesh.matrix)) > 0)]),
+									]
+								: []),
 							bindVAO,
 							render(mesh, mesh.instances, mesh.drawMode),
 						],

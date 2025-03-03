@@ -1,7 +1,6 @@
-import textureShader from "./texture.glsl";
-import { templateLiteralRenderer } from "../shaders/template.js";
-import { get } from "svelte/store";
-import { appContext } from "../store/engine-refactor.js";
+import { a6 as templateLiteralRenderer, Q as appContext } from './Menu-zg4L83RP.js';
+
+var textureShader = "${declaration?\r\n`\r\nuniform sampler2D ${mapType};\r\n` : ''\r\n}\r\n${declarationNormal?\r\n`\r\nuniform vec2 normalScale;\r\nmat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {\r\n    vec3 q0 = dFdx( eye_pos.xyz );\r\n    vec3 q1 = dFdy( eye_pos.xyz );\r\n    vec2 st0 = dFdx( uv.st );\r\n    vec2 st1 = dFdy( uv.st );\r\n    vec3 N = surf_norm;\r\n    vec3 q1perp = cross( q1, N );\r\n    vec3 q0perp = cross( N, q0 );\r\n    vec3 T = q1perp * st0.x + q0perp * st1.x;\r\n    vec3 B = q1perp * st0.y + q0perp * st1.y;\r\n    float det = max( dot( T, T ), dot( B, B ) );\r\n    float scale = ( det == 0.0 ) ? 0.0 : inversesqrt( det );\r\n    return mat3( T * scale, B * scale, N );\r\n}\r\n` : ''\r\n}\r\n${diffuseMapSample?\r\n`\r\n    //atan(uv.y, uv.x)\r\n    ${coordinateSpace === 'circular' ?\r\n`   vec2 uv = vec2(vUv.x/vUv.y, vUv.y);\r\n` :\r\n`   vec2 uv = vUv;\r\n`}\r\n    vec4 textureColor = texture( ${mapType}, uv );\r\n    material.diffuseColor *= textureColor.rgb;\r\n    material.diffuseAlpha = textureColor.a;\r\n    \r\n` : ''\r\n}\r\n${normalMapSample?\r\n`\r\n    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );\r\n    vec2 rotatedUv = vec2(vUv.x, vUv.y);\r\n    normal = texture( ${mapType}, rotatedUv ).xyz * 2.0 - 1.0;\r\n    normal.xy *= normalScale;\r\n    normal = normalize(tbn * normal);\r\n\t//normal = normalize( normalMatrix * normal );\r\n` : ''\r\n}\r\n${roughnessMapSample?\r\n`\r\n    //atan(uv.y, uv.x)\r\n    ${coordinateSpace === 'circular' ?\r\n`   vec2 roughnessUv = vec2(vUv.x/vUv.y, vUv.y);\r\n` :\r\n`   vec2 roughnessUv = vec2(vUv.x, vUv.y);\r\n`}\r\n    vec4 texelRoughness = texture( ${mapType}, roughnessUv );\r\n    roughnessFactor = texelRoughness.g;\r\n` : ''\r\n}\r\n";
 
 const types = {
 	diffuse: "diffuseMap",
@@ -17,43 +16,23 @@ const id = {
 
 /**
  * @typedef TextureProps
+ * @property {string} url
  * @property {"diffuse" | "normal" | "roughness" } type
  * @property {number[]} [normalScale=[1, 1]]
  * @property {"square" | "circular"} [coordinateSpace="square"]
- * @property {() => WebGLTexture} [textureBuffer]
- * @property {string} url
- */
-
-/**
- * Get the values from the types object
- * @typedef {typeof types[keyof typeof types]} TextureType
- */
-
-/**
- * @typedef {Object} SvelteGLTexture
- * @property {TextureType} type
- * @property {string} [url]
- * @property {number[]} [normalScale=[1, 1]]
- * @property {"square" | "circular"} [coordinateSpace="square"]
- * @property {import("../shaders/template").TemplateRenderer} shader
- * @property {()=>void} setupTexture
- * @property {()=>void} bindTexture
- * @property {() => WebGLTexture} [textureBuffer]
- * @property {HTMLImageElement} [texture]
  */
 
 /**
  *
  * @param {TextureProps} props
- * @returns {Promise<SvelteGLTexture>}
+ * @returns
  */
-export const createTexture = async (props) => {
+const createTexture = async (props) => {
 	let image;
-	let texBuffer;
 	if (props.url) {
 		image = await loadTexture(props.url);
 	} else if (typeof props.textureBuffer === "function") {
-		texBuffer = props.textureBuffer;
+		image = props.textureBuffer;
 	}
 
 	let buffer;
@@ -81,11 +60,11 @@ export const createTexture = async (props) => {
 		...(props.url ? { url: props.url } : {}),
 	};
 
-	if (texBuffer != null) {
+	if (typeof image === "function") {
 		output = {
 			...output,
 			get textureBuffer() {
-				return texBuffer();
+				return image();
 			},
 		};
 	} else {
@@ -97,11 +76,6 @@ export const createTexture = async (props) => {
 	return output;
 };
 
-/**
- * load a texture from a url
- * @param {string} url
- * @returns Promise<HTMLImageElement>
- */
 function loadTexture(url) {
 	return new Promise((resolve, reject) => {
 		const image = new Image();
@@ -150,9 +124,6 @@ function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		// Prevents t-coordinate wrapping (repeating).
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-		if (type === "diffuseMap") {
-			//gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-		}
 		gl.generateMipmap(gl.TEXTURE_2D);
 		//gl.getExtension("EXT_texture_filter_anisotropic");
 		if (normalScale != null) {
@@ -161,3 +132,5 @@ function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
 		}
 	};
 }
+
+export { createTexture as c };

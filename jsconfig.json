@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+      "checkJs": true,
+      "target": "es2020",
+      "moduleResolution": "node",
+      "baseUrl": ".",
+      "paths": {
+        "*": ["*", "src/*"]
+      }
+    },
+    "include": ["src/**/*"]
+}

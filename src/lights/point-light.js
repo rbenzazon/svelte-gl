@@ -5,6 +5,34 @@ import { multiplyScalarVec3 } from "../geometries/common.js";
 import { UBO_BINDING_POINT_POINTLIGHT } from "../store/gl-refactor.js";
 import { appContext } from "../store/engine-refactor.js";
 
+/**
+ * @typedef {"point" | "spot"} SvelteGLLightType
+ */
+
+/**
+ * @typedef {Object} SvelteGLLightProps
+ * @property {vec3} [position]
+ * @property {vec3} [color]
+ * @property {number} [intensity]
+ * @property {number} [cutoffDistance]
+ * @property {number} [decayExponent]
+ * @property {SvelteGLLightType} [type]
+ */
+
+/**
+ * @typedef {Object} SvelteGLLightObject
+ * @property {import("../shaders/template.js").TemplateRenderer} shader
+ * @property {()=>void} setupLights
+ * @property {UpdateOneLight} updateOneLight
+ */
+/**
+ * @typedef {SvelteGLLightProps & SvelteGLLightObject} SvelteGLLightValue
+ */
+/**
+ *
+ * @param {SvelteGLLightProps} props
+ * @returns {SvelteGLLightValue}
+ */
 export const createPointLight = (props) => {
 	return {
 		type: "point",
@@ -93,7 +121,13 @@ export function setupLights(lights) {
 		gl.uniformBlockBinding(program, pointLightsBlockIndex, UBO_BINDING_POINT_POINTLIGHT);
 	};
 }
-
+/**
+ * @callback UpdateOneLight
+ * @param {Array<import("../store/engine-refactor.js").SvelteGLLightCustomStore>} lights
+ * @param {import("../store/engine-refactor.js").SvelteGLLightCustomStore} light
+ * @returns {void}
+ */
+/** @type {UpdateOneLight} */
 export function updateOneLight(lights, light) {
 	const { gl } = appContext;
 	const pointLigths = lights.filter((l) => get(l).type === "point");

@@ -1,3 +1,15 @@
+/**
+ * @callback TemplateRenderer
+ * @param {Object.<string, any>} propsWithValues
+ * @returns {string}
+ */
+/**
+ *
+ * @param {string} template
+ * @param {Object.<string, string|boolean>} parameters
+ * @returns {TemplateRenderer}
+ */
+
 export const templateLiteralRenderer = (template, parameters) => {
 	const fn = Function.constructor(
 		...Object.entries(parameters).map(([key, defaultValue]) => {

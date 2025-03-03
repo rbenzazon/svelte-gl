@@ -11,6 +11,14 @@ import { appContext } from "../../store/engine-refactor.js";
  * @property {number} [intensity=1]
  * @property {number[]} [color=[1, 1, 1]]
  */
+/**
+ * @typedef SpecularExtended
+ * @property {import("../../shaders/template.js").TemplateRenderer} shader
+ * @property {()=>void} setupSpecular
+ */
+/**
+ * @typedef {SpecularProps & SpecularExtended} SvelteGLSpecular
+ */
 
 /**
  *

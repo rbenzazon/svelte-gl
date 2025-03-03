@@ -1,7 +1,4 @@
-import { drawModes } from "../store/webgl.js";
-
-import { fromRotationTranslationScale, getScaling, identity, multiply } from "gl-matrix/esm/mat4.js";
-import { transformQuat, add, scale, distance } from "gl-matrix/esm/vec3.js";
+import { H as drawModes, y as identity, Z as multiply, _ as fromRotationTranslationScale } from './Menu-zg4L83RP.js';
 
 /**
  * @typedef {Object} GLTFFile
@@ -192,7 +189,7 @@ const WEBGL_TYPE_SIZES = {
 	VEC4: 4,
 };
 
-export async function loadGLTFFile(url, binUrlPreload = undefined) {
+async function loadGLTFFile(url, binUrlPreload = undefined) {
 	try {
 		let binPreloadMap = new Map();
 		if (binUrlPreload) {
@@ -452,7 +449,7 @@ async function parseGLTF(content, url, binPreloadMap) {
 	}
 }
 
-export function createMeshFromGLTF(gltfScene, gltfObject) {
+function createMeshFromGLTF(gltfScene, gltfObject) {
 	const mesh = gltfObject;
 	const gltfMaterial = gltfScene.materials[mesh.material];
 	const material = {};
@@ -522,7 +519,7 @@ Example of a camera object in svelte-gl
 }
 */
 
-export function createCameraFromGLTF(gltfObject) {
+function createCameraFromGLTF(gltfObject) {
 	const { perspective, translation /*, rotation*/ } = gltfObject;
 	/*const matrix = createMatrixFromGLTFTransform(gltfObject);
 	const dist = distance([0, 0, 0], translation);*/
@@ -557,7 +554,7 @@ export function createCameraFromGLTF(gltfObject) {
  * @param {Array} parentMatrix
  * @param {Object} target
  */
-export function getAbsoluteNodeMatrix(node) {
+function getAbsoluteNodeMatrix(node) {
 	const matrices = [];
 	let currentNode = node;
 
@@ -575,7 +572,7 @@ function createMatrixFromGLTFTransform(object) {
 	return matrix;
 }
 
-export function traverseScene(scene, callback) {
+function traverseScene(scene, callback) {
 	scene.forEach((node) => {
 		callback(node);
 		if (node.children != null) {
@@ -583,3 +580,5 @@ export function traverseScene(scene, callback) {
 		}
 	});
 }
+
+export { createMeshFromGLTF as a, createCameraFromGLTF as c, getAbsoluteNodeMatrix as g, loadGLTFFile as l, traverseScene as t };
