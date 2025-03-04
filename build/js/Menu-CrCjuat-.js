@@ -1763,6 +1763,18 @@ var defaultVertex = "#version 300 es\r\nprecision mediump float;\r\n    \r\nin v
 
 var defaultFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n${defines}\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n\r\nuniform vec3 diffuse;\r\nuniform float opacity;\r\nuniform float metalness;\r\nuniform vec3 ambientLightColor;\r\nuniform vec3 cameraPosition;\r\n//uniform mat3 normalMatrix;\r\n\r\nin vec3 vertex;\r\nin vec3 vNormal;\r\nin highp vec2 vUv;\r\nin vec3 vViewPosition;\r\n\r\nout vec4 fragColor;\r\n\r\nstruct ReflectedLight {\r\n\tvec3 directDiffuse;\r\n\tvec3 directSpecular;\r\n\tvec3 indirectDiffuse;\r\n\tvec3 indirectSpecular;\r\n};\r\n\r\nstruct PhysicalMaterial {\r\n\tvec3 diffuseColor;\r\n\tfloat diffuseAlpha;\r\n\tfloat roughness;\r\n\tvec3 specularColor;\r\n\tfloat specularF90;\r\n\tfloat ior;\r\n};\r\n\r\nvec3 BRDF_Lambert(const in vec3 diffuseColor) {\r\n\treturn RECIPROCAL_PI * diffuseColor;\r\n}\r\n\r\n\r\n${declarations}\r\n\r\nvec4 sRGBTransferOETF(in vec4 value) {\r\n\treturn vec4(mix(pow(value.rgb, vec3(0.41666)) * 1.055 - vec3(0.055), value.rgb * 12.92, vec3(lessThanEqual(value.rgb, vec3(0.0031308)))), value.a);\r\n}\r\n\r\nvec4 linearToOutputTexel(vec4 value) {\r\n\treturn (sRGBTransferOETF(value));\r\n}\r\n\r\nvoid main() {\r\n    PhysicalMaterial material;\r\n\tmaterial.diffuseAlpha = 1.0;\r\n\tmaterial.diffuseColor = diffuse.rgb * (1.0 - metalness);\r\n\t${diffuseMapSample}\r\n\t\r\n\r\n\tvec3 normal = normalize( vNormal );\r\n\t${normalMapSample}\r\n\t${roughnessMapSample}\r\n\r\n    ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));\r\n\r\n    reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);\r\n\r\n    vec3 totalIrradiance = vec3(0.0f);\r\n    ${irradiance}\r\n\tvec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;\r\n    fragColor = vec4(outgoingLight, opacity*material.diffuseAlpha);\r\n    //fragColor = vec4(totalIrradiance, 1.0f);\r\n    ${toneMapping}\r\n\tfragColor = linearToOutputTexel(fragColor);\r\n}";
 
+/**
+ * @callback TemplateRenderer
+ * @param {Object.<string, any>} propsWithValues
+ * @returns {string}
+ */
+/**
+ *
+ * @param {string} template
+ * @param {Object.<string, string|boolean>} parameters
+ * @returns {TemplateRenderer}
+ */
+
 const templateLiteralRenderer = (template, parameters) => {
 	const fn = Function.constructor(
 		...Object.entries(parameters).map(([key, defaultValue]) => {
@@ -1893,7 +1905,6 @@ function setupTime() {
 
 function render(mesh, instances, drawMode) {
 	return function render() {
-		/** @type {WebGL2RenderingContext} **/
 		const { gl, program } = appContext;
 
 		const positionSize = mesh.attributes.positionsSize ?? 3;
@@ -1929,7 +1940,6 @@ function bindVAO() {
 
 function createProgram(programStore) {
 	return function createProgram() {
-		/** @type {{gl:WebGL2RenderingContext}} **/
 		const { gl } = appContext;
 		const program = gl.createProgram();
 		appContext.programMap.set(programStore, program);
@@ -1939,7 +1949,6 @@ function createProgram(programStore) {
 }
 
 function linkProgram() {
-	/** @type {{gl:WebGL2RenderingContext}} **/
 	const { gl, program } = appContext;
 	gl.linkProgram(program);
 	if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
@@ -1948,7 +1957,6 @@ function linkProgram() {
 }
 
 function validateProgram() {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, program } = appContext;
 	gl.validateProgram(program);
 	if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
@@ -1957,13 +1965,11 @@ function validateProgram() {
 }
 
 function useProgram() {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, program } = appContext;
 	gl.useProgram(program);
 }
 
 function bindDefaultFramebuffer() {
-	/** @type {{gl:WebGL2RenderingContext}} **/
 	const { gl, backgroundColor } = appContext;
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -1975,7 +1981,6 @@ function bindDefaultFramebuffer() {
 
 function createShaders(material, meshes, numPointLights, pointLightShader) {
 	return function createShaders() {
-		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program } = appContext;
 
 		let vertexDeclarations = "";
@@ -2112,7 +2117,6 @@ function createShaders(material, meshes, numPointLights, pointLightShader) {
 
 function setupMeshColor({ diffuse, metalness, opacity }) {
 	return function setupMeshColor() {
-		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program } = appContext;
 		const colorLocation = gl.getUniformLocation(program, "diffuse");
 		if (colorLocation == null) {
@@ -2130,7 +2134,6 @@ function setupMeshColor({ diffuse, metalness, opacity }) {
 }
 
 function setupAmbientLight(programOverride, ambientLightColorOverride) {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, program, ambientLightColor } = appContext;
 	const currentProgram = programOverride ?? program;
 	const currentAmbientLightColor = ambientLightColorOverride ?? ambientLightColor;
@@ -2147,7 +2150,6 @@ function getCameraProjectionView(camera, width, height) {
 
 function setupCamera(camera) {
 	return function createCamera() {
-		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program, canvas } = appContext;
 		const { projection, view } = getCameraProjectionView(camera, canvas.width, canvas.height);
 		// projection matrix
@@ -2169,7 +2171,6 @@ function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances)
 	if (numInstances == null) {
 		return function setupTransformMatrix() {
 			//("setupTransformMatrix", numInstances);
-			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 			const { gl, program } = appContext;
 			const worldLocation = gl.getUniformLocation(program, "world");
 			if (worldLocation == null) {
@@ -2192,7 +2193,6 @@ function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances)
 			}
 
 			const attributeName = "world";
-			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 			const { gl, program, vaoMap } = appContext;
 
 			//TODO, clean that it's useless since we overwrite it anyway and storing this way is not good
@@ -2261,7 +2261,6 @@ function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances)
 	}
 }
 function updateTransformMatrix(programStore, worldMatrix) {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, programMap } = appContext;
 	const program = programMap.get(programStore);
 	const worldLocation = gl.getUniformLocation(program, "world");
@@ -2269,7 +2268,6 @@ function updateTransformMatrix(programStore, worldMatrix) {
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 }
 function updateInstanceTransformMatrix(programStore, mesh, newMatrix, instanceIndex) {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, vaoMap, matrixBuffer } = appContext;
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
@@ -2291,12 +2289,11 @@ function setupNormalMatrix(programStore, mesh, numInstances) {
 			}
 			const normalMatrix = derivateNormalMatrix(get_store_value(mesh.matrix));
 			console.log("normalMatrix", normalMatrix);
-			
+
 			gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
 		};
 	} else {
 		return function setupNormalMatrix() {
-			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 			const { gl, program, vaoMap, transformMatricesWindows } = appContext;
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
 			if (normalMatricesLocation == null) {
@@ -2383,7 +2380,6 @@ function getBuffer(variable) {
 
 function setupAttributes(programStore, mesh) {
 	return function setupAttributes() {
-		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program, vaoMap } = appContext;
 		const { positions, normals, elements, uvs, positionsSize } = mesh.attributes;
 		let vao;
@@ -2710,6 +2706,50 @@ function getPositionFromPolar(radius, polar, azimuth) {
 	return [sinPhiRadius * Math.sin(azimuth), Math.cos(polar) * radius, sinPhiRadius * Math.cos(azimuth)];
 }
 
+/**
+ * Creates an identity matrix that satisfies the mat4 type constraint
+ * @returns {Float32Array & {length: 16}}
+ */
+function createZeroMatrix() {
+	return /** @type {Float32Array & {length: 16}} */ (new Float32Array(16));
+}
+
+/**
+ * Creates an identity matrix that satisfies the mat4 type constraint
+ * @returns {Float32Array & {length: 16}}
+ */
+function cloneMatrix(matrix) {
+	return /** @type {Float32Array & {length: 16}} */ (new Float32Array(matrix));
+}
+
+/**
+ * @typedef {"point" | "spot"} SvelteGLLightType
+ */
+
+/**
+ * @typedef {Object} SvelteGLLightProps
+ * @property {vec3} [position]
+ * @property {vec3} [color]
+ * @property {number} [intensity]
+ * @property {number} [cutoffDistance]
+ * @property {number} [decayExponent]
+ * @property {SvelteGLLightType} [type]
+ */
+
+/**
+ * @typedef {Object} SvelteGLLightObject
+ * @property {import("../shaders/template.js").TemplateRenderer} shader
+ * @property {()=>void} setupLights
+ * @property {UpdateOneLight} updateOneLight
+ */
+/**
+ * @typedef {SvelteGLLightProps & SvelteGLLightObject} SvelteGLLightValue
+ */
+/**
+ *
+ * @param {SvelteGLLightProps} props
+ * @returns {SvelteGLLightValue}
+ */
 const createPointLight = (props) => {
 	return {
 		type: "point",
@@ -2798,7 +2838,13 @@ function setupLights(lights) {
 		gl.uniformBlockBinding(program, pointLightsBlockIndex, UBO_BINDING_POINT_POINTLIGHT);
 	};
 }
-
+/**
+ * @callback UpdateOneLight
+ * @param {Array<import("../store/engine-refactor.js").SvelteGLLightCustomStore>} lights
+ * @param {import("../store/engine-refactor.js").SvelteGLLightCustomStore} light
+ * @returns {void}
+ */
+/** @type {UpdateOneLight} */
 function updateOneLight(lights, light) {
 	const { gl } = appContext;
 	const pointLigths = lights.filter((l) => get_store_value(l).type === "point");
@@ -2813,6 +2859,54 @@ function updateOneLight(lights, light) {
 		gl.bufferSubData(gl.UNIFORM_BUFFER, offset * Float32Array.BYTES_PER_ELEMENT, lightData);
 	}
 }
+
+/**
+ * @typedef {Object} SvelteGLCameraCustomStore
+ * @property {SvelteGLCameraStore['subscribe']} subscribe
+ * @property {SvelteGLCameraStore['set']} set
+ * @property {SvelteGLCameraStore['update']} update
+ * @property {number} revision
+ */
+/**
+ * @return {SvelteGLCameraCustomStore}
+ */
+function createCameraStore() {
+	/** @type {SvelteGLCameraStore} */
+	const store = writable({
+		position: [0, 0, -1],
+		target: [0, 0, 0],
+		fov: 80,
+		near: 0.1,
+		far: 1000,
+		up: [0, 1, 0],
+	});
+	const { subscribe, update } = store;
+	const revisionStore = writable(0);
+	function customUpdate(updater) {
+		update((camera) => {
+			//this makes update require only the changed props (especially the revision)
+			const next = {
+				...camera,
+				...updater(camera),
+			};
+			revisionStore.update((revision) => revision + 1);
+			return next;
+		});
+	}
+	function customSet(next) {
+		customUpdate((camera) => next);
+	}
+	return {
+		subscribe,
+		set: customSet,
+		update: customUpdate,
+		get revision() {
+			return get_store_value(revisionStore);
+		},
+	};
+}
+
+const camera = createCameraStore();
 
 function createRenderer() {
 	const initialValue = {
@@ -2918,71 +3012,12 @@ function createRenderer() {
 		},
 	};
 }
-
-/**
- * Camera
- * @typedef {Object} Camera
- * @property {import('gl-matrix').vec3} position - The position of the camera
- * @property {import('gl-matrix').vec3} target - The target of the camera
- * @property {number} fov - The field of view of the camera in degrees
- * @property {number} near - The near clipping plane distance
- * @property {number} far - The far clipping plane distance
- * @property {import('gl-matrix').vec3} up - The up vector of the camera
- * @property {import('gl-matrix').mat4 | null} matrix - The view matrix of the camera
- */
-
-/**
- * Camera store
- * @typedef {import('svelte/store').Writable<Camera>} CameraStore
- * @property {number} revision - The revision of the store
- */
-
-/**
- * @return {CameraStore}
- */
-function createCameraStore() {
-	const initialCamera = {
-		position: [0, 0, -1],
-		target: [0, 0, 0],
-		fov: 80,
-		near: 0.1,
-		far: 1000,
-		up: [0, 1, 0],
-		matrix: null,
-	};
-	const store = writable(initialCamera);
-	const { subscribe, update } = store;
-	const revisionStore = writable(0);
-	function customUpdate(updater) {
-		update((camera) => {
-			//this makes update require only the changed props (especially the revision)
-			const next = {
-				...camera,
-				...updater(camera),
-			};
-			revisionStore.update((revision) => revision + 1);
-			return next;
-		});
-	}
-	function customSet(next) {
-		customUpdate((camera) => next);
-	}
-	return {
-		subscribe,
-		set: customSet,
-		update: customUpdate,
-		get revision() {
-			return get_store_value(revisionStore);
-		},
-	};
-}
-
-const camera = createCameraStore();
-
 const renderer = createRenderer();
 
 function createSceneStore() {
+	/** @type {SvelteGLSceneStore} */
 	const store = writable([]);
+
 	const revisionStore = writable(0);
 	const { subscribe, update } = store;
 	function customUpdate(updater) {
@@ -3010,8 +3045,7 @@ function createSceneStore() {
 	};
 }
 const scene = createSceneStore();
-
-const defaultWorldMatrix = new Float32Array(16);
+const defaultWorldMatrix = createZeroMatrix();
 identity(defaultWorldMatrix);
 
 function findProgram(mesh) {
@@ -3043,18 +3077,13 @@ const createMeshMatrixStore = (mesh, rendererUpdate, initialValue, instanceIndex
 	return transformMatrix;
 };
 
-/*
-const createMeshMatricesStore = (rendererUpdate, initialValue) => {
-	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
-	const transformMatrix = {
-		subscribe,
-		set: (nextMatrix) => {
-			set(nextMatrix);
-			rendererUpdate(get(renderer));
-		},
-	};
-	return transformMatrix;
-};*/
+/**
+ *
+ * @param {*} value
+ * @param {*} symmetry
+ * @param {*} symmetryAxis
+ * @returns {SvelteGLMesh}
+ */
 function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]) {
 	if (symmetry) {
 		console.log("symmetry");
@@ -3090,9 +3119,11 @@ function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]) {
 let meshCache;
 
 const meshes = derived([scene], ([$scene]) => {
+	// type bug from svelte, $scene is an array but  the type system thinks wrongly that it's destructured
 	const meshNodes = $scene.filter((node) => node.attributes != null);
 	//using throw to cancel update flow when unchanged
 	// maybe when matrix change we need to update renderer and not programs, because the programs are the same
+	// cancellation wrong, doesn't work, interrupts the whole task
 	//&& objectsHaveSameMatrix(meshCache, meshNodes)
 	if (hasSameShallow(meshCache, meshNodes)) {
 		throw new Error("meshes unchanged");
@@ -3103,6 +3134,7 @@ const meshes = derived([scene], ([$scene]) => {
 });
 
 function createLightsStore() {
+	/** @type {import("svelte/store").Writable<Array<SvelteGLLightCustomStore>>} */
 	const { subscribe, set } = writable([]);
 	const lights = {
 		subscribe,
@@ -3118,8 +3150,26 @@ const numLigths = derived([lights], ([$lights]) => {
 	return $lights.length;
 });
 
+//SvelteGLLightStore
+/**
+ * @typedef {import("svelte/store").Writable<import("../lights/point-light.js").SvelteGLLightValue>} SvelteGLLightStore
+ */
+
+/**
+ * @typedef {Object} SvelteGLLightCustomStore
+ * @property {SvelteGLLightStore['subscribe']} subscribe
+ * @property {SvelteGLLightStore['set']} set
+ */
+
+/**
+ *
+ * @param {import("../lights/point-light.js").SvelteGLLightValue} initialProps
+ * @returns {SvelteGLLightCustomStore}
+ */
 const createLightStore = (initialProps) => {
-	const { subscribe, set } = writable(initialProps);
+	/** @type {SvelteGLLightStore} */
+	const store = writable(initialProps);
+	const { subscribe, set } = store;
 	const light = {
 		subscribe,
 		set: (props) => {
@@ -3134,8 +3184,19 @@ const createLightStore = (initialProps) => {
 
 const renderPasses = writable([]);
 
+/**
+ * @typedef {Object} MaterialCustomStore
+ * @property {MaterialStore['subscribe']} subscribe
+ * @property {MaterialStore['set']} set
+ */
+/**
+ * @param {SvelteGLMaterial} initialProps
+ * @return {MaterialCustomStore}
+ */
 function createMaterialStore(initialProps) {
-	const { subscribe, set } = writable(initialProps);
+	/** @type {MaterialStore} */
+	const store = writable(initialProps);
+	const { subscribe, set } = store;
 	const material = {
 		subscribe,
 		set: (props) => {
@@ -3146,6 +3207,8 @@ function createMaterialStore(initialProps) {
 	};
 	return material;
 }
+
+/** @type {import("svelte/store").Writable<MaterialCustomStore[]>} */
 const materials = writable([]);
 
 function isTransparent(material) {
@@ -3405,7 +3468,19 @@ function selectMesh(programStore, mesh) {
 		appContext.vao = cachedVAO;
 	};
 }
-
+//WebGL2RenderingContext
+/**
+ * @typedef {Object} appContext
+ * @property {Map<object,WebGLProgram>} programMap
+ * @property {Map<object,Map<object,WebGLVertexArrayObject>>} vaoMap
+ * @property {WebGL2RenderingContext} gl
+ * @property {WebGLProgram} program
+ * @property {vec4} backgroundColor
+ * @property {WebGLVertexArrayObject} vao
+ */
+/**
+ * @type {appContext}
+ */
 let appContext = {
 	programMap: new Map(),
 	vaoMap: new Map(),
@@ -3556,7 +3631,7 @@ const renderPipeline = derived(
 										selectMesh(program, mesh),
 										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
 										...(mesh.instances == null
-											? []//setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)
+											? [] //setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)
 											: []),
 									]
 								: [
@@ -3568,10 +3643,10 @@ const renderPipeline = derived(
 									]),
 							...(mesh.matrix != null
 								? [
-									...(mesh.instances != null
-										? [setFaceWinding(determinant(get_store_value(mesh.matrices[0])) > 0)]
-										: [setFaceWinding(determinant(get_store_value(mesh.matrix)) > 0)]),
-								]
+										...(mesh.instances != null
+											? [setFaceWinding(determinant(get_store_value(mesh.matrices[0])) > 0)]
+											: [setFaceWinding(determinant(get_store_value(mesh.matrix)) > 0)]),
+									]
 								: []),
 							bindVAO,
 							render(mesh, mesh.instances, mesh.drawMode),
@@ -3709,7 +3784,7 @@ function createOrbitControls(canvas, camera) {
 		const { position, target, fov } = cameraValue;
 		const { radius, polar, azimuth } = getCoordinates(position, target);
 		console.log("polar", polar);
-		
+
 		const newPosition = getPositionFromPolar(radius + event.deltaY * 0.001 * radius, polar, azimuth);
 		newPosition[0] = newPosition[0] + target[0];
 		newPosition[1] = newPosition[1] + target[1];
@@ -3973,4 +4048,4 @@ class Menu extends SvelteComponent {
 	}
 }
 
-export { createFlatShadedNormals as $, skyblue as A, createLightStore as B, createPointLight as C, create3DObject as D, createOrbitControls as E, binding_callbacks as F, createMaterialStore as G, drawModes as H, cross as I, subtract as J, normalize as K, rotateY as L, Menu as M, getPositionFromPolar as N, get_store_value as O, rotateX as P, appContext as Q, getTranslation as R, SvelteComponent as S, orthoNO as T, lookAt as U, linkProgram as V, validateProgram as W, useProgram as X, selectProgram as Y, multiply as Z, fromRotationTranslationScale as _, space as a, toRadian as a0, ARRAY_TYPE as a1, createVec3 as a2, lerp as a3, multiplyScalarVec3 as a4, normalizeNormals as a5, templateLiteralRenderer as a6, append_styles as a7, attr as a8, listen as a9, run_all as aa, create_slot as ab, append as ac, update_slot_base as ad, get_all_dirty_from_scope as ae, get_slot_changes as af, text as ag, set_data as ah, createEventDispatcher as ai, null_to_empty as aj, hexNumToCSSStringColor as ak, linearArrayToCSSHashColor as al, cssStringColorToHexNum as am, ensure_array_like as an, empty as ao, group_outros as ap, check_outros as aq, destroy_each as ar, cssStringColorToLinearArray as as, colorProps as at, meshes as au, toggle_class as av, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, materials as k, lights as l, mount_component as m, noop as n, onMount as o, camera as p, renderPasses as q, renderer as r, safe_not_equal as s, transition_in as t, transformMat4 as u, rotateZ as v, scale as w, translate as x, identity as y, set_store_value as z };
+export { fromRotationTranslationScale as $, skyblue as A, createLightStore as B, createPointLight as C, create3DObject as D, createOrbitControls as E, binding_callbacks as F, createMaterialStore as G, drawModes as H, cross as I, subtract as J, normalize as K, rotateY as L, Menu as M, get_store_value as N, getPositionFromPolar as O, createZeroMatrix as P, rotateX as Q, appContext as R, SvelteComponent as S, getTranslation as T, orthoNO as U, lookAt as V, linkProgram as W, validateProgram as X, useProgram as Y, selectProgram as Z, multiply as _, space as a, createFlatShadedNormals as a0, cloneMatrix as a1, toRadian as a2, ARRAY_TYPE as a3, createVec3 as a4, lerp as a5, multiplyScalarVec3 as a6, normalizeNormals as a7, templateLiteralRenderer as a8, append_styles as a9, attr as aa, listen as ab, run_all as ac, create_slot as ad, append as ae, update_slot_base as af, get_all_dirty_from_scope as ag, get_slot_changes as ah, text as ai, set_data as aj, createEventDispatcher as ak, null_to_empty as al, hexNumToCSSStringColor as am, linearArrayToCSSHashColor as an, cssStringColorToHexNum as ao, ensure_array_like as ap, empty as aq, group_outros as ar, check_outros as as, destroy_each as at, cssStringColorToLinearArray as au, colorProps as av, meshes as aw, toggle_class as ax, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, materials as k, lights as l, mount_component as m, noop as n, onMount as o, camera as p, renderPasses as q, renderer as r, safe_not_equal as s, transition_in as t, transformMat4 as u, rotateZ as v, scale as w, translate as x, identity as y, set_store_value as z };

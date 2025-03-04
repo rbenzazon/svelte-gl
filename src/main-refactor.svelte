@@ -4,13 +4,13 @@ import {
 	createLightStore,
 	renderer,
 	scene,
-	camera,
 	renderPasses,
 	create3DObject,
 	lights,
 	createMaterialStore,
 	materials,
 } from "./store/engine-refactor.js";
+import { camera } from "./store/camera.js";
 import { identity, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";

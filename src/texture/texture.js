@@ -53,7 +53,7 @@ export const createTexture = async (props) => {
 	if (props.url) {
 		image = await loadTexture(props.url);
 	} else if (typeof props.textureBuffer === "function") {
-		texBuffer = props.textureBuffer;
+		image = props.textureBuffer;
 	}
 
 	let buffer;
@@ -64,7 +64,7 @@ export const createTexture = async (props) => {
 		return buffer;
 	}
 
-	let output = {
+	return {
 		type: types[props.type],
 		coordinateSpace: props.coordinateSpace,
 		shader: templateLiteralRenderer(textureShader, {
@@ -79,22 +79,14 @@ export const createTexture = async (props) => {
 		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale, setBuffer),
 		bindTexture: bindTexture(id[props.type], getBuffer, types[props.type]),
 		...(props.url ? { url: props.url } : {}),
+		...(typeof image === "function"
+			? {
+					get textureBuffer() {
+						return image();
+					},
+				}
+			: { texture: image }),
 	};
-
-	if (texBuffer != null) {
-		output = {
-			...output,
-			get textureBuffer() {
-				return texBuffer();
-			},
-		};
-	} else {
-		output = {
-			...output,
-			texture: image,
-		};
-	}
-	return output;
 };
 
 /**
@@ -115,7 +107,6 @@ function loadTexture(url) {
 
 function bindTexture(id, getBuffer, type) {
 	return function bindTexture() {
-		/** @type {{gl: WebGL2RenderingContext}} **/
 		const { gl, program } = appContext;
 		const textureLocation = gl.getUniformLocation(program, type);
 		gl.activeTexture(gl["TEXTURE" + id]);
@@ -126,7 +117,6 @@ function bindTexture(id, getBuffer, type) {
 
 function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
 	return function setupTexture() {
-		/** @type {{gl: WebGL2RenderingContext}} **/
 		const { gl, program } = appContext;
 		//uniform sampler2D diffuseMap;
 		let textureBuffer;

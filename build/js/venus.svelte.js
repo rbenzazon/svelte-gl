@@ -1,7 +1,7 @@
-import { H as drawModes, y as identity, I as cross, J as subtract, K as normalize, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, q as renderPasses, x as translate, z as set_store_value, A as skyblue, B as createLightStore, C as createPointLight, w as scale, L as rotateY, G as createMaterialStore, D as create3DObject, E as createOrbitControls, F as binding_callbacks } from './Menu-zg4L83RP.js';
-import { c as createPlane } from './plane-372VmowA.js';
-import { c as createTexture } from './texture-DuokdrdY.js';
-import { c as createContactShadowPass } from './contact-shadow-BFc-Zw1-.js';
+import { H as drawModes, y as identity, I as cross, J as subtract, K as normalize, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, q as renderPasses, x as translate, z as set_store_value, A as skyblue, B as createLightStore, C as createPointLight, w as scale, L as rotateY, G as createMaterialStore, N as get_store_value, D as create3DObject, E as createOrbitControls, F as binding_callbacks } from './Menu-CrCjuat-.js';
+import { c as createPlane } from './plane-DgLcwWr2.js';
+import { c as createTexture } from './texture-Co2A1O6O.js';
+import { c as createContactShadowPass } from './contact-shadow-CIVCIrgd.js';
 
 async function loadOBJFile(url) {
 	try {
@@ -221,8 +221,9 @@ function instance($$self, $$props, $$invalidate) {
 		venus.matrix = scale(venus.matrix, venus.matrix, [0.003, 0.003, 0.003]);
 		venus.matrix = translate(venus.matrix, venus.matrix, [0, -450, 0]);
 		const venusMaterial = createMaterialStore(venus.material);
-		venus.material = venusMaterial;
 		set_store_value(materials, $materials = [...$materials, venusMaterial, groundMaterial], $materials);
+		console.log("groundMaterial", get_store_value(groundMaterial));
+		venus.material = venusMaterial;
 
 		set_store_value(
 			scene,

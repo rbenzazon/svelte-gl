@@ -2,6 +2,7 @@ import { drawModes } from "../store/webgl.js";
 
 import { fromRotationTranslationScale, getScaling, identity, multiply } from "gl-matrix/esm/mat4.js";
 import { transformQuat, add, scale, distance } from "gl-matrix/esm/vec3.js";
+import { createZeroMatrix } from "../geometries/common.js";
 
 /**
  * @typedef {Object} GLTFFile
@@ -59,25 +60,6 @@ import { transformQuat, add, scale, distance } from "gl-matrix/esm/vec3.js";
 
 /**
  * @typedef {GLTFBaseNode & (GLTFMeshNode|GLTFGroupNode|GLTFCameraNode)} GLTFNode
- */
-
-/*
-fov,
-near,
-far,
-position,
-target,
-up,
-*/
-
-/**
- * @typedef {Object} SvelteGLCamera
- * @property {Number} fov
- * @property {Number} near
- * @property {Number} far
- * @property {vec3} position
- * @property {vec3} target
- * @property {vec3} up
  */
 
 /**
@@ -173,6 +155,60 @@ up,
  * @property {Number} texCoord
  * @property {String} name
  */
+/**
+ * @typedef {Object} GLTFSimpleAccessorData
+ * @property {String} type
+ * @property {WEBGLComponentType} componentType
+ * @property {Number} count
+ * @property {Array<Number>} min
+ * @property {Array<Number>} max
+ * @property {TypedArray} data
+ */
+/**
+ * @typedef {Object} GLTFInterLeavedAccessorData
+ * @property {Boolean} interleaved
+ * @property {Number} byteOffset
+ * @property {Number} byteStride
+ */
+/**
+ * @typedef {GLTFSimpleAccessorData | (GLTFSimpleAccessorData & GLTFInterLeavedAccessorData)} GLTFAccessorData
+ */
+/**
+ * @typedef {Object} GLTFFileBaseNodeData
+ * @property {mat4} matrix
+ */
+/**
+ * @typedef {Object} GLTFParsedMesh
+ * @property {GLTFAccessorData} position
+ * @property {GLTFAccessorData} normal
+ * @property {GLTFAccessorData} indices
+ * @property {GLTFAccessorData} uv
+ * @property {Number} material
+ * @property {DrawMode} drawMode
+ */
+
+/**
+ * @typedef {GLTFFileBaseNodeData & GLTFParsedMesh} GLTFFileMeshNodeData
+ */
+/**
+ * @typedef {GLTFFileBaseNodeData & GLTFCamera} GLTFFileCameraNodeData
+ */
+
+/**
+ * @typedef {Object} GLTFFileGroupNodeDataProp
+ * @property {Array<GLTFFileNodeData>} children
+ */
+/**
+ * @typedef {GLTFFileBaseNodeData & GLTFFileGroupNodeDataProp} GLTFFileGroupNodeData
+ */
+/**
+ * @typedef {GLTFFileMeshNodeData | GLTFFileCameraNodeData | GLTFFileGroupNodeData} GLTFFileNodeData
+ */
+/**
+ * @typedef {Object} GLTFLoadedFile
+ * @property {Array<GLTFFileNodeData>} scene
+ * @property {Array<GLTFMaterial>} materials
+ */
 
 const WEBGL_COMPONENT_TYPES = {
 	5120: Int8Array,
@@ -225,7 +261,7 @@ async function loadBinary(url) {
  *
  * @param {GLTFFile} content
  * @param {String} url
- * @returns
+ * @returns {Promise<GLTFLoadedFile>}
  */
 async function parseGLTF(content, url, binPreloadMap) {
 	const baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
@@ -286,6 +322,7 @@ async function parseGLTF(content, url, binPreloadMap) {
 	 * Note that each accessor uses a dataview but not necesarily all of it,
 	 * the accessor can use a subset of the dataview
 	 */
+
 	const accessorsData = accessors.map((accessor) => {
 		const { bufferView, byteOffset } = accessor;
 
@@ -332,16 +369,41 @@ async function parseGLTF(content, url, binPreloadMap) {
 	});
 
 	const meshesData = meshes.map((mesh) => parseMesh(mesh));
+	/**
+	 * Type guard for GLTFMeshNode
+	 * @param {GLTFNode} node - The node to check
+	 * @returns {node is GLTFBaseNode & GLTFMeshNode}
+	 */
+	function isMeshNode(node) {
+		return "mesh" in node;
+	}
 
-	let nodesData = nodes.map((node) => {
-		if (node.mesh != null) {
+	/**
+	 * Type guard for GLTFCameraNode
+	 * @param {GLTFNode} node - The node to check
+	 * @returns {node is GLTFBaseNode & GLTFCameraNode}
+	 */
+	function isCameraNode(node) {
+		return "camera" in node;
+	}
+
+	/**
+	 * Type guard for GLTFGroupNode
+	 * @param {GLTFNode} node - The node to check
+	 * @returns {node is GLTFBaseNode & GLTFGroupNode}
+	 */
+	function isGroupNode(node) {
+		return "children" in node;
+	}
+	const partialNodesData = nodes.map((node) => {
+		if (isMeshNode(node)) {
 			return {
 				...meshesData[node.mesh],
 				matrix: createMatrixFromGLTFTransform(node),
 			};
-		} else if (node.camera != null) {
+		} else if (isCameraNode(node)) {
 			return parseCameraNode(node);
-		} else if (node.children != null) {
+		} else if (isGroupNode(node)) {
 			return node;
 		}
 	});
@@ -349,7 +411,11 @@ async function parseGLTF(content, url, binPreloadMap) {
 	/**
 	 * requires 2 passes because groups reference other nodes that are not yet parsed
 	 */
-	nodesData = nodesData.map((node) => {
+
+	/**
+	 * @type {Array<GLTFFileNodeData>}
+	 */
+	const nodesData = partialNodesData.map((node) => {
 		if (node.children != null) {
 			return parseGroupNode(node);
 		} else {
@@ -372,48 +438,47 @@ async function parseGLTF(content, url, binPreloadMap) {
 	return {
 		scene: sceneNodesData,
 		materials,
-		lights,
-		cameras,
 	};
 
 	/**
-	 *
-	 * @param {GLTFMeshNode} nodeData
-	 * @returns
+	 * @param {GLTFMesh} meshData
+	 * @returns {GLTFParsedMesh}
 	 */
 	function parseMesh(meshData) {
 		const { primitives } = meshData;
-		const primitivesData = primitives.map((primitive) => {
-			const { attributes, indices } = primitive;
-			const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
-			const positionAccessor = accessorsData[POSITION];
-			const normalAccessor = accessorsData[NORMAL];
-			const uvAccessor = accessorsData[TEXCOORD_0];
-			const indexAccessor = accessorsData[indices];
+		const primitive = primitives[0];
+		const { attributes, indices } = primitives[0];
+		const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
+		const positionAccessor = accessorsData[POSITION];
+		const normalAccessor = accessorsData[NORMAL];
+		const uvAccessor = accessorsData[TEXCOORD_0];
+		const indexAccessor = accessorsData[indices];
 
-			return {
-				position: positionAccessor,
-				normal: normalAccessor,
-				indices: indexAccessor,
-				uv: uvAccessor,
-				material: primitive.material,
-				drawMode: drawModes[primitive.mode],
-			};
-		});
-		return primitivesData[0];
+		return {
+			position: positionAccessor,
+			normal: normalAccessor,
+			indices: indexAccessor,
+			uv: uvAccessor,
+			material: primitive.material,
+			drawMode: drawModes[primitive.mode],
+		};
 	}
 
+	/**
+	 *
+	 * @param {GLTFBaseNode & GLTFCameraNode} nodeData
+	 * @returns {GLTFFileCameraNodeData}
+	 */
 	function parseCameraNode(nodeData) {
-		if (
-			nodeData.matrix == null &&
-			(nodeData.scale != null || nodeData.translation != null || nodeData.rotation != null)
-		) {
-			nodeData.matrix = createMatrixFromGLTFTransform(nodeData);
-		} else if (nodeData.matrix == null) {
-			nodeData.matrix = identity(new Float32Array(16));
+		let matrix;
+		if (nodeData.scale != null || nodeData.translation != null || nodeData.rotation != null) {
+			matrix = createMatrixFromGLTFTransform(nodeData);
+		} else {
+			matrix = identity(createZeroMatrix());
 		}
 		return {
 			...nodeData,
+			matrix,
 			...cameras[nodeData.camera],
 		};
 	}
@@ -437,14 +502,14 @@ async function parseGLTF(content, url, binPreloadMap) {
 		} else if (matrix != null) {
 			nodeMatrix = matrix;
 		} else {
-			nodeMatrix = identity(new Float32Array(16));
+			nodeMatrix = identity(createZeroMatrix());
 		}
 		return {
 			children: children.map((child) => {
-				if (nodesData[child].children != null) {
-					return parseGroupNode(nodesData[child]);
+				if (partialNodesData[child].children != null) {
+					return parseGroupNode(partialNodesData[child]);
 				} else {
-					return nodesData[child];
+					return partialNodesData[child];
 				}
 			}),
 			matrix: nodeMatrix,
@@ -452,9 +517,23 @@ async function parseGLTF(content, url, binPreloadMap) {
 	}
 }
 
-export function createMeshFromGLTF(gltfScene, gltfObject) {
-	const mesh = gltfObject;
-	const gltfMaterial = gltfScene.materials[mesh.material];
+/**
+ * Type guard for GLTFMeshNode
+ * @param {GLTFAccessorData} accessor - The node to check
+ * @returns {accessor is GLTFSimpleAccessorData & GLTFInterLeavedAccessorData}
+ */
+function isInterleavedAccessorData(accessor) {
+	return "interleaved" in accessor;
+}
+/**
+ *
+ * @param {GLTFLoadedFile} gltfFile
+ * @param {GLTFFileMeshNodeData} gltfMeshObject
+ * @returns
+ */
+export function createMeshFromGLTF(gltfFile, gltfMeshObject) {
+	const mesh = gltfMeshObject;
+	const gltfMaterial = gltfFile.materials[mesh.material];
 	const material = {};
 	if (gltfMaterial.pbrMetallicRoughness) {
 		const { baseColorFactor, metallicFactor, roughnessFactor } = gltfMaterial.pbrMetallicRoughness;
@@ -465,7 +544,7 @@ export function createMeshFromGLTF(gltfScene, gltfObject) {
 	}
 	return {
 		attributes: {
-			positions: mesh.position.interleaved
+			positions: isInterleavedAccessorData(mesh.position)
 				? {
 						data: mesh.position.data,
 						interleaved: mesh.position.interleaved,
@@ -473,7 +552,7 @@ export function createMeshFromGLTF(gltfScene, gltfObject) {
 						byteStride: mesh.position.byteStride,
 					}
 				: mesh.position.data,
-			normals: mesh.normal.interleaved
+			normals: isInterleavedAccessorData(mesh.normal)
 				? {
 						data: mesh.normal.data,
 						interleaved: mesh.normal.interleaved,
@@ -490,57 +569,15 @@ export function createMeshFromGLTF(gltfScene, gltfObject) {
 	};
 }
 /**
+ * @typedef {GLTFCamera & GLTFBaseNode & GLTFCameraNode} GLTFCameraData
+ */
+/**
  *
- * @param {GLTFCamera & GLTFBaseNode & GLTFCameraNode} gltfObject
+ * @param {GLTFCameraData} gltfObject
  * @returns {SvelteGLCamera}
  */
-/*
-Example of a camera object in a gltf file
-{
-	camera: 0,
-	name: "Camera",
-	perspective:{
-		"znear": 0.10000000149011612,
-		"zfar": 1000,
-		"yfov": 0.39959652046304894,
-		"aspectRatio": 1.7777777777777777
-	},
-	type: "perspective",
-	rotation: [0, 0, 0, 1],
-	translation: [0, 0, 0],
-}
-*/
-/*
-Example of a camera object in svelte-gl
-{
-	fov: 0.39959652046304894,
-	near: 0.10000000149011612,
-	far: 1000,
-	position: [0, 0, 0],
-	target: [0, 0, 0],
-	up: [0, 1, 0],
-}
-*/
-
 export function createCameraFromGLTF(gltfObject) {
 	const { perspective, translation /*, rotation*/ } = gltfObject;
-	/*const matrix = createMatrixFromGLTFTransform(gltfObject);
-	const dist = distance([0, 0, 0], translation);*/
-	/*
-	const target = [0, 0, -1];
-	transformQuat(target, target, rotation);
-	scale(target, target, dist);
-	add(target, target, translation);
-	*/
-	/*
-	position = [0, 0, -1],
-	target = [0, 0, 0],
-	fov = 80,
-	near = 0.1,
-	far = 1000,
-	up = [0, 1, 0],
-	matrix = null,
-	*/
 	return {
 		position: translation,
 		target: [0, 0, 0],
@@ -565,12 +602,12 @@ export function getAbsoluteNodeMatrix(node) {
 		matrices.unshift(currentNode.matrix);
 		currentNode = currentNode.parent;
 	}
-	return matrices.reduce((acc, matrix) => multiply(acc, acc, matrix), identity(new Float32Array(16)));
+	return matrices.reduce((acc, matrix) => multiply(acc, acc, matrix), identity(createZeroMatrix()));
 }
 
 function createMatrixFromGLTFTransform(object) {
 	const { translation, rotation, scale } = object;
-	const matrix = identity(new Float32Array(16));
+	const matrix = identity(createZeroMatrix());
 	fromRotationTranslationScale(matrix, rotation || [0, 0, 0, 0], translation || [0, 0, 0], scale || [1, 1, 1]);
 	return matrix;
 }

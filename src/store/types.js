@@ -2,10 +2,7 @@
  * matrix store
  * @typedef {import("svelte/store").Writable<mat4>} MatrixStore
  */
-/**
- * matrices store
- * @typedef {import("svelte/store").Writable<Array<mat4>>} MatricesStore
- */
+
 /**
  * material store
  * @typedef {import("svelte/store").Writable<SvelteGLMaterial>} MaterialStore
@@ -45,7 +42,7 @@
  * @property {import("src/texture/texture").SvelteGLTexture} [diffuseMap]
  * @property {import("src/texture/texture").SvelteGLTexture} [normalMap]
  * @property {import("src/texture/texture").SvelteGLTexture} [roughnessMap]
- *
+ * @property {boolean} [transparent]
  */
 //roughness, ior, intensity, color
 
@@ -64,7 +61,7 @@
 /**
  * @typedef {Object} SvelteGLInstancedMesh
  * @property {number} instances
- * @property {MatricesStore} matrices
+ * @property {MatrixStore[]} matrices
  */
 /**
  * @typedef {SvelteGLBaseMesh & (SvelteGLSingleMesh | SvelteGLInstancedMesh)} SvelteGLMesh
@@ -72,6 +69,6 @@
 
 /**
  * scene store
- * @typedef {import("svelte/store").Writable<SvelteGLMesh>} SvelteGLSceneStore
+ * @typedef {import("svelte/store").Writable<SvelteGLMesh[]>} SvelteGLSceneStore
  */
 

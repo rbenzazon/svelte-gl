@@ -4,13 +4,13 @@ import {
 	createLightStore,
 	renderer,
 	scene,
-	camera,
 	renderPasses,
 	create3DObject,
 	lights,
 	createMaterialStore,
 	materials,
 } from "./store/engine-refactor.js";
+import { camera } from "./store/camera.js";
 import { create, identity, rotateY, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
@@ -20,6 +20,7 @@ import { createTexture } from "./texture/texture.js";
 import { createContactShadowPass } from "./store/contact-shadow.js";
 import { loadOBJFile } from "./loaders/obj-loader.js";
 import Menu from "./Menu.svelte";
+import { get } from "svelte/store";
 
 let canvas;
 onMount(async () => {
@@ -83,8 +84,9 @@ onMount(async () => {
 	venus.matrix = scale(venus.matrix, venus.matrix, [0.003, 0.003, 0.003]);
 	venus.matrix = translate(venus.matrix, venus.matrix, [0, -450, 0]);
 	const venusMaterial = createMaterialStore(venus.material);
-	venus.material = venusMaterial;
 	$materials = [...$materials, venusMaterial, groundMaterial];
+	console.log("groundMaterial", get(groundMaterial));
+	venus.material = venusMaterial;
 	$scene = [
 		...$scene,
 		create3DObject({

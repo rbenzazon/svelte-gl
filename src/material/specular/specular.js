@@ -38,7 +38,6 @@ export const createSpecular = (props) => {
 
 function setupSpecular({ roughness, ior, intensity, color }) {
 	return function setupSpecular() {
-		/** @type {{gl: WebGL2RenderingContext}} **/
 		const { gl, program } = appContext;
 
 		const colorLocation = gl.getUniformLocation(program, "specularColor");

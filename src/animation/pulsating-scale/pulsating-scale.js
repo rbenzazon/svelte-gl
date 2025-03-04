@@ -30,7 +30,6 @@ export const createPulsatingScaleAnimation = (props) => {
 
 function setupPulsatingScale({ frequency, minScale, maxScale }) {
 	return function () {
-		/** @type {{gl: WebGL2RenderingContext}} **/
 		const { gl, program } = appContext;
 
 		const frequencyLocation = gl.getUniformLocation(program, "pScaleFrequency");

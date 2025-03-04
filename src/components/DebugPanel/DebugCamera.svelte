@@ -6,7 +6,7 @@ import DebugNumber from "./DebugNumber.svelte";
 import DebugRow from "./DebugRow.svelte";
 import DebugSliderNumber from "./DebugSliderNumber.svelte";
 
-import { camera } from "../../store/engine-refactor.js";
+import { camera } from "../../store/camera.js";
 import DebugH4 from "./DebugH4.svelte";
 
 function onCameraXPositionChange(e) {

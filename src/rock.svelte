@@ -4,24 +4,17 @@ import {
 	createLightStore,
 	renderer,
 	scene,
-	camera,
 	create3DObject,
 	lights,
 	materials,
 	createMaterialStore,
 } from "./store/engine-refactor.js";
+import { camera } from "./store/camera.js";
 import { identity, rotate, rotateX, rotateY, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
-import {
-	createCameraFromGLTF,
-	createMeshFromGLTF,
-	getAbsoluteNodeMatrix,
-	loadGLTFFile,
-	traverseScene,
-} from "./loaders/gltf-loader.js";
-import { transformMat4 } from "gl-matrix/esm/vec3.js";
+import { createMeshFromGLTF, loadGLTFFile, traverseScene } from "./loaders/gltf-loader.js";
 import Menu from "./Menu.svelte";
 import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 import { createTexture } from "./texture/texture.js";
@@ -29,7 +22,7 @@ import { get } from "svelte/store";
 import { createSpecular } from "./material/specular/specular.js";
 import { createCylinder } from "./geometries/cylinder.js";
 import { createPolyhedron } from "./geometries/polyhedron.js";
-import { createFlatShadedNormals } from "./geometries/common.js";
+import { createFlatShadedNormals, createZeroMatrix } from "./geometries/common.js";
 
 let canvas;
 let light1;
@@ -44,7 +37,7 @@ onMount(async () => {
 			meshObject = o;
 		}
 	});
-	const loadedMesh = createMeshFromGLTF(file, meshObject);
+	const loadedRocks = createMeshFromGLTF(file, meshObject);
 	const diffuseMap = await createTexture({
 		url: "rock-diffuse.jpg",
 		type: "diffuse",
@@ -54,12 +47,11 @@ onMount(async () => {
 		type: "normal",
 	});
 	const meshMaterial = createMaterialStore({
-		metalness: loadedMesh.material.metalness,
+		metalness: loadedRocks.material.metalness,
 		diffuse: [0.67, 0.68, 0.81],
 		diffuseMap,
 		normalMap,
 	});
-	loadedMesh.material = meshMaterial;
 
 	const ennemi1File = await loadGLTFFile("models/ennemi1.gltf", "models/ennemi1.bin");
 	let ennemi1MeshObject;
@@ -68,7 +60,7 @@ onMount(async () => {
 			ennemi1MeshObject = o;
 		}
 	});
-	const ennemi1Mesh = createMeshFromGLTF(ennemi1File, ennemi1MeshObject);
+	const loadedEnnemi1 = createMeshFromGLTF(ennemi1File, ennemi1MeshObject);
 	const ennemi1DiffuseMap = await createTexture({
 		url: "models/ennemi1-diffuse.png",
 		type: "diffuse",
@@ -77,9 +69,9 @@ onMount(async () => {
 		url: "models/ennemi1-roughness.png",
 		type: "roughness",
 	});
-	console.log("ennemi1Mesh.material", ennemi1Mesh.material);
+	console.log("ennemi1Mesh.material", loadedEnnemi1.material);
 	const ennemi1Material = createMaterialStore({
-		...ennemi1Mesh.material,
+		...loadedEnnemi1.material,
 		specular: createSpecular({
 			roughness: 1,
 			ior: 1.4,
@@ -90,7 +82,6 @@ onMount(async () => {
 		diffuseMap: ennemi1DiffuseMap,
 		roughnessMap: ennemi1RoughnessMap,
 	});
-	ennemi1Mesh.material = ennemi1Material;
 
 	$renderer = {
 		...$renderer,
@@ -127,7 +118,7 @@ onMount(async () => {
 	);
 
 	const numInstances = 20;
-	const originalMatrix = loadedMesh.matrix;
+	const originalMatrix = loadedRocks.matrix;
 	let matrices = new Array(numInstances).fill(0).map((_, index) => {
 		/*const count = index - Math.floor(numInstances / 2);*/
 		let mat = [...originalMatrix];
@@ -138,11 +129,17 @@ onMount(async () => {
 		//rotate(mat, mat, Math.PI/2,[0,1,0]);
 		return new Float32Array(mat);
 	});
-	loadedMesh.instances = numInstances;
 
-	delete loadedMesh.matrix;
-	loadedMesh.matrices = matrices;
-	const leftRocks = create3DObject(loadedMesh, false, [1, 0, 0]);
+	const leftRocks = create3DObject(
+		{
+			...loadedRocks,
+			material: meshMaterial,
+			instances: numInstances,
+			matrices,
+		},
+		false,
+		[1, 0, 0],
+	);
 
 	/*matrices = new Array(numInstances).fill(0).map((_, index) => {
 		let mat = [...originalMatrix];
@@ -160,7 +157,8 @@ onMount(async () => {
 
 	ennemi1 = create3DObject(
 		{
-			...ennemi1Mesh,
+			...loadedEnnemi1,
+			material: ennemi1Material,
 		},
 		false,
 	);
@@ -176,7 +174,7 @@ onMount(async () => {
 			color: [1, 1, 1],
 		}),
 	});
-	const cylinderMatrix = identity(new Float32Array(16));
+	const cylinderMatrix = identity(createZeroMatrix());
 	translate(cylinderMatrix, cylinderMatrix, [0, 1, 0]);
 
 	cylinder = create3DObject({
@@ -223,7 +221,7 @@ function animate() {
 	const radius = 5;
 	const x = Math.cos(angle) * radius;
 	const y = Math.sin(angle) * radius;
-	const ennemiMatrix = identity(new Float32Array(16));
+	const ennemiMatrix = identity(createZeroMatrix());
 	translate(ennemiMatrix, ennemiMatrix, [x, y, 0]);
 	rotateX(ennemiMatrix, ennemiMatrix, Math.PI / 2);
 	rotateZ(ennemiMatrix, ennemiMatrix, performance.now() * 0.005);

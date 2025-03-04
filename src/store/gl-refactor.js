@@ -87,7 +87,6 @@ export function clearFrame() {
 
 export function render(mesh, instances, drawMode) {
 	return function render() {
-		/** @type {WebGL2RenderingContext} **/
 		const { gl, program } = appContext;
 
 		const positionSize = mesh.attributes.positionsSize ?? 3;
@@ -123,7 +122,6 @@ export function bindVAO() {
 
 export function createProgram(programStore) {
 	return function createProgram() {
-		/** @type {{gl:WebGL2RenderingContext}} **/
 		const { gl } = appContext;
 		const program = gl.createProgram();
 		appContext.programMap.set(programStore, program);
@@ -133,7 +131,6 @@ export function createProgram(programStore) {
 }
 
 export function linkProgram() {
-	/** @type {{gl:WebGL2RenderingContext}} **/
 	const { gl, program } = appContext;
 	gl.linkProgram(program);
 	if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
@@ -142,7 +139,6 @@ export function linkProgram() {
 }
 
 export function validateProgram() {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, program } = appContext;
 	gl.validateProgram(program);
 	if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
@@ -151,13 +147,11 @@ export function validateProgram() {
 }
 
 export function useProgram() {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, program } = appContext;
 	gl.useProgram(program);
 }
 
 export function bindDefaultFramebuffer() {
-	/** @type {{gl:WebGL2RenderingContext}} **/
 	const { gl, backgroundColor } = appContext;
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -169,7 +163,6 @@ export function bindDefaultFramebuffer() {
 
 export function createShaders(material, meshes, numPointLights, pointLightShader) {
 	return function createShaders() {
-		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program } = appContext;
 
 		let vertexDeclarations = "";
@@ -306,7 +299,6 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 
 export function setupMeshColor({ diffuse, metalness, opacity }) {
 	return function setupMeshColor() {
-		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program } = appContext;
 		const colorLocation = gl.getUniformLocation(program, "diffuse");
 		if (colorLocation == null) {
@@ -324,7 +316,6 @@ export function setupMeshColor({ diffuse, metalness, opacity }) {
 }
 
 export function setupAmbientLight(programOverride, ambientLightColorOverride) {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, program, ambientLightColor } = appContext;
 	const currentProgram = programOverride ?? program;
 	const currentAmbientLightColor = ambientLightColorOverride ?? ambientLightColor;
@@ -341,7 +332,6 @@ export function getCameraProjectionView(camera, width, height) {
 
 export function setupCamera(camera) {
 	return function createCamera() {
-		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program, canvas } = appContext;
 		const { projection, view } = getCameraProjectionView(camera, canvas.width, canvas.height);
 		// projection matrix
@@ -394,7 +384,6 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 	if (numInstances == null) {
 		return function setupTransformMatrix() {
 			//("setupTransformMatrix", numInstances);
-			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 			const { gl, program } = appContext;
 			const worldLocation = gl.getUniformLocation(program, "world");
 			if (worldLocation == null) {
@@ -417,7 +406,6 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 			}
 
 			const attributeName = "world";
-			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 			const { gl, program, vaoMap } = appContext;
 
 			//TODO, clean that it's useless since we overwrite it anyway and storing this way is not good
@@ -486,7 +474,6 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 	}
 }
 export function updateTransformMatrix(programStore, worldMatrix) {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, programMap } = appContext;
 	const program = programMap.get(programStore);
 	const worldLocation = gl.getUniformLocation(program, "world");
@@ -494,7 +481,6 @@ export function updateTransformMatrix(programStore, worldMatrix) {
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 }
 export function updateInstanceTransformMatrix(programStore, mesh, newMatrix, instanceIndex) {
-	/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 	const { gl, vaoMap, matrixBuffer } = appContext;
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
@@ -521,7 +507,6 @@ export function setupNormalMatrix(programStore, mesh, numInstances) {
 		};
 	} else {
 		return function setupNormalMatrix() {
-			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 			const { gl, program, vaoMap, transformMatricesWindows } = appContext;
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
 			if (normalMatricesLocation == null) {
@@ -608,7 +593,6 @@ function getBuffer(variable) {
 
 export function setupAttributes(programStore, mesh) {
 	return function setupAttributes() {
-		/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 		const { gl, program, vaoMap } = appContext;
 		const { positions, normals, elements, uvs, positionsSize } = mesh.attributes;
 		let vao;

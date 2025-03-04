@@ -34,6 +34,8 @@ import { convertToVector3 } from "../color/color-space.js";
 import { determinant, getTranslation, identity, invert, multiply } from "gl-matrix/esm/mat4.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import { updateOneLight } from "../lights/point-light.js";
+import { camera } from "./camera.js";
+import { createZeroMatrix } from "../geometries/common.js";
 
 function createRenderer() {
 	const initialValue = {
@@ -139,55 +141,6 @@ function createRenderer() {
 		},
 	};
 }
-/**
- * @typedef {Object} SvelteGLCameraCustomStore
- * @property {SvelteGLCameraStore['subscribe']} subscribe
- * @property {SvelteGLCameraStore['set']} set
- * @property {SvelteGLCameraStore['update']} update
- * @property {number} revision
- */
-
-/**
- * @return {SvelteGLCameraCustomStore}
- */
-function createCameraStore() {
-	/** @type {SvelteGLCameraStore} */
-	const store = writable({
-		position: [0, 0, -1],
-		target: [0, 0, 0],
-		fov: 80,
-		near: 0.1,
-		far: 1000,
-		up: [0, 1, 0],
-	});
-	const { subscribe, update } = store;
-	const revisionStore = writable(0);
-	function customUpdate(updater) {
-		update((camera) => {
-			//this makes update require only the changed props (especially the revision)
-			const next = {
-				...camera,
-				...updater(camera),
-			};
-			revisionStore.update((revision) => revision + 1);
-			return next;
-		});
-	}
-	function customSet(next) {
-		customUpdate((camera) => next);
-	}
-	return {
-		subscribe,
-		set: customSet,
-		update: customUpdate,
-		get revision() {
-			return get(revisionStore);
-		},
-	};
-}
-
-export const camera = createCameraStore();
-
 export const renderer = createRenderer();
 
 function createSceneStore() {
@@ -221,13 +174,31 @@ function createSceneStore() {
 	};
 }
 export const scene = createSceneStore();
-
-const defaultWorldMatrix = new Float32Array(16);
+const defaultWorldMatrix = createZeroMatrix();
 identity(defaultWorldMatrix);
+
+//create typeguard for SvelteGLSingleMesh and SvelteGLInstancedMesh
+/**
+ * @param {SvelteGLMesh} mesh
+ * @returns {mesh is SvelteGLSingleMesh}
+ */
+function isSvelteGLSingleMesh(mesh) {
+	return "matrix" in mesh;
+}
+/**
+ * @param {SvelteGLMesh} mesh
+ * @returns {mesh is SvelteGLInstancedMesh}
+ */
+function isSvelteGLInstancedMesh(mesh) {
+	return "matrices" in mesh;
+}
 
 function findMesh(matrixStore) {
 	const mesh = get(scene).find((node) => {
-		return (node.matrix && node.matrix === matrixStore) || (node.matrices && node.matrices.includes(matrixStore));
+		return (
+			(isSvelteGLSingleMesh(node) && node.matrix === matrixStore) ||
+			(isSvelteGLInstancedMesh(node) && node.matrices.includes(matrixStore))
+		);
 	});
 	return mesh;
 }
@@ -261,18 +232,6 @@ const createMeshMatrixStore = (mesh, rendererUpdate, initialValue, instanceIndex
 	return transformMatrix;
 };
 
-/*
-const createMeshMatricesStore = (rendererUpdate, initialValue) => {
-	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
-	const transformMatrix = {
-		subscribe,
-		set: (nextMatrix) => {
-			set(nextMatrix);
-			rendererUpdate(get(renderer));
-		},
-	};
-	return transformMatrix;
-};*/
 /**
  *
  * @param {*} value
@@ -324,9 +283,11 @@ function objectsHaveSameMatrix(a, b) {
 }
 
 export const meshes = derived([scene], ([$scene]) => {
+	// type bug from svelte, $scene is an array but  the type system thinks wrongly that it's destructured
 	const meshNodes = $scene.filter((node) => node.attributes != null);
 	//using throw to cancel update flow when unchanged
 	// maybe when matrix change we need to update renderer and not programs, because the programs are the same
+	// cancellation wrong, doesn't work, interrupts the whole task
 	//&& objectsHaveSameMatrix(meshCache, meshNodes)
 	if (arrayHasSameShallow(meshCache, meshNodes)) {
 		throw new Error("meshes unchanged");
@@ -387,7 +348,6 @@ export const createLightStore = (initialProps) => {
 
 export const renderPasses = writable([]);
 
-let materialCache;
 /**
  * @typedef {Object} MaterialCustomStore
  * @property {MaterialStore['subscribe']} subscribe
@@ -422,21 +382,9 @@ function createMaterialsStore() {
 	};
 	return materials;
 }
+
+/** @type {import("svelte/store").Writable<MaterialCustomStore[]>} */
 export const materials = writable([]);
-/*derived([meshes], ([$meshes]) => {
-	const materials = new Set();
-	$meshes.forEach((node) => {
-		materials.add(node.material);
-	});
-	//using throw to cancel update flow when unchanged
-	if (hasSameShallow(materialCache, materials)) {
-		// TODO, study this, maybe not required, only mesh unchanged could be useful
-		throw new Error("materials unchanged");
-	} else {
-		materialCache = materials;
-	}
-	return materials;
-});*/
 
 export const RENDER_PASS_TYPES = {
 	FRAMEBUFFER_TO_TEXTURE: 0,
@@ -704,7 +652,19 @@ function selectMesh(programStore, mesh) {
 		appContext.vao = cachedVAO;
 	};
 }
-
+//WebGL2RenderingContext
+/**
+ * @typedef {Object} appContext
+ * @property {Map<object,WebGLProgram>} programMap
+ * @property {Map<object,Map<object,WebGLVertexArrayObject>>} vaoMap
+ * @property {WebGL2RenderingContext} gl
+ * @property {WebGLProgram} program
+ * @property {vec4} backgroundColor
+ * @property {WebGLVertexArrayObject} vao
+ */
+/**
+ * @type {appContext}
+ */
 export let appContext = {
 	programMap: new Map(),
 	vaoMap: new Map(),

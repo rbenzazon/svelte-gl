@@ -102,3 +102,19 @@ export function getPositionFromPolar(radius, polar, azimuth) {
 	const sinPhiRadius = Math.sin(polar) * radius;
 	return [sinPhiRadius * Math.sin(azimuth), Math.cos(polar) * radius, sinPhiRadius * Math.cos(azimuth)];
 }
+
+/**
+ * Creates an identity matrix that satisfies the mat4 type constraint
+ * @returns {Float32Array & {length: 16}}
+ */
+export function createZeroMatrix() {
+	return /** @type {Float32Array & {length: 16}} */ (new Float32Array(16));
+}
+
+/**
+ * Creates an identity matrix that satisfies the mat4 type constraint
+ * @returns {Float32Array & {length: 16}}
+ */
+export function cloneMatrix(matrix) {
+	return /** @type {Float32Array & {length: 16}} */ (new Float32Array(matrix));
+}

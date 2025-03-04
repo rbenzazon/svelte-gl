@@ -4,13 +4,13 @@ import {
 	createLightStore,
 	renderer,
 	scene,
-	camera,
 	create3DObject,
 	lights,
 	createMaterialStore,
 	materials,
 } from "./store/engine-refactor.js";
-import { identity, rotateX, rotateY, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
+import { camera } from "./store/camera.js";
+import { create, identity, rotateX, rotateY, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
@@ -18,7 +18,7 @@ import { createCube } from "./geometries/cube.js";
 import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
-import { createFlatShadedNormals, toRadian } from "./geometries/common.js";
+import { cloneMatrix, createFlatShadedNormals, createZeroMatrix, toRadian } from "./geometries/common.js";
 import { get } from "svelte/store";
 
 let canvas;
@@ -32,13 +32,14 @@ onMount(async () => {
 	};
 
 	$camera = {
+		...$camera,
 		position: [0, 5, -5],
 		target: [0, 1, 0],
 		fov: 75,
 	};
 
 	const cubeMesh = createCube();
-	const cubePos = identity(new Float32Array(16));
+	const cubePos = identity(createZeroMatrix());
 	translate(cubePos, cubePos, [3, 1.5, 0]);
 	const material = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],
@@ -47,12 +48,11 @@ onMount(async () => {
 	$materials = [...$materials, material];
 
 	const numInstances = 3;
-	let identityMatrix = new Array(16).fill(0);
-	identity(identityMatrix);
+	const identityMatrix = identity(createZeroMatrix());
 
 	let matrices = new Array(numInstances).fill(0).map((_, index) => {
 		const count = index - Math.floor(numInstances / 2);
-		let mat = [...identityMatrix];
+		let mat = cloneMatrix(identityMatrix);
 
 		//transform the model matrix
 		translate(mat, mat, [count * 2, 0, 0]);

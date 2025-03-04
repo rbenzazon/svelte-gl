@@ -4,13 +4,13 @@ import {
 	createLightStore,
 	renderer,
 	scene,
-	camera,
 	renderPasses,
 	create3DObject,
 	lights,
 	createMaterialStore,
 	materials,
 } from "./store/engine-refactor.js";
+import { camera } from "./store/camera.js";
 import { create, identity, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
@@ -71,6 +71,7 @@ onMount(async () => {
 	$renderPasses = [shadowPass];
 
 	$camera = {
+		...$camera,
 		position: [0, 5, -5],
 		target: [0, 1, 0],
 		fov: 75,

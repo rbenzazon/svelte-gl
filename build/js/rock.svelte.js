@@ -1,113 +1,99 @@
-import { K as normalize, H as drawModes, N as getPositionFromPolar, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, G as createMaterialStore, z as set_store_value, A as skyblue, B as createLightStore, C as createPointLight, x as translate, D as create3DObject, y as identity, E as createOrbitControls, O as get_store_value, P as rotateX, F as binding_callbacks } from './Menu-zg4L83RP.js';
-import { l as loadGLTFFile, t as traverseScene, a as createMeshFromGLTF } from './gltf-loader-B1itYvA5.js';
-import { D as DebugPanel } from './DebugPanel-Cv5cYhCZ.js';
-import { c as createTexture } from './texture-DuokdrdY.js';
-import { c as createSpecular } from './specular-XdEOjkpE.js';
+import { K as normalize, H as drawModes, O as getPositionFromPolar, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, G as createMaterialStore, z as set_store_value, A as skyblue, B as createLightStore, C as createPointLight, x as translate, D as create3DObject, y as identity, P as createZeroMatrix, E as createOrbitControls, N as get_store_value, Q as rotateX, F as binding_callbacks } from './Menu-CrCjuat-.js';
+import { l as loadGLTFFile, t as traverseScene, a as createMeshFromGLTF } from './gltf-loader-B_xgQh6a.js';
+import { D as DebugPanel } from './DebugPanel-CN1xU2k3.js';
+import { c as createTexture } from './texture-Co2A1O6O.js';
+import { c as createSpecular } from './specular-DEiUjcCC.js';
 
 function createCylinder(radius = 1, height = 1, radialSegment = 1, heightSegment = 1) {
-    radialSegment = Math.max(radialSegment, 1);
+	radialSegment = Math.max(radialSegment, 1);
 	heightSegment = Math.max(heightSegment, 1);
-    const halfHeight = height / 2;
-    const angle = (Math.PI * 2) / radialSegment;
-    const loopPositions = [];
-    const loopNormals = [];
-    const loopUVs = [];
-    const topNormal = [0, 1, 0];
-    const downNormal = [0, -1, 0];
-    const positions = [];
-    const normals = [];
-    const uvs = [];
-    const heightIncrement = height / heightSegment;
-    const uVRadius = 0.25;
-    for (let ir = 0; ir < radialSegment; ir++) {
-        const radialAngle = angle * ir;
-        const normal = getPositionFromPolar(1, Math.PI/2, radialAngle);
-        const x = Math.cos(radialAngle);
-        const z = Math.sin(radialAngle);
-        loopPositions.push([x * radius, z * radius]);
-        loopNormals.push(normalize(normal, normal));
-        loopUVs.push([x*uVRadius, z*uVRadius]);
-    }
-    //top and bottom caps
-    const topUVCenter = [0.25,0.25];
-    const bottomUVCenter = [0.75,0.25];
-    for (let ir = 0; ir < radialSegment; ir++) {
-        const nextIndex = (ir + 1) % radialSegment;
-        const yTop = halfHeight;
-        const yBottom = -halfHeight;
+	const halfHeight = height / 2;
+	const angle = (Math.PI * 2) / radialSegment;
+	const loopPositions = [];
+	const loopNormals = [];
+	const loopUVs = [];
+	const topNormal = [0, 1, 0];
+	const downNormal = [0, -1, 0];
+	const positions = [];
+	const normals = [];
+	const uvs = [];
+	const heightIncrement = height / heightSegment;
+	const uVRadius = 0.25;
+	for (let ir = 0; ir < radialSegment; ir++) {
+		const radialAngle = angle * ir;
+		const normal = getPositionFromPolar(1, Math.PI / 2, radialAngle);
+		const x = Math.cos(radialAngle);
+		const z = Math.sin(radialAngle);
+		loopPositions.push([x * radius, z * radius]);
+		loopNormals.push(normalize(normal, normal));
+		loopUVs.push([x * uVRadius, z * uVRadius]);
+	}
+	//top and bottom caps
+	const topUVCenter = [0.25, 0.25];
+	const bottomUVCenter = [0.75, 0.25];
+	for (let ir = 0; ir < radialSegment; ir++) {
+		const nextIndex = (ir + 1) % radialSegment;
+		const yTop = halfHeight;
+		const yBottom = -halfHeight;
 
-        // Top cap
-        positions.push(
-            [0, yTop, 0],
-            [loopPositions[nextIndex][0], yTop, loopPositions[nextIndex][1]],
-            [loopPositions[ir][0], yTop, loopPositions[ir][1]]
-        );
-        normals.push(topNormal, topNormal, topNormal);
-        uvs.push(
-            topUVCenter,
-            [loopUVs[ir][0]+topUVCenter[0], loopUVs[ir][1]+topUVCenter[1]],
-            [loopUVs[nextIndex][0]+topUVCenter[0], loopUVs[nextIndex][1]+topUVCenter[1]]
-        );
+		// Top cap
+		positions.push(
+			[0, yTop, 0],
+			[loopPositions[nextIndex][0], yTop, loopPositions[nextIndex][1]],
+			[loopPositions[ir][0], yTop, loopPositions[ir][1]],
+		);
+		normals.push(topNormal, topNormal, topNormal);
+		uvs.push(
+			topUVCenter,
+			[loopUVs[ir][0] + topUVCenter[0], loopUVs[ir][1] + topUVCenter[1]],
+			[loopUVs[nextIndex][0] + topUVCenter[0], loopUVs[nextIndex][1] + topUVCenter[1]],
+		);
 
-        // Bottom cap
-        positions.push(
-            [0, yBottom, 0],
-            [loopPositions[ir][0], yBottom, loopPositions[ir][1]],
-            [loopPositions[nextIndex][0], yBottom, loopPositions[nextIndex][1]]
-        );
-        normals.push(downNormal, downNormal, downNormal);
-        uvs.push(
-            bottomUVCenter,
-            [loopUVs[ir][0]+bottomUVCenter[0], loopUVs[ir][1]+bottomUVCenter[1]],
-            [loopUVs[nextIndex][0]+bottomUVCenter[0], loopUVs[nextIndex][1]+bottomUVCenter[1]]
-        );
-    }
+		// Bottom cap
+		positions.push(
+			[0, yBottom, 0],
+			[loopPositions[ir][0], yBottom, loopPositions[ir][1]],
+			[loopPositions[nextIndex][0], yBottom, loopPositions[nextIndex][1]],
+		);
+		normals.push(downNormal, downNormal, downNormal);
+		uvs.push(
+			bottomUVCenter,
+			[loopUVs[ir][0] + bottomUVCenter[0], loopUVs[ir][1] + bottomUVCenter[1]],
+			[loopUVs[nextIndex][0] + bottomUVCenter[0], loopUVs[nextIndex][1] + bottomUVCenter[1]],
+		);
+	}
 
-    // Side faces
-    for (let iy = 0; iy < heightSegment; iy++) {
-        const y = halfHeight - iy * heightIncrement;
-        const nextY = y - heightIncrement;
-        for (let ir = 0; ir < radialSegment; ir++) {
-            const nextIndex = (ir + 1) % radialSegment;
-            positions.push(
-                [loopPositions[ir][0], y, loopPositions[ir][1]],
-                [loopPositions[nextIndex][0], y, loopPositions[nextIndex][1]],
-                [loopPositions[nextIndex][0], nextY, loopPositions[nextIndex][1]],
-                [loopPositions[ir][0], y, loopPositions[ir][1]],
-                [loopPositions[nextIndex][0], nextY, loopPositions[nextIndex][1]],
-                [loopPositions[ir][0], nextY, loopPositions[ir][1]]
-            );
-            normals.push(
-                loopNormals[ir],
-                loopNormals[ir],
-                loopNormals[ir],
-                loopNormals[ir],
-                loopNormals[ir],
-                loopNormals[ir]
-            );
-            const uvX = 0.5 - ir / radialSegment / 2;
-            const uvY = 0.5 + iy / heightSegment / 2;
-            const uvXNext = 0.5 - nextIndex / radialSegment / 2;
-            const uvYNext = 0.5 + (iy + 1) / heightSegment / 2;
-            uvs.push(
-                [uvX, uvY],
-                [uvXNext, uvY],
-                [uvXNext, uvYNext],
-                [uvX, uvY],
-                [uvXNext, uvYNext],
-                [uvX, uvYNext]
-            );
-        }
-    }
+	// Side faces
+	for (let iy = 0; iy < heightSegment; iy++) {
+		const y = halfHeight - iy * heightIncrement;
+		const nextY = y - heightIncrement;
+		for (let ir = 0; ir < radialSegment; ir++) {
+			const nextIndex = (ir + 1) % radialSegment;
+			positions.push(
+				[loopPositions[ir][0], y, loopPositions[ir][1]],
+				[loopPositions[nextIndex][0], y, loopPositions[nextIndex][1]],
+				[loopPositions[nextIndex][0], nextY, loopPositions[nextIndex][1]],
+				[loopPositions[ir][0], y, loopPositions[ir][1]],
+				[loopPositions[nextIndex][0], nextY, loopPositions[nextIndex][1]],
+				[loopPositions[ir][0], nextY, loopPositions[ir][1]],
+			);
+			normals.push(loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir]);
+			const uvX = 0.5 - ir / radialSegment / 2;
+			const uvY = 0.5 + iy / heightSegment / 2;
+			const uvXNext = 0.5 - nextIndex / radialSegment / 2;
+			const uvYNext = 0.5 + (iy + 1) / heightSegment / 2;
+			uvs.push([uvX, uvY], [uvXNext, uvY], [uvXNext, uvYNext], [uvX, uvY], [uvXNext, uvYNext], [uvX, uvYNext]);
+		}
+	}
 
-    return {
-        attributes: {
-            positions: new Float32Array(positions.flat()),
-            normals: new Float32Array(normals.flat()),
-            uvs: new Float32Array(uvs.flat()),
-        },
-        drawMode: drawModes[4],
-    };
+	return {
+		attributes: {
+			positions: new Float32Array(positions.flat()),
+			normals: new Float32Array(normals.flat()),
+			uvs: new Float32Array(uvs.flat()),
+		},
+		drawMode: drawModes[4],
+	};
 }
 
 /* src\rock.svelte generated by Svelte v4.2.18 */
@@ -192,18 +178,17 @@ function instance($$self, $$props, $$invalidate) {
 			}
 		});
 
-		const loadedMesh = createMeshFromGLTF(file, meshObject);
+		const loadedRocks = createMeshFromGLTF(file, meshObject);
 		const diffuseMap = await createTexture({ url: "rock-diffuse.jpg", type: "diffuse" });
 		const normalMap = await createTexture({ url: "rock-normal.png", type: "normal" });
 
 		const meshMaterial = createMaterialStore({
-			...loadedMesh.material,
+			metalness: loadedRocks.material.metalness,
 			diffuse: [0.67, 0.68, 0.81],
 			diffuseMap,
 			normalMap
 		});
 
-		loadedMesh.material = meshMaterial;
 		const ennemi1File = await loadGLTFFile("models/ennemi1.gltf", "models/ennemi1.bin");
 		let ennemi1MeshObject;
 
@@ -213,7 +198,7 @@ function instance($$self, $$props, $$invalidate) {
 			}
 		});
 
-		const ennemi1Mesh = createMeshFromGLTF(ennemi1File, ennemi1MeshObject);
+		const loadedEnnemi1 = createMeshFromGLTF(ennemi1File, ennemi1MeshObject);
 
 		const ennemi1DiffuseMap = await createTexture({
 			url: "models/ennemi1-diffuse.png",
@@ -225,10 +210,10 @@ function instance($$self, $$props, $$invalidate) {
 			type: "roughness"
 		});
 
-		console.log("ennemi1Mesh.material", ennemi1Mesh.material);
+		console.log("ennemi1Mesh.material", loadedEnnemi1.material);
 
 		const ennemi1Material = createMaterialStore({
-			...ennemi1Mesh.material,
+			...loadedEnnemi1.material,
 			specular: createSpecular({
 				roughness: 1,
 				ior: 1.4,
@@ -239,8 +224,6 @@ function instance($$self, $$props, $$invalidate) {
 			diffuseMap: ennemi1DiffuseMap,
 			roughnessMap: ennemi1RoughnessMap
 		});
-
-		ennemi1Mesh.material = ennemi1Material;
 
 		set_store_value(
 			renderer,
@@ -256,6 +239,7 @@ function instance($$self, $$props, $$invalidate) {
 		set_store_value(
 			camera,
 			$camera = {
+				...$camera,
 				position: [0, 3, 10],
 				target: [0, 3, 0],
 				fov: 75
@@ -264,11 +248,11 @@ function instance($$self, $$props, $$invalidate) {
 		);
 
 		light1 = createLightStore(createPointLight({
-			"color": [0.996078431372549, 0.9529411764705882, 0.6627450980392157],
-			"intensity": 7.5,
-			"position": [0, 9, 0],
-			"cutoffDistance": 27,
-			"decayExponent": 0.05
+			color: [0.996078431372549, 0.9529411764705882, 0.6627450980392157],
+			intensity: 7.5,
+			position: [0, 9, 0],
+			cutoffDistance: 27,
+			decayExponent: 0.05
 		}));
 
 		light2 = createLightStore(createPointLight({
@@ -280,7 +264,7 @@ function instance($$self, $$props, $$invalidate) {
 		}));
 
 		const numInstances = 20;
-		const originalMatrix = loadedMesh.matrix;
+		const originalMatrix = loadedRocks.matrix;
 
 		let matrices = new Array(numInstances).fill(0).map((_, index) => {
 			/*const count = index - Math.floor(numInstances / 2);*/
@@ -294,10 +278,16 @@ function instance($$self, $$props, $$invalidate) {
 			return new Float32Array(mat);
 		});
 
-		loadedMesh.instances = numInstances;
-		delete loadedMesh.matrix;
-		loadedMesh.matrices = matrices;
-		create3DObject(loadedMesh, false, [1, 0, 0]);
+		create3DObject(
+			{
+				...loadedRocks,
+				material: meshMaterial,
+				instances: numInstances,
+				matrices
+			},
+			false,
+			[1, 0, 0]
+		);
 
 		/*matrices = new Array(numInstances).fill(0).map((_, index) => {
 	let mat = [...originalMatrix];
@@ -312,7 +302,13 @@ const rightRocks = create3DObject({
 	...loadedMesh,
 	matrices,
 },false);*/
-		ennemi1 = create3DObject({ ...ennemi1Mesh }, false);
+		ennemi1 = create3DObject(
+			{
+				...loadedEnnemi1,
+				material: ennemi1Material
+			},
+			false
+		);
 
 		const cylinderGeometry = createCylinder(1, 1, 32, 1);
 		console.log("cylinderGeometry", cylinderGeometry);
@@ -328,7 +324,7 @@ const rightRocks = create3DObject({
 			})
 		});
 
-		const cylinderMatrix = identity(new Float32Array(16));
+		const cylinderMatrix = identity(createZeroMatrix());
 		translate(cylinderMatrix, cylinderMatrix, [0, 1, 0]);
 
 		cylinder = create3DObject({
@@ -378,7 +374,7 @@ const angle = performance.now() * 0.001;
 const radius = 5;
 const x = Math.cos(angle) * radius;
 const y = Math.sin(angle) * radius;
-const ennemiMatrix = identity(new Float32Array(16));
+const ennemiMatrix = identity(createZeroMatrix());
 translate(ennemiMatrix, ennemiMatrix, [x, y, 0]);
 rotateX(ennemiMatrix, ennemiMatrix, Math.PI / 2);
 rotateZ(ennemiMatrix, ennemiMatrix, performance.now() * 0.005);

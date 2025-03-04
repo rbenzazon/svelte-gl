@@ -290,52 +290,6 @@ function createShadowProgram(textureWidth, textureHeight) {
 	};
 }
 
-/*function createFBO(setTexture) {
-	return function createFBO(width, height) {
-		const { gl } = appContext;
-
-		// Create FBO
-		let fbo = gl.createFramebuffer();
-		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-
-		// Create texture
-		const texture = gl.createTexture();
-		setTexture(texture);
-		gl.bindTexture(gl.TEXTURE_2D, texture);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-		// Attach texture to FBO
-		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
-
-		// Create renderbuffer
-		const renderbuffer = gl.createRenderbuffer();
-		gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
-		gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, width, height);
-
-		// Attach renderbuffer to FBO
-		gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
-
-		// Check FBO status
-		const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-		if (status !== gl.FRAMEBUFFER_COMPLETE) {
-			console.error("Framebuffer is incomplete:", status);
-		}
-
-		// Cleanup
-		gl.bindTexture(gl.TEXTURE_2D, null);
-		gl.bindRenderbuffer(gl.RENDERBUFFER, null);
-		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-		return {
-			fbo,
-			texture,
-		};
-	};
-}*/
-
 function createFBO(width, height, setFBO, setTexture) {
 	return function createFBO() {
 		const { gl } = appContext;
