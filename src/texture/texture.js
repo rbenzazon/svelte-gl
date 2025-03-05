@@ -16,12 +16,21 @@ const id = {
 };
 
 /**
- * @typedef TextureProps
+ * @typedef TexturePropsBase
  * @property {"diffuse" | "normal" | "roughness" } type
  * @property {number[]} [normalScale=[1, 1]]
  * @property {"square" | "circular"} [coordinateSpace="square"]
- * @property {() => WebGLTexture} [textureBuffer]
+ */
+/**
+ * @typedef {Object} SvelteGLImageTextureProps
  * @property {string} url
+ */
+/**
+ * @typedef {Object} SvelteGLBufferTextureProps
+ * @property {() => WebGLTexture} textureBuffer
+ */
+/**
+ * @typedef {TexturePropsBase & (SvelteGLImageTextureProps | SvelteGLBufferTextureProps)} TextureProps
  */
 
 /**
@@ -49,13 +58,12 @@ const id = {
  */
 export const createTexture = async (props) => {
 	let image;
-	let texBuffer;
+	let externalBuffer;
 	if (props.url) {
 		image = await loadTexture(props.url);
 	} else if (typeof props.textureBuffer === "function") {
-		image = props.textureBuffer;
+		externalBuffer = props.textureBuffer;
 	}
-
 	let buffer;
 	function setBuffer(value) {
 		buffer = value;
@@ -63,7 +71,6 @@ export const createTexture = async (props) => {
 	function getBuffer() {
 		return buffer;
 	}
-
 	return {
 		type: types[props.type],
 		coordinateSpace: props.coordinateSpace,
@@ -76,16 +83,9 @@ export const createTexture = async (props) => {
 			mapType: undefined,
 			coordinateSpace: undefined,
 		}),
-		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale, setBuffer),
+		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale, setBuffer, externalBuffer),
 		bindTexture: bindTexture(id[props.type], getBuffer, types[props.type]),
 		...(props.url ? { url: props.url } : {}),
-		...(typeof image === "function"
-			? {
-					get textureBuffer() {
-						return image();
-					},
-				}
-			: { texture: image }),
 	};
 };
 
@@ -115,13 +115,12 @@ function bindTexture(id, getBuffer, type) {
 	};
 }
 
-function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
+function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer, externalBuffer = null) {
 	return function setupTexture() {
 		const { gl, program } = appContext;
-		//uniform sampler2D diffuseMap;
 		let textureBuffer;
-		if (typeof texture === "function") {
-			textureBuffer = texture();
+		if (externalBuffer !== null) {
+			textureBuffer = externalBuffer();
 		} else {
 			textureBuffer = gl.createTexture();
 		}
@@ -130,21 +129,13 @@ function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer) {
 		gl.activeTexture(gl["TEXTURE" + id]);
 		gl.bindTexture(gl.TEXTURE_2D, textureBuffer);
 		gl.uniform1i(textureLocation, id);
-		if (typeof texture !== "function") {
+		if (externalBuffer === null) {
 			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture);
 		}
-
-		// gl.NEAREST is also allowed, instead of gl.LINEAR, as neither mipmap.
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-		// Prevents s-coordinate wrapping (repeating).
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		// Prevents t-coordinate wrapping (repeating).
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-		if (type === "diffuseMap") {
-			//gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-		}
 		gl.generateMipmap(gl.TEXTURE_2D);
-		//gl.getExtension("EXT_texture_filter_anisotropic");
 		if (normalScale != null) {
 			const normalScaleLocation = gl.getUniformLocation(program, "normalScale");
 			gl.uniform2fv(normalScaleLocation, normalScale);
