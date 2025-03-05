@@ -299,21 +299,6 @@ function objectsHaveSameMatrix(a, b) {
 	return true;
 }
 
-export const meshes = derived([scene], ([$scene]) => {
-	// type bug from svelte, $scene is an array but  the type system thinks wrongly that it's destructured
-	const meshNodes = $scene.filter((node) => node.attributes != null);
-	//using throw to cancel update flow when unchanged
-	// maybe when matrix change we need to update renderer and not programs, because the programs are the same
-	// cancellation wrong, doesn't work, interrupts the whole task
-	//&& objectsHaveSameMatrix(meshCache, meshNodes)
-	if (arrayHasSameShallow(meshCache, meshNodes)) {
-		throw new Error("meshes unchanged");
-	} else {
-		meshCache = meshNodes;
-	}
-	return meshNodes;
-});
-
 function createLightsStore() {
 	/** @type {import("svelte/store").Writable<Array<SvelteGLLightCustomStore>>} */
 	const { subscribe, set } = writable([]);
@@ -383,6 +368,9 @@ export function createMaterialStore(initialProps) {
 		set: (props) => {
 			set(props);
 			materials.set(get(materials));
+			console.log("set material", get(renderer));
+			scene.set(get(scene));
+
 			//renderer.set(get(renderer));
 		},
 	};
@@ -454,8 +442,8 @@ function sortMeshesByZ(programs) {
 }
 
 export const programs = derived(
-	[meshes, numLigths, materials, renderPasses],
-	([$meshes, $numLigths, $materials, $renderPasses]) => {
+	[scene, numLigths, materials, renderPasses],
+	([$scene, $numLigths, $materials, $renderPasses]) => {
 		//console.log("###programs derived");
 
 		let prePasses = $renderPasses
@@ -466,18 +454,21 @@ export const programs = derived(
 			.map((program) => ({
 				...program,
 				updateProgram: [],
-				...(program.allMeshes ? { meshes: $meshes } : {}),
+				...(program.allMeshes ? { meshes: $scene } : {}),
 			}));
 
-		let programs = Array.from($materials);
+		//let programs = Array.from($materials);
 
 		//this sublist mesh items require their own respective program (shader)
 		const specialMeshes = new Set(
-			$meshes.filter((node) => node.instances > 1 || node.animations?.some((a) => a.type === "vertex")),
+			$scene.filter((node) => isSvelteGLInstancedMesh(node) || node.animations?.some((a) => a.type === "vertex")),
 		);
-
-		programs = programs.reduce((acc, current) => {
-			const materialMeshes = $meshes.filter((node) => node.material === current);
+		/** @type {Array<{material:SvelteGLMaterial,meshes:SvelteGLMesh[],requireTime?:boolean}>} */
+		const programs = Array.from($materials).reduce((acc, current) => {
+			const materialMeshes = $scene.filter((node) => node.material === current);
+			/**
+			 * @type {{currentNormalMeshes:SvelteGLMesh[],currentSpecialMeshes:SvelteGLMesh[]}}
+			 */
 			const { currentNormalMeshes, currentSpecialMeshes } = materialMeshes.reduce(
 				(acc, node) => {
 					if (specialMeshes.has(node)) {
@@ -510,7 +501,7 @@ export const programs = derived(
 			return acc;
 		}, []);
 
-		programs = programs.sort(sortTransparency);
+		const sortedPrograms = programs.sort(sortTransparency);
 		sortMeshesByZ(programs);
 
 		// TODO make two different numligth store, one for each light type, when spotlight is supported
@@ -524,11 +515,13 @@ export const programs = derived(
 
 		const next = [
 			...prePasses,
-			...programs.map((p, index) => {
+			...sortedPrograms.map((p, index) => {
 				const firstCall = index === 0;
 				const program = {
 					...p,
 					useProgram,
+					setupProgram: null,
+					setFrameBuffer: null,
 					setupMaterial: [setupAmbientLight],
 					updateProgram: [],
 					bindTextures: [],
@@ -712,16 +705,7 @@ function updated() {
 		updateMap.add(camera);
 	}
 	revisionMap.set(renderer, renderer.revision);
-	revisionMap.set(scene, scene.revision); /**
-	 * running states
-	 * 0 : not started
-	 * 1 : init currently running
-	 * 2 : init done, waiting for start
-	 * 3 : loop requested, ready to run									<---|
-	 * 																		|---- end state occilates between 3 and 4
-	 * 4 : loop currently running, renderer updates ignored momentarily	<---|
-	 */
-	const running = writable(0);
+	revisionMap.set(scene, scene.revision);
 	revisionMap.set(camera, camera.revision);
 	return updateMap;
 }
@@ -738,8 +722,8 @@ function updated() {
 const running = writable(0);
 
 const renderPipeline = derived(
-	[renderer, programs, scene, camera, running],
-	([$renderer, $programs, $scene, $camera, $running]) => {
+	[renderer, programs, camera, running],
+	([$renderer, $programs, $camera, $running]) => {
 		// if renderer.enabled is false, the scene is being setup, we should not render
 		// if running is 4, we delay the pipeline updates as a way to batch scene updates
 		//console.log("render pipeline derived");
@@ -808,7 +792,6 @@ const renderPipeline = derived(
 			*/
 		pipeline.push(
 			...sortedPrograms.reduce((acc, program) => {
-				let transitionTransparent = false;
 				if (isTransparent(program.material) && !transparent) {
 					transparent = true;
 					acc.push(enableBlend);
@@ -890,7 +873,8 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 	async function loop() {
 		//lock pipeline updates to batch changes while loop is running
 		running.set(4);
-		get(renderer).loop && get(renderer).loop();
+		const rendererValue = get(renderer);
+		rendererValue.loop && rendererValue.loop();
 		//unlock pipeline updates and trigger next update
 		running.set(3);
 		//run pipeline updates

@@ -35,6 +35,7 @@ export const createSpecular = (props) => {
 		...props,
 	};
 	return {
+		...props,
 		shader: templateLiteralRenderer(specularShader, {
 			declaration: false,
 			irradiance: false,

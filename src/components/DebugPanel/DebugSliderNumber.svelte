@@ -7,6 +7,7 @@ export let max;
 export let step;
 const dispatch = createEventDispatcher();
 function onChange(event) {
+	console.log("onChange", event.target.value);
 	dispatch("change", {
 		number: parseFloat(event.target.value),
 	});

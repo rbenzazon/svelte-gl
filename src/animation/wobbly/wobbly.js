@@ -12,18 +12,19 @@ import { appContext } from "../../store/engine-refactor.js";
 /**
  *
  * @param {WobblyProps} props
- * @returns
+ * @returns {SvelteGLMeshAnimation & WobblyProps}
  */
-export const createWobblyAnimation = (props) => {
+export const createWobblyAnimation = ({ frequency = 0.04, amplitude = 1 }) => {
 	return {
-		...props,
+		frequency,
+		amplitude,
 		type: "vertex",
 		requireTime: true,
 		shader: templateLiteralRenderer(wobblyShader, {
 			declaration: false,
 			position: false,
 		}),
-		setupAnimation: setupWobbly(props),
+		setupAnimation: setupWobbly({ frequency, amplitude }),
 	};
 };
 

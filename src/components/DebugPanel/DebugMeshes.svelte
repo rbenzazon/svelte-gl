@@ -1,6 +1,6 @@
 <script type="module">
 import { get } from "svelte/store";
-import { meshes } from "../../store/engine-refactor";
+import { scene } from "../../store/engine-refactor";
 import DebugBlock from "./DebugBlock.svelte";
 
 import DebugH2 from "./DebugH2.svelte";
@@ -12,7 +12,7 @@ import DebugH4 from "./DebugH4.svelte";
 
 <DebugBlock>
   <DebugH2 slot="title">Meshes</DebugH2>
-  {#each $meshes as { attributes, drawMode, matrix,matrices, material,instances }, i}
+  {#each $scene as { attributes, drawMode, matrix,matrices, material,instances }, i}
     <DebugBlock level={2}>
       <DebugH3 slot="title">Mesh {i}</DebugH3>
       <DebugBlock level={3}>

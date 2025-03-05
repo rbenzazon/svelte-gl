@@ -18,6 +18,7 @@ import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import { createNoiseDistortionAnimation } from "./animation/noise-distortion/noise-distortion.js";
 import Menu from "./Menu.svelte";
 import { createSpecular } from "./material/specular/specular.js";
+import { createZeroMatrix } from "./geometries/common.js";
 
 let canvas;
 onMount(async () => {
@@ -29,6 +30,7 @@ onMount(async () => {
 	};
 
 	$camera = {
+		...$camera,
 		position: [0, 3, -5],
 		target: [0, 0, -1],
 		fov: 75,
@@ -45,7 +47,7 @@ onMount(async () => {
 	);
 
 	const groundMesh = createPlane(10, 10, 200, 200);
-	const groundMatrix = identity(new Float32Array(16));
+	const groundMatrix = identity(createZeroMatrix());
 
 	const groundMaterial = createMaterialStore({
 		diffuse: [0, 102 / 255, 204 / 255],

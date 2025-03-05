@@ -1,6 +1,5 @@
 import pulsatingScaleShader from "./pulsating-scale.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
-import { get } from "svelte/store";
 import { appContext } from "../../store/engine-refactor";
 
 /**
@@ -13,18 +12,20 @@ import { appContext } from "../../store/engine-refactor";
 /**
  *
  * @param {PulsatingScaleProps} props
- * @returns
+ * @returns {SvelteGLMeshAnimation & PulsatingScaleProps}
  */
-export const createPulsatingScaleAnimation = (props) => {
+export const createPulsatingScaleAnimation = ({ frequency = 0.04, minScale = 0.8, maxScale = 1.2 }) => {
 	return {
-		...props,
+		frequency,
+		minScale,
+		maxScale,
 		type: "vertex",
 		requireTime: true,
 		shader: templateLiteralRenderer(pulsatingScaleShader, {
 			declaration: false,
 			position: false,
 		}),
-		setupAnimation: setupPulsatingScale(props),
+		setupAnimation: setupPulsatingScale({ frequency, minScale, maxScale }),
 	};
 };
 

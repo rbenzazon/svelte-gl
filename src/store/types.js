@@ -51,6 +51,14 @@
  */
 
 /**
+ * @typedef {Object} SvelteGLMeshAnimation
+ * @property {"vertex"} type
+ * @property {boolean} requireTime
+ * @property {import("src/shaders/template").TemplateRenderer} shader
+ * @property {() => void} setupAnimation
+ */
+
+/**
  * @typedef {{
  *  attributes:{
  *	positions: Float32Array,
@@ -70,6 +78,7 @@
  * @typedef {Object} SvelteGLBaseMeshData
  * @property {SvelteGLAttributes} attributes
  * @property {import("./webgl").DrawMode} drawMode
+ * @property {SvelteGLMeshAnimation[]} [animations]
  */
 /**
  * material model with static material data (no store)
@@ -112,6 +121,7 @@
  * @property {SvelteGLAttributes} attributes
  * @property {import("./webgl").DrawMode} drawMode
  * @property {import("./engine-refactor").MaterialCustomStore} material
+ * @property {SvelteGLMeshAnimation[]} [animations]
  */
 /**
  * @typedef {Object} SvelteGLSingleMesh

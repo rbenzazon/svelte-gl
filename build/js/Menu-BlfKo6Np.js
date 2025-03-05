@@ -1839,8 +1839,6 @@ function cssStringColorToLinearArray(color) {
 	];
 }
 
-const colorProps = ["diffuse", "color"];
-
 // Uniform Buffer Objects, must have unique binding points
 const UBO_BINDING_POINT_POINTLIGHT = 0;
 
@@ -3147,23 +3145,6 @@ function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]) {
 	return new3DObject;
 }
 
-let meshCache;
-
-const meshes = derived([scene], ([$scene]) => {
-	// type bug from svelte, $scene is an array but  the type system thinks wrongly that it's destructured
-	const meshNodes = $scene.filter((node) => node.attributes != null);
-	//using throw to cancel update flow when unchanged
-	// maybe when matrix change we need to update renderer and not programs, because the programs are the same
-	// cancellation wrong, doesn't work, interrupts the whole task
-	//&& objectsHaveSameMatrix(meshCache, meshNodes)
-	if (hasSameShallow(meshCache, meshNodes)) {
-		throw new Error("meshes unchanged");
-	} else {
-		meshCache = meshNodes;
-	}
-	return meshNodes;
-});
-
 function createLightsStore() {
 	/** @type {import("svelte/store").Writable<Array<SvelteGLLightCustomStore>>} */
 	const { subscribe, set } = writable([]);
@@ -3233,6 +3214,9 @@ function createMaterialStore(initialProps) {
 		set: (props) => {
 			set(props);
 			materials.set(get_store_value(materials));
+			console.log("set material", get_store_value(renderer));
+			scene.set(get_store_value(scene));
+
 			//renderer.set(get(renderer));
 		},
 	};
@@ -3289,8 +3273,8 @@ function sortMeshesByZ(programs) {
 }
 
 const programs = derived(
-	[meshes, numLigths, materials, renderPasses],
-	([$meshes, $numLigths, $materials, $renderPasses]) => {
+	[scene, numLigths, materials, renderPasses],
+	([$scene, $numLigths, $materials, $renderPasses]) => {
 		//console.log("###programs derived");
 
 		let prePasses = $renderPasses
@@ -3301,18 +3285,21 @@ const programs = derived(
 			.map((program) => ({
 				...program,
 				updateProgram: [],
-				...(program.allMeshes ? { meshes: $meshes } : {}),
+				...(program.allMeshes ? { meshes: $scene } : {}),
 			}));
 
-		let programs = Array.from($materials);
+		//let programs = Array.from($materials);
 
 		//this sublist mesh items require their own respective program (shader)
 		const specialMeshes = new Set(
-			$meshes.filter((node) => node.instances > 1 || node.animations?.some((a) => a.type === "vertex")),
+			$scene.filter((node) => isSvelteGLInstancedMesh(node) || node.animations?.some((a) => a.type === "vertex")),
 		);
-
-		programs = programs.reduce((acc, current) => {
-			const materialMeshes = $meshes.filter((node) => node.material === current);
+		/** @type {Array<{material:SvelteGLMaterial,meshes:SvelteGLMesh[],requireTime?:boolean}>} */
+		const programs = Array.from($materials).reduce((acc, current) => {
+			const materialMeshes = $scene.filter((node) => node.material === current);
+			/**
+			 * @type {{currentNormalMeshes:SvelteGLMesh[],currentSpecialMeshes:SvelteGLMesh[]}}
+			 */
 			const { currentNormalMeshes, currentSpecialMeshes } = materialMeshes.reduce(
 				(acc, node) => {
 					if (specialMeshes.has(node)) {
@@ -3345,7 +3332,7 @@ const programs = derived(
 			return acc;
 		}, []);
 
-		programs = programs.sort(sortTransparency);
+		const sortedPrograms = programs.sort(sortTransparency);
 		sortMeshesByZ(programs);
 
 		// TODO make two different numligth store, one for each light type, when spotlight is supported
@@ -3359,11 +3346,13 @@ const programs = derived(
 
 		const next = [
 			...prePasses,
-			...programs.map((p, index) => {
+			...sortedPrograms.map((p, index) => {
 				const firstCall = index === 0;
 				const program = {
 					...p,
 					useProgram,
+					setupProgram: null,
+					setFrameBuffer: null,
 					setupMaterial: [setupAmbientLight],
 					updateProgram: [],
 					bindTextures: [],
@@ -3542,15 +3531,7 @@ function updated() {
 		updateMap.add(camera);
 	}
 	revisionMap.set(renderer, renderer.revision);
-	revisionMap.set(scene, scene.revision); /**
-	 * running states
-	 * 0 : not started
-	 * 1 : init currently running
-	 * 2 : init done, waiting for start
-	 * 3 : loop requested, ready to run									<---|
-	 * 																		|---- end state occilates between 3 and 4
-	 * 4 : loop currently running, renderer updates ignored momentarily	<---|
-	 */
+	revisionMap.set(scene, scene.revision);
 	revisionMap.set(camera, camera.revision);
 	return updateMap;
 }
@@ -3567,8 +3548,8 @@ function updated() {
 const running = writable(0);
 
 const renderPipeline = derived(
-	[renderer, programs, scene, camera, running],
-	([$renderer, $programs, $scene, $camera, $running]) => {
+	[renderer, programs, camera, running],
+	([$renderer, $programs, $camera, $running]) => {
 		// if renderer.enabled is false, the scene is being setup, we should not render
 		// if running is 4, we delay the pipeline updates as a way to batch scene updates
 		//console.log("render pipeline derived");
@@ -3718,7 +3699,8 @@ const renderLoopStore = derived([renderPipeline], ([$renderPipeline]) => {
 	async function loop() {
 		//lock pipeline updates to batch changes while loop is running
 		running.set(4);
-		get_store_value(renderer).loop && get_store_value(renderer).loop();
+		const rendererValue = get_store_value(renderer);
+		rendererValue.loop && rendererValue.loop();
 		//unlock pipeline updates and trigger next update
 		running.set(3);
 		//run pipeline updates
@@ -4086,4 +4068,4 @@ class Menu extends SvelteComponent {
 	}
 }
 
-export { multiply as $, set_store_value as A, skyblue as B, createLightStore as C, createPointLight as D, create3DObject as E, createOrbitControls as F, binding_callbacks as G, createMaterialStore as H, cross as I, subtract as J, normalize as K, drawModes as L, Menu as M, rotateY as N, getPositionFromPolar as O, get_store_value as P, rotateX as Q, cloneMatrix as R, SvelteComponent as S, appContext as T, getTranslation as U, orthoNO as V, lookAt as W, linkProgram as X, validateProgram as Y, useProgram as Z, selectProgram as _, space as a, fromRotationTranslationScale as a0, createFlatShadedNormals as a1, toRadian as a2, ARRAY_TYPE as a3, createVec3 as a4, lerp as a5, multiplyScalarVec3 as a6, normalizeNormals as a7, templateLiteralRenderer as a8, append_styles as a9, attr as aa, listen as ab, run_all as ac, create_slot as ad, append as ae, update_slot_base as af, get_all_dirty_from_scope as ag, get_slot_changes as ah, text as ai, set_data as aj, createEventDispatcher as ak, null_to_empty as al, hexNumToCSSStringColor as am, linearArrayToCSSHashColor as an, cssStringColorToHexNum as ao, ensure_array_like as ap, empty as aq, group_outros as ar, check_outros as as, destroy_each as at, cssStringColorToLinearArray as au, colorProps as av, meshes as aw, toggle_class as ax, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, materials as k, lights as l, mount_component as m, noop as n, onMount as o, camera as p, renderPasses as q, renderer as r, safe_not_equal as s, transition_in as t, transformMat4 as u, rotateZ as v, scale as w, translate as x, identity as y, createZeroMatrix as z };
+export { multiply as $, set_store_value as A, skyblue as B, createLightStore as C, createPointLight as D, create3DObject as E, createOrbitControls as F, binding_callbacks as G, createMaterialStore as H, cross as I, subtract as J, normalize as K, drawModes as L, Menu as M, rotateY as N, getPositionFromPolar as O, get_store_value as P, rotateX as Q, cloneMatrix as R, SvelteComponent as S, appContext as T, getTranslation as U, orthoNO as V, lookAt as W, linkProgram as X, validateProgram as Y, useProgram as Z, selectProgram as _, space as a, fromRotationTranslationScale as a0, createFlatShadedNormals as a1, toRadian as a2, ARRAY_TYPE as a3, createVec3 as a4, lerp as a5, multiplyScalarVec3 as a6, normalizeNormals as a7, templateLiteralRenderer as a8, append_styles as a9, attr as aa, listen as ab, run_all as ac, create_slot as ad, append as ae, update_slot_base as af, get_all_dirty_from_scope as ag, get_slot_changes as ah, text as ai, set_data as aj, createEventDispatcher as ak, null_to_empty as al, hexNumToCSSStringColor as am, linearArrayToCSSHashColor as an, cssStringColorToHexNum as ao, ensure_array_like as ap, empty as aq, group_outros as ar, check_outros as as, destroy_each as at, cssStringColorToLinearArray as au, toggle_class as av, insert as b, create_component as c, transition_out as d, element as e, detach as f, destroy_component as g, component_subscribe as h, init as i, scene as j, materials as k, lights as l, mount_component as m, noop as n, onMount as o, camera as p, renderPasses as q, renderer as r, safe_not_equal as s, transition_in as t, transformMat4 as u, rotateZ as v, scale as w, translate as x, identity as y, createZeroMatrix as z };

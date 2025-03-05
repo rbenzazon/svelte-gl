@@ -13,8 +13,12 @@ import { appContext } from "../../store/engine-refactor";
 
 /**
  *
+ */
+
+/**
+ *
  * @param {NoiseProps} props
- * @returns
+ * @returns {SvelteGLMeshAnimation & NoiseProps}
  */
 export const createNoiseDistortionAnimation = ({
 	frequency = 1,
