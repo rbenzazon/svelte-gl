@@ -19,6 +19,7 @@ import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { createTexture } from "./texture/texture.js";
 import { createSpecular } from "./material/specular/specular.js";
+import { createZeroMatrix } from "./geometries/common.js";
 
 let canvas;
 onMount(async () => {
@@ -30,13 +31,14 @@ onMount(async () => {
 	};
 
 	$camera = {
+		...$camera,
 		position: [0, 5, -5],
 		target: [0, 0.5, 0],
 		fov: 75,
 	};
 
 	const cubeMesh = createCube();
-	cubeMesh.attributes.uvs = sameFaceUVS;
+	cubeMesh.attributes.uvs = new Float32Array(sameFaceUVS);
 
 	const light = createLightStore(
 		createPointLight({
@@ -57,7 +59,7 @@ onMount(async () => {
 		}),
 	);
 
-	const matrix = identity(new Float32Array(16));
+	const matrix = identity(createZeroMatrix());
 	const diffuseMap = await createTexture({
 		url: "granite.jpg",
 		type: "diffuse",

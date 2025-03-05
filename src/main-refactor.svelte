@@ -24,24 +24,23 @@ import {
 	createCameraFromGLTF,
 	createMeshFromGLTF,
 	getAbsoluteNodeMatrix,
+	isGLTFCameraData,
+	isGLTFMeshData,
 	loadGLTFFile,
+	mapScene,
 	traverseScene,
 } from "./loaders/gltf-loader.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import Menu from "./Menu.svelte";
+import { createZeroMatrix } from "./geometries/common.js";
 
 let canvas;
 onMount(async () => {
 	const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf", "models/v2/md-blend6-mdlvw.bin");
-	let meshObject;
-	let cameraGLTF;
-	traverseScene(file.scene, (o) => {
-		if (o.position != null) {
-			meshObject = o;
-		} else if (o.camera != null) {
-			cameraGLTF = o;
-		}
-	});
+	const sceneObjects = mapScene(file.scene);
+	const meshObject = sceneObjects.find(isGLTFMeshData);
+	const cameraGLTF = sceneObjects.find(isGLTFCameraData);
+
 	const cameraAbsoluteMatrix = getAbsoluteNodeMatrix(cameraGLTF);
 	const cameraFromFile = createCameraFromGLTF(cameraGLTF);
 	transformMat4(cameraFromFile.position, cameraFromFile.position, cameraAbsoluteMatrix);
@@ -51,11 +50,9 @@ onMount(async () => {
 	scale(meshAbsoluteMatrix, meshAbsoluteMatrix, [200, 200, 200]);
 	translate(meshAbsoluteMatrix, meshAbsoluteMatrix, [0, 0, -500]);
 
-	meshObject.matrix = meshAbsoluteMatrix;
 	const loadedMesh = createMeshFromGLTF(file, meshObject);
-	loadedMesh.matrix = meshAbsoluteMatrix;
 
-	const groundMatrix = identity(new Float32Array(16));
+	const groundMatrix = identity(createZeroMatrix());
 	translate(groundMatrix, groundMatrix, [0, -1.5, 0]);
 
 	$renderer = {
@@ -71,11 +68,10 @@ onMount(async () => {
 	$renderPasses = [shadowPass];
 
 	$camera = {
+		...$camera,
 		position: [0, 5, -5],
 		target: [0, 2, 0],
 		fov: 75,
-
-		//...cameraFromFile
 	};
 
 	const cubeMesh = createCube();
@@ -100,7 +96,7 @@ onMount(async () => {
 		}),
 	);
 
-	const secondCubePos = identity(new Float32Array(16));
+	const secondCubePos = identity(createZeroMatrix());
 	translate(secondCubePos, secondCubePos, [3, 0, 0]);
 	scale(secondCubePos, secondCubePos, [0.1, 0.1, 0.1]);
 
@@ -129,13 +125,16 @@ onMount(async () => {
 		opacity: 0.5,
 	});
 	const meshMaterial = createMaterialStore(loadedMesh.material);
-	loadedMesh.material = meshMaterial;
 
 	$materials = [...$materials, groundMaterial, transparentMaterial, meshMaterial];
 
 	$scene = [
 		...$scene,
-		create3DObject(loadedMesh),
+		create3DObject({
+			...loadedMesh,
+			matrix: meshAbsoluteMatrix,
+			material: meshMaterial,
+		}),
 		create3DObject({
 			...sphereMesh,
 			matrix: secondCubePos,
@@ -161,12 +160,6 @@ onMount(async () => {
 	};
 
 	createOrbitControls(canvas, camera);
-
-	/*setTimeout(() => {
-		$camera = {
-			position: [0, 5, -4],
-		};
-	}, 1000);*/
 });
 
 function animate() {

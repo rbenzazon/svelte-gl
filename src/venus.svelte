@@ -21,10 +21,11 @@ import { createContactShadowPass } from "./store/contact-shadow.js";
 import { loadOBJFile } from "./loaders/obj-loader.js";
 import Menu from "./Menu.svelte";
 import { get } from "svelte/store";
+import { cloneMatrix, createZeroMatrix } from "./geometries/common.js";
 
 let canvas;
 onMount(async () => {
-	const groundMatrix = identity(new Float32Array(16));
+	const groundMatrix = identity(createZeroMatrix());
 	translate(groundMatrix, groundMatrix, [0, -1.5, 0]);
 
 	$renderer = {
@@ -40,6 +41,7 @@ onMount(async () => {
 	$renderPasses = [shadowPass];
 
 	$camera = {
+		...$camera,
 		position: [0, 5, -5],
 		target: [0, 2, 0],
 		fov: 75,
@@ -64,10 +66,6 @@ onMount(async () => {
 		}),
 	);
 
-	const secondCubePos = identity(new Float32Array(16));
-	translate(secondCubePos, secondCubePos, [3, 0, 0]);
-	scale(secondCubePos, secondCubePos, [0.1, 0.1, 0.1]);
-
 	const groundMesh = createPlane(10, 10, 1, 1);
 	const groundDiffuseMap = await createTexture({
 		textureBuffer: shadowTexture,
@@ -79,14 +77,16 @@ onMount(async () => {
 		diffuseMap: groundDiffuseMap,
 		transparent: true,
 	});
+
 	const venus = await loadOBJFile("venus.obj");
-	venus.matrix = rotateY(venus.matrix, venus.matrix, Math.PI);
-	venus.matrix = scale(venus.matrix, venus.matrix, [0.003, 0.003, 0.003]);
-	venus.matrix = translate(venus.matrix, venus.matrix, [0, -450, 0]);
+	const venusMatrix = identity(createZeroMatrix());
+	rotateY(venusMatrix, venusMatrix, Math.PI);
+	scale(venusMatrix, venusMatrix, [0.003, 0.003, 0.003]);
+	translate(venusMatrix, venusMatrix, [0, -450, 0]);
 	const venusMaterial = createMaterialStore(venus.material);
+
 	$materials = [...$materials, venusMaterial, groundMaterial];
-	console.log("groundMaterial", get(groundMaterial));
-	venus.material = venusMaterial;
+
 	$scene = [
 		...$scene,
 		create3DObject({
@@ -94,7 +94,11 @@ onMount(async () => {
 			matrix: groundMatrix,
 			material: groundMaterial,
 		}),
-		create3DObject(venus),
+		create3DObject({
+			...venus,
+			matrix: venusMatrix,
+			material: venusMaterial,
+		}),
 	];
 	$lights = [...$lights, light, light2];
 

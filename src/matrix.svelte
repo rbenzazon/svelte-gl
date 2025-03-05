@@ -18,6 +18,7 @@ import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { easeOutCubic } from "easing-utils";
+import { createZeroMatrix } from "./geometries/common.js";
 
 let canvas;
 let sphere;
@@ -30,20 +31,21 @@ onMount(async () => {
 	};
 
 	$camera = {
+		...$camera,
 		position: [0, 1, -5],
 		target: [0, 1, 0],
 		fov: 75,
 	};
 
 	const sphereMesh = createPolyhedron(1, 5, createSmoothShadedNormals);
-	const spherePos = identity(new Float32Array(16));
+	const spherePos = identity(createZeroMatrix());
 	const material = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],
 		metalness: 0,
 	});
 
 	const groundMesh = createPlane(10, 10, 1, 1);
-	const groundMatrix = identity(new Float32Array(16));
+	const groundMatrix = identity(createZeroMatrix());
 	translate(groundMatrix, groundMatrix, [0, -1, 0]);
 	const groundMaterial = createMaterialStore({
 		diffuse: [1, 1, 1],
@@ -147,7 +149,7 @@ function animate() {
 	const elasticBounce =
 		Math.sin(time * Math.PI * elasticBounceSinFrequency) * elasticBounceFactor * elasticBounceAmplitude;
 
-	const newMatrix = identity(new Float32Array(16));
+	const newMatrix = identity(createZeroMatrix());
 	translate(newMatrix, newMatrix, [0, posY - sphereCrushY, 0]);
 	scale(newMatrix, newMatrix, [
 		sphereScaleXZ - elasticBounce / 2,

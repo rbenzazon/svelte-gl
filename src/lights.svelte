@@ -5,26 +5,23 @@ import {
 	renderer,
 	scene,
 	lights,
-	renderPasses,
 	create3DObject,
 	materials,
 	createMaterialStore,
 } from "./store/engine-refactor.js";
 import { camera } from "./store/camera.js";
-import { identity, scale, translate } from "gl-matrix/esm/mat4.js";
+import { identity } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
-import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
-import { createCube } from "./geometries/cube.js";
 import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import { createTexture } from "./texture/texture.js";
-import { createContactShadowPass } from "./store/contact-shadow.js";
 
 import Menu from "./Menu.svelte";
 import { get } from "svelte/store";
 import { createSpecular } from "./material/specular/specular.js";
 import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
+import { createZeroMatrix } from "./geometries/common.js";
 
 let canvas;
 let light;
@@ -38,6 +35,7 @@ onMount(async () => {
 	};
 
 	$camera = {
+		...$camera,
 		position: [0, 5, -5],
 		target: [0, 1, 0],
 		fov: 75,
@@ -63,7 +61,7 @@ onMount(async () => {
 	);
 
 	const groundMesh = createPlane(10, 10, 1, 1);
-	const groundMatrix = identity(new Float32Array(16));
+	const groundMatrix = identity(createZeroMatrix());
 	const diffuseMap = await createTexture({
 		url: "peeling-painted-metal-diffuse.jpg",
 		type: "diffuse",

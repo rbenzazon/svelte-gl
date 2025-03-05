@@ -22,7 +22,7 @@ import { get } from "svelte/store";
 import { createSpecular } from "./material/specular/specular.js";
 import { createCylinder } from "./geometries/cylinder.js";
 import { createPolyhedron } from "./geometries/polyhedron.js";
-import { createFlatShadedNormals, createZeroMatrix } from "./geometries/common.js";
+import { cloneMatrix, createFlatShadedNormals, createZeroMatrix } from "./geometries/common.js";
 
 let canvas;
 let light1;
@@ -118,16 +118,18 @@ onMount(async () => {
 	);
 
 	const numInstances = 20;
+	/** @type {mat4} */
 	const originalMatrix = loadedRocks.matrix;
 	let matrices = new Array(numInstances).fill(0).map((_, index) => {
 		/*const count = index - Math.floor(numInstances / 2);*/
-		let mat = [...originalMatrix];
+		/** @type {mat4} */
+		let mat = cloneMatrix(originalMatrix);
 
 		//transform the model matrix
 		translate(mat, mat, [0, index * 2 - 4, -4.5]);
 		//scale(mat, mat, [1, 1, -1]);
 		//rotate(mat, mat, Math.PI/2,[0,1,0]);
-		return new Float32Array(mat);
+		return mat;
 	});
 
 	const leftRocks = create3DObject(

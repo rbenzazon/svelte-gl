@@ -2,6 +2,7 @@ import { cross, normalize, subtract } from "gl-matrix/esm/vec3.js";
 import { drawModes } from "../store/webgl.js";
 
 import { identity } from "gl-matrix/esm/mat4.js";
+import { createZeroMatrix } from "../geometries/common.js";
 export async function loadOBJFile(url) {
 	try {
 		const response = await fetch(url);
@@ -19,7 +20,7 @@ export async function loadOBJFile(url) {
  *
  * @param {string} content
  * @param {string} url
- * @returns
+ * @returns {Promise<SvelteGLMeshData>}
  */
 async function parseOBJ(content, url) {
 	const rows = content.split("\n");
@@ -28,15 +29,7 @@ async function parseOBJ(content, url) {
 	const normals = [];
 	const uvs = [];
 	const indices = [];
-	const object = {
-		attributes: {},
-		drawMode: drawModes[4],
-		material: {
-			diffuse: [1, 1, 1],
-			metalness: 0,
-		},
-		matrix: identity(new Float32Array(16)),
-	};
+
 	for (let i = 0; i < rows.length; i++) {
 		const row = rows[i];
 		if (row.startsWith("v ")) {
@@ -74,18 +67,18 @@ async function parseOBJ(content, url) {
 		}
 	}
 
-	if (positions.length > 0) {
-		object.attributes.positions = new Float32Array(positions);
-	}
-	if (normals.length > 0) {
-		object.attributes.normals = new Float32Array(normals);
-	}
-	if (uvs.length > 0) {
-		object.attributes.uvs = new Float32Array(uvs);
-	}
-	if (indices.length > 0) {
-		object.attributes.elements = new Uint16Array(indices);
-	}
-
-	return object;
+	return {
+		attributes: {
+			positions: new Float32Array(positions),
+			normals: new Float32Array(normals),
+			...(uvs.length > 0 && { uvs: new Float32Array(uvs) }),
+			...(indices.length > 0 && { elements: new Uint16Array(indices) }),
+		},
+		drawMode: drawModes[4],
+		material: {
+			diffuse: [1, 1, 1],
+			metalness: 0,
+		},
+		matrix: identity(createZeroMatrix()),
+	};
 }

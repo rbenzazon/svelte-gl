@@ -18,7 +18,7 @@ import { createCube } from "./geometries/cube.js";
 import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
-import { createFlatShadedNormals } from "./geometries/common.js";
+import { createFlatShadedNormals, createZeroMatrix } from "./geometries/common.js";
 import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 
 let canvas;
@@ -31,13 +31,14 @@ onMount(async () => {
 	};
 
 	$camera = {
+		...$camera,
 		position: [0, 5, -5],
 		target: [0, 1, 0],
 		fov: 75,
 	};
 
 	const cubeMesh = createCube();
-	const cubePos = identity(new Float32Array(16));
+	const cubePos = identity(createZeroMatrix());
 	translate(cubePos, cubePos, [3, 1.5, 0]);
 	const material = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],
@@ -45,7 +46,7 @@ onMount(async () => {
 	});
 
 	const sphereMesh = createPolyhedron(1, 5, createSmoothShadedNormals);
-	const spherePos = identity(new Float32Array(16));
+	const spherePos = identity(createZeroMatrix());
 	translate(spherePos, spherePos, [-3, 1.5, 0]);
 	const transparentMaterial = createMaterialStore({
 		diffuse: [1, 1, 0.5],
@@ -54,11 +55,11 @@ onMount(async () => {
 	});
 
 	const polyhedronMesh = createPolyhedron(1, 2, createFlatShadedNormals);
-	const polyhedronPos = identity(new Float32Array(16));
+	const polyhedronPos = identity(createZeroMatrix());
 	translate(polyhedronPos, polyhedronPos, [0, 1.5, 0]);
 
 	const groundMesh = createPlane(10, 10, 1, 1);
-	const groundMatrix = identity(new Float32Array(16));
+	const groundMatrix = identity(createZeroMatrix());
 	translate(groundMatrix, groundMatrix, [0, 0, 0]);
 	const groundMaterial = createMaterialStore({
 		diffuse: [1, 1, 1],

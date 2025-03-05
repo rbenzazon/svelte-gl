@@ -148,7 +148,7 @@ export function generateUVs({ positions }) {
 
 	correctSeam(uvBuffer);
 
-	return uvBuffer;
+	return new Float32Array(uvBuffer);
 }
 
 function correctUVs(uvBuffer, positions) {

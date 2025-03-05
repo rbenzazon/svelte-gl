@@ -1,6 +1,6 @@
-import { S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, z as set_store_value, A as skyblue, y as identity, x as translate, B as createLightStore, C as createPointLight, D as create3DObject, E as createOrbitControls, w as scale, F as binding_callbacks, G as createMaterialStore } from './Menu-BqnWciH7.js';
-import { c as createPolyhedron, a as createSmoothShadedNormals } from './polyhedron-CJSjScPp.js';
-import { c as createPlane } from './plane-CrIrHUin.js';
+import { S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, A as set_store_value, B as skyblue, y as identity, z as createZeroMatrix, x as translate, C as createLightStore, D as createPointLight, E as create3DObject, F as createOrbitControls, w as scale, G as binding_callbacks, H as createMaterialStore } from './Menu-CPeTabfQ.js';
+import { c as createPolyhedron, a as createSmoothShadedNormals } from './polyhedron-DrljFWum.js';
+import { c as createPlane } from './plane-DU6w3p3e.js';
 
 var easing = {};
 
@@ -394,6 +394,7 @@ function instance($$self, $$props, $$invalidate) {
 		set_store_value(
 			camera,
 			$camera = {
+				...$camera,
 				position: [0, 1, -5],
 				target: [0, 1, 0],
 				fov: 75
@@ -402,10 +403,10 @@ function instance($$self, $$props, $$invalidate) {
 		);
 
 		const sphereMesh = createPolyhedron(1, 5, createSmoothShadedNormals);
-		const spherePos = identity(new Float32Array(16));
+		const spherePos = identity(createZeroMatrix());
 		const material = createMaterialStore({ diffuse: [1, 0.5, 0.5], metalness: 0 });
 		const groundMesh = createPlane(10, 10, 1, 1);
-		const groundMatrix = identity(new Float32Array(16));
+		const groundMatrix = identity(createZeroMatrix());
 		translate(groundMatrix, groundMatrix, [0, -1, 0]);
 		const groundMaterial = createMaterialStore({ diffuse: [1, 1, 1], metalness: 0 });
 
@@ -512,7 +513,7 @@ elastic bounce effect factor
 		const elasticBounceSinFrequency = 12;
 		const elasticBounceAmplitude = 0.5;
 		const elasticBounce = Math.sin(time * Math.PI * elasticBounceSinFrequency) * elasticBounceFactor * elasticBounceAmplitude;
-		const newMatrix = identity(new Float32Array(16));
+		const newMatrix = identity(createZeroMatrix());
 		translate(newMatrix, newMatrix, [0, posY - sphereCrushY, 0]);
 
 		scale(newMatrix, newMatrix, [

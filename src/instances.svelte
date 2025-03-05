@@ -10,19 +10,18 @@ import {
 	materials,
 } from "./store/engine-refactor.js";
 import { camera } from "./store/camera.js";
-import { create, identity, rotateX, rotateY, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
+import { identity, rotateX, rotateY, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
-import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
 import { createCube } from "./geometries/cube.js";
-import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
-import { cloneMatrix, createFlatShadedNormals, createZeroMatrix, toRadian } from "./geometries/common.js";
+import { cloneMatrix, createZeroMatrix, toRadian } from "./geometries/common.js";
 import { get } from "svelte/store";
 
 let canvas;
 let cube;
+const numInstances = 500;
 onMount(async () => {
 	$renderer = {
 		...$renderer,
@@ -47,19 +46,20 @@ onMount(async () => {
 	});
 	$materials = [...$materials, material];
 
-	const numInstances = 3;
 	const identityMatrix = identity(createZeroMatrix());
 
 	let matrices = new Array(numInstances).fill(0).map((_, index) => {
 		const count = index - Math.floor(numInstances / 2);
 		let mat = cloneMatrix(identityMatrix);
-
+		// set y so that there are rows of cubes of 12 cubes each
+		const y = Math.floor(count / 12) - 6;
+		const x = (count % 12) - 6;
 		//transform the model matrix
-		translate(mat, mat, [count * 2, 0, 0]);
+		translate(mat, mat, [x * 2, y * 2, 0]);
 
 		rotateY(mat, mat, toRadian(count * 10));
 		scale(mat, mat, [0.5, 0.5, 0.5]);
-		return new Float32Array(mat);
+		return mat;
 	});
 
 	const light = createLightStore(
@@ -100,7 +100,7 @@ function rotateCube(cube, index) {
 	cube.matrices[index].set(tmp);
 }
 function animate() {
-	for (let i = 0; i < 3; i++) {
+	for (let i = 0; i < numInstances; i++) {
 		rotateCube(cube, i);
 	}
 }

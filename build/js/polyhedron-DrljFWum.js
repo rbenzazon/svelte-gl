@@ -1,4 +1,4 @@
-import { a3 as ARRAY_TYPE, H as drawModes, a4 as createVec3, a5 as lerp, K as normalize, a6 as multiplyScalarVec3, a7 as normalizeNormals } from './Menu-BqnWciH7.js';
+import { a3 as ARRAY_TYPE, L as drawModes, a4 as createVec3, a5 as lerp, K as normalize, a6 as multiplyScalarVec3, a7 as normalizeNormals } from './Menu-CPeTabfQ.js';
 
 /**
  * 2 Dimensional Vector
@@ -238,7 +238,7 @@ function generateUVs({ positions }) {
 
 	correctSeam(uvBuffer);
 
-	return uvBuffer;
+	return new Float32Array(uvBuffer);
 }
 
 function correctUVs(uvBuffer, positions) {

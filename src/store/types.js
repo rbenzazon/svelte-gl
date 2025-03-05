@@ -57,6 +57,7 @@ data: mesh.position.data,
  * @property {import("src/texture/texture").SvelteGLTexture} [normalMap]
  * @property {import("src/texture/texture").SvelteGLTexture} [roughnessMap]
  * @property {boolean} [transparent]
+ * @property {number} [opacity]
  */
 
 /**

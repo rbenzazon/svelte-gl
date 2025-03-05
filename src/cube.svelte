@@ -17,6 +17,7 @@ import { skyblue } from "./color/color-keywords.js";
 import { createCube } from "./geometries/cube.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
+import { createZeroMatrix } from "./geometries/common.js";
 
 let canvas;
 onMount(async () => {
@@ -28,6 +29,7 @@ onMount(async () => {
 	};
 
 	$camera = {
+		...$camera,
 		position: [0, 5, -5],
 		target: [0, 0.5, 0],
 		fov: 75,
@@ -45,7 +47,7 @@ onMount(async () => {
 		}),
 	);
 
-	const matrix = identity(new Float32Array(16));
+	const matrix = identity(createZeroMatrix());
 
 	const material = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],
