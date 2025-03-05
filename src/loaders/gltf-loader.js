@@ -1,7 +1,6 @@
 import { drawModes } from "../store/webgl.js";
 
 import { fromRotationTranslationScale, getScaling, identity, multiply } from "gl-matrix/esm/mat4.js";
-import { transformQuat, add, scale, distance } from "gl-matrix/esm/vec3.js";
 import { createZeroMatrix } from "../geometries/common.js";
 import { createSpecular } from "../material/specular/specular.js";
 
@@ -198,7 +197,7 @@ import { createSpecular } from "../material/specular/specular.js";
  * @property {GLTFUint16AccessorData} indices
  * @property {GLTFFloat32AccessorData} uv
  * @property {Number} material
- * @property {DrawMode} drawMode
+ * @property {import("../store/webgl.js").DrawMode} drawMode
  */
 
 /**

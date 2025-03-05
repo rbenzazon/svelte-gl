@@ -1,4 +1,7 @@
-// vales are of type DrawMode
+/**
+ * @typedef {"POINTS"| "LINES"| "LINE_LOOP"| "LINE_STRIP"| "TRIANGLES"| "TRIANGLE_STRIP"| "TRIANGLE_FAN"} DrawMode
+ */
+
 /**
  * @type {Object.<number, DrawMode>}
  */

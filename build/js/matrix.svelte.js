@@ -1,6 +1,6 @@
-import { S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, A as set_store_value, B as skyblue, y as identity, z as createZeroMatrix, x as translate, C as createLightStore, D as createPointLight, E as create3DObject, F as createOrbitControls, w as scale, G as binding_callbacks, H as createMaterialStore } from './Menu-CPeTabfQ.js';
-import { c as createPolyhedron, a as createSmoothShadedNormals } from './polyhedron-DrljFWum.js';
-import { c as createPlane } from './plane-DU6w3p3e.js';
+import { S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, A as set_store_value, B as skyblue, y as identity, z as createZeroMatrix, x as translate, C as createLightStore, D as createPointLight, E as create3DObject, F as createOrbitControls, w as scale, G as binding_callbacks, H as createMaterialStore } from './Menu-Y5DXEdjv.js';
+import { c as createPolyhedron, a as createSmoothShadedNormals } from './polyhedron-D16dm6gC.js';
+import { c as createPlane } from './plane-CMa45v2d.js';
 
 var easing = {};
 

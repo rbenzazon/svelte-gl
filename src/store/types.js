@@ -24,22 +24,12 @@
  */
 
 /**
- * @typedef {"POINTS"| "LINES"| "LINE_LOOP"| "LINE_STRIP"| "TRIANGLES"| "TRIANGLE_STRIP"| "TRIANGLE_FAN"} DrawMode
- */
-/*
-data: mesh.position.data,
-                        interleaved: mesh.position.interleaved,
-                        byteOffset: mesh.position.byteOffset,
-                        byteStride: mesh.position.byteStride,
-*/
-/**
  * @typedef {Object} SvelteGLInterleavedAttribute
  * @property {ArrayBuffer} data
  * @property {boolean} interleaved
  * @property {number} byteOffset
  * @property {number} byteStride
  */
-
 /**
  * @typedef {Object} SvelteGLAttributes
  * @property {Float32Array|SvelteGLInterleavedAttribute} positions
@@ -61,19 +51,66 @@ data: mesh.position.data,
  */
 
 /**
- * @typedef {{attributes:{
+ * @typedef {{
+ *  attributes:{
  *	positions: Float32Array,
  *	normals: Float32Array,
  * 	elements?: Uint16Array,
  * 	uvs?: Float32Array
- * },
- * drawMode:DrawMode}} Geometry
+ *  },
+ *  drawMode:import("./webgl").DrawMode
+ * }} Geometry
  */
 
 /**
+ * INITIAL MESH DATA
+ */
+/**
+ * base mesh model before create3DObject
+ * @typedef {Object} SvelteGLBaseMeshData
+ * @property {SvelteGLAttributes} attributes
+ * @property {import("./webgl").DrawMode} drawMode
+ */
+/**
+ * material model with static material data (no store)
+ * @typedef {Object} SvelteGLBaseMeshDataMaterial
+ * @property {SvelteGLMaterial} material
+ */
+/**
+ * matrix model of single mesh (no instances)
+ * @typedef {Object} SvelteGLSingleMeshData
+ * @property {mat4} matrix
+ */
+/**
+ * matrix model of instanced mesh
+ * @typedef {Object} SvelteGLInstancedMeshData
+ * @property {number} instances
+ * @property {mat4[]} matrices
+ */
+/**
+ * mesh data before create3DObject wit static material data
+ * @typedef {SvelteGLBaseMeshData & SvelteGLBaseMeshDataMaterial & (SvelteGLSingleMeshData | SvelteGLInstancedMeshData)} SvelteGLMeshData
+ */
+/**
+ * material model using store to be added into scene
+ * @typedef {Object} SvelteGLBaseMeshDataMaterialStore
+ * @property {import("./engine-refactor").MaterialCustomStore} material
+ */
+/**
+ * MESH DATA BEFORE create3DObject
+ */
+/**
+ * mesh data ready to be used in create3DObject with material store
+ * @typedef {SvelteGLBaseMeshData & SvelteGLBaseMeshDataMaterialStore & (SvelteGLSingleMeshData | SvelteGLInstancedMeshData)} SvelteGLMeshReadyData
+ */
+
+/**
+ * MESH DATA AFTER create3DObject
+ */
+/**
  * @typedef {Object} SvelteGLBaseMesh
  * @property {SvelteGLAttributes} attributes
- * @property {DrawMode} drawMode
+ * @property {import("./webgl").DrawMode} drawMode
  * @property {import("./engine-refactor").MaterialCustomStore} material
  */
 /**
@@ -88,36 +125,6 @@ data: mesh.position.data,
 /**
  * @typedef {SvelteGLBaseMesh & (SvelteGLSingleMesh | SvelteGLInstancedMesh)} SvelteGLMesh
  */
-/**
- * @typedef {Object} SvelteGLBaseMeshData
- * @property {SvelteGLAttributes} attributes
- * @property {DrawMode} drawMode
- */
-/**
- * @typedef {Object} SvelteGLBaseMeshDataMaterial
- * @property {SvelteGLMaterial} material
- */
-/**
- * @typedef {Object} SvelteGLBaseMeshDataMaterialStore
- * @property {import("./engine-refactor").MaterialCustomStore} material
- */
-
-/**
- * @typedef {Object} SvelteGLSingleMeshData
- * @property {mat4} matrix
- */
-/**
- * @typedef {Object} SvelteGLInstancedMeshData
- * @property {number} instances
- * @property {mat4[]} matrices
- */
-/**
- * @typedef {SvelteGLBaseMeshData & SvelteGLBaseMeshDataMaterial & (SvelteGLSingleMeshData | SvelteGLInstancedMeshData)} SvelteGLMeshData
- */
-/**
- * @typedef {SvelteGLBaseMeshData & SvelteGLBaseMeshDataMaterialStore & (SvelteGLSingleMeshData | SvelteGLInstancedMeshData)} SvelteGLMeshReadyData
- */
-
 /**
  * scene store
  * @typedef {import("svelte/store").Writable<SvelteGLMesh[]>} SvelteGLSceneStore

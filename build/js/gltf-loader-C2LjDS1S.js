@@ -1,5 +1,5 @@
-import { L as drawModes, y as identity, z as createZeroMatrix, $ as multiply, a0 as fromRotationTranslationScale } from './Menu-CPeTabfQ.js';
-import { c as createSpecular } from './specular-CQ6hTrY_.js';
+import { L as drawModes, y as identity, z as createZeroMatrix, $ as multiply, a0 as fromRotationTranslationScale } from './Menu-Y5DXEdjv.js';
+import { c as createSpecular } from './specular-BnBuJcJg.js';
 
 /**
  * @typedef {Object} GLTFFile
@@ -194,7 +194,7 @@ import { c as createSpecular } from './specular-CQ6hTrY_.js';
  * @property {GLTFUint16AccessorData} indices
  * @property {GLTFFloat32AccessorData} uv
  * @property {Number} material
- * @property {DrawMode} drawMode
+ * @property {import("../store/webgl.js").DrawMode} drawMode
  */
 
 /**
