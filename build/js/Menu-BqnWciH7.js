@@ -2288,8 +2288,6 @@ function setupNormalMatrix(programStore, mesh, numInstances) {
 				return;
 			}
 			const normalMatrix = derivateNormalMatrix(get_store_value(mesh.matrix));
-			console.log("normalMatrix", normalMatrix);
-
 			gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
 		};
 	} else {
@@ -3048,6 +3046,22 @@ const scene = createSceneStore();
 const defaultWorldMatrix = createZeroMatrix();
 identity(defaultWorldMatrix);
 
+//create typeguard for SvelteGLSingleMesh and SvelteGLInstancedMesh
+/**
+ * @param {SvelteGLMesh | SvelteGLMeshData | SvelteGLMeshReadyData} mesh
+ * @returns {mesh is SvelteGLSingleMesh}
+ */
+function isSvelteGLSingleMesh(mesh) {
+	return "matrix" in mesh;
+}
+/**
+ * @param {SvelteGLMesh | SvelteGLMeshData | SvelteGLMeshReadyData} mesh
+ * @returns {mesh is SvelteGLInstancedMesh}
+ */
+function isSvelteGLInstancedMesh(mesh) {
+	return "matrices" in mesh;
+}
+
 function findProgram(mesh) {
 	const program = get_store_value(programs).find((program) => program.allMeshes !== true && program.meshes.includes(mesh));
 	return program;
@@ -3079,7 +3093,7 @@ const createMeshMatrixStore = (mesh, rendererUpdate, initialValue, instanceIndex
 
 /**
  *
- * @param {*} value
+ * @param {SvelteGLMeshReadyData} value
  * @param {*} symmetry
  * @param {*} symmetryAxis
  * @returns {SvelteGLMesh}
@@ -3097,7 +3111,7 @@ function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]) {
 			newPositions.push(x + 2 * (sx - x), y + 2 * (sy - y), z + 2 * (sz - z));
 		}
 		value.attributes.positions = newPositions;*/
-		const newNormals = [];
+		/*const newNormals = [];
 		for (let i = 0; i < value.attributes.normals.length / 3; i++) {
 			const x = value.attributes.normals[i * 3];
 			const y = value.attributes.normals[i * 3 + 1];
@@ -3106,14 +3120,31 @@ function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]) {
 			const [sx, sy, sz] = symmetryAxis;
 			newNormals.push(x * -sx, y * -sy, z * -sz);
 		}
-		value.attributes.normals = newNormals;
+		value.attributes.normals = newNormals;*/
 	}
-	if (value.matrix != null) {
-		value.matrix = createMeshMatrixStore(value, renderer.set, value.matrix);
-	} else if (value.matrices != null) {
-		value.matrices = value.matrices.map((matrix, index) => createMeshMatrixStore(value, renderer.set, matrix, index));
+	/*
+	if (isSvelteGLSingleMesh(new3DObject)) {
+		
+		new3DObject.matrix = createMeshMatrixStore(new3DObject, renderer.set, new3DObject.matrix);
+	} else if (isSvelteGLInstancedMesh(new3DObject)) {
+		new3DObject.matrices = new3DObject.matrices.map((matrix, index) => createMeshMatrixStore(new3DObject, renderer.set, matrix, index));
 	}
-	return value;
+	*/
+	/** @type {SvelteGLMesh} */
+	// @ts-ignore
+	const new3DObject = {
+		...value,
+	};
+	if (isSvelteGLSingleMesh(new3DObject)) {
+		// @ts-ignore
+		new3DObject.matrix = createMeshMatrixStore(new3DObject, renderer.set, new3DObject.matrix);
+	} else if (isSvelteGLInstancedMesh(new3DObject)) {
+		// @ts-ignore
+		new3DObject.matrices = new3DObject.matrices.map((matrix, index) =>
+			createMeshMatrixStore(new3DObject, renderer.set, matrix, index),
+		);
+	}
+	return new3DObject;
 }
 
 let meshCache;
@@ -3631,7 +3662,7 @@ const renderPipeline = derived(
 										selectMesh(program, mesh),
 										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
 										...(mesh.instances == null
-											? [] //setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)
+											? [setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)] //setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)
 											: []),
 									]
 								: [
@@ -3708,6 +3739,10 @@ renderLoopStore.subscribe((value) => {
 
 const skyblue = 0x87ceeb;
 
+// vales are of type DrawMode
+/**
+ * @type {Object.<number, DrawMode>}
+ */
 const drawModes = {
 	0: "POINTS",
 	1: "LINES",

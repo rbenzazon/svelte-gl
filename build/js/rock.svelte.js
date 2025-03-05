@@ -1,8 +1,8 @@
-import { K as normalize, H as drawModes, O as getPositionFromPolar, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, G as createMaterialStore, z as set_store_value, A as skyblue, B as createLightStore, C as createPointLight, x as translate, D as create3DObject, y as identity, P as createZeroMatrix, E as createOrbitControls, N as get_store_value, Q as rotateX, F as binding_callbacks } from './Menu-CrCjuat-.js';
-import { l as loadGLTFFile, t as traverseScene, a as createMeshFromGLTF } from './gltf-loader-B_xgQh6a.js';
-import { D as DebugPanel } from './DebugPanel-CN1xU2k3.js';
-import { c as createTexture } from './texture-Co2A1O6O.js';
-import { c as createSpecular } from './specular-DEiUjcCC.js';
+import { K as normalize, H as drawModes, O as getPositionFromPolar, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, G as createMaterialStore, z as set_store_value, A as skyblue, B as createLightStore, C as createPointLight, x as translate, D as create3DObject, y as identity, P as createZeroMatrix, E as createOrbitControls, N as get_store_value, Q as rotateX, F as binding_callbacks } from './Menu-BqnWciH7.js';
+import { l as loadGLTFFile, t as traverseScene, a as createMeshFromGLTF } from './gltf-loader-DdXy8JKY.js';
+import { D as DebugPanel } from './DebugPanel-DAW0j5B4.js';
+import { c as createTexture } from './texture-BTzs4YaJ.js';
+import { c as createSpecular } from './specular-C8w49Z5k.js';
 
 function createCylinder(radius = 1, height = 1, radialSegment = 1, heightSegment = 1) {
 	radialSegment = Math.max(radialSegment, 1);

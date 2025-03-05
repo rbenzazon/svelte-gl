@@ -24,24 +24,23 @@ import {
 	createCameraFromGLTF,
 	createMeshFromGLTF,
 	getAbsoluteNodeMatrix,
+	isGLTFCameraData,
+	isGLTFMeshData,
 	loadGLTFFile,
+	mapScene,
 	traverseScene,
 } from "./loaders/gltf-loader.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import Menu from "./Menu.svelte";
+import { createZeroMatrix } from "./geometries/common.js";
 
 let canvas;
 onMount(async () => {
 	const file = await loadGLTFFile("models/v2/md-blend6-mdlvw.gltf", "models/v2/md-blend6-mdlvw.bin");
-	let meshObject;
-	let cameraGLTF;
-	traverseScene(file.scene, (o) => {
-		if (o.position != null) {
-			meshObject = o;
-		} else if (o.camera != null) {
-			cameraGLTF = o;
-		}
-	});
+	const sceneObjects = mapScene(file.scene);
+	const meshObject = sceneObjects.find(isGLTFMeshData);
+	const cameraGLTF = sceneObjects.find(isGLTFCameraData);
+
 	const cameraAbsoluteMatrix = getAbsoluteNodeMatrix(cameraGLTF);
 	const cameraFromFile = createCameraFromGLTF(cameraGLTF);
 	transformMat4(cameraFromFile.position, cameraFromFile.position, cameraAbsoluteMatrix);
@@ -53,9 +52,8 @@ onMount(async () => {
 
 	meshObject.matrix = meshAbsoluteMatrix;
 	const loadedMesh = createMeshFromGLTF(file, meshObject);
-	loadedMesh.matrix = meshAbsoluteMatrix;
 
-	const groundMatrix = identity(new Float32Array(16));
+	const groundMatrix = identity(createZeroMatrix());
 	translate(groundMatrix, groundMatrix, [0, -1.2, 0]);
 
 	$renderer = {
@@ -100,11 +98,11 @@ onMount(async () => {
 	);
 
 	const objScale = 0.5;
-	const cubePos = identity(new Float32Array(16));
+	const cubePos = identity(createZeroMatrix());
 	translate(cubePos, cubePos, [3, 0, 0]);
 	scale(cubePos, cubePos, [objScale, objScale, objScale]);
 
-	const spherePos = identity(new Float32Array(16));
+	const spherePos = identity(createZeroMatrix());
 	translate(spherePos, spherePos, [-3, 0, 0]);
 	scale(spherePos, spherePos, [objScale, objScale, objScale]);
 
@@ -128,13 +126,16 @@ onMount(async () => {
 	});
 
 	const meshMaterial = createMaterialStore(loadedMesh.material);
-	loadedMesh.material = meshMaterial;
 
 	$materials = [...$materials, sameMaterial, meshMaterial, groundMaterial];
 
 	$scene = [
 		...$scene,
-		create3DObject(loadedMesh),
+		create3DObject({
+			...loadedMesh,
+			matrix: meshAbsoluteMatrix,
+			material: meshMaterial,
+		}),
 		create3DObject({
 			...sphereMesh,
 			matrix: spherePos,

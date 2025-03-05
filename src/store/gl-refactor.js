@@ -501,8 +501,6 @@ export function setupNormalMatrix(programStore, mesh, numInstances) {
 				return;
 			}
 			const normalMatrix = derivateNormalMatrix(get(mesh.matrix));
-			console.log("normalMatrix", normalMatrix);
-
 			gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
 		};
 	} else {

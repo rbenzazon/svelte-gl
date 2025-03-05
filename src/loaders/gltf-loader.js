@@ -3,6 +3,7 @@ import { drawModes } from "../store/webgl.js";
 import { fromRotationTranslationScale, getScaling, identity, multiply } from "gl-matrix/esm/mat4.js";
 import { transformQuat, add, scale, distance } from "gl-matrix/esm/vec3.js";
 import { createZeroMatrix } from "../geometries/common.js";
+import { createSpecular } from "../material/specular/specular.js";
 
 /**
  * @typedef {Object} GLTFFile
@@ -156,13 +157,20 @@ import { createZeroMatrix } from "../geometries/common.js";
  * @property {String} name
  */
 /**
- * @typedef {Object} GLTFSimpleAccessorData
+ * @typedef {Object} GLTFSimpleUint16AccessorData
+ * @property {Uint16Array} data
+ */
+/**
+ * @typedef {Object} GLTFSimpleFloat32AccessorData
+ * @property {Float32Array} data
+ */
+/**
+ * @typedef {Object} GLTFSimpleBaseAccessorData
  * @property {String} type
  * @property {WEBGLComponentType} componentType
  * @property {Number} count
  * @property {Array<Number>} min
  * @property {Array<Number>} max
- * @property {TypedArray} data
  */
 /**
  * @typedef {Object} GLTFInterLeavedAccessorData
@@ -171,7 +179,13 @@ import { createZeroMatrix } from "../geometries/common.js";
  * @property {Number} byteStride
  */
 /**
- * @typedef {GLTFSimpleAccessorData | (GLTFSimpleAccessorData & GLTFInterLeavedAccessorData)} GLTFAccessorData
+ * @typedef {GLTFSimpleBaseAccessorData | (GLTFSimpleBaseAccessorData & GLTFInterLeavedAccessorData)} GLTFAccessorData
+ */
+/**
+ * @typedef {GLTFAccessorData & GLTFSimpleUint16AccessorData} GLTFUint16AccessorData
+ */
+/**
+ * @typedef {GLTFAccessorData & GLTFSimpleFloat32AccessorData} GLTFFloat32AccessorData
  */
 /**
  * @typedef {Object} GLTFFileBaseNodeData
@@ -179,10 +193,10 @@ import { createZeroMatrix } from "../geometries/common.js";
  */
 /**
  * @typedef {Object} GLTFParsedMesh
- * @property {GLTFAccessorData} position
- * @property {GLTFAccessorData} normal
- * @property {GLTFAccessorData} indices
- * @property {GLTFAccessorData} uv
+ * @property {GLTFFloat32AccessorData} position
+ * @property {GLTFFloat32AccessorData} normal
+ * @property {GLTFUint16AccessorData} indices
+ * @property {GLTFFloat32AccessorData} uv
  * @property {Number} material
  * @property {DrawMode} drawMode
  */
@@ -520,26 +534,44 @@ async function parseGLTF(content, url, binPreloadMap) {
 /**
  * Type guard for GLTFMeshNode
  * @param {GLTFAccessorData} accessor - The node to check
- * @returns {accessor is GLTFSimpleAccessorData & GLTFInterLeavedAccessorData}
+ * @returns {accessor is GLTFSimpleBaseAccessorData & GLTFInterLeavedAccessorData}
  */
 function isInterleavedAccessorData(accessor) {
 	return "interleaved" in accessor;
 }
 /**
+ * Type guard for GLTFMeshNode
+ * @param {Array | Float32Array<ArrayBuffer> | Uint16Array<ArrayBuffer>} list - The node to check
+ * @returns {list is vec3}
+ */
+function isVec3(list) {
+	return list.length === 3;
+}
+/**
  *
  * @param {GLTFLoadedFile} gltfFile
  * @param {GLTFFileMeshNodeData} gltfMeshObject
- * @returns
+ * @returns {SvelteGLMeshData}
  */
 export function createMeshFromGLTF(gltfFile, gltfMeshObject) {
 	const mesh = gltfMeshObject;
 	const gltfMaterial = gltfFile.materials[mesh.material];
-	const material = {};
+	/** @type {SvelteGLMaterial} */
+	const material = {
+		diffuse: [1, 1, 1],
+		metalness: 0,
+	};
 	if (gltfMaterial.pbrMetallicRoughness) {
 		const { baseColorFactor, metallicFactor, roughnessFactor } = gltfMaterial.pbrMetallicRoughness;
-		console.log(gltfMaterial);
-		material.diffuse = baseColorFactor?.slice(0, 3) ?? [1, 1, 1];
-		material.roughness = roughnessFactor ?? 1;
+		const diffuse = baseColorFactor?.slice(0, 3) ?? [1, 1, 1];
+		if (isVec3(diffuse)) {
+			material.diffuse = diffuse;
+		}
+		if (roughnessFactor != null) {
+			material.specular = createSpecular({
+				roughness: roughnessFactor,
+			});
+		}
 		material.metalness = metallicFactor;
 	}
 	return {
@@ -573,7 +605,7 @@ export function createMeshFromGLTF(gltfFile, gltfMeshObject) {
  */
 /**
  *
- * @param {GLTFCameraData} gltfObject
+ * @param {GLTFFileCameraNodeData} gltfObject
  * @returns {SvelteGLCamera}
  */
 export function createCameraFromGLTF(gltfObject) {
@@ -593,6 +625,7 @@ export function createCameraFromGLTF(gltfObject) {
  * @param {Object} node
  * @param {Array} parentMatrix
  * @param {Object} target
+ * @returns {mat4}
  */
 export function getAbsoluteNodeMatrix(node) {
 	const matrices = [];
@@ -619,4 +652,40 @@ export function traverseScene(scene, callback) {
 			traverseScene(node.children, callback);
 		}
 	});
+}
+/**
+ * returns a flat array of all nodes in the scene
+ * @param {GLTFFileNodeData[]} scene
+ * @param {GLTFFileNodeData[]} map
+ * @returns {GLTFFileNodeData[]}
+ */
+export function mapScene(scene, map = []) {
+	scene.forEach((node) => {
+		map.push(node);
+		if (node.children != null) {
+			mapScene(node.children, map);
+		}
+	});
+	return map;
+}
+/**
+ * @param {GLTFFileNodeData} node
+ * @returns {node is GLTFFileMeshNodeData}
+ */
+export function isGLTFMeshData(node) {
+	return "position" in node;
+}
+/**
+ * @param {GLTFFileNodeData} node
+ * @returns {node is GLTFFileCameraNodeData}
+ */
+export function isGLTFCameraData(node) {
+	return "perspective" in node;
+}
+/**
+ * @param {GLTFFileNodeData} node
+ * @returns {node is GLTFFileGroupNodeData}
+ */
+export function isGLTFGroupData(node) {
+	return "children" in node;
 }

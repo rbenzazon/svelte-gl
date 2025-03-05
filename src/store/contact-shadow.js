@@ -14,12 +14,11 @@ import {
 } from "./blur";
 import { selectProgram } from "./engine-refactor";
 import { appContext } from "./engine-refactor";
-import { mat4 } from "gl-matrix";
 /**
- * @typedef {ContactShadowPass} ContactShadowPass
+ * @typedef {Object} ContactShadowPass
  * @property {Array} programs array of programs used in the pass
+ * @property {() => WebGLTexture} getTexture function to get the shadow texture
  * @property {number} order order of the pass in the rendering pipeline
- * @property {function} getTexture function to get the shadow texture
  */
 
 /**

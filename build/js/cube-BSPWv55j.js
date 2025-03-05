@@ -1,9 +1,13 @@
-import { H as drawModes } from './Menu-CrCjuat-.js';
+import { H as drawModes } from './Menu-BqnWciH7.js';
 
+/**
+ *
+ * @returns {Geometry}
+ */
 function createCube() {
 	return {
 		attributes: {
-			positions: [
+			positions: new Float32Array([
 				//top
 				-1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0,
 				//left
@@ -16,8 +20,8 @@ function createCube() {
 				1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0,
 				//bottom
 				-1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0,
-			],
-			normals: [
+			]),
+			normals: new Float32Array([
 				//top
 				0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
 				//left
@@ -30,8 +34,8 @@ function createCube() {
 				0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0,
 				//bottom
 				0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0,
-			],
-			elements: [
+			]),
+			elements: new Uint16Array([
 				//top
 				0, 1, 2, 0, 2, 3,
 				//left
@@ -44,7 +48,7 @@ function createCube() {
 				16, 17, 18, 16, 18, 19,
 				//bottom
 				21, 20, 22, 22, 20, 23,
-			],
+			]),
 		},
 		drawMode: drawModes[4],
 	};

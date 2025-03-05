@@ -1,4 +1,4 @@
-import { R as appContext, H as drawModes, T as getTranslation, U as orthoNO, V as lookAt, W as linkProgram, X as validateProgram, Y as useProgram, Z as selectProgram } from './Menu-CrCjuat-.js';
+import { R as appContext, H as drawModes, T as getTranslation, U as orthoNO, V as lookAt, W as linkProgram, X as validateProgram, Y as useProgram, Z as selectProgram } from './Menu-BqnWciH7.js';
 
 var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 world;\r\n\r\nin vec3 position;\r\n\r\nout vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tgl_Position = projection * view * world * vec4( position, 1.0 );\r\n\tvHighPrecisionZW = gl_Position.zw;\r\n}";
 
@@ -179,10 +179,10 @@ function setKernelUniforms(kernel) {
 }
 
 /**
- * @typedef {ContactShadowPass} ContactShadowPass
+ * @typedef {Object} ContactShadowPass
  * @property {Array} programs array of programs used in the pass
+ * @property {() => WebGLTexture} getTexture function to get the shadow texture
  * @property {number} order order of the pass in the rendering pipeline
- * @property {function} getTexture function to get the shadow texture
  */
 
 /**

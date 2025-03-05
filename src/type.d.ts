@@ -24,13 +24,13 @@ declare type vec4Array = [number, number, number, number];
 
 declare type TypedArray =
 	| Float32Array
-	| Float64Array
+	/*| Float64Array
 	| Int8Array
 	| Int16Array
 	| Int32Array
-	| Uint8Array
-	| Uint16Array
 	| Uint32Array;
+	| Uint8Array*/
+	| Uint16Array;
 declare type mat4Typed = TypedArray & { length: 16 };
 declare type mat3Typed = TypedArray & { length: 9 };
 declare type mat2Typed = TypedArray & { length: 4 };

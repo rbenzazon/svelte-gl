@@ -1,4 +1,4 @@
-import { a3 as ARRAY_TYPE, H as drawModes, a4 as createVec3, a5 as lerp, K as normalize, a6 as multiplyScalarVec3, a7 as normalizeNormals } from './Menu-CrCjuat-.js';
+import { a3 as ARRAY_TYPE, H as drawModes, a4 as createVec3, a5 as lerp, K as normalize, a6 as multiplyScalarVec3, a7 as normalizeNormals } from './Menu-BqnWciH7.js';
 
 /**
  * 2 Dimensional Vector
@@ -94,16 +94,15 @@ function divide(out, a, b) {
 })();
 
 /**
- * @typedef {{
- *	positions: Float32Array,
- *	normals: Float32Array,
- * }} Geometry
+ * @callback NormalCreator
+ * @param {number[]} positions
+ * @returns {Float32Array}
  */
-/*elements: Uint16Array*/
+
 /**
- *
- * @param {*} radius
- * @param {*} subdivisions
+ * @param {number} radius
+ * @param {number} detail
+ * @param {NormalCreator} normalCreator
  * @returns {Geometry}
  */
 const createPolyhedron = (radius, detail, normalCreator) => {
@@ -115,7 +114,7 @@ const createPolyhedron = (radius, detail, normalCreator) => {
 
 	return {
 		attributes: {
-			positions,
+			positions: new Float32Array(positions),
 			normals,
 		},
 		drawMode: drawModes[4],

@@ -23,6 +23,8 @@ import {
 } from "./loaders/gltf-loader.js";
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import Menu from "./Menu.svelte";
+import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
+import { createSpecular } from "./material/specular/specular.js";
 
 let canvas;
 onMount(async () => {
@@ -45,9 +47,7 @@ onMount(async () => {
 	scale(meshAbsoluteMatrix, meshAbsoluteMatrix, [200, 200, 200]);
 	translate(meshAbsoluteMatrix, meshAbsoluteMatrix, [0, 0, -500]);
 
-	meshObject.matrix = meshAbsoluteMatrix;
 	const loadedMesh = createMeshFromGLTF(file, meshObject);
-	loadedMesh.matrix = meshAbsoluteMatrix;
 
 	$renderer = {
 		...$renderer,
@@ -57,6 +57,7 @@ onMount(async () => {
 	};
 
 	$camera = {
+		...$camera,
 		position: [0, 3, -3],
 		target: [0, 0, 0],
 		fov: 75,
@@ -80,13 +81,24 @@ onMount(async () => {
 			decayExponent: 2,
 		}),
 	);
-
+	console.log("loadedMesh.material", loadedMesh.material);
+	loadedMesh.material.metalness = 0.05;
+	loadedMesh.material.specular = createSpecular({
+		...loadedMesh.material.specular.props,
+		roughness: 0.8,
+	});
 	const meshMaterial = createMaterialStore(loadedMesh.material);
-	loadedMesh.material = meshMaterial;
 
 	$materials = [...$materials, meshMaterial];
 
-	$scene = [...$scene, create3DObject(loadedMesh)];
+	$scene = [
+		...$scene,
+		create3DObject({
+			...loadedMesh,
+			matrix: meshAbsoluteMatrix,
+			material: meshMaterial,
+		}),
+	];
 
 	$lights = [...$lights, light, light2];
 
@@ -105,3 +117,4 @@ function animate() {
 </script>
 <canvas bind:this={canvas}></canvas>
 <Menu />
+<DebugPanel />
