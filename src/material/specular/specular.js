@@ -15,6 +15,7 @@ import { appContext } from "../../store/engine-refactor.js";
  * @typedef SpecularExtended
  * @property {import("../../shaders/template.js").TemplateRenderer} shader
  * @property {()=>void} setupSpecular
+ * @property {SpecularProps} props
  */
 /**
  * @typedef {SpecularProps & SpecularExtended} SvelteGLSpecular
@@ -26,16 +27,27 @@ import { appContext } from "../../store/engine-refactor.js";
  * @returns
  */
 export const createSpecular = (props) => {
-	return {
+	props = {
+		roughness: 0,
+		ior: 1.5,
+		intensity: 1,
+		color: [1, 1, 1],
 		...props,
+	};
+	return {
 		shader: templateLiteralRenderer(specularShader, {
 			declaration: false,
 			irradiance: false,
 		}),
 		setupSpecular: setupSpecular(props),
+		props,
 	};
 };
-
+/**
+ *
+ * @param {SpecularProps} param0
+ * @returns
+ */
 function setupSpecular({ roughness, ior, intensity, color }) {
 	return function setupSpecular() {
 		const { gl, program } = appContext;
