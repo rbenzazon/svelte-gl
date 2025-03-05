@@ -4,16 +4,15 @@ import { normalizeNormals, createVec3, multiplyScalarVec3 } from "./common";
 import { drawModes } from "../store/webgl.js";
 
 /**
- * @typedef {{
- *	positions: Float32Array,
- *	normals: Float32Array,
- * }} Geometry
+ * @callback NormalCreator
+ * @param {number[]} positions
+ * @returns {Float32Array}
  */
-/*elements: Uint16Array*/
+
 /**
- *
- * @param {*} radius
- * @param {*} subdivisions
+ * @param {number} radius
+ * @param {number} detail
+ * @param {NormalCreator} normalCreator
  * @returns {Geometry}
  */
 export const createPolyhedron = (radius, detail, normalCreator) => {
@@ -25,7 +24,7 @@ export const createPolyhedron = (radius, detail, normalCreator) => {
 
 	return {
 		attributes: {
-			positions,
+			positions: new Float32Array(positions),
 			normals,
 		},
 		drawMode: drawModes[4],

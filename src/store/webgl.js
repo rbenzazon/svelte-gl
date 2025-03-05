@@ -1,3 +1,7 @@
+// vales are of type DrawMode
+/**
+ * @type {Object.<number, DrawMode>}
+ */
 export const drawModes = {
 	0: "POINTS",
 	1: "LINES",
