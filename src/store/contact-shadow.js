@@ -14,9 +14,10 @@ import {
 } from "./blur";
 import { selectProgram } from "./engine-refactor";
 import { appContext } from "./engine-refactor";
+import { createZeroMatrix } from "../geometries/common";
 /**
  * @typedef {Object} ContactShadowPass
- * @property {Array} programs array of programs used in the pass
+ * @property {import("./engine-refactor").SvelteGLProgram[]} programs array of programs used in the pass
  * @property {() => WebGLTexture} getTexture function to get the shadow texture
  * @property {number} order order of the pass in the rendering pipeline
  */
@@ -48,10 +49,10 @@ export function createContactShadowPass(
 	const textureHeight = textureSize / aspect;
 	//log("creating contact shadow pass", width, height, depth, groundMatrix, blurSize);
 
-	const projection = orthoNO(new Float32Array(16), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
+	const projection = orthoNO(createZeroMatrix(), -width / 2, width / 2, -height / 2, height / 2, 0, depth);
 
 	const view = lookAt(
-		new Float32Array(16),
+		createZeroMatrix(),
 		groundTranslation,
 		[groundTranslation[0], groundTranslation[1] + 1, groundTranslation[2]],
 		[0, 0, 1],
@@ -308,14 +309,4 @@ function createFBO(width, height, setFBO, setTexture) {
 		gl.bindTexture(gl.TEXTURE_2D, null);
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	};
-}
-
-function createHorizontalBlurProgram() {
-	return createBlurProgram(BLUR_DIRECTION_HORIZONTAL, 128);
-}
-
-function createHorizontalBlurShaders() {}
-
-function createVerticalBlurProgram() {
-	return createBlurProgram(BLUR_DIRECTION_VERTICAL, 128);
 }

@@ -14,6 +14,7 @@ import defaultFragment from "../shaders/default-fragment.glsl";
 import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";
 import { SRGBToLinear } from "../color/color-space.js";
 import { appContext, setAppContext } from "./engine-refactor.js";
+import { createZeroMatrix } from "../geometries/common";
 
 // Uniform Buffer Objects, must have unique binding points
 export const UBO_BINDING_POINT_POINTLIGHT = 0;
@@ -296,7 +297,11 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 		gl.attachShader(program, fragmentShader);
 	};
 }
-
+/**
+ *
+ * @param {SvelteGLMaterial} param0
+ * @returns {()=>void}
+ */
 export function setupMeshColor({ diffuse, metalness, opacity }) {
 	return function setupMeshColor() {
 		const { gl, program } = appContext;
@@ -325,8 +330,8 @@ export function setupAmbientLight(programOverride, ambientLightColorOverride) {
 
 export function getCameraProjectionView(camera, width, height) {
 	return {
-		projection: perspective(new Float32Array(16), toRadian(camera.fov), width / height, camera.near, camera.far),
-		view: lookAt(new Float32Array(16), camera.position, camera.target, camera.up),
+		projection: perspective(createZeroMatrix(), toRadian(camera.fov), width / height, camera.near, camera.far),
+		view: lookAt(createZeroMatrix(), camera.position, camera.target, camera.up),
 	};
 }
 
@@ -379,11 +384,8 @@ function getEuler(out, quat) {
 }
 
 export function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances) {
-	//("setupTransformMatrix", numInstances);
-
 	if (numInstances == null) {
 		return function setupTransformMatrix() {
-			//("setupTransformMatrix", numInstances);
 			const { gl, program } = appContext;
 			const worldLocation = gl.getUniformLocation(program, "world");
 			if (worldLocation == null) {
@@ -391,20 +393,15 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 			}
 			//todo check why we have that, we shouldn't need this
 			if (!transformMatrix) {
-				transformMatrix = new Float32Array(16);
-				identity(transformMatrix);
+				transformMatrix = identity(createZeroMatrix());
 			}
-			// TODO store this in a map, or not store it at all
-			appContext.transformMatrix = transformMatrix;
 			gl.uniformMatrix4fv(worldLocation, false, get(transformMatrix));
 		};
 	} else {
 		return function setupTransformMatrix() {
-			//("setupTransformMatrix", transformMatrix);
 			if (transformMatrix == null) {
 				return;
 			}
-
 			const attributeName = "world";
 			const { gl, program, vaoMap } = appContext;
 
@@ -439,7 +436,6 @@ export function setupTransformMatrix(programStore, mesh, transformMatrix, numIns
 
 			gl.bindVertexArray(vao);
 			const matrixBuffer = gl.createBuffer();
-			//("setupTransformMatrix");
 
 			setAppContext({
 				matrixBuffer,

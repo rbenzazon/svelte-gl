@@ -373,7 +373,7 @@ export function createMaterialStore(initialProps) {
 			set(props);
 			materials.set(get(materials));
 			scene.set(get(scene));
-
+			// TODO was necessary but now it works without
 			//renderer.set(get(renderer));
 		},
 		update,
@@ -416,14 +416,19 @@ function sortTransparency(a, b) {
 	return (isTransparent(a.material) ? 1 : -1) - (isTransparent(b.material) ? 1 : -1);
 }
 
+/**
+ * Sorts meshes by Z depth for transparency rendering
+ * @template {SvelteGLProgram[]|SvelteGLProgramProject[]} T
+ * @param {T} programs - Array of programs to sort
+ * @returns {T} - Sorted array with the same type as input
+ */
 function sortMeshesByZ(programs) {
 	if (programs.length === 0 || get(renderer).canvas == null) {
-		return;
+		return programs;
 	}
 	let transparent = false;
 	const canvas = get(renderer).canvas;
 	const { projection, view } = getCameraProjectionView(get(camera), canvas.width, canvas.height);
-	//const inverseView = invert([], view);
 	const projScreen = multiply([], projection, view);
 
 	programs.forEach((program) => {
@@ -450,15 +455,44 @@ function sortMeshesByZ(programs) {
 		}
 		return b.meshes[0].clipSpacePosition[2] - a.meshes[0].clipSpacePosition[2];
 	});
-
+	// @ts-ignore, trust me bro
 	return sortedPrograms;
 }
 
+/**
+ * @typedef {Object} SvelteGLProgramProject
+ * @property {SvelteGLMaterial} material
+ * @property {SvelteGLMesh[]} meshes
+ * @property {boolean} [requireTime]
+ */
+
+/**
+ * @typedef {Object} SvelteGLProgram
+ * @property {Function} createProgram
+ * @property {Function[]} setupProgram
+ * @property {Function[]} setupMaterial
+ * @property {Function} useProgram
+ * @property {Function} selectProgram
+ * @property {Function} setupCamera
+ * @property {Function} setFrameBuffer
+ * @property {Function[]} bindTextures
+ * @property {SvelteGLMaterial} [material]
+ * @property {SvelteGLMesh[]} [meshes]
+ * @property {Function[]} [updateProgram]
+ * @property {boolean} [allMeshes]
+ * @property {Function} [postDraw]
+ */
+
+/**
+ * @typedef {import("svelte/store").Readable<SvelteGLProgram[]>} SvelteGLProgramStore
+ */
+
+/**
+ * @type {SvelteGLProgramStore}
+ */
 export const programs = derived(
 	[scene, numLigths, materials, renderPasses],
 	([$scene, $numLigths, $materials, $renderPasses]) => {
-		//console.log("###programs derived");
-
 		let prePasses = $renderPasses
 			.filter((pass) => pass.order < 0)
 			.reduce((acc, pass) => {
@@ -470,13 +504,11 @@ export const programs = derived(
 				...(program.allMeshes ? { meshes: $scene } : {}),
 			}));
 
-		//let programs = Array.from($materials);
-
 		//this sublist mesh items require their own respective program (shader)
 		const specialMeshes = new Set(
 			$scene.filter((node) => isSvelteGLInstancedMesh(node) || node.animations?.some((a) => a.type === "vertex")),
 		);
-		/** @type {Array<{material:SvelteGLMaterial,meshes:SvelteGLMesh[],requireTime?:boolean}>} */
+		/** @type {Array<SvelteGLProgramProject>} */
 		const programs = Array.from($materials).reduce((acc, current) => {
 			const materialMeshes = $scene.filter((node) => node.material === current);
 			/**
@@ -514,8 +546,7 @@ export const programs = derived(
 			return acc;
 		}, []);
 
-		const sortedPrograms = programs.sort(sortTransparency);
-		sortMeshesByZ(programs);
+		const sortedPrograms = sortMeshesByZ(programs.sort(sortTransparency));
 
 		// TODO make two different numligth store, one for each light type, when spotlight is supported
 		//const pointLights = $lights.filter((l) => get(l).type === "point");
@@ -526,6 +557,7 @@ export const programs = derived(
 			pointLightShader = get(get(lights)[0]).shader;
 		}
 
+		/** @type {SvelteGLProgram[]} */
 		const next = [
 			...prePasses,
 			...sortedPrograms.map((p, index) => {
@@ -540,6 +572,7 @@ export const programs = derived(
 					bindTextures: [],
 					createProgram,
 					selectProgram,
+					setupCamera: undefined,
 				};
 				reconciliateCacheMap(p, program);
 
@@ -596,7 +629,7 @@ export const renderState = writable({
 
 /**
  * Clears the cache map of unused programs and VAOs
- * @param {Object[]} next - The next programs
+ * @param {SvelteGLProgram[]} next - The next programs
  * @returns {void}
  */
 function clearUnusedCache(next) {
@@ -616,10 +649,10 @@ function clearUnusedCache(next) {
 			}
 		});
 		if (cachedProgram != null) {
-			const existingVAO = vaoMap.get(cachedProgram);
-			existingVAO.forEach((vao, mesh) => {
+			const existingVAOMap = vaoMap.get(cachedProgram);
+			existingVAOMap.forEach((vao, mesh) => {
 				if (!p.meshes.includes(mesh)) {
-					existingVAO.delete(mesh);
+					existingVAOMap.delete(mesh);
 				}
 			});
 		}
@@ -631,11 +664,10 @@ function clearUnusedCache(next) {
  * Then assigns the VAOs to the new programstore too.
  * The previous programstore and vaos are deleted from the cache map
  *
- * @param {Object} p - The program object
- * @param {Object} program - The program store
+ * @param {SvelteGLProgramProject} p - The program object
+ * @param {SvelteGLProgram} program - The program store
  * @returns {void}
  */
-
 function reconciliateCacheMap(p, program) {
 	const { programMap, vaoMap } = appContext;
 	let cachedProgram, cachedGLProgram;
@@ -646,18 +678,14 @@ function reconciliateCacheMap(p, program) {
 		}
 	});
 	if (cachedProgram != null) {
-		const existingVAO = vaoMap.get(cachedProgram);
-		if (existingVAO != null) {
+		const existingVAOMap = vaoMap.get(cachedProgram);
+		if (existingVAOMap != null) {
 			vaoMap.delete(cachedProgram);
-			vaoMap.set(program, existingVAO);
+			vaoMap.set(program, existingVAOMap);
 		}
 		programMap.delete(cachedProgram);
 		programMap.set(program, cachedGLProgram);
 	}
-}
-
-function isStore(obj) {
-	return obj != null && obj.subscribe != null;
 }
 
 export function selectProgram(programStore) {
@@ -679,8 +707,8 @@ function selectMesh(programStore, mesh) {
 
 /**
  * @typedef {Object} appContext
- * @property {Map<object,WebGLProgram>} programMap
- * @property {Map<object,Map<object,WebGLVertexArrayObject>>} vaoMap
+ * @property {Map<SvelteGLProgram,WebGLProgram>} programMap
+ * @property {Map<SvelteGLProgram,Map<SvelteGLMesh,WebGLVertexArrayObject>>} vaoMap
  * @property {WebGL2RenderingContext} gl
  * @property {WebGLProgram} program
  * @property {WebGLVertexArrayObject} vao
@@ -851,20 +879,20 @@ const renderPipeline = derived(
 								? [
 										selectMesh(program, mesh),
 										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
-										...(mesh.instances == null
+										...(isSvelteGLSingleMesh(mesh)
 											? [setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)] //setupTransformMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)
 											: []),
 									]
 								: [
 										setupAttributes(program, mesh),
 										...(program.material ? [setupMeshColor(program.material)] : []),
-										setupTransformMatrix(program, mesh, mesh.instances == null ? mesh.matrix : mesh.matrices, mesh.instances),
+										setupTransformMatrix(program, mesh, isSvelteGLSingleMesh(mesh) ? mesh.matrix : mesh.matrices, mesh.instances),
 										setupNormalMatrix(program, mesh, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation) || []),
 									]),
 							...(mesh.matrix != null
 								? [
-										...(mesh.instances != null
+										...(isSvelteGLInstancedMesh(mesh)
 											? [setFaceWinding(determinant(get(mesh.matrices[0])) > 0)]
 											: [setFaceWinding(determinant(get(mesh.matrix)) > 0)]),
 									]

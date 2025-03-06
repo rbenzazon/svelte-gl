@@ -6,7 +6,7 @@
 /**
  *
  * @param {string} template
- * @param {Object.<string, string|boolean>} parameters
+ * @param {Object.<string, string|boolean|number>} parameters
  * @returns {TemplateRenderer}
  */
 

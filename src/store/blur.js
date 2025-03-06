@@ -84,6 +84,7 @@ const convertKernelToOffsetsAndScales = (kernel) => {
  * @param {boolean} mapCurrent makes the previous program the current one
  * which allows to reuse one program in two consecutive and different draw passes
  * This case is necessary to draw twice with different settings (unitforms)
+ *
  */
 export function createBlurProgram(mapCurrent = false) {
 	return function createBlurProgram(programStore) {
