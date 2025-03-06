@@ -15,7 +15,7 @@ import DebugH4 from "./DebugH4.svelte";
   {#each $scene as { attributes, drawMode, matrix,matrices, material,instances }, i}
     <DebugBlock level={2}>
       <DebugH3 slot="title">Mesh {i}</DebugH3>
-      <DebugBlock level={3}>
+      <DebugBlock level={3} initialCollapsed={true}>
         <DebugH4 slot="title">Attributes</DebugH4>
         {#each Object.entries(attributes) as [key, value]}
           <span>{key}: {value.length}</span>
@@ -37,7 +37,7 @@ import DebugH4 from "./DebugH4.svelte";
         <DebugMatrix matrix={get(matrix)} />
       </DebugBlock>
       {:else if matrices}
-      <DebugBlock level={3}>
+      <DebugBlock level={3} initialCollapsed={true}>
         <DebugH4 slot="title">Matrices</DebugH4>
         {#each matrices as matrix}
           <DebugMatrix matrix={get(matrix)} />

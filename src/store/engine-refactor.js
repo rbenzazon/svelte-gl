@@ -784,7 +784,7 @@ const renderPipeline = derived(
 		//we must filter in the stores first because not all the nodes are stores for now
 		//then we filter the lights
 		//console.log("updateMap.size",updateMap);
-		if (updateMap.size === 0 && $running !== 2 && !$programs.some(p => p.requireTime)) {
+		if (updateMap.size === 0 && $running !== 2 && !$programs.some((p) => p.requireTime)) {
 			//console.log("no updates updateMap.size is 0,skipping render",$running);
 
 			return emptyRenderPipeline;

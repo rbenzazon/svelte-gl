@@ -18,7 +18,7 @@ import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { cloneMatrix, createZeroMatrix, toRadian } from "./geometries/common.js";
 import { get } from "svelte/store";
-  import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
+import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 
 let canvas;
 let cube;
@@ -51,46 +51,38 @@ onMount(async () => {
 
 	let matrices = new Array(numInstances).fill(0).map((_, index) => {
 		let mat = cloneMatrix(identityMatrix);
-		
+
 		// Calculate a single cubic grid
 		const gridSize = Math.ceil(Math.cbrt(numInstances));
-		
+
 		// Calculate x, y, z positions within the grid (0-based indices)
 		const x = index % gridSize;
 		const y = Math.floor(index / gridSize) % gridSize;
 		const z = Math.floor(index / (gridSize * gridSize));
-		
+
 		// Center the grid by subtracting half the grid size
 		const offsetX = x - (gridSize - 1) / 2;
 		const offsetY = y - (gridSize - 1) / 2;
 		const offsetZ = z - (gridSize - 1) / 2;
-		
+
 		// Apply transformations
 		translate(mat, mat, [offsetX * 2, offsetY * 2, offsetZ * 2]);
-		
+
 		// Add some rotation variation based on index
 		rotateY(mat, mat, toRadian(index * 10));
 		scale(mat, mat, [0.5, 0.5, 0.5]);
-		
+
 		return mat;
 	});
 
 	const light = createLightStore(
 		createPointLight({
-			"color": [
-			  1,
-			  1,
-			  1
-			],
-			"intensity": 27,
-			"position": [
-			  -2,
-			  12,
-			  -12
-			],
-			"cutoffDistance": 30,
-			"decayExponent": 1.5
-		  }),
+			color: [1, 1, 1],
+			intensity: 27,
+			position: [-2, 12, -12],
+			cutoffDistance: 30,
+			decayExponent: 1.5,
+		}),
 	);
 
 	cube = create3DObject({
