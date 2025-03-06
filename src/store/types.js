@@ -9,6 +9,19 @@
  */
 
 /**
+ * materials store
+ * @typedef {import("svelte/store").Writable<MaterialStore[]>} MaterialsStore
+ */
+
+/**
+ * materials custom store
+ * @typedef {Object} MaterialsCustomStore
+ * @property {MaterialsStore['subscribe']} subscribe
+ * @property {MaterialsStore['set']} set
+ * @property {number} revision
+ */
+
+/**
  * @typedef {Object} SvelteGLCamera
  * @property {vec3} position
  * @property {vec3} target
@@ -21,6 +34,26 @@
 /**
  * Camera store
  * @typedef {import('svelte/store').Writable<SvelteGLCamera>} SvelteGLCameraStore
+ */
+
+/**
+ * @typedef {import("svelte/store").Writable<import("../lights/point-light.js").SvelteGLLightValue>} SvelteGLLightStore
+ */
+
+/**
+ * @typedef {import("svelte/store").Writable<SvelteGLLightCustomStore[]>} SvelteGLLightsStore
+ */
+/**
+ * @typedef {Object} SvelteGLLightsCustomStore
+ * @property {SvelteGLLightsStore['subscribe']} subscribe
+ * @property {SvelteGLLightsStore['set']} set
+ * @property {number} revision
+ */
+
+/**
+ * @typedef {Object} SvelteGLLightCustomStore
+ * @property {SvelteGLLightStore['subscribe']} subscribe
+ * @property {SvelteGLLightStore['set']} set
  */
 
 /**
@@ -49,7 +82,6 @@
  * @property {boolean} [transparent]
  * @property {number} [opacity]
  */
-
 /**
  * @typedef {Object} SvelteGLMeshAnimation
  * @property {"vertex"} type
@@ -138,5 +170,43 @@
 /**
  * scene store
  * @typedef {import("svelte/store").Writable<SvelteGLMesh[]>} SvelteGLSceneStore
+ */
+
+/**
+ * @typedef {Object} SvelteGLToneMapping
+ * @property {number} exposure
+ * @property {import("src/shaders/template").TemplateRenderer} shader
+ */
+
+/**
+ * @typedef {Object} SvelteGLRenderer
+ * @property {HTMLCanvasElement} canvas
+ * @property {() => void} loop
+ * @property {number} backgroundColor
+ * @property {vec2} ambientLightColor
+ * @property {SvelteGLToneMapping[]} toneMappings
+ * @property {boolean} enabled
+ */
+/**
+ * @typedef {import("svelte/store").Writable<SvelteGLRenderer>} SvelteGLRendererStore
+ */
+
+/**
+ * @typedef {Object} SvelteGLProcessedRenderer
+ * @property {HTMLCanvasElement} canvas
+ * @property {() => void} loop
+ * @property {vec4} backgroundColor
+ * @property {vec3} ambientLightColor
+ * @property {SvelteGLToneMapping[]} toneMappings
+ * @property {boolean} enabled
+ */
+
+/**
+ * @typedef {Object} SvelteGLRendererCustomStore
+ * @property {SvelteGLRendererStore['subscribe']} subscribe
+ * @property {SvelteGLRendererStore['set']} set
+ * @property {SvelteGLRendererStore['update']} update
+ * @property {SvelteGLProcessedRenderer} processed
+ * @property {number} revision
  */
 

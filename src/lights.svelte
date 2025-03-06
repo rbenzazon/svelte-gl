@@ -111,18 +111,22 @@ onMount(async () => {
 });
 
 function animate() {
+	//console.log('animate before light');
 	light.set({
 		...get(light),
 		position: [Math.sin(performance.now() / 1000) * 3, 1, Math.cos(performance.now() / 1000) * 3],
 	});
+	//console.log('animate after light');
 	//animate hue
 	const color1 = Math.sin(performance.now() / 1000) * 0.5 + 0.5;
 	const color2 = Math.sin(performance.now() / 1000 + 2) * 0.5 + 0.5;
 	const color3 = Math.sin(performance.now() / 1000 + 4) * 0.5 + 0.5;
+	//console.log('animate before light2');
 	light2.set({
 		...get(light2),
 		color: [color1, color2, color3],
 	});
+	//console.log('animate after light2');
 }
 </script>
 <canvas bind:this={canvas}></canvas>

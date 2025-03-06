@@ -37,6 +37,10 @@ import { updateOneLight } from "../lights/point-light.js";
 import { camera } from "./camera.js";
 import { createZeroMatrix } from "../geometries/common.js";
 
+/**
+ *
+ * @returns {SvelteGLRendererCustomStore}
+ */
 function createRenderer() {
 	const initialValue = {
 		//ref
@@ -56,6 +60,7 @@ function createRenderer() {
 	let cache = initialValue;
 	// some values have a different internal format
 	let processed = new Map();
+	/** @type {SvelteGLRendererStore} */
 	const store = writable(initialValue);
 	const { subscribe, update } = store;
 
@@ -122,6 +127,9 @@ function createRenderer() {
 		subscribe,
 		set: customSet,
 		update: customUpdate,
+		/**
+		 * @returns {SvelteGLProcessedRenderer}
+		 */
 		get processed() {
 			const values = get(store);
 			return Object.entries(values)
@@ -288,8 +296,6 @@ export function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]
 	return new3DObject;
 }
 
-let meshCache;
-
 function objectsHaveSameMatrix(a, b) {
 	for (let i = 0; i < a.length; i++) {
 		if (arrayHasSameShallow(get(a[i].matrix), get(b[i].matrix))) {
@@ -298,34 +304,6 @@ function objectsHaveSameMatrix(a, b) {
 	}
 	return true;
 }
-
-function createLightsStore() {
-	/** @type {import("svelte/store").Writable<Array<SvelteGLLightCustomStore>>} */
-	const { subscribe, set } = writable([]);
-	const lights = {
-		subscribe,
-		set: (next) => {
-			set(next);
-		},
-	};
-	return lights;
-}
-export const lights = createLightsStore();
-
-export const numLigths = derived([lights], ([$lights]) => {
-	return $lights.length;
-});
-
-//SvelteGLLightStore
-/**
- * @typedef {import("svelte/store").Writable<import("../lights/point-light.js").SvelteGLLightValue>} SvelteGLLightStore
- */
-
-/**
- * @typedef {Object} SvelteGLLightCustomStore
- * @property {SvelteGLLightStore['subscribe']} subscribe
- * @property {SvelteGLLightStore['set']} set
- */
 
 /**
  *
@@ -342,11 +320,36 @@ export const createLightStore = (initialProps) => {
 			set(props);
 			updateOneLight(get(lights), light);
 			lights.set(get(lights));
-			renderer.set(get(renderer));
+			//renderer.set(get(renderer));
 		},
 	};
 	return light;
 };
+
+/**
+ * @returns {SvelteGLLightsCustomStore}
+ */
+function createLightsStore() {
+	/** @type {import("svelte/store").Writable<Array<SvelteGLLightCustomStore>>} */
+	const store = writable([]);
+	const { subscribe, set } = store;
+	const revisionStore = writable(0);
+	return {
+		subscribe,
+		set: (next) => {
+			set(next);
+			revisionStore.update((revision) => revision + 1);
+		},
+		get revision() {
+			return get(revisionStore);
+		},
+	};
+}
+export const lights = createLightsStore();
+
+export const numLigths = derived([lights], ([$lights]) => {
+	return $lights.length;
+});
 
 export const renderPasses = writable([]);
 
@@ -368,7 +371,6 @@ export function createMaterialStore(initialProps) {
 		set: (props) => {
 			set(props);
 			materials.set(get(materials));
-			console.log("set material", get(renderer));
 			scene.set(get(scene));
 
 			//renderer.set(get(renderer));
@@ -377,19 +379,27 @@ export function createMaterialStore(initialProps) {
 	return material;
 }
 
-function createMaterialsStore() {
-	const { subscribe, set } = writable([]);
-	const materials = {
+/**
+ * @returns {MaterialsCustomStore}
+ */
+function createMaterials() {
+	/** @type {MaterialsStore} */
+	const store = writable([]);
+	const { subscribe, set } = store;
+	const revisionStore = writable(0);
+	return {
 		subscribe,
 		set: (next) => {
 			set(next);
+			revisionStore.update((revision) => revision + 1);
+		},
+		get revision() {
+			return get(revisionStore);
 		},
 	};
-	return materials;
 }
 
-/** @type {import("svelte/store").Writable<MaterialCustomStore[]>} */
-export const materials = writable([]);
+export const materials = createMaterials();
 
 export const RENDER_PASS_TYPES = {
 	FRAMEBUFFER_TO_TEXTURE: 0,
@@ -648,6 +658,7 @@ function isStore(obj) {
 }
 
 export function selectProgram(programStore) {
+	appContext.existingProgram = true;
 	return function selectProgram() {
 		const { programMap } = appContext;
 		const cachedProgram = programMap.get(programStore);
@@ -662,15 +673,19 @@ function selectMesh(programStore, mesh) {
 		appContext.vao = cachedVAO;
 	};
 }
-//WebGL2RenderingContext
+
 /**
  * @typedef {Object} appContext
  * @property {Map<object,WebGLProgram>} programMap
  * @property {Map<object,Map<object,WebGLVertexArrayObject>>} vaoMap
  * @property {WebGL2RenderingContext} gl
  * @property {WebGLProgram} program
- * @property {vec4} backgroundColor
  * @property {WebGLVertexArrayObject} vao
+ * @property {HTMLCanvasElement} canvas
+ * @property {vec4} backgroundColor
+ * @property {vec3} ambientLightColor
+ * @property {SvelteGLToneMapping[]} toneMappings
+ * @property {boolean} existingProgram during a pipeline creation, informs the procedure that the program already exists
  */
 /**
  * @type {appContext}
@@ -692,6 +707,8 @@ const revisionMap = new Map();
 revisionMap.set(renderer, 0);
 revisionMap.set(scene, 0);
 revisionMap.set(camera, 0);
+revisionMap.set(materials, 0);
+revisionMap.set(lights, 0);
 
 function updated() {
 	const updateMap = new Set();
@@ -704,9 +721,17 @@ function updated() {
 	if (revisionMap.get(camera) !== camera.revision) {
 		updateMap.add(camera);
 	}
+	if (revisionMap.get(materials) !== materials.revision) {
+		updateMap.add(materials);
+	}
+	if (revisionMap.get(lights) !== lights.revision) {
+		updateMap.add(lights);
+	}
 	revisionMap.set(renderer, renderer.revision);
 	revisionMap.set(scene, scene.revision);
 	revisionMap.set(camera, camera.revision);
+	revisionMap.set(materials, materials.revision);
+	revisionMap.set(lights, lights.revision);
 	return updateMap;
 }
 
@@ -726,10 +751,8 @@ const renderPipeline = derived(
 	([$renderer, $programs, $camera, $running]) => {
 		// if renderer.enabled is false, the scene is being setup, we should not render
 		// if running is 4, we delay the pipeline updates as a way to batch scene updates
-		//console.log("render pipeline derived");
 
 		if (!$renderer.enabled || $running === 4 || $running === 1 || $programs.length === 0) {
-			//TODO maybe throw here to cancel the update flow
 			return emptyRenderPipeline;
 		}
 		/**
@@ -742,21 +765,27 @@ const renderPipeline = derived(
 		if(updateMap.has(renderer)){
 			console.log("update renderer");
 		}
-		
 		if(updateMap.has(scene)){
 			console.log("update scene");
 		}
 		if(updateMap.has(camera)){
 			console.log("update camera");
 		}
+		if(updateMap.has(materials)){
+			console.log("update materials");
+		}
+		if(updateMap.has(lights)){
+			console.log("update lights");
+		}
 		*/
 		//we must filter in the stores first because not all the nodes are stores for now
 		//then we filter the lights
+		//console.log("updateMap.size",updateMap);
+		if (updateMap.size === 0 && $running !== 2) {
+			//console.log("no updates updateMap.size is 0,skipping render",$running);
 
-		if (updateMap.length === 0) {
 			return emptyRenderPipeline;
 		}
-		//console.log("update map", updateMap.has(renderer), updateMap.has(scene), updateMap.has(camera));
 
 		const rendererValues = renderer.processed;
 		let rendererContext = {
@@ -792,6 +821,7 @@ const renderPipeline = derived(
 			*/
 		pipeline.push(
 			...sortedPrograms.reduce((acc, program) => {
+				appContext.existingProgram = false;
 				if (isTransparent(program.material) && !transparent) {
 					transparent = true;
 					acc.push(enableBlend);
@@ -807,7 +837,9 @@ const renderPipeline = derived(
 								...program.setupMaterial,
 								...program.updateProgram,
 							]),
-					...(program.setupCamera ? [program.setupCamera] : [...(updateMap.has(camera) ? [setupCamera($camera)] : [])]),
+					...(program.setupCamera
+						? [program.setupCamera]
+						: [...(updateMap.has(camera) || !appContext.existingProgram ? [setupCamera($camera)] : [])]),
 					...(program.setFrameBuffer ? [program.setFrameBuffer] : []),
 					...program.meshes.reduce(
 						(acc, mesh) => [

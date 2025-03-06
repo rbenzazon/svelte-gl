@@ -123,8 +123,8 @@ export function setupLights(lights) {
 }
 /**
  * @callback UpdateOneLight
- * @param {Array<import("../store/engine-refactor.js").SvelteGLLightCustomStore>} lights
- * @param {import("../store/engine-refactor.js").SvelteGLLightCustomStore} light
+ * @param {SvelteGLLightCustomStore[]} lights
+ * @param {SvelteGLLightCustomStore} light
  * @returns {void}
  */
 /** @type {UpdateOneLight} */

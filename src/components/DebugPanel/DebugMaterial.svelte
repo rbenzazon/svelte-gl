@@ -41,18 +41,27 @@ function onDiffuseColorChange(e, material) {
 		diffuse: cssStringColorToLinearArray(e.detail.color),
 	});
 }
+function onMetalnessChange(e, material) {
+	material.set({
+		...get(material),
+		metalness: e.detail.number,
+	});
+}
 function onSpecularNumChange(e, material, key) {
 	const specular = {
 		...get(material).specular.props,
 		[key]: e.detail.number,
 	};
-	console.log("onSpecularNumChange", specular, e.detail.number);
-	/*
-  {
-    ...get(material).specular,
-    [key]: e.detail.value,
-  },
-  */
+	material.set({
+		...get(material),
+		specular: createSpecular(specular),
+	});
+}
+function onSpecularColorChange(e, material, key) {
+	const specular = {
+		...get(material).specular.props,
+		color: cssStringColorToLinearArray(e.detail.color),
+	};
 	material.set({
 		...get(material),
 		specular: createSpecular(specular),
@@ -82,13 +91,14 @@ export let material;
       <a href={"./" + value.url}>{getFileName(value.url)}</a>
     {:else if key === "diffuse"}
       <DebugColor label={key} color={value} on:change={(e) => onDiffuseColorChange(e, material)} />
-    {:else if key in materialPropsRange}
+    {:else if key === "metalness"}
       <DebugH4 padding="1">{key}</DebugH4>
       <DebugSliderNumber
         min={getRangeMin(key)}
         max={getRangeMax(key)}
         step={getRangeStep(key)}
         {value}
+        on:change={(e) => onMetalnessChange(e, material)}
       />
     {:else if key === "specular"}
       <DebugBlock level={4}>
@@ -104,7 +114,7 @@ export let material;
               on:change={(e) => onSpecularNumChange(e, material, specularKey)}
             />
           {:else if specularDef.type === "color"}
-            <DebugColor label={specularKey} color={value[specularKey]} />
+            <DebugColor label={specularKey} color={value[specularKey]} on:change={(e) => onSpecularColorChange(e, material)} />
           {/if}
         {/each}
       </DebugBlock>
