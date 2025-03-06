@@ -2,202 +2,25 @@ import { derived, get, writable } from "svelte/store";
 import {
 	setupNormalMatrix,
 	initRenderer,
-	createProgram,
-	linkProgram,
-	validateProgram,
-	createShaders,
 	setupCamera,
 	render,
 	setupTransformMatrix,
 	setupAttributes,
-	setupAmbientLight,
-	updateTransformMatrix,
-	updateInstanceTransformMatrix,
 	setupMeshColor,
-	updateNormalMatrix,
-	updateInstanceNormalMatrix,
-	derivateNormalMatrix,
-	setupTime,
-	useProgram,
 	bindVAO,
-	clearFrame,
-	bindDefaultFramebuffer,
-	getCameraProjectionView,
 	enableBlend,
 	disableBlend,
 	setFaceWinding,
 } from "./gl.js";
 import { hasSameShallow as arrayHasSameShallow } from "../utils/array.js";
-import { convertToVector3 } from "../color/color-space.js";
-import { determinant, getTranslation, identity, invert, multiply } from "gl-matrix/esm/mat4.js";
-import { transformMat4 } from "gl-matrix/esm/vec3.js";
-import { updateOneLight } from "../lights/point-light.js";
+import { determinant } from "gl-matrix/esm/mat4.js";
 import { camera } from "./camera.js";
-import { createZeroMatrix } from "../geometries/common.js";
-
-/**
- *
- * @returns {SvelteGLRendererCustomStore}
- */
-function createRenderer() {
-	const initialValue = {
-		//ref
-		canvas: null,
-		//ref
-		loop: null,
-		//value
-		backgroundColor: 0xffffff,
-		//value
-		ambientLightColor: [0xffffff, 0],
-		//values
-		toneMappings: [],
-		//value
-		enabled: false,
-	};
-	// the cache is made to compare the previous value with the new one
-	let cache = initialValue;
-	// some values have a different internal format
-	let processed = new Map();
-	/** @type {SvelteGLRendererStore} */
-	const store = writable(initialValue);
-	const { subscribe, update } = store;
-
-	//private store to keep track of updates
-	const revisionStore = writable(0);
-
-	/**
-	 * Update functions are called when a different value is set.
-	 * processed values are updated here
-	 */
-	function updateCanvas(canvas) {}
-	function updateLoop(loop) {}
-	function updateBackgroundColor(color) {
-		processed.set("backgroundColor", [...convertToVector3(color), 1]);
-	}
-	function updateAmbientLightColor([color, intensity]) {
-		processed.set(
-			"ambientLightColor",
-			convertToVector3(color).map((c) => c * intensity),
-		);
-	}
-	function updateToneMappings(toneMappings) {}
-	function updateEnabled(enabled) {}
-
-	function customUpdate(updater) {
-		update((renderer) => {
-			const next = updater(renderer);
-			revisionStore.update((revision) => revision + 1);
-			if (cache.canvas != null && next.canvas !== cache.canvas) {
-				updateCanvas(next.canvas);
-			}
-			if (cache.loop != null && next.loop !== cache.loop) {
-				updateLoop(next.loop);
-			}
-			if (next.backgroundColor !== cache.backgroundColor) {
-				updateBackgroundColor(next.backgroundColor);
-			}
-			if (!arrayHasSameShallow(next.ambientLightColor, cache.ambientLightColor)) {
-				updateAmbientLightColor(next.ambientLightColor);
-				const programs = findMaterialProgram();
-				if (programs) {
-					programs.forEach((program) => {
-						setupAmbientLight(appContext.programMap.get(program), processed.get("ambientLightColor"));
-					});
-				}
-			}
-			if (!arrayHasSameShallow(next.toneMappings, cache.toneMappings)) {
-				updateToneMappings(next.toneMappings);
-			}
-			if (next.enabled !== cache.enabled) {
-				updateEnabled(next.enabled);
-			}
-			cache = next;
-			return next;
-		});
-	}
-
-	//specific on change handling, might be useless
-	function customSet(next) {
-		customUpdate((renderer) => next);
-	}
-
-	return {
-		subscribe,
-		set: customSet,
-		update: customUpdate,
-		/**
-		 * @returns {SvelteGLProcessedRenderer}
-		 */
-		get processed() {
-			const values = get(store);
-			return Object.entries(values)
-				.map(([key, value]) => {
-					if (processed.has(key)) {
-						return [key, processed.get(key)];
-					}
-					return [key, value];
-				})
-				.reduce((acc, [key, value]) => {
-					acc[key] = value;
-					return acc;
-				}, {});
-		},
-		get revision() {
-			return get(revisionStore);
-		},
-	};
-}
-export const renderer = createRenderer();
-
-function createSceneStore() {
-	/** @type {SvelteGLSceneStore} */
-	const store = writable([]);
-
-	const revisionStore = writable(0);
-	const { subscribe, update } = store;
-	function customUpdate(updater) {
-		try {
-			update((scene) => {
-				const next = updater(scene);
-				revisionStore.update((revision) => revision + 1);
-				return next;
-			});
-		} catch (e) {
-			console.log(e);
-		}
-	}
-	function customSet(next) {
-		customUpdate((scene) => next);
-	}
-	return {
-		subscribe,
-		set: customSet,
-		update: customUpdate,
-		//this way the revision can't be changed from outside
-		get revision() {
-			return get(revisionStore);
-		},
-	};
-}
-export const scene = createSceneStore();
-const defaultWorldMatrix = createZeroMatrix();
-identity(defaultWorldMatrix);
-
-//create typeguard for SvelteGLSingleMesh and SvelteGLInstancedMesh
-/**
- * @param {SvelteGLMesh | SvelteGLMeshData | SvelteGLMeshReadyData} mesh
- * @returns {mesh is SvelteGLSingleMesh}
- */
-export function isSvelteGLSingleMesh(mesh) {
-	return "matrix" in mesh;
-}
-/**
- * @param {SvelteGLMesh | SvelteGLMeshData | SvelteGLMeshReadyData} mesh
- * @returns {mesh is SvelteGLInstancedMesh}
- */
-export function isSvelteGLInstancedMesh(mesh) {
-	return "matrices" in mesh;
-}
+import { renderer } from "./renderer.js";
+import { lights } from "./lights.js";
+import { materials } from "./materials.js";
+import { programs, sortMeshesByZ, isTransparent } from "./programs.js";
+import { scene } from "./scene.js";
+import { isSvelteGLInstancedMesh, isSvelteGLSingleMesh } from "./mesh-types.js";
 
 function findMesh(matrixStore) {
 	const mesh = get(scene).find((node) => {
@@ -209,91 +32,6 @@ function findMesh(matrixStore) {
 	return mesh;
 }
 
-function findProgram(mesh) {
-	const program = get(programs).find((program) => program.allMeshes !== true && program.meshes.includes(mesh));
-	return program;
-}
-
-function findMaterialProgram() {
-	const matPrograms = get(programs).filter((program) => program.meshes?.length !== 0 && program.allMeshes !== true);
-	return matPrograms;
-}
-
-const createMeshMatrixStore = (mesh, rendererUpdate, initialValue, instanceIndex = NaN) => {
-	const { subscribe, set } = writable(initialValue || defaultWorldMatrix);
-	const transformMatrix = {
-		subscribe,
-		set: (nextMatrix) => {
-			set(nextMatrix);
-			const program = findProgram(mesh);
-			if (isNaN(instanceIndex)) {
-				updateTransformMatrix(program, nextMatrix);
-				updateNormalMatrix(program, nextMatrix);
-			} else {
-				updateInstanceTransformMatrix(program, mesh, nextMatrix, instanceIndex);
-			}
-			rendererUpdate(get(renderer));
-		},
-	};
-	return transformMatrix;
-};
-
-/**
- *
- * @param {SvelteGLMeshReadyData} value
- * @param {*} symmetry
- * @param {*} symmetryAxis
- * @returns {SvelteGLMesh}
- */
-export function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]) {
-	if (symmetry) {
-		console.log("symmetry");
-
-		/*const newPositions = [];
-		for (let i = 0; i < value.attributes.positions.length / 3; i++) {
-			const x = value.attributes.positions[i * 3];
-			const y = value.attributes.positions[i * 3 + 1];
-			const z = value.attributes.positions[i * 3 + 2];
-			const [sx, sy, sz] = symmetryAxis;
-			newPositions.push(x + 2 * (sx - x), y + 2 * (sy - y), z + 2 * (sz - z));
-		}
-		value.attributes.positions = newPositions;*/
-		/*const newNormals = [];
-		for (let i = 0; i < value.attributes.normals.length / 3; i++) {
-			const x = value.attributes.normals[i * 3];
-			const y = value.attributes.normals[i * 3 + 1];
-			const z = value.attributes.normals[i * 3 + 2];
-			//calculate normals in symmetry taking symmetryAxis into account
-			const [sx, sy, sz] = symmetryAxis;
-			newNormals.push(x * -sx, y * -sy, z * -sz);
-		}
-		value.attributes.normals = newNormals;*/
-	}
-	/*
-	if (isSvelteGLSingleMesh(new3DObject)) {
-		
-		new3DObject.matrix = createMeshMatrixStore(new3DObject, renderer.set, new3DObject.matrix);
-	} else if (isSvelteGLInstancedMesh(new3DObject)) {
-		new3DObject.matrices = new3DObject.matrices.map((matrix, index) => createMeshMatrixStore(new3DObject, renderer.set, matrix, index));
-	}
-	*/
-	/** @type {SvelteGLMesh} */
-	// @ts-ignore
-	const new3DObject = {
-		...value,
-	};
-	if (isSvelteGLSingleMesh(new3DObject)) {
-		// @ts-ignore
-		new3DObject.matrix = createMeshMatrixStore(new3DObject, renderer.set, new3DObject.matrix);
-	} else if (isSvelteGLInstancedMesh(new3DObject)) {
-		// @ts-ignore
-		new3DObject.matrices = new3DObject.matrices.map((matrix, index) =>
-			createMeshMatrixStore(new3DObject, renderer.set, matrix, index),
-		);
-	}
-	return new3DObject;
-}
-
 function objectsHaveSameMatrix(a, b) {
 	for (let i = 0; i < a.length; i++) {
 		if (arrayHasSameShallow(get(a[i].matrix), get(b[i].matrix))) {
@@ -303,334 +41,16 @@ function objectsHaveSameMatrix(a, b) {
 	return true;
 }
 
-/**
- *
- * @param {import("../lights/point-light.js").SvelteGLLightValue} initialProps
- * @returns {SvelteGLLightCustomStore}
- */
-export const createLightStore = (initialProps) => {
-	/** @type {SvelteGLLightStore} */
-	const store = writable(initialProps);
-	const { subscribe, set } = store;
-	const light = {
-		subscribe,
-		set: (props) => {
-			set(props);
-			updateOneLight(get(lights), light);
-			lights.set(get(lights));
-			//renderer.set(get(renderer));
-		},
-	};
-	return light;
-};
-
-/**
- * @returns {SvelteGLLightsCustomStore}
- */
-function createLightsStore() {
-	/** @type {import("svelte/store").Writable<Array<SvelteGLLightCustomStore>>} */
-	const store = writable([]);
-	const { subscribe, set } = store;
-	const revisionStore = writable(0);
-	return {
-		subscribe,
-		set: (next) => {
-			set(next);
-			revisionStore.update((revision) => revision + 1);
-		},
-		get revision() {
-			return get(revisionStore);
-		},
-	};
-}
-export const lights = createLightsStore();
-
-export const numLigths = derived([lights], ([$lights]) => {
-	return $lights.length;
-});
-
-export const renderPasses = writable([]);
-
-/**
- * @typedef {Object} MaterialCustomStore
- * @property {MaterialStore['subscribe']} subscribe
- * @property {MaterialStore['set']} set
- * @property {MaterialStore['update']} update
- */
-/**
- * @param {SvelteGLMaterial} initialProps
- * @return {MaterialCustomStore}
- */
-export function createMaterialStore(initialProps) {
-	/** @type {MaterialStore} */
-	const store = writable(initialProps);
-	const { subscribe, set, update } = store;
-	const material = {
-		subscribe,
-		set: (props) => {
-			set(props);
-			materials.set(get(materials));
-			scene.set(get(scene));
-			// TODO was necessary but now it works without
-			//renderer.set(get(renderer));
-		},
-		update,
-	};
-	return material;
-}
-
-/**
- * @returns {MaterialsCustomStore}
- */
-function createMaterials() {
-	/** @type {MaterialsStore} */
-	const store = writable([]);
-	const { subscribe, set, update } = store;
-	const revisionStore = writable(0);
-	return {
-		subscribe,
-		set: (next) => {
-			set(next);
-			revisionStore.update((revision) => revision + 1);
-		},
-		update,
-		get revision() {
-			return get(revisionStore);
-		},
-	};
-}
-
-export const materials = createMaterials();
-
-export const RENDER_PASS_TYPES = {
-	FRAMEBUFFER_TO_TEXTURE: 0,
-};
-
-function isTransparent(material) {
-	return material?.opacity < 1 || material?.transparent;
-}
-
-function sortTransparency(a, b) {
-	return (isTransparent(a.material) ? 1 : -1) - (isTransparent(b.material) ? 1 : -1);
-}
-
-/**
- * Sorts meshes by Z depth for transparency rendering
- * @template {SvelteGLProgram[]|SvelteGLProgramProject[]} T
- * @param {T} programs - Array of programs to sort
- * @returns {T} - Sorted array with the same type as input
- */
-function sortMeshesByZ(programs) {
-	if (programs.length === 0 || get(renderer).canvas == null) {
-		return programs;
-	}
-	let transparent = false;
-	const canvas = get(renderer).canvas;
-	const { projection, view } = getCameraProjectionView(get(camera), canvas.width, canvas.height);
-	const projScreen = multiply([], projection, view);
-
-	programs.forEach((program) => {
-		if (transparent || isTransparent(program.material)) {
-			transparent = true;
-			program.meshes.forEach((mesh, i) => {
-				const meshPosition = getTranslation([], mesh.matrix);
-				mesh.clipSpacePosition = transformMat4([], meshPosition, projScreen);
-			});
-			program.meshes = program.meshes.sort((a, b) => {
-				return b.clipSpacePosition[2] - a.clipSpacePosition[2];
-			});
-		}
-	});
-
-	const sortedPrograms = programs.sort((a, b) => {
-		if (
-			a.material == null ||
-			b.material == null ||
-			a.meshes[0].clipSpacePosition == null ||
-			b.meshes[0].clipSpacePosition == null
-		) {
-			return 0;
-		}
-		return b.meshes[0].clipSpacePosition[2] - a.meshes[0].clipSpacePosition[2];
-	});
-	// @ts-ignore, trust me bro
-	return sortedPrograms;
-}
-
-/**
- * @typedef {Object} SvelteGLProgramProject
- * @property {SvelteGLMaterial} material
- * @property {SvelteGLMesh[]} meshes
- * @property {boolean} [requireTime]
- */
-
-/**
- * @typedef {Object} SvelteGLProgram
- * @property {Function} createProgram
- * @property {Function[]} setupProgram
- * @property {Function[]} setupMaterial
- * @property {Function} useProgram
- * @property {Function} selectProgram
- * @property {Function} setupCamera
- * @property {Function} setFrameBuffer
- * @property {Function[]} bindTextures
- * @property {SvelteGLMaterial} [material]
- * @property {SvelteGLMesh[]} [meshes]
- * @property {Function[]} [updateProgram]
- * @property {boolean} [allMeshes]
- * @property {Function} [postDraw]
- */
-
-/**
- * @typedef {import("svelte/store").Readable<SvelteGLProgram[]>} SvelteGLProgramStore
- */
-
-/**
- * @type {SvelteGLProgramStore}
- */
-export const programs = derived(
-	[scene, numLigths, materials, renderPasses],
-	([$scene, $numLigths, $materials, $renderPasses]) => {
-		let prePasses = $renderPasses
-			.filter((pass) => pass.order < 0)
-			.reduce((acc, pass) => {
-				return acc.concat(...pass.programs);
-			}, [])
-			.map((program) => ({
-				...program,
-				updateProgram: [],
-				...(program.allMeshes ? { meshes: $scene } : {}),
-			}));
-
-		//this sublist mesh items require their own respective program (shader)
-		const specialMeshes = new Set(
-			$scene.filter((node) => isSvelteGLInstancedMesh(node) || node.animations?.some((a) => a.type === "vertex")),
-		);
-		/** @type {Array<SvelteGLProgramProject>} */
-		const programs = Array.from($materials).reduce((acc, current) => {
-			const materialMeshes = $scene.filter((node) => node.material === current);
-			/**
-			 * @type {{currentNormalMeshes:SvelteGLMesh[],currentSpecialMeshes:SvelteGLMesh[]}}
-			 */
-			const { currentNormalMeshes, currentSpecialMeshes } = materialMeshes.reduce(
-				(acc, node) => {
-					if (specialMeshes.has(node)) {
-						acc.currentSpecialMeshes.push(node);
-					} else {
-						acc.currentNormalMeshes.push(node);
-					}
-					return acc;
-				},
-				{
-					currentNormalMeshes: [],
-					currentSpecialMeshes: [],
-				},
-			);
-
-			if (currentNormalMeshes.length > 0) {
-				acc.push({
-					material: get(current),
-					meshes: currentNormalMeshes,
-				});
-			}
-			currentSpecialMeshes.forEach((mesh) => {
-				const requireTime = mesh.animations?.some((animation) => animation.requireTime);
-				acc.push({
-					requireTime,
-					material: get(current),
-					meshes: [mesh],
-				});
-			});
-			return acc;
-		}, []);
-
-		const sortedPrograms = sortMeshesByZ(programs.sort(sortTransparency));
-
-		// TODO make two different numligth store, one for each light type, when spotlight is supported
-		//const pointLights = $lights.filter((l) => get(l).type === "point");
-		const numPointLights = $numLigths;
-
-		let pointLightShader;
-		if (numPointLights > 0) {
-			pointLightShader = get(get(lights)[0]).shader;
-		}
-
-		/** @type {SvelteGLProgram[]} */
-		const next = [
-			...prePasses,
-			...sortedPrograms.map((p, index) => {
-				const firstCall = index === 0;
-				const program = {
-					...p,
-					useProgram,
-					setupProgram: null,
-					setFrameBuffer: null,
-					setupMaterial: [setupAmbientLight],
-					updateProgram: [],
-					bindTextures: [],
-					createProgram,
-					selectProgram,
-					setupCamera: undefined,
-				};
-				reconciliateCacheMap(p, program);
-
-				program.setupProgram = [
-					createShaders(p.material, p.meshes, numPointLights, pointLightShader),
-					linkProgram,
-					validateProgram,
-				];
-				if (firstCall) {
-					program.setFrameBuffer = bindDefaultFramebuffer;
-				}
-				if (p.material?.specular) {
-					program.setupMaterial.push(p.material.specular.setupSpecular);
-				}
-				if (p.material?.diffuseMap) {
-					program.setupMaterial.push(p.material.diffuseMap.setupTexture);
-					program.bindTextures.push(p.material.diffuseMap.bindTexture);
-				}
-				if (p.material?.normalMap) {
-					program.setupMaterial.push(p.material.normalMap.setupTexture);
-					program.bindTextures.push(p.material.normalMap.bindTexture);
-				}
-				if (p.material?.roughnessMap) {
-					program.setupMaterial.push(p.material.roughnessMap.setupTexture);
-					program.bindTextures.push(p.material.roughnessMap.bindTexture);
-				}
-				if (p.requireTime) {
-					program.updateProgram.push(setupTime);
-				}
-				program.setupMaterial.push(
-					...Array.from(
-						get(lights).reduce((acc, light) => {
-							const lightValue = get(light);
-							if (acc.has(lightValue.setupLights)) {
-								acc.set(lightValue.setupLights, [...acc.get(lightValue.setupLights), light]);
-							} else {
-								acc.set(lightValue.setupLights, [light]);
-							}
-							return acc;
-						}, new Map()),
-					).map(([setupLights, filteredLights]) => setupLights(filteredLights)),
-				);
-				return program;
-			}),
-		];
-		clearUnusedCache(next);
-		return next;
-	},
-);
-
 export const renderState = writable({
 	init: false,
 });
 
 /**
  * Clears the cache map of unused programs and VAOs
- * @param {SvelteGLProgram[]} next - The next programs
+ * @param {import("./programs.js").SvelteGLProgram[]} next - The next programs
  * @returns {void}
  */
-function clearUnusedCache(next) {
+export function clearUnusedCache(next) {
 	const { programMap, vaoMap } = appContext;
 	programMap.forEach((glProgram, programStore) => {
 		if (!next.some((program) => program.material === programStore.material)) {
@@ -662,11 +82,11 @@ function clearUnusedCache(next) {
  * Then assigns the VAOs to the new programstore too.
  * The previous programstore and vaos are deleted from the cache map
  *
- * @param {SvelteGLProgramProject} p - The program object
- * @param {SvelteGLProgram} program - The program store
+ * @param {import("./programs.js").SvelteGLProgramProject} p - The program object
+ * @param {import("./programs.js").SvelteGLProgram} program - The program store
  * @returns {void}
  */
-function reconciliateCacheMap(p, program) {
+export function reconciliateCacheMap(p, program) {
 	const { programMap, vaoMap } = appContext;
 	let cachedProgram, cachedGLProgram;
 	programMap.forEach((glProgram, programStore) => {
@@ -705,8 +125,8 @@ function selectMesh(programStore, mesh) {
 
 /**
  * @typedef {Object} appContext
- * @property {Map<SvelteGLProgram,WebGLProgram>} programMap
- * @property {Map<SvelteGLProgram,Map<SvelteGLMesh,WebGLVertexArrayObject>>} vaoMap
+ * @property {Map<import("./programs.js").SvelteGLProgram,WebGLProgram>} programMap
+ * @property {Map<import("./programs.js").SvelteGLProgram,Map<SvelteGLMesh,WebGLVertexArrayObject>>} vaoMap
  * @property {WebGL2RenderingContext} gl
  * @property {WebGLProgram} program
  * @property {WebGLVertexArrayObject} vao

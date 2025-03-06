@@ -1,1 +1,408 @@
-import{K as s,L as a,O as t,S as e,i as n,s as o,M as r,e as i,a as l,c as u,b as c,m as f,n as m,t as p,d as h,f as d,g,h as y,o as M,r as w,l as x,j as $,k as b,p as j,H as k,A,B as D,C as v,D as F,x as P,E as C,y as E,z as G,F as I,P as L,Q as z,G as B,R as H}from"./Menu-COY93t_A.js";import{l as K,t as O,b as Q}from"./gltf-loader-BkCLhHXE.js";import{D as R}from"./DebugPanel-CBC3guzt.js";import{c as S}from"./texture-DH2yB5xB.js";import{c as q}from"./specular-ijX3PQ1F.js";function J(s){let a,t,e,n,o,y;return e=new r({}),o=new R({}),{c(){a=i("canvas"),t=l(),u(e.$$.fragment),n=l(),u(o.$$.fragment)},m(r,i){c(r,a,i),s[1](a),c(r,t,i),f(e,r,i),c(r,n,i),f(o,r,i),y=!0},p:m,i(s){y||(p(e.$$.fragment,s),p(o.$$.fragment,s),y=!0)},o(s){h(e.$$.fragment,s),h(o.$$.fragment,s),y=!1},d(r){r&&(d(a),d(t),d(n)),s[1](null),g(e,r),g(o,r)}}}function N(e,n,o){let r,i,l,u,c,f,m,p,h,d;function g(){const s=L(d.matrix);z(s,s,.001),d.matrix.set(s)}return y(e,w,(s=>o(6,r=s))),y(e,x,(s=>o(7,i=s))),y(e,$,(s=>o(8,l=s))),y(e,b,(s=>o(9,u=s))),y(e,j,(s=>o(10,c=s))),M((async()=>{const e=await K("models/rock.gltf","models/rock.bin");let n;O(e.scene,(s=>{null!=s.position&&(n=s)}));const o=Q(e,n),y=await S({url:"rock-diffuse.jpg",type:"diffuse"}),M=await S({url:"rock-normal.png",type:"normal"}),L=k({metalness:o.material.metalness,diffuse:[.67,.68,.81],diffuseMap:y,normalMap:M}),z=await K("models/ennemi1.gltf","models/ennemi1.bin");let B;O(z.scene,(s=>{null!=s.position&&(B=s)}));const R=Q(z,B),J=await S({url:"models/ennemi1-diffuse.png",type:"diffuse"}),N=await S({url:"models/ennemi1-roughness.png",type:"roughness"});console.log("ennemi1Mesh.material",R.material);const T=k({...R.material,specular:q({roughness:1,ior:1.4,intensity:.8,color:[1,1,1]}),diffuse:[1,1,1],diffuseMap:J,roughnessMap:N});A(w,r={...r,canvas:f,backgroundColor:D,ambientLightColor:[16777215,.1]},r),A(j,c={...c,position:[0,3,10],target:[0,3,0],fov:75},c),m=v(F({color:[.996078431372549,.9529411764705882,.6627450980392157],intensity:7.5,position:[0,9,0],cutoffDistance:27,decayExponent:.05})),p=v(F({position:[-3,-3,1],color:[.6313725490196078,.6235294117647059,.996078431372549],intensity:0,cutoffDistance:15,decayExponent:.25}));const U=o.matrix;let V=new Array(20).fill(0).map(((s,a)=>{let t=H(U);return P(t,t,[0,2*a-4,-4.5]),t}));C({...o,material:L,instances:20,matrices:V},!1,[1,0,0]),h=C({...R,material:T},!1);const W=function(e=1,n=1,o=1,r=1){o=Math.max(o,1),r=Math.max(r,1);const i=n/2,l=2*Math.PI/o,u=[],c=[],f=[],m=[0,1,0],p=[0,-1,0],h=[],d=[],g=[],y=n/r;for(let a=0;a<o;a++){const n=l*a,o=t(1,Math.PI/2,n),r=Math.cos(n),i=Math.sin(n);u.push([r*e,i*e]),c.push(s(o,o)),f.push([.25*r,.25*i])}const M=[.25,.25],w=[.75,.25];for(let s=0;s<o;s++){const a=(s+1)%o,t=i,e=-i;h.push([0,t,0],[u[a][0],t,u[a][1]],[u[s][0],t,u[s][1]]),d.push(m,m,m),g.push(M,[f[s][0]+M[0],f[s][1]+M[1]],[f[a][0]+M[0],f[a][1]+M[1]]),h.push([0,e,0],[u[s][0],e,u[s][1]],[u[a][0],e,u[a][1]]),d.push(p,p,p),g.push(w,[f[s][0]+w[0],f[s][1]+w[1]],[f[a][0]+w[0],f[a][1]+w[1]])}for(let s=0;s<r;s++){const a=i-s*y,t=a-y;for(let e=0;e<o;e++){const n=(e+1)%o;h.push([u[e][0],a,u[e][1]],[u[n][0],a,u[n][1]],[u[n][0],t,u[n][1]],[u[e][0],a,u[e][1]],[u[n][0],t,u[n][1]],[u[e][0],t,u[e][1]]),d.push(c[e],c[e],c[e],c[e],c[e],c[e]);const i=.5-e/o/2,l=.5+s/r/2,f=.5-n/o/2,m=.5+(s+1)/r/2;g.push([i,l],[f,l],[f,m],[i,l],[f,m],[i,m])}}return{attributes:{positions:new Float32Array(h.flat()),normals:new Float32Array(d.flat()),uvs:new Float32Array(g.flat())},drawMode:a[4]}}(1,1,32,1);console.log("cylinderGeometry",W);const X=k({diffuse:[.916,.916,.916],metalness:.8090909123420715,specular:q({roughness:.1,ior:1.4,intensity:.8,color:[1,1,1]})}),Y=E(G());P(Y,Y,[0,1,0]),d=C({...W,material:X,matrix:Y}),A(b,u=[...u,L,T,X],u),A($,l=[...l,h,d],l),A(x,i=[...i,m,p],i),A(w,r={...r,loop:g,enabled:!0},r),I(f,j)})),[f,function(s){B[s?"unshift":"push"]((()=>{f=s,o(0,f)}))}]}class T extends e{constructor(s){super(),n(this,s,N,J,o,{})}}export{T as default};
+import { K as normalize, L as drawModes, O as getPositionFromPolar, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, H as createMaterialStore, A as set_store_value, B as skyblue, C as createLightStore, D as createPointLight, x as translate, E as create3DObject, y as identity, z as createZeroMatrix, F as createOrbitControls, P as get_store_value, Q as rotateX, G as binding_callbacks, R as cloneMatrix } from './Menu-DpZKAeDf.js';
+import { l as loadGLTFFile, t as traverseScene, b as createMeshFromGLTF } from './gltf-loader-CK_SmVI-.js';
+import { D as DebugPanel } from './DebugPanel-tC8Sn3zX.js';
+import { c as createTexture } from './texture-BIGlSWMv.js';
+import { c as createSpecular } from './specular-BKewLJsb.js';
+
+function createCylinder(radius = 1, height = 1, radialSegment = 1, heightSegment = 1) {
+	radialSegment = Math.max(radialSegment, 1);
+	heightSegment = Math.max(heightSegment, 1);
+	const halfHeight = height / 2;
+	const angle = (Math.PI * 2) / radialSegment;
+	const loopPositions = [];
+	const loopNormals = [];
+	const loopUVs = [];
+	const topNormal = [0, 1, 0];
+	const downNormal = [0, -1, 0];
+	const positions = [];
+	const normals = [];
+	const uvs = [];
+	const heightIncrement = height / heightSegment;
+	const uVRadius = 0.25;
+	for (let ir = 0; ir < radialSegment; ir++) {
+		const radialAngle = angle * ir;
+		const normal = getPositionFromPolar(1, Math.PI / 2, radialAngle);
+		const x = Math.cos(radialAngle);
+		const z = Math.sin(radialAngle);
+		loopPositions.push([x * radius, z * radius]);
+		loopNormals.push(normalize(normal, normal));
+		loopUVs.push([x * uVRadius, z * uVRadius]);
+	}
+	//top and bottom caps
+	const topUVCenter = [0.25, 0.25];
+	const bottomUVCenter = [0.75, 0.25];
+	for (let ir = 0; ir < radialSegment; ir++) {
+		const nextIndex = (ir + 1) % radialSegment;
+		const yTop = halfHeight;
+		const yBottom = -halfHeight;
+
+		// Top cap
+		positions.push(
+			[0, yTop, 0],
+			[loopPositions[nextIndex][0], yTop, loopPositions[nextIndex][1]],
+			[loopPositions[ir][0], yTop, loopPositions[ir][1]],
+		);
+		normals.push(topNormal, topNormal, topNormal);
+		uvs.push(
+			topUVCenter,
+			[loopUVs[ir][0] + topUVCenter[0], loopUVs[ir][1] + topUVCenter[1]],
+			[loopUVs[nextIndex][0] + topUVCenter[0], loopUVs[nextIndex][1] + topUVCenter[1]],
+		);
+
+		// Bottom cap
+		positions.push(
+			[0, yBottom, 0],
+			[loopPositions[ir][0], yBottom, loopPositions[ir][1]],
+			[loopPositions[nextIndex][0], yBottom, loopPositions[nextIndex][1]],
+		);
+		normals.push(downNormal, downNormal, downNormal);
+		uvs.push(
+			bottomUVCenter,
+			[loopUVs[ir][0] + bottomUVCenter[0], loopUVs[ir][1] + bottomUVCenter[1]],
+			[loopUVs[nextIndex][0] + bottomUVCenter[0], loopUVs[nextIndex][1] + bottomUVCenter[1]],
+		);
+	}
+
+	// Side faces
+	for (let iy = 0; iy < heightSegment; iy++) {
+		const y = halfHeight - iy * heightIncrement;
+		const nextY = y - heightIncrement;
+		for (let ir = 0; ir < radialSegment; ir++) {
+			const nextIndex = (ir + 1) % radialSegment;
+			positions.push(
+				[loopPositions[ir][0], y, loopPositions[ir][1]],
+				[loopPositions[nextIndex][0], y, loopPositions[nextIndex][1]],
+				[loopPositions[nextIndex][0], nextY, loopPositions[nextIndex][1]],
+				[loopPositions[ir][0], y, loopPositions[ir][1]],
+				[loopPositions[nextIndex][0], nextY, loopPositions[nextIndex][1]],
+				[loopPositions[ir][0], nextY, loopPositions[ir][1]],
+			);
+			normals.push(loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir]);
+			const uvX = 0.5 - ir / radialSegment / 2;
+			const uvY = 0.5 + iy / heightSegment / 2;
+			const uvXNext = 0.5 - nextIndex / radialSegment / 2;
+			const uvYNext = 0.5 + (iy + 1) / heightSegment / 2;
+			uvs.push([uvX, uvY], [uvXNext, uvY], [uvXNext, uvYNext], [uvX, uvY], [uvXNext, uvYNext], [uvX, uvYNext]);
+		}
+	}
+
+	return {
+		attributes: {
+			positions: new Float32Array(positions.flat()),
+			normals: new Float32Array(normals.flat()),
+			uvs: new Float32Array(uvs.flat()),
+		},
+		drawMode: drawModes[4],
+	};
+}
+
+/* src\rock.svelte generated by Svelte v4.2.18 */
+
+function create_fragment(ctx) {
+	let canvas_1;
+	let t0;
+	let menu;
+	let t1;
+	let debugpanel;
+	let current;
+	menu = new Menu({});
+	debugpanel = new DebugPanel({});
+
+	return {
+		c() {
+			canvas_1 = element("canvas");
+			t0 = space();
+			create_component(menu.$$.fragment);
+			t1 = space();
+			create_component(debugpanel.$$.fragment);
+		},
+		m(target, anchor) {
+			insert(target, canvas_1, anchor);
+			/*canvas_1_binding*/ ctx[1](canvas_1);
+			insert(target, t0, anchor);
+			mount_component(menu, target, anchor);
+			insert(target, t1, anchor);
+			mount_component(debugpanel, target, anchor);
+			current = true;
+		},
+		p: noop,
+		i(local) {
+			if (current) return;
+			transition_in(menu.$$.fragment, local);
+			transition_in(debugpanel.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(menu.$$.fragment, local);
+			transition_out(debugpanel.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) {
+				detach(canvas_1);
+				detach(t0);
+				detach(t1);
+			}
+
+			/*canvas_1_binding*/ ctx[1](null);
+			destroy_component(menu, detaching);
+			destroy_component(debugpanel, detaching);
+		}
+	};
+}
+
+function instance($$self, $$props, $$invalidate) {
+	let $renderer;
+	let $lights;
+	let $scene;
+	let $materials;
+	let $camera;
+	component_subscribe($$self, renderer, $$value => $$invalidate(6, $renderer = $$value));
+	component_subscribe($$self, lights, $$value => $$invalidate(7, $lights = $$value));
+	component_subscribe($$self, scene, $$value => $$invalidate(8, $scene = $$value));
+	component_subscribe($$self, materials, $$value => $$invalidate(9, $materials = $$value));
+	component_subscribe($$self, camera, $$value => $$invalidate(10, $camera = $$value));
+	let canvas;
+	let light1;
+	let light2;
+	let ennemi1;
+	let cylinder;
+
+	onMount(async () => {
+		const file = await loadGLTFFile("models/rock.gltf", "models/rock.bin");
+		let meshObject;
+
+		traverseScene(file.scene, o => {
+			if (o.position != null) {
+				meshObject = o;
+			}
+		});
+
+		const loadedRocks = createMeshFromGLTF(file, meshObject);
+		const diffuseMap = await createTexture({ url: "rock-diffuse.jpg", type: "diffuse" });
+		const normalMap = await createTexture({ url: "rock-normal.png", type: "normal" });
+
+		const meshMaterial = createMaterialStore({
+			metalness: loadedRocks.material.metalness,
+			diffuse: [0.67, 0.68, 0.81],
+			diffuseMap,
+			normalMap
+		});
+
+		const ennemi1File = await loadGLTFFile("models/ennemi1.gltf", "models/ennemi1.bin");
+		let ennemi1MeshObject;
+
+		traverseScene(ennemi1File.scene, o => {
+			if (o.position != null) {
+				ennemi1MeshObject = o;
+			}
+		});
+
+		const loadedEnnemi1 = createMeshFromGLTF(ennemi1File, ennemi1MeshObject);
+
+		const ennemi1DiffuseMap = await createTexture({
+			url: "models/ennemi1-diffuse.png",
+			type: "diffuse"
+		});
+
+		const ennemi1RoughnessMap = await createTexture({
+			url: "models/ennemi1-roughness.png",
+			type: "roughness"
+		});
+
+		console.log("ennemi1Mesh.material", loadedEnnemi1.material);
+
+		const ennemi1Material = createMaterialStore({
+			...loadedEnnemi1.material,
+			specular: createSpecular({
+				roughness: 1,
+				ior: 1.4,
+				intensity: 0.8,
+				color: [1, 1, 1]
+			}),
+			diffuse: [1, 1, 1],
+			diffuseMap: ennemi1DiffuseMap,
+			roughnessMap: ennemi1RoughnessMap
+		});
+
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				canvas,
+				backgroundColor: skyblue,
+				ambientLightColor: [0xffffff, 0.1]
+			},
+			$renderer
+		);
+
+		set_store_value(
+			camera,
+			$camera = {
+				...$camera,
+				position: [0, 3, 10],
+				target: [0, 3, 0],
+				fov: 75
+			},
+			$camera
+		);
+
+		light1 = createLightStore(createPointLight({
+			color: [0.996078431372549, 0.9529411764705882, 0.6627450980392157],
+			intensity: 7.5,
+			position: [0, 9, 0],
+			cutoffDistance: 27,
+			decayExponent: 0.05
+		}));
+
+		light2 = createLightStore(createPointLight({
+			position: [-3, -3, 1],
+			color: [0.6313725490196078, 0.6235294117647059, 0.996078431372549],
+			intensity: 0,
+			cutoffDistance: 15,
+			decayExponent: 0.25
+		}));
+
+		const numInstances = 20;
+
+		/** @type {mat4} */
+		const originalMatrix = loadedRocks.matrix;
+
+		let matrices = new Array(numInstances).fill(0).map((_, index) => {
+			/*const count = index - Math.floor(numInstances / 2);*/
+			/** @type {mat4} */
+			let mat = cloneMatrix(originalMatrix);
+
+			//transform the model matrix
+			translate(mat, mat, [0, index * 2 - 4, -4.5]);
+
+			//scale(mat, mat, [1, 1, -1]);
+			//rotate(mat, mat, Math.PI/2,[0,1,0]);
+			return mat;
+		});
+
+		create3DObject(
+			{
+				...loadedRocks,
+				material: meshMaterial,
+				instances: numInstances,
+				matrices
+			},
+			false,
+			[1, 0, 0]
+		);
+
+		/*matrices = new Array(numInstances).fill(0).map((_, index) => {
+	let mat = [...originalMatrix];
+
+	//transform the model matrix
+	translate(mat, mat, [0, index * 2 - 4, 4.5]);
+	scale(mat, mat, [1, 1, -1]);
+	//rotate(mat, mat, Math.PI/2,[0,1,0]);
+	return new Float32Array(mat);
+});
+const rightRocks = create3DObject({
+	...loadedMesh,
+	matrices,
+},false);*/
+		ennemi1 = create3DObject(
+			{
+				...loadedEnnemi1,
+				material: ennemi1Material
+			},
+			false
+		);
+
+		const cylinderGeometry = createCylinder(1, 1, 32, 1);
+		console.log("cylinderGeometry", cylinderGeometry);
+
+		const cylinderMaterial = createMaterialStore({
+			diffuse: [0.916, 0.916, 0.916],
+			metalness: 0.8090909123420715,
+			specular: createSpecular({
+				roughness: 0.1,
+				ior: 1.4,
+				intensity: 0.8,
+				color: [1, 1, 1]
+			})
+		});
+
+		const cylinderMatrix = identity(createZeroMatrix());
+		translate(cylinderMatrix, cylinderMatrix, [0, 1, 0]);
+
+		cylinder = create3DObject({
+			...cylinderGeometry,
+			material: cylinderMaterial,
+			matrix: cylinderMatrix
+		});
+
+		set_store_value(materials, $materials = [...$materials, meshMaterial, ennemi1Material, cylinderMaterial], $materials);
+		set_store_value(scene, $scene = [...$scene, ennemi1, cylinder], /*leftRocks,rightRocks,*/ $scene);
+		set_store_value(lights, $lights = [...$lights, light1, light2], $lights);
+
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				loop: animate,
+				enabled: true
+			},
+			$renderer
+		);
+
+		createOrbitControls(canvas, camera);
+	});
+
+	function animate() {
+		/*
+const currentPosition = $camera.position;
+currentPosition[1] += 0.01;
+const currentTarget = $camera.target;
+currentTarget[1] += 0.01;
+$camera = { ...$camera, position: currentPosition,target: currentTarget };
+const currentLight1 = get(light1);
+currentLight1.position[1] += 0.01;
+const currentLight2 = get(light2);
+currentLight2.position[1] += 0.01;
+
+light1.set({ ...currentLight1 });
+light2.set({ ...currentLight2 });
+const matrix = get(ennemi1.matrix);
+translate(matrix, matrix, [0, 0.01, 0]);
+ennemi1.matrix.set( matrix);*/
+		// make the ennemi1 move in circle
+		//const ennemiMatrix = get(ennemi1.matrix);
+		/*
+const angle = performance.now() * 0.001;
+const radius = 5;
+const x = Math.cos(angle) * radius;
+const y = Math.sin(angle) * radius;
+const ennemiMatrix = identity(createZeroMatrix());
+translate(ennemiMatrix, ennemiMatrix, [x, y, 0]);
+rotateX(ennemiMatrix, ennemiMatrix, Math.PI / 2);
+rotateZ(ennemiMatrix, ennemiMatrix, performance.now() * 0.005);
+ennemi1.matrix.set(ennemiMatrix);*/
+		const cylinderMatrix = get_store_value(cylinder.matrix);
+
+		rotateX(cylinderMatrix, cylinderMatrix, 0.001);
+		cylinder.matrix.set(cylinderMatrix);
+	}
+
+	function canvas_1_binding($$value) {
+		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+			canvas = $$value;
+			$$invalidate(0, canvas);
+		});
+	}
+
+	return [canvas, canvas_1_binding];
+}
+
+class Rock extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance, create_fragment, safe_not_equal, {});
+	}
+}
+
+export { Rock as default };

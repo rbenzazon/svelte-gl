@@ -1,15 +1,11 @@
 <script type="module">
 import { onMount } from "svelte";
-import {
-	createLightStore,
-	renderer,
-	scene,
-	renderPasses,
-	create3DObject,
-	lights,
-	createMaterialStore,
-	materials,
-} from "./store/engine.js";
+import { scene } from "./store/scene.js";
+import { create3DObject } from "./store/create-object.js";
+import { renderPasses } from "./store/programs.js";
+import { createMaterialStore, materials } from "./store/materials.js";
+import { createLightStore, lights } from "./store/lights.js";
+import { renderer } from "./store/renderer.js";
 import { camera } from "./store/camera.js";
 import { identity, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
