@@ -1,7 +1,7 @@
 import { getTranslation, orthoNO, lookAt } from "gl-matrix/mat4";
 import depthVertexShader from "../shaders/depth-vertex.glsl";
 import depthFragmentShader from "../shaders/depth-fragment.glsl";
-import { getCameraProjectionView, linkProgram, useProgram, validateProgram } from "./gl-refactor";
+import { getCameraProjectionView, linkProgram, useProgram, validateProgram } from "./gl";
 import {
 	BLUR_DIRECTION_HORIZONTAL,
 	BLUR_DIRECTION_VERTICAL,
@@ -12,12 +12,12 @@ import {
 	setDirectionUniform,
 	setKernelUniforms,
 } from "./blur";
-import { selectProgram } from "./engine-refactor";
-import { appContext } from "./engine-refactor";
+import { selectProgram } from "./engine";
+import { appContext } from "./engine";
 import { createZeroMatrix } from "../geometries/common";
 /**
  * @typedef {Object} ContactShadowPass
- * @property {import("./engine-refactor").SvelteGLProgram[]} programs array of programs used in the pass
+ * @property {import("./engine").SvelteGLProgram[]} programs array of programs used in the pass
  * @property {() => WebGLTexture} getTexture function to get the shadow texture
  * @property {number} order order of the pass in the rendering pipeline
  */

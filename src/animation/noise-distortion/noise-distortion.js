@@ -1,7 +1,7 @@
 import noiseShader from "./noise-distortion.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
 import { get } from "svelte/store";
-import { appContext } from "../../store/engine-refactor";
+import { appContext } from "../../store/engine";
 
 /**
  * @typedef NoiseProps

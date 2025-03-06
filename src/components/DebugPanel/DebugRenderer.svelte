@@ -2,7 +2,7 @@
 import DebugBlock from "./DebugBlock.svelte";
 import DebugH2 from "./DebugH2.svelte";
 import DebugSliderNumber from "./DebugSliderNumber.svelte";
-import { renderer } from "../../store/engine-refactor.js";
+import { renderer } from "../../store/engine.js";
 import DebugColor from "./DebugColor.svelte";
 import DebugH4 from "./DebugH4.svelte";
 import { cssStringColorToHexNum } from "../../color/color-space";

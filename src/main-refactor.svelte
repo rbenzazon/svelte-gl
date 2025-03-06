@@ -9,7 +9,7 @@ import {
 	lights,
 	createMaterialStore,
 	materials,
-} from "./store/engine-refactor.js";
+} from "./store/engine.js";
 import { camera } from "./store/camera.js";
 import { identity, rotateZ, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";

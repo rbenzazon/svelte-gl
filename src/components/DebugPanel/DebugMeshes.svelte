@@ -1,6 +1,6 @@
 <script type="module">
 import { get } from "svelte/store";
-import { scene } from "../../store/engine-refactor";
+import { scene } from "../../store/engine";
 import DebugBlock from "./DebugBlock.svelte";
 
 import DebugH2 from "./DebugH2.svelte";

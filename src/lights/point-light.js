@@ -2,8 +2,8 @@ import pointLightShader from "./point-light.glsl";
 import { templateLiteralRenderer } from "../shaders/template.js";
 import { get } from "svelte/store";
 import { multiplyScalarVec3 } from "../geometries/common.js";
-import { UBO_BINDING_POINT_POINTLIGHT } from "../store/gl-refactor.js";
-import { appContext } from "../store/engine-refactor.js";
+import { UBO_BINDING_POINT_POINTLIGHT } from "../store/gl.js";
+import { appContext } from "../store/engine.js";
 
 /**
  * @typedef {"point" | "spot"} SvelteGLLightType

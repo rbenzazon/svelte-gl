@@ -1,7 +1,7 @@
 <script type="module">
 import { get } from "svelte/store";
 import { cssStringColorToLinearArray, linearArrayToCSSHashColor } from "../../color/color-space";
-import { lights } from "../../store/engine-refactor";
+import { lights } from "../../store/engine";
 
 import DebugBlock from "./DebugBlock.svelte";
 import DebugColor from "./DebugColor.svelte";

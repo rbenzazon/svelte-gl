@@ -1,6 +1,6 @@
 import pulsatingScaleShader from "./pulsating-scale.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
-import { appContext } from "../../store/engine-refactor";
+import { appContext } from "../../store/engine";
 
 /**
  * @typedef PulsatingScaleProps

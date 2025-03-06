@@ -9,11 +9,12 @@ import {
 	getRotation,
 } from "gl-matrix/esm/mat4.js";
 import { get } from "svelte/store";
-import { renderState } from "./engine.js";
 import defaultVertex from "../shaders/default-vertex.glsl";
 import defaultFragment from "../shaders/default-fragment.glsl";
 import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";
 import { SRGBToLinear } from "../color/color-space.js";
+import { appContext, setAppContext } from "./engine.js";
+import { createZeroMatrix } from "../geometries/common";
 
 // Uniform Buffer Objects, must have unique binding points
 export const UBO_BINDING_POINT_POINTLIGHT = 0;
@@ -30,59 +31,82 @@ function toRadian(a) {
 	return a * degree;
 }
 
-export function initRenderer(rendererContext, appContext) {
-	return function () {
-		console.log("initRenderer");
+export function initRenderer() {
+	const canvasRect = appContext.canvas.getBoundingClientRect();
+	appContext.canvas.width = canvasRect.width;
+	appContext.canvas.height = canvasRect.height;
+	/** @type {WebGL2RenderingContext} */
+	const gl = appContext.canvas.getContext("webgl2");
+	appContext.gl = gl;
 
-		const canvasRect = rendererContext.canvas.getBoundingClientRect();
-		rendererContext.canvas.width = canvasRect.width;
-		rendererContext.canvas.height = canvasRect.height;
-		const gl = (rendererContext.gl = rendererContext.canvas.getContext("webgl2"));
-		appContext.update((appContext) => ({
-			...appContext,
-			...rendererContext,
-		}));
-		gl.viewportWidth = rendererContext.canvas.width;
-		gl.viewportHeight = rendererContext.canvas.height;
-		gl.clearColor(...rendererContext.backgroundColor);
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_COLOR_BIT);
-		gl.enable(gl.DEPTH_TEST);
-		gl.enable(gl.CULL_FACE);
-		gl.frontFace(gl.CCW);
-		gl.cullFace(gl.BACK);
-		renderState.set({
-			init: true,
-		});
+	/*gl.viewportWidth = canvasRect.width;
+	gl.viewportHeight = canvasRect.height;*/
+
+	gl.enable(gl.DEPTH_TEST);
+
+	/*
+	gl.disable(gl.DEPTH_TEST);
+	
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+*/
+	gl.enable(gl.CULL_FACE);
+	gl.frontFace(gl.CCW);
+	gl.cullFace(gl.BACK);
+}
+
+export function setFaceWinding(ccw = true) {
+	return function setFaceWinding() {
+		const { gl } = appContext;
+		gl.frontFace(ccw ? gl.CCW : gl.CW);
 	};
 }
 
-export function setupTime(context) {
-	return function () {
-		const contextValue = get(context);
-		const gl = contextValue.gl;
-		const program = contextValue.program;
-		const timeLocation = gl.getUniformLocation(program, "time");
-		gl.uniform1f(timeLocation, performance.now());
-	};
+export function enableBlend() {
+	const { gl } = appContext;
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 }
 
-export function render(context, instances, drawMode) {
-	return function () {
-		const contextValue = get(context);
-		/** @type {WebGL2RenderingContext} **/
-		const gl = contextValue.gl;
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-		contextValue.loop && contextValue.loop();
-		// when using vertex array objects, you must bind it before rendering
-		gl.bindVertexArray(contextValue.vao);
-		console.log("drawMode", drawMode);
+export function disableBlend() {
+	const { gl } = appContext;
+	gl.disable(gl.BLEND);
+}
+
+export function setupTime() {
+	const { gl, program } = appContext;
+	const timeLocation = gl.getUniformLocation(program, "time");
+	gl.uniform1f(timeLocation, performance.now());
+}
+
+export function clearFrame() {
+	const { gl, backgroundColor } = appContext;
+
+	gl.clearColor(...backgroundColor);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+}
+
+export function render(mesh, instances, drawMode) {
+	return function render() {
+		const { gl, program } = appContext;
+
+		const positionSize = mesh.attributes.positionsSize ?? 3;
+
+		const attributeLength = mesh.attributes.elements
+			? mesh.attributes.elements.length
+			: mesh.attributes.positions.length / positionSize;
+
 		if (instances) {
-			gl.drawArraysInstanced(gl[drawMode], 0, contextValue.attributeLength, instances);
-		} else {
-			if (contextValue.hasElements) {
-				gl.drawElements(gl[drawMode], contextValue.attributeLength, gl.UNSIGNED_SHORT, 0);
+			if (mesh.attributes.elements) {
+				gl.drawElementsInstanced(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0, instances);
 			} else {
-				gl.drawArrays(gl[drawMode], 0, contextValue.attributeLength);
+				gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
+			}
+		} else {
+			if (mesh.attributes.elements) {
+				gl.drawElements(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0);
+			} else {
+				gl.drawArrays(gl[drawMode], 0, attributeLength);
 				//add mesh visualization (lines)
 				//gl.drawArrays(gl.LINE_STRIP, 0, contextValue.attributeLength);
 			}
@@ -92,252 +116,242 @@ export function render(context, instances, drawMode) {
 	};
 }
 
-export function createProgram(context) {
+export function bindVAO() {
+	const { gl, vao } = appContext;
+	gl.bindVertexArray(vao);
+}
+
+export function createProgram(programStore) {
 	return function createProgram() {
-		context = get(context);
-		if (context.program != null) {
-			return;
-		}
-		const gl = context.gl;
+		const { gl } = appContext;
 		const program = gl.createProgram();
-		context.program = program;
+		appContext.programMap.set(programStore, program);
+		appContext.vaoMap.set(programStore, new Map());
+		appContext.program = program;
 	};
 }
 
-export function linkProgram(context) {
-	return function () {
-		context = get(context);
-		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
-		gl.linkProgram(program);
-		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-			console.error("ERROR linking program!", gl.getProgramInfoLog(program));
+export function linkProgram() {
+	const { gl, program } = appContext;
+	gl.linkProgram(program);
+	if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+		console.error("ERROR linking program!", gl.getProgramInfoLog(program));
+	}
+}
+
+export function validateProgram() {
+	const { gl, program } = appContext;
+	gl.validateProgram(program);
+	if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
+		console.error("ERROR validating program!", gl.getProgramInfoLog(program));
+	}
+}
+
+export function useProgram() {
+	const { gl, program } = appContext;
+	gl.useProgram(program);
+}
+
+export function bindDefaultFramebuffer() {
+	const { gl, backgroundColor } = appContext;
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+	appContext.frameBufferWidth = gl.canvas.width;
+	appContext.frameBufferHeight = gl.canvas.height;
+	gl.clearColor(...backgroundColor);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+}
+
+export function createShaders(material, meshes, numPointLights, pointLightShader) {
+	return function createShaders() {
+		const { gl, program } = appContext;
+
+		let vertexDeclarations = "";
+		let vertexPositionModifiers = "";
+
+		let vertexAnimationsDeclaration = "";
+		let vertexAnimationsModifier = "";
+		const [mesh] = meshes;
+		const vertexAnimationComponents = mesh.animations?.filter(({ type }) => type === "vertex");
+		if (vertexAnimationComponents?.length > 0) {
+			vertexAnimationsDeclaration += vertexAnimationComponents.reduce((acc, component) => {
+				return acc + component.shader({ declaration: true });
+			}, "");
+			vertexAnimationsModifier += vertexAnimationComponents.reduce((acc, component) => {
+				return acc + component.shader({ position: true });
+			}, "");
+			vertexDeclarations += vertexAnimationsDeclaration;
+			vertexPositionModifiers += vertexAnimationsModifier;
 		}
-	};
-}
-
-export function validateProgram(context) {
-	return function () {
-		context = get(context);
-		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
-
-		gl.validateProgram(program);
-		if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-			console.error("ERROR validating program!", gl.getProgramInfoLog(program));
+		const vertexShaderSource = templateLiteralRenderer(defaultVertex, {
+			instances: false,
+			declarations: "",
+			positionModifier: "",
+		})({
+			instances: mesh.instances > 1,
+			declarations: vertexDeclarations,
+			positionModifier: vertexPositionModifiers,
+		});
+		//(vertexShaderSource);
+		const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+		gl.shaderSource(vertexShader, vertexShaderSource);
+		gl.compileShader(vertexShader);
+		if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+			console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
 		}
+		let specularIrradiance = "";
+		let specularDeclaration = "";
+		if (material.specular) {
+			specularDeclaration = material.specular.shader({ declaration: true });
+			specularIrradiance = material.specular.shader({ irradiance: true });
+		}
+		let diffuseMapDeclaration = "";
+		let diffuseMapSample = "";
+		if (material.diffuseMap) {
+			diffuseMapDeclaration = material.diffuseMap.shader({
+				declaration: true,
+				declarationNormal: false,
+				mapType: material.diffuseMap.type,
+			});
+			diffuseMapSample = material.diffuseMap.shader({
+				diffuseMapSample: true,
+				mapType: material.diffuseMap.type,
+				coordinateSpace: material.diffuseMap.coordinateSpace,
+			});
+		}
+		let normalMapDeclaration = "";
+		let normalMapSample = "";
+		if (material.normalMap) {
+			normalMapDeclaration = material.normalMap.shader({
+				declaration: true,
+				declarationNormal: true,
+				mapType: material.normalMap.type,
+			});
+			normalMapSample = material.normalMap.shader({
+				normalMapSample: true,
+				mapType: material.normalMap.type,
+			});
+		}
+		let roughnessMapDeclaration = "";
+		let roughnessMapSample = "";
+		if (material.roughnessMap) {
+			roughnessMapDeclaration = material.roughnessMap.shader({
+				declaration: true,
+				declarationNormal: false,
+				mapType: material.roughnessMap.type,
+			});
+			roughnessMapSample = material.roughnessMap.shader({
+				roughnessMapSample: true,
+				mapType: material.roughnessMap.type,
+			});
+		}
+
+		const fragmentShaderSource = templateLiteralRenderer(defaultFragment, {
+			defines: "",
+			declarations: "",
+			diffuseMapSample: "",
+			normalMapSample: "",
+			roughnessMapSample: "",
+			irradiance: "",
+			toneMapping: "",
+			numPointLights: 0,
+		})({
+			defines: objectToDefines({
+				...(numPointLights
+					? {
+							NUM_POINT_LIGHTS: numPointLights,
+						}
+					: undefined),
+			}),
+			declarations: [
+				...(numPointLights ? [pointLightShader({ declaration: true, irradiance: false })] : []),
+				...(appContext.toneMappings?.length > 0
+					? [...appContext.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
+					: []),
+				...(material.specular ? [specularDeclaration] : []),
+				...(material.diffuseMap ? [diffuseMapDeclaration] : []),
+				...(material.normalMap ? [normalMapDeclaration] : []),
+				...(material.roughnessMap ? [roughnessMapDeclaration] : []),
+			].join("\n"),
+			diffuseMapSample,
+			normalMapSample,
+			roughnessMapSample,
+			irradiance: [
+				...(numPointLights ? [pointLightShader({ declaration: false, irradiance: true, specularIrradiance })] : []),
+			].join("\n"),
+			toneMapping: [
+				...(appContext.toneMappings?.length > 0
+					? [...appContext.toneMappings.map((tm) => tm.shader({ color: true }))]
+					: []),
+			].join("\n"),
+			//todo, remove this after decoupling the point light shader
+			numPointLights,
+		});
+		const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+		gl.shaderSource(fragmentShader, fragmentShaderSource);
+		gl.compileShader(fragmentShader);
+		if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+			console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
+		}
+		gl.attachShader(program, vertexShader);
+		gl.attachShader(program, fragmentShader);
 	};
 }
-
-export function useProgram(context) {
-	return function () {
-		context = get(context);
-		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
-		gl.useProgram(program);
-	};
-}
-
-export function endProgramSetup(context) {
-	return function () {
-		context = get(context);
-		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
-		if (context.program === context.programUsed) {
+/**
+ *
+ * @param {SvelteGLMaterial} param0
+ * @returns {()=>void}
+ */
+export function setupMeshColor({ diffuse, metalness, opacity }) {
+	return function setupMeshColor() {
+		const { gl, program } = appContext;
+		const colorLocation = gl.getUniformLocation(program, "diffuse");
+		if (colorLocation == null) {
 			return;
 		}
-		gl.linkProgram(program);
-		if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-			console.error("ERROR linking program!", gl.getProgramInfoLog(program));
-		}
-		gl.validateProgram(program);
-		if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-			console.error("ERROR validating program!", gl.getProgramInfoLog(program));
-		}
-		gl.useProgram(program);
-		context.programUsed = program;
-	};
-}
-
-export function createShaders() {
-	return function (context, mesh) {
-		return function () {
-			context = get(context);
-			const gl = context.gl;
-			const program = context.program;
-
-			let vertexDeclarations = "";
-			let vertexPositionModifiers = "";
-
-			let vertexAnimationsDeclaration = "";
-			let vertexAnimationsModifier = "";
-			const vertexAnimationComponents = mesh.animations?.filter(({ type }) => type === "vertex");
-			if (vertexAnimationComponents.length > 0) {
-				vertexAnimationsDeclaration += vertexAnimationComponents.reduce((acc, component) => {
-					return acc + component.shader({ declaration: true });
-				}, "");
-				vertexAnimationsModifier += vertexAnimationComponents.reduce((acc, component) => {
-					return acc + component.shader({ position: true });
-				}, "");
-				vertexDeclarations += vertexAnimationsDeclaration;
-				vertexPositionModifiers += vertexAnimationsModifier;
-			}
-			const vertexShaderSource = templateLiteralRenderer(defaultVertex, {
-				instances: false,
-				declarations: "",
-				positionModifier: "",
-			})({
-				instances: mesh.instances > 1,
-				declarations: vertexDeclarations,
-				positionModifier: vertexPositionModifiers,
-			});
-			//console.log(vertexShaderSource);
-			const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-			gl.shaderSource(vertexShader, vertexShaderSource);
-			gl.compileShader(vertexShader);
-			if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-				console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
-			}
-			let specularIrradiance = "";
-			let specularDeclaration = "";
-			if (mesh.material?.specular) {
-				specularDeclaration = mesh.material.specular.shader({ declaration: true });
-				specularIrradiance = mesh.material.specular.shader({ irradiance: true });
-			}
-			let diffuseMapDeclaration = "";
-			let diffuseMapSample = "";
-			if (mesh.material?.diffuseMap) {
-				diffuseMapDeclaration = mesh.material.diffuseMap.shader({
-					declaration: true,
-					mapType: mesh.material.diffuseMap.type,
-				});
-				diffuseMapSample = mesh.material.diffuseMap.shader({
-					diffuseMapSample: true,
-					mapType: mesh.material.diffuseMap.type,
-					coordinateSpace: mesh.material.diffuseMap.coordinateSpace,
-				});
-			}
-			let normalMapDeclaration = "";
-			let normalMapSample = "";
-			if (mesh.material?.normalMap) {
-				normalMapDeclaration = mesh.material.normalMap.shader({
-					declaration: true,
-					mapType: mesh.material.normalMap.type,
-				});
-				normalMapSample = mesh.material.normalMap.shader({
-					normalMapSample: true,
-					mapType: mesh.material.normalMap.type,
-				});
-			}
-			const fragmentShaderSource = templateLiteralRenderer(defaultFragment, {
-				defines: "",
-				declarations: "",
-				diffuseMapSample: "",
-				normalMapSample: "",
-				irradiance: "",
-				toneMapping: "",
-				numPointLights: 0,
-			})({
-				defines: objectToDefines({
-					...(context.numPointLights
-						? {
-								NUM_POINT_LIGHTS: context.numPointLights,
-							}
-						: undefined),
-				}),
-				declarations: [
-					...(context.numPointLights ? [context.pointLightShader({ declaration: true, irradiance: false })] : []),
-					...(context.toneMappings?.length > 0
-						? [...context.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
-						: []),
-					...(mesh.material?.specular ? [specularDeclaration] : []),
-					...(mesh.material?.diffuseMap ? [diffuseMapDeclaration] : []),
-					...(mesh.material?.normalMap ? [normalMapDeclaration] : []),
-				].join("\n"),
-				diffuseMapSample,
-				normalMapSample,
-				irradiance: [
-					...(context.numPointLights
-						? [context.pointLightShader({ declaration: false, irradiance: true, specularIrradiance })]
-						: []),
-				].join("\n"),
-				toneMapping: [
-					...(context.toneMappings?.length > 0 ? [...context.toneMappings.map((tm) => tm.shader({ color: true }))] : []),
-				].join("\n"),
-				//todo, remove this after decoupling the point light shader
-				numPointLights: context.numPointLights,
-			});
-			const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-			gl.shaderSource(fragmentShader, fragmentShaderSource);
-			//console.log(fragmentShaderSource);
-			gl.compileShader(fragmentShader);
-			if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-				console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
-			}
-			gl.attachShader(program, vertexShader);
-			gl.attachShader(program, fragmentShader);
-		};
-	};
-}
-
-export function setupMeshColor(context, { diffuse, metalness }) {
-	return function () {
-		context = get(context);
-		const gl = context.gl;
-		const program = context.program;
-		const colorLocation = gl.getUniformLocation(program, "diffuse");
 		gl.uniform3fv(colorLocation, new Float32Array(diffuse.map(SRGBToLinear)));
+		if (metalness == null) {
+			console.log("metalness is null, material won't display correctly");
+		}
 		const metalnessLocation = gl.getUniformLocation(program, "metalness");
 		gl.uniform1f(metalnessLocation, metalness);
+		const opacityLocation = gl.getUniformLocation(program, "opacity");
+		gl.uniform1f(opacityLocation, opacity ?? 1);
 	};
 }
 
-export function setupAmbientLight(context, ambientLightColor) {
-	return function () {
-		context = get(context);
-		const { gl, program } = context;
-		const ambientLightColorLocation = gl.getUniformLocation(program, "ambientLightColor");
-		gl.uniform3fv(ambientLightColorLocation, new Float32Array(ambientLightColor));
+export function setupAmbientLight(programOverride, ambientLightColorOverride) {
+	const { gl, program, ambientLightColor } = appContext;
+	const currentProgram = programOverride ?? program;
+	const currentAmbientLightColor = ambientLightColorOverride ?? ambientLightColor;
+	const ambientLightColorLocation = gl.getUniformLocation(currentProgram, "ambientLightColor");
+	gl.uniform3fv(ambientLightColorLocation, new Float32Array(currentAmbientLightColor));
+}
+
+export function getCameraProjectionView(camera, width, height) {
+	return {
+		projection: perspective(createZeroMatrix(), toRadian(camera.fov), width / height, camera.near, camera.far),
+		view: lookAt(createZeroMatrix(), camera.position, camera.target, camera.up),
 	};
 }
 
-export function setupCamera(context, camera) {
+export function setupCamera(camera) {
 	return function createCamera() {
-		context = get(context);
-		const gl = context.gl;
-		const program = context.program;
+		const { gl, program, canvas } = appContext;
+		const { projection, view } = getCameraProjectionView(camera, canvas.width, canvas.height);
 		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projection");
-
-		const fieldOfViewInRadians = toRadian(camera.fov);
-		const aspectRatio = context.canvas.width / context.canvas.height;
-		const nearClippingPlaneDistance = camera.near;
-		const farClippingPlaneDistance = camera.far;
-		let projection = new Float32Array(16);
-		projection = perspective(
-			projection,
-			fieldOfViewInRadians,
-			aspectRatio,
-			nearClippingPlaneDistance,
-			farClippingPlaneDistance,
-		);
-
 		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
 		// view matrix
 		const viewLocation = gl.getUniformLocation(program, "view");
-		const view = new Float32Array(16);
-		lookAt(view, camera.position, camera.target, camera.up);
 		gl.uniformMatrix4fv(viewLocation, false, view);
 
 		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");
 		gl.uniform3fv(cameraPositionLocation, camera.position);
 	};
 }
+
 function getEuler(out, quat) {
 	let x = quat[0],
 		y = quat[1],
@@ -369,28 +383,35 @@ function getEuler(out, quat) {
 	return out;
 }
 
-export function setupTransformMatrix(context, transformMatrix, numInstances) {
+export function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances) {
 	if (numInstances == null) {
-		return function createTransformMatrix() {
-			context = get(context);
-			const gl = context.gl;
-			const program = context.program;
-			if (!transformMatrix) {
-				transformMatrix = new Float32Array(16);
-				identity(transformMatrix);
-			}
-			context.transformMatrix = transformMatrix;
+		return function setupTransformMatrix() {
+			const { gl, program } = appContext;
 			const worldLocation = gl.getUniformLocation(program, "world");
-			gl.uniformMatrix4fv(worldLocation, false, transformMatrix);
+			if (worldLocation == null) {
+				return;
+			}
+			//todo check why we have that, we shouldn't need this
+			if (!transformMatrix) {
+				transformMatrix = identity(createZeroMatrix());
+			}
+			gl.uniformMatrix4fv(worldLocation, false, get(transformMatrix));
 		};
 	} else {
-		return function createTransformMatrices() {
+		return function setupTransformMatrix() {
+			if (transformMatrix == null) {
+				return;
+			}
 			const attributeName = "world";
-			/** @type {{gl: WebGL2RenderingContext}} **/
-			context = get(context);
-			const { gl, program, vao } = context;
+			const { gl, program, vaoMap } = appContext;
 
-			const transformMatricesWindows = (context.transformMatricesWindows = context.transformMatricesWindows || []);
+			//TODO, clean that it's useless since we overwrite it anyway and storing this way is not good
+			let transformMatricesWindows;
+			if (appContext.transformMatricesWindows == null) {
+				transformMatricesWindows = [];
+			} else {
+				transformMatricesWindows = appContext.transformMatricesWindows;
+			}
 
 			const transformMatricesValues = transformMatrix.reduce((acc, m) => [...acc, ...get(m)], []);
 			const transformMatricesData = new Float32Array(transformMatricesValues);
@@ -410,11 +431,17 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 				rotateY(mat, mat, toRadian(count * 10));
 				scale(mat, mat, [0.5, 0.5, 0.5]);
 			});
-*/
-			//context.transformMatrix = transformMatricesWindows;
+			*/
+			const vao = vaoMap.get(programStore).get(mesh);
+
 			gl.bindVertexArray(vao);
 			const matrixBuffer = gl.createBuffer();
-			context.matrixBuffer = matrixBuffer;
+
+			setAppContext({
+				matrixBuffer,
+				transformMatricesWindows,
+			});
+
 			const transformMatricesLocation = gl.getAttribLocation(program, attributeName);
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, transformMatricesData.byteLength, gl.DYNAMIC_DRAW);
@@ -442,49 +469,56 @@ export function setupTransformMatrix(context, transformMatrix, numInstances) {
 		};
 	}
 }
-export function updateTransformMatrix(context, worldMatrix) {
-	context = get(context);
-	const gl = context.gl;
-	const program = context.program;
+export function updateTransformMatrix(programStore, worldMatrix) {
+	const { gl, programMap } = appContext;
+	const program = programMap.get(programStore);
 	const worldLocation = gl.getUniformLocation(program, "world");
+	gl.useProgram(program);
 	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
 }
-
-export function updateInstanceTransformMatrix(context, worldMatrix, instanceIndex) {
-	context = get(context);
-	/** @type{{gl:WebGL2RenderingContext}} **/
-	const { gl, program, vao, matrixBuffer } = context;
-	gl.bindVertexArray(vao);
+export function updateInstanceTransformMatrix(programStore, mesh, newMatrix, instanceIndex) {
+	const { gl, vaoMap, matrixBuffer } = appContext;
+	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
 	const bytesPerMatrix = 4 * 16;
-	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, worldMatrix);
+	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, newMatrix);
 	gl.bindVertexArray(null);
+
+	updateInstanceNormalMatrix(programStore, mesh, derivateNormalMatrix(newMatrix), instanceIndex);
 }
 
-export function setupNormalMatrix(context, numInstances) {
+export function setupNormalMatrix(programStore, mesh, numInstances) {
 	if (numInstances == null) {
-		return function createNormalMatrix() {
-			/** @type{{gl:WebGL2RenderingContext}} **/
-			const { gl, program, transformMatrix } = get(context);
+		return function setupNormalMatrix() {
+			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
+			const { gl, program } = appContext;
 			const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-			context.normalMatrixLocation = normalMatrixLocation;
-			gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(transformMatrix));
+			if (normalMatrixLocation == null) {
+				return;
+			}
+			const normalMatrix = derivateNormalMatrix(get(mesh.matrix));
+			gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
 		};
 	} else {
-		return function createNormalMatrices() {
-			context = get(context);
-			/** @type{{gl:WebGL2RenderingContext}} **/
-			const { gl, program, transformMatrix, vao, transformMatricesWindows } = context;
-			gl.bindVertexArray(vao);
+		return function setupNormalMatrix() {
+			const { gl, program, vaoMap, transformMatricesWindows } = appContext;
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
+			if (normalMatricesLocation == null) {
+				return;
+			}
+			const vao = vaoMap.get(programStore).get(mesh);
+
+			gl.bindVertexArray(vao);
 			const normalMatricesValues = [];
 
 			for (let i = 0; i < numInstances; i++) {
 				normalMatricesValues.push(...derivateNormalMatrix(transformMatricesWindows[i]));
 			}
 			const normalMatrices = new Float32Array(normalMatricesValues);
+
 			const normalMatrixBuffer = gl.createBuffer();
-			context.normalMatrixBuffer = normalMatrixBuffer;
+			//TODO store this in a map ?
+			appContext.normalMatrixBuffer = normalMatrixBuffer;
 			gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, normalMatrices.byteLength, gl.DYNAMIC_DRAW);
 
@@ -511,14 +545,16 @@ export function setupNormalMatrix(context, numInstances) {
 		};
 	}
 }
-
-export function updateNormalMatrix({ gl, program }, normalMatrix) {
+export function updateNormalMatrix(programStore, worldMatrix) {
+	const { gl, programMap } = appContext;
+	const program = programMap.get(programStore);
 	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-	gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+	gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(worldMatrix));
 }
 
-export function updateInstanceNormalMatrix({ gl, program, vao, normalMatrixBuffer }, normalMatrix, instanceIndex) {
-	gl.bindVertexArray(vao);
+export function updateInstanceNormalMatrix(programStore, mesh, normalMatrix, instanceIndex) {
+	const { gl, vaoMap, normalMatrixBuffer } = appContext;
+	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
 	const bytesPerMatrix = 4 * 16;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, normalMatrix);
@@ -549,18 +585,18 @@ function getBuffer(variable) {
 	};
 }
 
-export function setupAttributes(context, mesh) {
-	return function () {
-		context = get(context);
-		/** @type {WebGL2RenderingContext} **/
-		const gl = context.gl;
-		const program = context.program;
-		context.attributeLength = mesh.attributes.elements
-			? mesh.attributes.elements.length
-			: mesh.attributes.positions.length / 3;
-
-		const { positions, normals, elements, uvs } = mesh.attributes;
-		const vao = (context.vao = gl.createVertexArray());
+export function setupAttributes(programStore, mesh) {
+	return function setupAttributes() {
+		const { gl, program, vaoMap } = appContext;
+		const { positions, normals, elements, uvs, positionsSize } = mesh.attributes;
+		let vao;
+		if (vaoMap.has(programStore) && vaoMap.get(programStore).has(mesh)) {
+			vao = vaoMap.get(programStore).get(mesh);
+		} else {
+			vao = gl.createVertexArray();
+			vaoMap.get(programStore).set(mesh, vao);
+		}
+		appContext.vao = vao;
 		gl.bindVertexArray(vao);
 		const {
 			data: positionsData,
@@ -574,26 +610,30 @@ export function setupAttributes(context, mesh) {
 		gl.bufferData(gl.ARRAY_BUFFER, positionsData, gl.STATIC_DRAW);
 		const positionLocation = gl.getAttribLocation(program, "position");
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer); //todo check if redundant
-		gl.vertexAttribPointer(positionLocation, 3, gl.FLOAT, false, positionsByteStride, positionsByteOffset);
+		const size = positionsSize != null ? positionsSize : 3;
+		gl.vertexAttribPointer(positionLocation, size, gl.FLOAT, false, positionsByteStride, positionsByteOffset);
 		gl.enableVertexAttribArray(positionLocation);
 		//normal
-		const {
-			data: normalsData,
-			interleaved: normalsInterleaved,
-			byteStride: normalsByteStride,
-			byteOffset: normalsByteOffset,
-		} = getBuffer(normals);
-		if (!normalsInterleaved) {
-			const normalBuffer = gl.createBuffer();
-			gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, normalsData, gl.STATIC_DRAW);
-			gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
+		if (mesh.attributes.normals) {
+			const {
+				data: normalsData,
+				interleaved: normalsInterleaved,
+				byteStride: normalsByteStride,
+				byteOffset: normalsByteOffset,
+			} = getBuffer(normals);
+			if (!normalsInterleaved) {
+				const normalBuffer = gl.createBuffer();
+				gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+				gl.bufferData(gl.ARRAY_BUFFER, normalsData, gl.STATIC_DRAW);
+				gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
+			}
+			const normalLocation = gl.getAttribLocation(program, "normal");
+			if (normalLocation != -1) {
+				gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
+				gl.enableVertexAttribArray(normalLocation);
+			}
 		}
-		const normalLocation = gl.getAttribLocation(program, "normal");
-		gl.vertexAttribPointer(normalLocation, 3, gl.FLOAT, false, normalsByteStride, normalsByteOffset);
-		gl.enableVertexAttribArray(normalLocation);
 		if (mesh.attributes.elements) {
-			context.hasElements = true;
 			const elementsData = new Uint16Array(mesh.attributes.elements);
 			const elementBuffer = gl.createBuffer();
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
@@ -605,9 +645,11 @@ export function setupAttributes(context, mesh) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, uvsData, gl.STATIC_DRAW);
 			const uvLocation = gl.getAttribLocation(program, "uv");
-			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
-			gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
-			gl.enableVertexAttribArray(uvLocation);
+			if (uvLocation != -1) {
+				gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+				gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
+				gl.enableVertexAttribArray(uvLocation);
+			}
 		}
 
 		gl.bindVertexArray(null);

@@ -1,7 +1,7 @@
 import wobblyShader from "./wobbly.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
 import { get } from "svelte/store";
-import { appContext } from "../../store/engine-refactor.js";
+import { appContext } from "../../store/engine.js";
 
 /**
  * @typedef WobblyProps
