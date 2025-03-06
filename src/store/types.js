@@ -18,6 +18,7 @@
  * @typedef {Object} MaterialsCustomStore
  * @property {MaterialsStore['subscribe']} subscribe
  * @property {MaterialsStore['set']} set
+ * @property {MaterialsStore['update']} update
  * @property {number} revision
  */
 

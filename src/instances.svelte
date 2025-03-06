@@ -18,10 +18,11 @@ import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { cloneMatrix, createZeroMatrix, toRadian } from "./geometries/common.js";
 import { get } from "svelte/store";
+  import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 
 let canvas;
 let cube;
-const numInstances = 500;
+const numInstances = 512;
 onMount(async () => {
 	$renderer = {
 		...$renderer,
@@ -32,7 +33,7 @@ onMount(async () => {
 
 	$camera = {
 		...$camera,
-		position: [0, 5, -5],
+		position: [0, 5, -20],
 		target: [0, 1, 0],
 		fov: 75,
 	};
@@ -49,27 +50,47 @@ onMount(async () => {
 	const identityMatrix = identity(createZeroMatrix());
 
 	let matrices = new Array(numInstances).fill(0).map((_, index) => {
-		const count = index - Math.floor(numInstances / 2);
 		let mat = cloneMatrix(identityMatrix);
-		// set y so that there are rows of cubes of 12 cubes each
-		const y = Math.floor(count / 12) - 6;
-		const x = (count % 12) - 6;
-		//transform the model matrix
-		translate(mat, mat, [x * 2, y * 2, 0]);
-
-		rotateY(mat, mat, toRadian(count * 10));
+		
+		// Calculate a single cubic grid
+		const gridSize = Math.ceil(Math.cbrt(numInstances));
+		
+		// Calculate x, y, z positions within the grid (0-based indices)
+		const x = index % gridSize;
+		const y = Math.floor(index / gridSize) % gridSize;
+		const z = Math.floor(index / (gridSize * gridSize));
+		
+		// Center the grid by subtracting half the grid size
+		const offsetX = x - (gridSize - 1) / 2;
+		const offsetY = y - (gridSize - 1) / 2;
+		const offsetZ = z - (gridSize - 1) / 2;
+		
+		// Apply transformations
+		translate(mat, mat, [offsetX * 2, offsetY * 2, offsetZ * 2]);
+		
+		// Add some rotation variation based on index
+		rotateY(mat, mat, toRadian(index * 10));
 		scale(mat, mat, [0.5, 0.5, 0.5]);
+		
 		return mat;
 	});
 
 	const light = createLightStore(
 		createPointLight({
-			position: [-2, 3, -3],
-			color: [1, 1, 1],
-			intensity: 20,
-			cutoffDistance: 0,
-			decayExponent: 2,
-		}),
+			"color": [
+			  1,
+			  1,
+			  1
+			],
+			"intensity": 27,
+			"position": [
+			  -2,
+			  12,
+			  -12
+			],
+			"cutoffDistance": 30,
+			"decayExponent": 1.5
+		  }),
 	);
 
 	cube = create3DObject({
@@ -107,3 +128,4 @@ function animate() {
 </script>
 <canvas bind:this={canvas}></canvas>
 <Menu />
+<DebugPanel />

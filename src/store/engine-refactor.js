@@ -357,6 +357,7 @@ export const renderPasses = writable([]);
  * @typedef {Object} MaterialCustomStore
  * @property {MaterialStore['subscribe']} subscribe
  * @property {MaterialStore['set']} set
+ * @property {MaterialStore['update']} update
  */
 /**
  * @param {SvelteGLMaterial} initialProps
@@ -365,7 +366,7 @@ export const renderPasses = writable([]);
 export function createMaterialStore(initialProps) {
 	/** @type {MaterialStore} */
 	const store = writable(initialProps);
-	const { subscribe, set } = store;
+	const { subscribe, set, update } = store;
 	const material = {
 		subscribe,
 		set: (props) => {
@@ -375,6 +376,7 @@ export function createMaterialStore(initialProps) {
 
 			//renderer.set(get(renderer));
 		},
+		update,
 	};
 	return material;
 }
@@ -385,7 +387,7 @@ export function createMaterialStore(initialProps) {
 function createMaterials() {
 	/** @type {MaterialsStore} */
 	const store = writable([]);
-	const { subscribe, set } = store;
+	const { subscribe, set, update } = store;
 	const revisionStore = writable(0);
 	return {
 		subscribe,
@@ -393,6 +395,7 @@ function createMaterials() {
 			set(next);
 			revisionStore.update((revision) => revision + 1);
 		},
+		update,
 		get revision() {
 			return get(revisionStore);
 		},
