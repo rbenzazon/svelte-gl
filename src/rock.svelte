@@ -19,6 +19,8 @@ import { createSpecular } from "./material/specular/specular.js";
 import { createCylinder } from "./geometries/cylinder.js";
 import { createPolyhedron } from "./geometries/polyhedron.js";
 import { cloneMatrix, createFlatShadedNormals, createZeroMatrix } from "./geometries/common.js";
+import { createDebugNormalsProgram } from "./store/debug-program.js";
+import { createDebugObject } from "./geometries/debug.js";
 
 let canvas;
 let light1;
@@ -175,14 +177,26 @@ onMount(async () => {
 	const cylinderMatrix = identity(createZeroMatrix());
 	translate(cylinderMatrix, cylinderMatrix, [0, 1, 0]);
 
+	const debugProgram = createMaterialStore({
+		diffuse: [1, 0, 0],
+		metalness: 0,
+		program: createDebugNormalsProgram(),
+	});
+	const debugNormalMesh = createDebugObject({
+		...cylinderGeometry,
+		matrix: cylinderMatrix,
+		material: debugProgram,
+	});
+	console.log("debugNormalMesh", debugNormalMesh);
+
 	cylinder = create3DObject({
 		...cylinderGeometry,
 		material: cylinderMaterial,
 		matrix: cylinderMatrix,
 	});
-	$materials = [...$materials, meshMaterial, ennemi1Material, cylinderMaterial];
+	$materials = [...$materials, meshMaterial, ennemi1Material, cylinderMaterial, debugProgram];
 
-	$scene = [...$scene, /*leftRocks,rightRocks,*/ ennemi1, cylinder];
+	$scene = [...$scene, /*leftRocks,rightRocks, ennemi1,*/ cylinder, create3DObject(debugNormalMesh)];
 
 	$lights = [...$lights, light1, light2];
 
@@ -223,10 +237,10 @@ function animate() {
 	translate(ennemiMatrix, ennemiMatrix, [x, y, 0]);
 	rotateX(ennemiMatrix, ennemiMatrix, Math.PI / 2);
 	rotateZ(ennemiMatrix, ennemiMatrix, performance.now() * 0.005);
-	ennemi1.matrix.set(ennemiMatrix);*/
+	ennemi1.matrix.set(ennemiMatrix);
 	const cylinderMatrix = get(cylinder.matrix);
 	rotateX(cylinderMatrix, cylinderMatrix, 0.001);
-	cylinder.matrix.set(cylinderMatrix);
+	cylinder.matrix.set(cylinderMatrix);*/
 }
 </script>
 <canvas bind:this={canvas}></canvas>

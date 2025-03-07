@@ -6,13 +6,15 @@ import { createMaterialStore, materials } from "./store/materials.js";
 import { createLightStore, lights } from "./store/lights.js";
 import { renderer } from "./store/renderer.js";
 import { camera } from "./store/camera.js";
-import { identity, scale, translate } from "gl-matrix/esm/mat4.js";
+import { create, identity, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createCube } from "./geometries/cube.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { createZeroMatrix } from "./geometries/common.js";
+import { createDebugObject } from "./geometries/debug.js";
+import { createDebugNormalsProgram } from "./store/debug-program.js";
 
 let canvas;
 onMount(async () => {
@@ -44,12 +46,23 @@ onMount(async () => {
 
 	const matrix = identity(createZeroMatrix());
 
+	const debugProgram = createMaterialStore({
+		diffuse: [1, 0, 0],
+		metalness: 0,
+		program: createDebugNormalsProgram(),
+	});
+	const debugNormalMesh = createDebugObject({
+		...cubeMesh,
+		matrix,
+		material: debugProgram,
+	});
+
 	const material = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],
 		metalness: 0,
 	});
 
-	$materials = [...$materials, material];
+	$materials = [...$materials, material, debugProgram];
 
 	$scene = [
 		...$scene,
@@ -58,6 +71,7 @@ onMount(async () => {
 			matrix,
 			material,
 		}),
+		create3DObject(debugNormalMesh),
 	];
 	$lights = [...$lights, light];
 

@@ -1,8 +1,8 @@
 import { normalize } from "gl-matrix/esm/vec3.js";
-import { getPositionFromPolar } from "./common";
+import { createVec3, getPositionFromPolar } from "./common";
 import { drawModes } from "../store/webgl";
 
-export function createCylinder(radius = 1, height = 1, radialSegment = 1, heightSegment = 1) {
+export function createCylinder(radius = 1, height = 1, radialSegment = 1, heightSegment = 1, smoothNormals = true) {
 	radialSegment = Math.max(radialSegment, 1);
 	heightSegment = Math.max(heightSegment, 1);
 	const halfHeight = height / 2;
@@ -20,11 +20,14 @@ export function createCylinder(radius = 1, height = 1, radialSegment = 1, height
 	for (let ir = 0; ir < radialSegment; ir++) {
 		const radialAngle = angle * ir;
 		const radialNormalAngle = angle * (ir + 0.5);
-		const normal = getPositionFromPolar(1, Math.PI / 2, radialAngle);
 		const x = Math.cos(radialAngle);
 		const z = Math.sin(radialAngle);
 		loopPositions.push([x * radius, z * radius]);
-		loopNormals.push(normalize(normal, normal));
+		if (!smoothNormals) {
+			loopNormals.push(normalize(createVec3(), [Math.cos(radialNormalAngle), 0, Math.sin(radialNormalAngle)]));
+		} else {
+			loopNormals.push(normalize(createVec3(), [x, 0, z]));
+		}
 		loopUVs.push([x * uVRadius, z * uVRadius]);
 	}
 	//top and bottom caps
@@ -76,7 +79,18 @@ export function createCylinder(radius = 1, height = 1, radialSegment = 1, height
 				[loopPositions[nextIndex][0], nextY, loopPositions[nextIndex][1]],
 				[loopPositions[ir][0], nextY, loopPositions[ir][1]],
 			);
-			normals.push(loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir]);
+			if (!smoothNormals) {
+				normals.push(loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir], loopNormals[ir]);
+			} else {
+				normals.push(
+					loopNormals[ir],
+					loopNormals[nextIndex],
+					loopNormals[nextIndex],
+					loopNormals[ir],
+					loopNormals[nextIndex],
+					loopNormals[ir],
+				);
+			}
 			const uvX = 0.5 - ir / radialSegment / 2;
 			const uvY = 0.5 + iy / heightSegment / 2;
 			const uvXNext = 0.5 - nextIndex / radialSegment / 2;

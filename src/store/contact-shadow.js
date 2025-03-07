@@ -125,7 +125,7 @@ export function createContactShadowPass(
 	return {
 		programs: [
 			{
-				createProgram: createShadowProgram(textureWidth, textureHeight),
+				createProgram: createShadowProgram(),
 				setupProgram: [
 					createShaders,
 					linkProgram,
@@ -135,7 +135,6 @@ export function createContactShadowPass(
 				setupMaterial: [setupDarknessUniform(darkness)],
 				useProgram,
 				selectProgram,
-				bindTextures: [],
 				setupCamera: setupShadowCamera(projection, view),
 				setFrameBuffer: setFrameBuffer(getGeometryFBO, textureWidth, textureHeight),
 				allMeshes: true,
@@ -155,7 +154,6 @@ export function createContactShadowPass(
 				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL, getGeometryTexture),
-				bindTextures: [],
 				setupCamera: () => {},
 				setFrameBuffer: setFrameBuffer(getHorizontalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
@@ -170,7 +168,6 @@ export function createContactShadowPass(
 				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL, getHorizontalBlurTexture),
-				bindTextures: [],
 				setupCamera: () => {},
 				setFrameBuffer: setFrameBuffer(getVerticalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
@@ -275,7 +272,7 @@ function createShaders() {
 	gl.attachShader(program, fragmentShader);
 }
 
-function createShadowProgram(textureWidth, textureHeight) {
+function createShadowProgram() {
 	return function createShadowProgram(programStore) {
 		return function createShadowProgram() {
 			const { gl, programMap, vaoMap } = appContext;

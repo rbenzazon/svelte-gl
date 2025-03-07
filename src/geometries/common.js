@@ -4,7 +4,7 @@ import { subtract as subtractVec3, cross as crossVec3, normalize as normalizeVec
  * @returns {vec3}
  */
 export function createVec3() {
-	return /** @type {vec3} */(new Array(3).fill(0));
+	return /** @type {vec3} */ (new Array(3).fill(0));
 }
 
 export function multiplyScalarVec3(a, scalar) {

@@ -23,7 +23,7 @@ function createRenderer() {
 		//value
 		backgroundColor: 0xffffff,
 		//value
-		ambientLightColor: /** @type {vec2} */([0xffffff, 0]),
+		ambientLightColor: /** @type {vec2} */ ([0xffffff, 0]),
 		//values
 		toneMappings: [],
 		//value
@@ -105,17 +105,19 @@ function createRenderer() {
 		 */
 		get processed() {
 			const values = get(store);
-			return /** @type {SvelteGLProcessedRenderer} */ (Object.entries(values)
-				.map(([key, value]) => {
-					if (processed.has(key)) {
-						return [key, processed.get(key)];
-					}
-					return [key, value];
-				})
-				.reduce((acc, [key, value]) => {
-					acc[key] = value;
-					return acc;
-				}, {}));
+			return /** @type {SvelteGLProcessedRenderer} */ (
+				Object.entries(values)
+					.map(([key, value]) => {
+						if (processed.has(key)) {
+							return [key, processed.get(key)];
+						}
+						return [key, value];
+					})
+					.reduce((acc, [key, value]) => {
+						acc[key] = value;
+						return acc;
+					}, {})
+			);
 		},
 		get revision() {
 			return get(revisionStore);

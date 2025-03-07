@@ -82,6 +82,7 @@
  * @property {import("src/texture/texture").SvelteGLTexture} [roughnessMap]
  * @property {boolean} [transparent]
  * @property {number} [opacity]
+ * @property {import("./programs.js").SvelteGLProgram} [program]
  */
 /**
  * @typedef {Object} SvelteGLMeshAnimation
@@ -130,7 +131,7 @@
  * @property {mat4[]} matrices
  */
 /**
- * mesh data before create3DObject wit static material data
+ * mesh data before create3DObject with static material data
  * @typedef {SvelteGLBaseMeshData & SvelteGLBaseMeshDataMaterial & (SvelteGLSingleMeshData | SvelteGLInstancedMeshData)} SvelteGLMeshData
  */
 /**
@@ -155,6 +156,9 @@
  * @property {import("./webgl").DrawMode} drawMode
  * @property {import("./materials.js").MaterialCustomStore} material
  * @property {SvelteGLMeshAnimation[]} [animations]
+ * @property {MatrixStore} [matrix]
+ * @property {number} [instances]
+ * @property {MatrixStore[]} [matrices]
  */
 /**
  * @typedef {Object} SvelteGLSingleMesh

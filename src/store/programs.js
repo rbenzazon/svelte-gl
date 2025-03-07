@@ -87,9 +87,9 @@ export function sortMeshesByZ(programs) {
  * @property {Function[]} setupMaterial
  * @property {Function} useProgram
  * @property {Function} selectProgram
- * @property {Function} setupCamera
- * @property {Function} setFrameBuffer
- * @property {Function[]} bindTextures
+ * @property {Function[]} [bindTextures]
+ * @property {Function} [setFrameBuffer]
+ * @property {Function} [setupCamera]
  * @property {SvelteGLMaterial} [material]
  * @property {SvelteGLMesh[]} [meshes]
  * @property {Function[]} [updateProgram]
@@ -174,6 +174,11 @@ export const programs = derived(
 		const next = [
 			...prePasses,
 			...sortedPrograms.map((p, index) => {
+				if (p.material.program) {
+					p.material.program.meshes = p.meshes;
+					reconciliateCacheMap(p, p.material.program);
+					return p.material.program;
+				}
 				const firstCall = index === 0;
 				const program = {
 					...p,

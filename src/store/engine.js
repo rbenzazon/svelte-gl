@@ -142,6 +142,14 @@ function selectMesh(programStore, mesh) {
 export let appContext = {
 	programMap: new Map(),
 	vaoMap: new Map(),
+	gl: null,
+	program: null,
+	vao: null,
+	canvas: null,
+	backgroundColor: null,
+	ambientLightColor: null,
+	toneMappings: null,
+	existingProgram: false,
 };
 
 export function setAppContext(context) {
@@ -274,7 +282,12 @@ const renderPipeline = derived(
 				return [
 					...acc,
 					...(appContext.programMap.has(program)
-						? [program.selectProgram(program), program.useProgram, ...program.bindTextures, ...program.updateProgram]
+						? [
+								program.selectProgram(program),
+								program.useProgram,
+								...(program.bindTextures ? [...program.bindTextures] : []),
+								...program.updateProgram,
+							]
 						: [
 								program.createProgram(program),
 								...program.setupProgram,
