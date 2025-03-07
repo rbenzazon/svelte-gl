@@ -77,7 +77,6 @@ onMount(async () => {
 			decayExponent: 2,
 		}),
 	);
-	console.log("loadedMesh.material", loadedMesh.material);
 	loadedMesh.material.metalness = 0.05;
 	loadedMesh.material.specular = createSpecular({
 		...loadedMesh.material.specular.props,

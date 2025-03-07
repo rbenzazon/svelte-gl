@@ -1,1 +1,238 @@
-import{S as a,i as s,s as t,M as n,e as o,a as e,c as r,b as i,m as c,n as f,t as m,d as u,f as l,g as p,h as d,o as g,r as b,l as $,j as h,k as x,p as j,A as y,B as v,C,D as k,y as D,z as E,E as M,F as w,G as z,H as A}from"./Menu-C4XSDfXF.js";import{c as B}from"./cube-8Xs1a8Tw.js";import{c as F,a as G}from"./debug-program-BglIdCNp.js";function H(a){let s,t,d,g;return d=new n({}),{c(){s=o("canvas"),t=e(),r(d.$$.fragment)},m(n,o){i(n,s,o),a[1](s),i(n,t,o),c(d,n,o),g=!0},p:f,i(a){g||(m(d.$$.fragment,a),g=!0)},o(a){u(d.$$.fragment,a),g=!1},d(n){n&&(l(s),l(t)),a[1](null),p(d,n)}}}function L(){}function S(a,s,t){let n,o,e,r,i,c;return d(a,b,(a=>t(2,n=a))),d(a,$,(a=>t(3,o=a))),d(a,h,(a=>t(4,e=a))),d(a,x,(a=>t(5,r=a))),d(a,j,(a=>t(6,i=a))),g((async()=>{y(b,n={...n,canvas:c,backgroundColor:v,ambientLightColor:[16777215,.1]},n),y(j,i={...i,position:[0,5,-5],target:[0,.5,0],fov:75},i);const a=B(),s=C(k({position:[-2,2,-2],color:[1,1,1],intensity:20,cutoffDistance:0,decayExponent:2})),t=D(E()),f=A({diffuse:[1,0,0],metalness:0,program:G()}),m=F({...a,matrix:t,material:f}),u=A({diffuse:[1,.5,.5],metalness:0});y(x,r=[...r,u,f],r),y(h,e=[...e,M({...a,matrix:t,material:u}),M(m)],e),y($,o=[...o,s],o),y(b,n={...n,loop:L,enabled:!0},n),w(c,j)})),[c,function(a){z[a?"unshift":"push"]((()=>{c=a,t(0,c)}))}]}class q extends a{constructor(a){super(),s(this,a,S,H,t,{})}}export{q as default};
+import { L as drawModes, O as createProgram, P as linkProgram, Q as validateProgram, R as useProgram, T as selectProgram, U as templateLiteralRenderer, V as defaultVertex, W as appContext, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, A as set_store_value, B as skyblue, C as createLightStore, D as createPointLight, y as identity, z as createZeroMatrix, E as create3DObject, F as createOrbitControls, G as binding_callbacks, H as createMaterialStore } from './Menu-UltLtXLd.js';
+import { c as createCube } from './cube-Bf2X8kO-.js';
+
+//this geometry will take an existing object and normals as lines
+
+
+/**
+ *
+ * @param {SvelteGLMeshReadyData} object
+ * @returns {SvelteGLMeshReadyData}
+ */
+function createDebugObject(object) {
+	const { normals, positions } = object.attributes;
+	console.log("positions", positions);
+	const positionsData = typeof positions !== "Float32Array" && "data" in positions ? positions.data : positions;
+	const normalsData = typeof normals !== "Float32Array" && "data" in normals ? normals.data : normals;
+	//for each vertex, create a line with the normal
+	const lines = [];
+	const lineLength = 0.2;
+	for (let i = 0; i < positionsData.length; i += 3) {
+		lines.push(positionsData[i], positionsData[i + 1], positionsData[i + 2]);
+		lines.push(
+			positionsData[i] + normalsData[i] * lineLength,
+			positionsData[i + 1] + normalsData[i + 1] * lineLength,
+			positionsData[i + 2] + normalsData[i + 2] * lineLength,
+		);
+	}
+	return {
+		attributes: {
+			positions: new Float32Array(lines),
+		},
+		matrix: object.matrix,
+		material: object.material,
+		drawMode: drawModes[1],
+	};
+}
+
+var basicFragment = "#version 300 es\r\nprecision mediump float;\r\n\r\n// Input from vertex shader\r\nin vec3 vertexColor;\r\nin vec3 vNormal;\r\nin vec3 vertex;\r\nin vec3 vViewPosition;\r\nin highp vec2 vUv;\r\n\r\n// Output color\r\nout vec4 fragColor;\r\n\r\nvoid main() {\r\n    // Simply use the vertex color for the fragment color\r\n    // This will create a simple colored line with no lighting effects\r\n    fragColor = vec4(vertexColor, 1.0);\r\n    \r\n    // Alternative: if you want slightly smoother lines with anti-aliasing\r\n    // float intensity = 1.0;\r\n    // fragColor = vec4(vertexColor * intensity, 1.0);\r\n}";
+
+/**
+ *
+ * @return {import("./programs").SvelteGLProgram}
+ */
+function createDebugNormalsProgram() {
+	const debugProgram = {
+		createProgram,
+		setupProgram: [createShaders, linkProgram, validateProgram],
+		setupMaterial: [],
+		useProgram,
+		selectProgram,
+		updateProgram: [],
+	};
+	return debugProgram;
+}
+
+function createShaders() {
+	const { gl, program } = appContext;
+
+	const vertexShaderSource = templateLiteralRenderer(defaultVertex, {
+		instances: false,
+		declarations: "",
+		positionModifier: "",
+	})({
+		instances: false,
+		declarations: "",
+		positionModifier: "",
+	});
+	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+	gl.shaderSource(vertexShader, vertexShaderSource);
+	gl.compileShader(vertexShader);
+	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+		console.error(gl.getShaderInfoLog(vertexShader));
+	}
+	gl.attachShader(program, vertexShader);
+
+	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+	gl.shaderSource(fragmentShader, basicFragment);
+	gl.compileShader(fragmentShader);
+	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+		console.error(gl.getShaderInfoLog(fragmentShader));
+	}
+	gl.attachShader(program, fragmentShader);
+}
+
+/* src\cube.svelte generated by Svelte v4.2.18 */
+
+function create_fragment(ctx) {
+	let canvas_1;
+	let t;
+	let menu;
+	let current;
+	menu = new Menu({});
+
+	return {
+		c() {
+			canvas_1 = element("canvas");
+			t = space();
+			create_component(menu.$$.fragment);
+		},
+		m(target, anchor) {
+			insert(target, canvas_1, anchor);
+			/*canvas_1_binding*/ ctx[1](canvas_1);
+			insert(target, t, anchor);
+			mount_component(menu, target, anchor);
+			current = true;
+		},
+		p: noop,
+		i(local) {
+			if (current) return;
+			transition_in(menu.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(menu.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) {
+				detach(canvas_1);
+				detach(t);
+			}
+
+			/*canvas_1_binding*/ ctx[1](null);
+			destroy_component(menu, detaching);
+		}
+	};
+}
+
+function animate() {
+	
+} //animate here
+
+function instance($$self, $$props, $$invalidate) {
+	let $renderer;
+	let $lights;
+	let $scene;
+	let $materials;
+	let $camera;
+	component_subscribe($$self, renderer, $$value => $$invalidate(2, $renderer = $$value));
+	component_subscribe($$self, lights, $$value => $$invalidate(3, $lights = $$value));
+	component_subscribe($$self, scene, $$value => $$invalidate(4, $scene = $$value));
+	component_subscribe($$self, materials, $$value => $$invalidate(5, $materials = $$value));
+	component_subscribe($$self, camera, $$value => $$invalidate(6, $camera = $$value));
+	let canvas;
+
+	onMount(async () => {
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				canvas,
+				backgroundColor: skyblue,
+				ambientLightColor: [0xffffff, 0.1]
+			},
+			$renderer
+		);
+
+		set_store_value(
+			camera,
+			$camera = {
+				...$camera,
+				position: [0, 5, -5],
+				target: [0, 0.5, 0],
+				fov: 75
+			},
+			$camera
+		);
+
+		const cubeMesh = createCube();
+
+		const light = createLightStore(createPointLight({
+			position: [-2, 2, -2],
+			color: [1, 1, 1],
+			intensity: 20,
+			cutoffDistance: 0,
+			decayExponent: 2
+		}));
+
+		const matrix = identity(createZeroMatrix());
+
+		const debugProgram = createMaterialStore({
+			diffuse: [1, 0, 0],
+			metalness: 0,
+			program: createDebugNormalsProgram()
+		});
+
+		const debugNormalMesh = createDebugObject({
+			...cubeMesh,
+			matrix,
+			material: debugProgram
+		});
+
+		const material = createMaterialStore({ diffuse: [1, 0.5, 0.5], metalness: 0 });
+		set_store_value(materials, $materials = [...$materials, material, debugProgram], $materials);
+
+		set_store_value(
+			scene,
+			$scene = [
+				...$scene,
+				create3DObject({ ...cubeMesh, matrix, material }),
+				create3DObject(debugNormalMesh)
+			],
+			$scene
+		);
+
+		set_store_value(lights, $lights = [...$lights, light], $lights);
+
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				loop: animate,
+				enabled: true
+			},
+			$renderer
+		);
+
+		createOrbitControls(canvas, camera);
+	});
+
+	function canvas_1_binding($$value) {
+		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+			canvas = $$value;
+			$$invalidate(0, canvas);
+		});
+	}
+
+	return [canvas, canvas_1_binding];
+}
+
+class Cube extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance, create_fragment, safe_not_equal, {});
+	}
+}
+
+export { Cube as default };

@@ -1,1 +1,376 @@
-import{K as s,O as a,L as t,S as e,i as n,s as o,M as r,e as i,a as l,c as u,b as c,m,n as f,t as p,d as h,f as d,g,h as y,o as M,r as w,l as $,j as b,k as x,p as j,H as k,A,B as D,C as v,D as F,x as C,E,y as P,z as G,F as L,G as z,P as B}from"./Menu-C4XSDfXF.js";import{l as H,t as I,b as K}from"./gltf-loader-Dlb2qqCJ.js";import{D as N}from"./DebugPanel-DVa0tNdT.js";import{c as O}from"./texture-D-LL34uK.js";import{c as S}from"./specular-C1xLo6g_.js";import{c as q,a as J}from"./debug-program-BglIdCNp.js";function Q(s){let a,t,e,n,o,y;return e=new r({}),o=new N({}),{c(){a=i("canvas"),t=l(),u(e.$$.fragment),n=l(),u(o.$$.fragment)},m(r,i){c(r,a,i),s[1](a),c(r,t,i),m(e,r,i),c(r,n,i),m(o,r,i),y=!0},p:f,i(s){y||(p(e.$$.fragment,s),p(o.$$.fragment,s),y=!0)},o(s){h(e.$$.fragment,s),h(o.$$.fragment,s),y=!1},d(r){r&&(d(a),d(t),d(n)),s[1](null),g(e,r),g(o,r)}}}function R(){}function T(e,n,o){let r,i,l,u,c,m,f,p,h;return y(e,w,(s=>o(6,r=s))),y(e,$,(s=>o(7,i=s))),y(e,b,(s=>o(8,l=s))),y(e,x,(s=>o(9,u=s))),y(e,j,(s=>o(10,c=s))),M((async()=>{const e=await H("models/rock.gltf","models/rock.bin");let n;I(e.scene,(s=>{null!=s.position&&(n=s)}));const o=K(e,n),d=await O({url:"rock-diffuse.jpg",type:"diffuse"}),g=await O({url:"rock-normal.png",type:"normal"}),y=k({metalness:o.material.metalness,diffuse:[.67,.68,.81],diffuseMap:d,normalMap:g}),M=await H("models/ennemi1.gltf","models/ennemi1.bin");let z;I(M.scene,(s=>{null!=s.position&&(z=s)}));const N=K(M,z),Q=await O({url:"models/ennemi1-diffuse.png",type:"diffuse"}),T=await O({url:"models/ennemi1-roughness.png",type:"roughness"});console.log("ennemi1Mesh.material",N.material);const U=k({...N.material,specular:S({roughness:1,ior:1.4,intensity:.8,color:[1,1,1]}),diffuse:[1,1,1],diffuseMap:Q,roughnessMap:T});A(w,r={...r,canvas:m,backgroundColor:D,ambientLightColor:[16777215,.1]},r),A(j,c={...c,position:[0,3,10],target:[0,3,0],fov:75},c),f=v(F({color:[.996078431372549,.9529411764705882,.6627450980392157],intensity:7.5,position:[0,9,0],cutoffDistance:27,decayExponent:.05})),p=v(F({position:[-3,-3,1],color:[.6313725490196078,.6235294117647059,.996078431372549],intensity:0,cutoffDistance:15,decayExponent:.25}));const V=o.matrix;let W=new Array(20).fill(0).map(((s,a)=>{let t=B(V);return C(t,t,[0,2*a-4,-4.5]),t}));E({...o,material:y,instances:20,matrices:W},!1,[1,0,0]),E({...N,material:U},!1);const X=function(e=1,n=1,o=1,r=1,i=!0){o=Math.max(o,1),r=Math.max(r,1);const l=n/2,u=2*Math.PI/o,c=[],m=[],f=[],p=[0,1,0],h=[0,-1,0],d=[],g=[],y=[],M=n/r;for(let t=0;t<o;t++){const n=u*t,o=u*(t+.5),r=Math.cos(n),l=Math.sin(n);c.push([r*e,l*e]),i?m.push(s(a(),[r,0,l])):m.push(s(a(),[Math.cos(o),0,Math.sin(o)])),f.push([.25*r,.25*l])}const w=[.25,.25],$=[.75,.25];for(let s=0;s<o;s++){const a=(s+1)%o,t=l,e=-l;d.push([0,t,0],[c[a][0],t,c[a][1]],[c[s][0],t,c[s][1]]),g.push(p,p,p),y.push(w,[f[s][0]+w[0],f[s][1]+w[1]],[f[a][0]+w[0],f[a][1]+w[1]]),d.push([0,e,0],[c[s][0],e,c[s][1]],[c[a][0],e,c[a][1]]),g.push(h,h,h),y.push($,[f[s][0]+$[0],f[s][1]+$[1]],[f[a][0]+$[0],f[a][1]+$[1]])}for(let s=0;s<r;s++){const a=l-s*M,t=a-M;for(let e=0;e<o;e++){const n=(e+1)%o;d.push([c[e][0],a,c[e][1]],[c[n][0],a,c[n][1]],[c[n][0],t,c[n][1]],[c[e][0],a,c[e][1]],[c[n][0],t,c[n][1]],[c[e][0],t,c[e][1]]),i?g.push(m[e],m[n],m[n],m[e],m[n],m[e]):g.push(m[e],m[e],m[e],m[e],m[e],m[e]);const l=.5-e/o/2,u=.5+s/r/2,f=.5-n/o/2,p=.5+(s+1)/r/2;y.push([l,u],[f,u],[f,p],[l,u],[f,p],[l,p])}}return{attributes:{positions:new Float32Array(d.flat()),normals:new Float32Array(g.flat()),uvs:new Float32Array(y.flat())},drawMode:t[4]}}(1,1,32,1);console.log("cylinderGeometry",X);const Y=k({diffuse:[.916,.916,.916],metalness:.8090909123420715,specular:S({roughness:.1,ior:1.4,intensity:.8,color:[1,1,1]})}),Z=P(G());C(Z,Z,[0,1,0]);const _=k({diffuse:[1,0,0],metalness:0,program:J()}),ss=q({...X,matrix:Z,material:_});console.log("debugNormalMesh",ss),h=E({...X,material:Y,matrix:Z}),A(x,u=[...u,y,U,Y,_],u),A(b,l=[...l,h,E(ss)],l),A($,i=[...i,f,p],i),A(w,r={...r,loop:R,enabled:!0},r),L(m,j)})),[m,function(s){z[s?"unshift":"push"]((()=>{m=s,o(0,m)}))}]}class U extends e{constructor(s){super(),n(this,s,T,Q,o,{})}}export{U as default};
+import { S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, p as camera, r as renderer, l as lights, j as scene, k as materials, H as createMaterialStore, y as identity, z as createZeroMatrix, x as translate, E as create3DObject, X as rotateX, C as createLightStore, D as createPointLight, A as set_store_value, B as skyblue, F as createOrbitControls, Y as get_store_value, N as rotateY, G as binding_callbacks, Z as cloneMatrix } from './Menu-UltLtXLd.js';
+import { l as loadGLTFFile, m as mapScene, i as isGLTFMeshData, b as createMeshFromGLTF } from './gltf-loader-BxLOwiqi.js';
+import { D as DebugPanel } from './DebugPanel-17Dvg8hl.js';
+import { c as createTexture } from './texture-B-EpJeyV.js';
+import { c as createSpecular } from './specular-Cztw7LIN.js';
+import { c as createPlane } from './plane-Ds5CdqOO.js';
+
+/* src\rock.svelte generated by Svelte v4.2.18 */
+
+function create_fragment(ctx) {
+	let canvas_1;
+	let t0;
+	let menu;
+	let t1;
+	let debugpanel;
+	let current;
+	menu = new Menu({});
+	debugpanel = new DebugPanel({ props: { initialCollapsed: true } });
+
+	return {
+		c() {
+			canvas_1 = element("canvas");
+			t0 = space();
+			create_component(menu.$$.fragment);
+			t1 = space();
+			create_component(debugpanel.$$.fragment);
+		},
+		m(target, anchor) {
+			insert(target, canvas_1, anchor);
+			/*canvas_1_binding*/ ctx[1](canvas_1);
+			insert(target, t0, anchor);
+			mount_component(menu, target, anchor);
+			insert(target, t1, anchor);
+			mount_component(debugpanel, target, anchor);
+			current = true;
+		},
+		p: noop,
+		i(local) {
+			if (current) return;
+			transition_in(menu.$$.fragment, local);
+			transition_in(debugpanel.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(menu.$$.fragment, local);
+			transition_out(debugpanel.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) {
+				detach(canvas_1);
+				detach(t0);
+				detach(t1);
+			}
+
+			/*canvas_1_binding*/ ctx[1](null);
+			destroy_component(menu, detaching);
+			destroy_component(debugpanel, detaching);
+		}
+	};
+}
+
+function instance($$self, $$props, $$invalidate) {
+	let $camera;
+	let $renderer;
+	let $lights;
+	let $scene;
+	let $materials;
+	component_subscribe($$self, camera, $$value => $$invalidate(6, $camera = $$value));
+	component_subscribe($$self, renderer, $$value => $$invalidate(7, $renderer = $$value));
+	component_subscribe($$self, lights, $$value => $$invalidate(8, $lights = $$value));
+	component_subscribe($$self, scene, $$value => $$invalidate(9, $scene = $$value));
+	component_subscribe($$self, materials, $$value => $$invalidate(10, $materials = $$value));
+	let canvas;
+	let light1;
+	let light2;
+	let ennemi1;
+	let scrollY = 0;
+
+	onMount(async () => {
+		const rockLeftFile = await loadGLTFFile("models/rock-left.gltf", "models/rock-left.bin");
+		const rockLeftData = mapScene(rockLeftFile.scene).find(isGLTFMeshData);
+		const rockLeftMesh = createMeshFromGLTF(rockLeftFile, rockLeftData);
+		const rockDiffuseMap = await createTexture({ url: "rock-diffuse.jpg", type: "diffuse" });
+		const rockNormalMap = await createTexture({ url: "rock-normal.png", type: "normal" });
+
+		const rockMaterial = createMaterialStore({
+			metalness: rockLeftMesh.material.metalness,
+			diffuse: [0.67, 0.68, 0.81],
+			diffuseMap: rockDiffuseMap,
+			normalMap: rockNormalMap
+		});
+
+		const numInstances = 20 * 3;
+
+		/** @type {mat4} */
+		const rockLeftOriginalMatrix = identity(createZeroMatrix());
+
+		/*//set translate x to 0
+rockLeftOriginalMatrix[12] = 0;
+//set translate y to 0
+rockLeftOriginalMatrix[13] = 0;
+//set translate z to 0	
+rockLeftOriginalMatrix[14] = 0;*/
+		let rockLeftMatrices = new Array(numInstances).fill(0).map((_, index) => {
+			/*const count = index - Math.floor(numInstances / 2);*/
+			/** @type {mat4} */
+			let mat = cloneMatrix(rockLeftOriginalMatrix);
+
+			//transform the model matrix
+			translate(mat, mat, [-10, index * 2 - 4, 0]);
+
+			//scale(mat, mat, [1, 1, -1]);
+			//rotate(mat, mat, Math.PI/2,[0,1,0]);
+			return mat;
+		});
+
+		delete rockLeftMesh.matrix;
+
+		const leftRocks = create3DObject({
+			...rockLeftMesh,
+			material: rockMaterial,
+			instances: numInstances,
+			matrices: rockLeftMatrices
+		});
+
+		const rockRightFile = await loadGLTFFile("models/rock-right.gltf", "models/rock-right.bin");
+		const rockRightData = mapScene(rockRightFile.scene).find(isGLTFMeshData);
+		const rockRightMesh = createMeshFromGLTF(rockRightFile, rockRightData);
+
+		/** @type {mat4} */
+		const rockRightOriginalMatrix = identity(createZeroMatrix());
+
+		/*rockRightOriginalMatrix[12] = 0;
+//set translate y to 0
+rockRightOriginalMatrix[13] = 0;
+//set translate z to 0	
+rockRightOriginalMatrix[14] = 0;*/
+		let rockRightMatrices = new Array(numInstances).fill(0).map((_, index) => {
+			/*const count = index - Math.floor(numInstances / 2);*/
+			/** @type {mat4} */
+			let mat = cloneMatrix(rockRightOriginalMatrix);
+
+			//transform the model matrix
+			translate(mat, mat, [10, index * 2 - 4, 0]);
+
+			//scale(mat, mat, [1, 1, -1]);
+			//rotate(mat, mat, Math.PI/2,[0,1,0]);
+			return mat;
+		});
+
+		delete rockRightMesh.matrix;
+
+		const rightRocks = create3DObject({
+			...rockRightMesh,
+			material: rockMaterial,
+			instances: numInstances,
+			matrices: rockRightMatrices
+		});
+
+		console.log("rightRocks", rightRocks);
+		console.log("leftRocks", leftRocks);
+		const ennemi1File = await loadGLTFFile("models/ennemi1.gltf", "models/ennemi1.bin");
+		const ennemi1Data = mapScene(ennemi1File.scene).find(isGLTFMeshData);
+		const ennemi1Mesh = createMeshFromGLTF(ennemi1File, ennemi1Data);
+
+		const ennemi1DiffuseMap = await createTexture({
+			url: "models/ennemi1-diffuse.png",
+			type: "diffuse"
+		});
+
+		const ennemi1RoughnessMap = await createTexture({
+			url: "models/ennemi1-roughness.png",
+			type: "roughness"
+		});
+
+		const ennemi1Material = createMaterialStore({
+			...ennemi1Mesh.material,
+			specular: createSpecular({
+				roughness: 1,
+				ior: 1.4,
+				intensity: 0.8,
+				color: [1, 1, 1]
+			}),
+			diffuse: [1, 1, 1],
+			diffuseMap: ennemi1DiffuseMap,
+			roughnessMap: ennemi1RoughnessMap
+		});
+
+		ennemi1 = create3DObject({
+			...ennemi1Mesh,
+			material: ennemi1Material
+		});
+
+		const backgroundGeometry = createPlane(100, 100, 1, 1);
+		const backgroundTexture = await createTexture({ url: "background.jpg", type: "diffuse" });
+
+		const backgroundMaterial = createMaterialStore({
+			diffuse: [0.67, 0.68, 0.81],
+			metalness: 0,
+			diffuseMap: backgroundTexture
+		});
+
+		const backgroundMatrix = identity(createZeroMatrix());
+		translate(backgroundMatrix, backgroundMatrix, [0, 0, -70]);
+		rotateX(backgroundMatrix, backgroundMatrix, Math.PI / 2);
+		const backgroundInstances = 5;
+
+		const backgroundMatrices = new Array(backgroundInstances).fill(0).map((_, index) => {
+			/** @type {mat4} */
+			let mat = cloneMatrix(backgroundMatrix);
+
+			translate(mat, mat, [0, 0, -index * 100]);
+			return mat;
+		});
+
+		const background = create3DObject({
+			...backgroundGeometry,
+			material: backgroundMaterial,
+			instances: backgroundInstances,
+			matrices: backgroundMatrices
+		});
+
+		light1 = createLightStore(createPointLight({
+			color: [0.996078431372549, 0.9529411764705882, 0.6627450980392157],
+			intensity: 7.5,
+			position: [0, 9, 3],
+			cutoffDistance: 120,
+			decayExponent: 0.001
+		}));
+
+		light2 = createLightStore(createPointLight({
+			position: [-3, -3, 1],
+			color: [0.6313725490196078, 0.6235294117647059, 0.996078431372549],
+			intensity: 5,
+			cutoffDistance: 15,
+			decayExponent: 0.25
+		}));
+
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				canvas,
+				backgroundColor: skyblue,
+				ambientLightColor: [0xffffff, 0.1]
+			},
+			$renderer
+		);
+
+		set_store_value(
+			camera,
+			$camera = {
+				...$camera,
+				position: [0, 3, 21],
+				target: [0, 3, 0],
+				fov: 36
+			},
+			$camera
+		);
+
+		/*
+const cylinderGeometry = createCylinder(1, 1, 32, 1);
+const cylinderMaterial = createMaterialStore({
+	diffuse: [0.916, 0.916, 0.916],
+	metalness: 0.8090909123420715,
+	specular: createSpecular({
+		roughness: 0.1,
+		ior: 1.4,
+		intensity: 0.8,
+		color: [1, 1, 1],
+	}),
+});
+const cylinderMatrix = identity(createZeroMatrix());
+translate(cylinderMatrix, cylinderMatrix, [0, 1, 0]);
+
+const debugProgram = createMaterialStore({
+	diffuse: [1, 0, 0],
+	metalness: 0,
+	program: createDebugNormalsProgram(),
+});
+const debugNormalMesh = createDebugObject({
+	...ennemi1Mesh,
+	material: debugProgram,
+});
+console.log("debugNormalMesh", debugNormalMesh);
+
+cylinder = create3DObject({
+	...cylinderGeometry,
+	material: cylinderMaterial,
+	matrix: cylinderMatrix,
+});*/
+		set_store_value(materials, $materials = [...$materials, rockMaterial, ennemi1Material, backgroundMaterial], $materials);
+
+		set_store_value(scene, $scene = [...$scene, leftRocks, rightRocks, ennemi1, background], $scene);
+		set_store_value(lights, $lights = [...$lights, light1, light2], $lights);
+
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				loop: animate,
+				enabled: true
+			},
+			$renderer
+		);
+
+		createOrbitControls(canvas, camera);
+	});
+
+	function animate() {
+		scrollY += 0.01;
+		const currentPosition = $camera.position;
+		currentPosition[1] += 0.01;
+		const currentTarget = $camera.target;
+		currentTarget[1] += 0.01;
+
+		set_store_value(
+			camera,
+			$camera = {
+				...$camera,
+				position: currentPosition,
+				target: currentTarget
+			},
+			$camera
+		);
+
+		const currentLight1 = get_store_value(light1);
+		currentLight1.position[1] += 0.01;
+		const currentLight2 = get_store_value(light2);
+		currentLight2.position[1] += 0.01;
+		light1.set({ ...currentLight1 });
+		light2.set({ ...currentLight2 });
+
+		/*
+const matrix = get(ennemi1.matrix);
+translate(matrix, matrix, [0, 0.01, 0]);
+ennemi1.matrix.set( matrix);
+*/
+		// make the ennemi1 move in circle
+		//const ennemiMatrix = get(ennemi1.matrix);
+		const angle = performance.now() * 0.001;
+
+		const radius = 4;
+		const x = Math.cos(angle) * radius;
+		const y = Math.sin(angle) * radius;
+		const ennemiMatrix = identity(createZeroMatrix());
+		translate(ennemiMatrix, ennemiMatrix, [x, y + scrollY + 4, 0]);
+
+		//rotateX(ennemiMatrix, ennemiMatrix, Math.PI / 2);
+		rotateY(ennemiMatrix, ennemiMatrix, performance.now() * 0.003);
+
+		//rotateZ(ennemiMatrix, ennemiMatrix, performance.now() * 0.005);
+		ennemi1.matrix.set(ennemiMatrix);
+	} /*const cylinderMatrix = get(cylinder.matrix);
+rotateX(cylinderMatrix, cylinderMatrix, 0.001);
+cylinder.matrix.set(cylinderMatrix);*/
+
+	function canvas_1_binding($$value) {
+		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+			canvas = $$value;
+			$$invalidate(0, canvas);
+		});
+	}
+
+	return [canvas, canvas_1_binding];
+}
+
+class Rock extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance, create_fragment, safe_not_equal, {});
+	}
+}
+
+export { Rock as default };

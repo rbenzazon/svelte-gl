@@ -9,7 +9,6 @@ import { drawModes } from "../store/webgl";
  */
 export function createDebugObject(object) {
 	const { normals, positions } = object.attributes;
-	console.log("positions", positions);
 	const positionsData = typeof positions !== "Float32Array" && "data" in positions ? positions.data : positions;
 	const normalsData = typeof normals !== "Float32Array" && "data" in normals ? normals.data : normals;
 	//for each vertex, create a line with the normal

@@ -15,13 +15,7 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"Cylinder",
-			"rotation":[
-				0.7071068286895752,
-				0,
-				0,
-				0.7071068286895752
-			]
+			"name":"Cylinder"
 		}
 	],
 	"materials":[
@@ -32,7 +26,7 @@
 				"baseColorTexture":{
 					"index":0
 				},
-				"metallicFactor":0.8090909123420715,
+				"metallicFactor":0.8545454740524292,
 				"metallicRoughnessTexture":{
 					"index":1
 				}
@@ -68,74 +62,74 @@
 	"images":[
 		{
 			"mimeType":"image/png",
-			"name":"diffuse",
-			"uri":"diffuse.png"
+			"name":"ennemi1-diffuse",
+			"uri":"ennemi1-diffuse.png"
 		},
 		{
 			"mimeType":"image/png",
-			"name":"roughness",
-			"uri":"roughness.png"
+			"name":"ennemi1-roughness",
+			"uri":"ennemi1-roughness.png"
 		}
 	],
 	"accessors":[
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":3475,
+			"count":3803,
 			"max":[
 				1,
-				0.4650000035762787,
-				1
+				1,
+				0.46500012278556824
 			],
 			"min":[
 				-1,
-				-0.4650000035762787,
-				-1
+				-1,
+				-0.46500012278556824
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":3475,
+			"count":3803,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":3475,
+			"count":3803,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":3,
 			"componentType":5123,
-			"count":16116,
+			"count":15348,
 			"type":"SCALAR"
 		}
 	],
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":41700,
+			"byteLength":45636,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":41700,
-			"byteOffset":41700,
+			"byteLength":45636,
+			"byteOffset":45636,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":27800,
-			"byteOffset":83400,
+			"byteLength":30424,
+			"byteOffset":91272,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":32232,
-			"byteOffset":111200,
+			"byteLength":30696,
+			"byteOffset":121696,
 			"target":34963
 		}
 	],
@@ -147,7 +141,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":143432,
+			"byteLength":152392,
 			"uri":"ennemi1.bin"
 		}
 	]

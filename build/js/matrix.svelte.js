@@ -1,1 +1,545 @@
-import{S as t,i as n,s as a,M as e,e as r,a as u,c as s,b as i,m as o,n as c,t as f,d as h,f as M,g as v,h as I,o as l,r as p,l as m,j as d,k as O,p as g,A as P,B as w,y as x,z as b,x as C,C as Q,D as E,E as B,F as y,w as $,G as j,H as k}from"./Menu-C4XSDfXF.js";import{c as q,a as S}from"./polyhedron-Dr0s34CB.js";import{c as D}from"./plane-BuhpfAmh.js";var _={};Object.defineProperty(_,"__esModule",{value:!0}),_.linear=function(t){return t},_.easeInSine=function(t){return-1*Math.cos(t*(Math.PI/2))+1},_.easeOutSine=function(t){return Math.sin(t*(Math.PI/2))},_.easeInOutSine=function(t){return-.5*(Math.cos(Math.PI*t)-1)},_.easeInQuad=function(t){return t*t},_.easeOutQuad=function(t){return t*(2-t)},_.easeInOutQuad=function(t){return t<.5?2*t*t:(4-2*t)*t-1},_.easeInCubic=function(t){return t*t*t};var z=_.easeOutCubic=function(t){var n=t-1;return n*n*n+1};function A(t){var n=t/1;if(n<1/2.75)return 7.5625*n*n;if(n<2/2.75){var a=n-1.5/2.75;return 7.5625*a*a+.75}if(n<2.5/2.75){var e=n-2.25/2.75;return 7.5625*e*e+.9375}var r=n-2.625/2.75;return 7.5625*r*r+.984375}function F(t){return 1-A(1-t)}function G(t){let n,a,I,l;return I=new e({}),{c(){n=r("canvas"),a=u(),s(I.$$.fragment)},m(e,r){i(e,n,r),t[1](n),i(e,a,r),o(I,e,r),l=!0},p:c,i(t){l||(f(I.$$.fragment,t),l=!0)},o(t){h(I.$$.fragment,t),l=!1},d(e){e&&(M(n),M(a)),t[1](null),v(I,e)}}}function H(t,n,a){let e,r,u,s,i,o,c;function f(){const t=performance.now()/1e3%1.2,n=1-Math.abs(1*(Math.max(t,1)-1-.1)/.1),a=.5*z(n)+1,e=1-.5*z(n),r=.5*z(n),u=1*Math.abs(Math.min(t,1)-.5)/.5*-1+1,s=3*z(u),i=1-2*Math.min(.5,Math.min(t,1)/1),o=Math.sin(t*Math.PI*12)*i*.5,f=x(b());C(f,f,[0,s-r,0]),$(f,f,[a-o/2,e+o,a-o/2]),c.matrix.set(f)}return I(t,p,(t=>a(3,e=t))),I(t,m,(t=>a(4,r=t))),I(t,d,(t=>a(5,u=t))),I(t,O,(t=>a(6,s=t))),I(t,g,(t=>a(7,i=t))),l((async()=>{P(p,e={...e,canvas:o,backgroundColor:w,ambientLightColor:[16777215,.1]},e),P(g,i={...i,position:[0,1,-5],target:[0,1,0],fov:75},i);const t=q(1,5,S),n=x(b()),a=k({diffuse:[1,.5,.5],metalness:0}),h=D(10,10,1,1),M=x(b());C(M,M,[0,-1,0]);const v=k({diffuse:[1,1,1],metalness:0}),I=Q(E({position:[-2,3,-3],color:[1,1,1],intensity:20,cutoffDistance:0,decayExponent:2}));c=B({...t,matrix:n,material:a}),P(O,s=[...s,a,v],s),P(d,u=[...u,c,B({...h,matrix:M,material:v})],u),P(m,r=[...r,I],r),P(p,e={...e,loop:f,enabled:!0},e),y(o,g)})),[o,function(t){j[t?"unshift":"push"]((()=>{o=t,a(0,o)}))}]}_.easeInOutCubic=function(t){return t<.5?4*t*t*t:(t-1)*(2*t-2)*(2*t-2)+1},_.easeInQuart=function(t){return t*t*t*t},_.easeOutQuart=function(t){var n=t-1;return 1-n*n*n*n},_.easeInOutQuart=function(t){var n=t-1;return t<.5?8*t*t*t*t:1-8*n*n*n*n},_.easeInQuint=function(t){return t*t*t*t*t},_.easeOutQuint=function(t){var n=t-1;return 1+n*n*n*n*n},_.easeInOutQuint=function(t){var n=t-1;return t<.5?16*t*t*t*t*t:1+16*n*n*n*n*n},_.easeInExpo=function(t){if(0===t)return 0;return Math.pow(2,10*(t-1))},_.easeOutExpo=function(t){if(1===t)return 1;return 1-Math.pow(2,-10*t)},_.easeInOutExpo=function(t){if(0===t||1===t)return t;var n=2*t,a=n-1;if(n<1)return.5*Math.pow(2,10*a);return.5*(2-Math.pow(2,-10*a))},_.easeInCirc=function(t){var n=t/1;return-1*(Math.sqrt(1-n*t)-1)},_.easeOutCirc=function(t){var n=t-1;return Math.sqrt(1-n*n)},_.easeInOutCirc=function(t){var n=2*t,a=n-2;if(n<1)return-.5*(Math.sqrt(1-n*n)-1);return.5*(Math.sqrt(1-a*a)+1)},_.easeInBack=function(t){var n=arguments.length<=1||void 0===arguments[1]?1.70158:arguments[1],a=t/1;return a*a*((n+1)*a-n)},_.easeOutBack=function(t){var n=arguments.length<=1||void 0===arguments[1]?1.70158:arguments[1],a=t/1-1;return a*a*((n+1)*a+n)+1},_.easeInOutBack=function(t){var n=arguments.length<=1||void 0===arguments[1]?1.70158:arguments[1],a=2*t,e=a-2,r=1.525*n;if(a<1)return.5*a*a*((r+1)*a-r);return.5*(e*e*((r+1)*e+r)+2)},_.easeInElastic=function(t){var n=arguments.length<=1||void 0===arguments[1]?.7:arguments[1];if(0===t||1===t)return t;var a=t/1-1,e=1-n,r=e/(2*Math.PI)*Math.asin(1);return-Math.pow(2,10*a)*Math.sin((a-r)*(2*Math.PI)/e)},_.easeOutElastic=function(t){var n=1-(arguments.length<=1||void 0===arguments[1]?.7:arguments[1]),a=2*t;if(0===t||1===t)return t;var e=n/(2*Math.PI)*Math.asin(1);return Math.pow(2,-10*a)*Math.sin((a-e)*(2*Math.PI)/n)+1},_.easeInOutElastic=function(t){var n=1-(arguments.length<=1||void 0===arguments[1]?.65:arguments[1]);if(0===t||1===t)return t;var a=2*t,e=a-1,r=n/(2*Math.PI)*Math.asin(1);if(a<1)return Math.pow(2,10*e)*Math.sin((e-r)*(2*Math.PI)/n)*-.5;return Math.pow(2,-10*e)*Math.sin((e-r)*(2*Math.PI)/n)*.5+1},_.easeOutBounce=A,_.easeInBounce=F,_.easeInOutBounce=function(t){if(t<.5)return.5*F(2*t);return.5*A(2*t-1)+.5};class L extends t{constructor(t){super(),n(this,t,H,G,a,{})}}export{L as default};
+import { S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, A as set_store_value, B as skyblue, y as identity, z as createZeroMatrix, x as translate, C as createLightStore, D as createPointLight, E as create3DObject, F as createOrbitControls, w as scale, G as binding_callbacks, H as createMaterialStore } from './Menu-UltLtXLd.js';
+import { c as createPolyhedron, a as createSmoothShadedNormals } from './polyhedron-DoqjJE61.js';
+import { c as createPlane } from './plane-Ds5CdqOO.js';
+
+var easing = {};
+
+Object.defineProperty(easing, "__esModule", {
+    value: true
+});
+easing.linear = linear;
+easing.easeInSine = easeInSine;
+easing.easeOutSine = easeOutSine;
+easing.easeInOutSine = easeInOutSine;
+easing.easeInQuad = easeInQuad;
+easing.easeOutQuad = easeOutQuad;
+easing.easeInOutQuad = easeInOutQuad;
+easing.easeInCubic = easeInCubic;
+var easeOutCubic_1 = easing.easeOutCubic = easeOutCubic;
+easing.easeInOutCubic = easeInOutCubic;
+easing.easeInQuart = easeInQuart;
+easing.easeOutQuart = easeOutQuart;
+easing.easeInOutQuart = easeInOutQuart;
+easing.easeInQuint = easeInQuint;
+easing.easeOutQuint = easeOutQuint;
+easing.easeInOutQuint = easeInOutQuint;
+easing.easeInExpo = easeInExpo;
+easing.easeOutExpo = easeOutExpo;
+easing.easeInOutExpo = easeInOutExpo;
+easing.easeInCirc = easeInCirc;
+easing.easeOutCirc = easeOutCirc;
+easing.easeInOutCirc = easeInOutCirc;
+easing.easeInBack = easeInBack;
+easing.easeOutBack = easeOutBack;
+easing.easeInOutBack = easeInOutBack;
+easing.easeInElastic = easeInElastic;
+easing.easeOutElastic = easeOutElastic;
+easing.easeInOutElastic = easeInOutElastic;
+easing.easeOutBounce = easeOutBounce;
+easing.easeInBounce = easeInBounce;
+easing.easeInOutBounce = easeInOutBounce;
+// Based on https://gist.github.com/gre/1650294
+
+// No easing, no acceleration
+function linear(t) {
+    return t;
+}
+
+// Slight acceleration from zero to full speed
+function easeInSine(t) {
+    return -1 * Math.cos(t * (Math.PI / 2)) + 1;
+}
+
+// Slight deceleration at the end
+function easeOutSine(t) {
+    return Math.sin(t * (Math.PI / 2));
+}
+
+// Slight acceleration at beginning and slight deceleration at end
+function easeInOutSine(t) {
+    return -0.5 * (Math.cos(Math.PI * t) - 1);
+}
+
+// Accelerating from zero velocity
+function easeInQuad(t) {
+    return t * t;
+}
+
+// Decelerating to zero velocity
+function easeOutQuad(t) {
+    return t * (2 - t);
+}
+
+// Acceleration until halfway, then deceleration
+function easeInOutQuad(t) {
+    return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+// Accelerating from zero velocity
+function easeInCubic(t) {
+    return t * t * t;
+}
+
+// Decelerating to zero velocity
+function easeOutCubic(t) {
+    var t1 = t - 1;
+    return t1 * t1 * t1 + 1;
+}
+
+// Acceleration until halfway, then deceleration
+function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : (t - 1) * (2 * t - 2) * (2 * t - 2) + 1;
+}
+
+// Accelerating from zero velocity
+function easeInQuart(t) {
+    return t * t * t * t;
+}
+
+// Decelerating to zero velocity
+function easeOutQuart(t) {
+    var t1 = t - 1;
+    return 1 - t1 * t1 * t1 * t1;
+}
+
+// Acceleration until halfway, then deceleration
+function easeInOutQuart(t) {
+    var t1 = t - 1;
+    return t < 0.5 ? 8 * t * t * t * t : 1 - 8 * t1 * t1 * t1 * t1;
+}
+
+// Accelerating from zero velocity
+function easeInQuint(t) {
+    return t * t * t * t * t;
+}
+
+// Decelerating to zero velocity
+function easeOutQuint(t) {
+    var t1 = t - 1;
+    return 1 + t1 * t1 * t1 * t1 * t1;
+}
+
+// Acceleration until halfway, then deceleration
+function easeInOutQuint(t) {
+    var t1 = t - 1;
+    return t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * t1 * t1 * t1 * t1 * t1;
+}
+
+// Accelerate exponentially until finish
+function easeInExpo(t) {
+
+    if (t === 0) {
+        return 0;
+    }
+
+    return Math.pow(2, 10 * (t - 1));
+}
+
+// Initial exponential acceleration slowing to stop
+function easeOutExpo(t) {
+
+    if (t === 1) {
+        return 1;
+    }
+
+    return -Math.pow(2, -10 * t) + 1;
+}
+
+// Exponential acceleration and deceleration
+function easeInOutExpo(t) {
+
+    if (t === 0 || t === 1) {
+        return t;
+    }
+
+    var scaledTime = t * 2;
+    var scaledTime1 = scaledTime - 1;
+
+    if (scaledTime < 1) {
+        return 0.5 * Math.pow(2, 10 * scaledTime1);
+    }
+
+    return 0.5 * (-Math.pow(2, -10 * scaledTime1) + 2);
+}
+
+// Increasing velocity until stop
+function easeInCirc(t) {
+
+    var scaledTime = t / 1;
+    return -1 * (Math.sqrt(1 - scaledTime * t) - 1);
+}
+
+// Start fast, decreasing velocity until stop
+function easeOutCirc(t) {
+
+    var t1 = t - 1;
+    return Math.sqrt(1 - t1 * t1);
+}
+
+// Fast increase in velocity, fast decrease in velocity
+function easeInOutCirc(t) {
+
+    var scaledTime = t * 2;
+    var scaledTime1 = scaledTime - 2;
+
+    if (scaledTime < 1) {
+        return -0.5 * (Math.sqrt(1 - scaledTime * scaledTime) - 1);
+    }
+
+    return 0.5 * (Math.sqrt(1 - scaledTime1 * scaledTime1) + 1);
+}
+
+// Slow movement backwards then fast snap to finish
+function easeInBack(t) {
+    var magnitude = arguments.length <= 1 || arguments[1] === undefined ? 1.70158 : arguments[1];
+
+
+    var scaledTime = t / 1;
+    return scaledTime * scaledTime * ((magnitude + 1) * scaledTime - magnitude);
+}
+
+// Fast snap to backwards point then slow resolve to finish
+function easeOutBack(t) {
+    var magnitude = arguments.length <= 1 || arguments[1] === undefined ? 1.70158 : arguments[1];
+
+
+    var scaledTime = t / 1 - 1;
+
+    return scaledTime * scaledTime * ((magnitude + 1) * scaledTime + magnitude) + 1;
+}
+
+// Slow movement backwards, fast snap to past finish, slow resolve to finish
+function easeInOutBack(t) {
+    var magnitude = arguments.length <= 1 || arguments[1] === undefined ? 1.70158 : arguments[1];
+
+
+    var scaledTime = t * 2;
+    var scaledTime2 = scaledTime - 2;
+
+    var s = magnitude * 1.525;
+
+    if (scaledTime < 1) {
+
+        return 0.5 * scaledTime * scaledTime * ((s + 1) * scaledTime - s);
+    }
+
+    return 0.5 * (scaledTime2 * scaledTime2 * ((s + 1) * scaledTime2 + s) + 2);
+}
+// Bounces slowly then quickly to finish
+function easeInElastic(t) {
+    var magnitude = arguments.length <= 1 || arguments[1] === undefined ? 0.7 : arguments[1];
+
+
+    if (t === 0 || t === 1) {
+        return t;
+    }
+
+    var scaledTime = t / 1;
+    var scaledTime1 = scaledTime - 1;
+
+    var p = 1 - magnitude;
+    var s = p / (2 * Math.PI) * Math.asin(1);
+
+    return -(Math.pow(2, 10 * scaledTime1) * Math.sin((scaledTime1 - s) * (2 * Math.PI) / p));
+}
+
+// Fast acceleration, bounces to zero
+function easeOutElastic(t) {
+    var magnitude = arguments.length <= 1 || arguments[1] === undefined ? 0.7 : arguments[1];
+
+
+    var p = 1 - magnitude;
+    var scaledTime = t * 2;
+
+    if (t === 0 || t === 1) {
+        return t;
+    }
+
+    var s = p / (2 * Math.PI) * Math.asin(1);
+    return Math.pow(2, -10 * scaledTime) * Math.sin((scaledTime - s) * (2 * Math.PI) / p) + 1;
+}
+
+// Slow start and end, two bounces sandwich a fast motion
+function easeInOutElastic(t) {
+    var magnitude = arguments.length <= 1 || arguments[1] === undefined ? 0.65 : arguments[1];
+
+
+    var p = 1 - magnitude;
+
+    if (t === 0 || t === 1) {
+        return t;
+    }
+
+    var scaledTime = t * 2;
+    var scaledTime1 = scaledTime - 1;
+
+    var s = p / (2 * Math.PI) * Math.asin(1);
+
+    if (scaledTime < 1) {
+        return -0.5 * (Math.pow(2, 10 * scaledTime1) * Math.sin((scaledTime1 - s) * (2 * Math.PI) / p));
+    }
+
+    return Math.pow(2, -10 * scaledTime1) * Math.sin((scaledTime1 - s) * (2 * Math.PI) / p) * 0.5 + 1;
+}
+
+// Bounce to completion
+function easeOutBounce(t) {
+
+    var scaledTime = t / 1;
+
+    if (scaledTime < 1 / 2.75) {
+
+        return 7.5625 * scaledTime * scaledTime;
+    } else if (scaledTime < 2 / 2.75) {
+
+        var scaledTime2 = scaledTime - 1.5 / 2.75;
+        return 7.5625 * scaledTime2 * scaledTime2 + 0.75;
+    } else if (scaledTime < 2.5 / 2.75) {
+
+        var _scaledTime = scaledTime - 2.25 / 2.75;
+        return 7.5625 * _scaledTime * _scaledTime + 0.9375;
+    } else {
+
+        var _scaledTime2 = scaledTime - 2.625 / 2.75;
+        return 7.5625 * _scaledTime2 * _scaledTime2 + 0.984375;
+    }
+}
+
+// Bounce increasing in velocity until completion
+function easeInBounce(t) {
+    return 1 - easeOutBounce(1 - t);
+}
+
+// Bounce in and bounce out
+function easeInOutBounce(t) {
+
+    if (t < 0.5) {
+
+        return easeInBounce(t * 2) * 0.5;
+    }
+
+    return easeOutBounce(t * 2 - 1) * 0.5 + 0.5;
+}
+
+/* src\matrix.svelte generated by Svelte v4.2.18 */
+
+function create_fragment(ctx) {
+	let canvas_1;
+	let t;
+	let menu;
+	let current;
+	menu = new Menu({});
+
+	return {
+		c() {
+			canvas_1 = element("canvas");
+			t = space();
+			create_component(menu.$$.fragment);
+		},
+		m(target, anchor) {
+			insert(target, canvas_1, anchor);
+			/*canvas_1_binding*/ ctx[1](canvas_1);
+			insert(target, t, anchor);
+			mount_component(menu, target, anchor);
+			current = true;
+		},
+		p: noop,
+		i(local) {
+			if (current) return;
+			transition_in(menu.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(menu.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) {
+				detach(canvas_1);
+				detach(t);
+			}
+
+			/*canvas_1_binding*/ ctx[1](null);
+			destroy_component(menu, detaching);
+		}
+	};
+}
+
+function instance($$self, $$props, $$invalidate) {
+	let $renderer;
+	let $lights;
+	let $scene;
+	let $materials;
+	let $camera;
+	component_subscribe($$self, renderer, $$value => $$invalidate(3, $renderer = $$value));
+	component_subscribe($$self, lights, $$value => $$invalidate(4, $lights = $$value));
+	component_subscribe($$self, scene, $$value => $$invalidate(5, $scene = $$value));
+	component_subscribe($$self, materials, $$value => $$invalidate(6, $materials = $$value));
+	component_subscribe($$self, camera, $$value => $$invalidate(7, $camera = $$value));
+	let canvas;
+	let sphere;
+
+	onMount(async () => {
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				canvas,
+				backgroundColor: skyblue,
+				ambientLightColor: [0xffffff, 0.1]
+			},
+			$renderer
+		);
+
+		set_store_value(
+			camera,
+			$camera = {
+				...$camera,
+				position: [0, 1, -5],
+				target: [0, 1, 0],
+				fov: 75
+			},
+			$camera
+		);
+
+		const sphereMesh = createPolyhedron(1, 5, createSmoothShadedNormals);
+		const spherePos = identity(createZeroMatrix());
+		const material = createMaterialStore({ diffuse: [1, 0.5, 0.5], metalness: 0 });
+		const groundMesh = createPlane(10, 10, 1, 1);
+		const groundMatrix = identity(createZeroMatrix());
+		translate(groundMatrix, groundMatrix, [0, -1, 0]);
+		const groundMaterial = createMaterialStore({ diffuse: [1, 1, 1], metalness: 0 });
+
+		const light = createLightStore(createPointLight({
+			position: [-2, 3, -3],
+			color: [1, 1, 1],
+			intensity: 20,
+			cutoffDistance: 0,
+			decayExponent: 2
+		}));
+
+		sphere = create3DObject({
+			...sphereMesh,
+			matrix: spherePos,
+			material
+		});
+
+		set_store_value(materials, $materials = [...$materials, material, groundMaterial], $materials);
+
+		set_store_value(
+			scene,
+			$scene = [
+				...$scene,
+				sphere,
+				create3DObject({
+					...groundMesh,
+					matrix: groundMatrix,
+					material: groundMaterial
+				})
+			],
+			$scene
+		);
+
+		set_store_value(lights, $lights = [...$lights, light], $lights);
+
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				loop: animate,
+				enabled: true
+			},
+			$renderer
+		);
+
+		createOrbitControls(canvas, camera);
+	});
+
+	function animate() {
+		const moveTime = 1;
+		const bounceTime = 0.2;
+		const elasticDeformation = 0.5;
+
+		// time goes from 0 to (moveTime + bounceTime) in cycle using the modulo operator
+		const time = performance.now() / 1000 % (moveTime + bounceTime);
+
+		/*
+this equation creates the elastic deformation using time as input
+equation description (-> is a range) :
+[max] => moveTime->moveTime+bounceTime
+[-moveTime] => 0->bounceTime
+[-bounceTime/2] => -bounceTime/2->0->0->bounceTime/2
+[abs] => bounceTime/2->0->0->bounceTime/2
+[* 1/bounceTime] => 1->0->0->1
+[1-] => 0->1->1->0
+*/
+		const sphereScaleNormalized = 1 - Math.abs((Math.max(time, moveTime) - moveTime - bounceTime / 2) * 1 / (bounceTime / 2));
+
+		/*
+[*elasticDeformation] => 0->elasticDeformation->elasticDeformation->0
+[+1] => 1.3->1->1->1.3
+*/
+		const sphereScaleXZ = easeOutCubic_1(sphereScaleNormalized) * elasticDeformation + 1;
+
+		const sphereScaleY = 1 - easeOutCubic_1(sphereScaleNormalized) * elasticDeformation;
+		const sphereCrushY = easeOutCubic_1(sphereScaleNormalized) * elasticDeformation;
+
+		/*
+this equation creates the bounce effect movement using time as input
+equation description (-> is a range) :
+
+[min] => 0 -> moveTime
+[-moveTime/2] => -moveTime/2 -> moveTime/2
+[abs] => moveTime/2 -> 0 -> 0 -> moveTime/2
+[* 1/(moveTime/2)] => 1 -> 0 -> 0 -> 1
+[* -1] => -1 -> 0 -> 0 -> -1
+[+1] => 0 -> 1 -> 1 ->0
+
+*/
+		const posYNormalized = Math.abs(Math.min(time, moveTime) - moveTime / 2) * 1 / (moveTime / 2) * -1 + 1;
+
+		const posY = easeOutCubic_1(posYNormalized) * 3;
+
+		/* 
+elastic bounce effect factor
+[min] => 0 -> moveTime
+[/moveTime] => 0 -> 1
+[min] => 0 -> 0.5 -> 0.5
+[*2] => 0 -> 1 -> 1
+[1-] => 1 -> 0 -> 0
+*/
+		const elasticBounceFactor = 1 - Math.min(0.5, Math.min(time, moveTime) / moveTime) * 2;
+
+		const elasticBounceSinFrequency = 12;
+		const elasticBounceAmplitude = 0.5;
+		const elasticBounce = Math.sin(time * Math.PI * elasticBounceSinFrequency) * elasticBounceFactor * elasticBounceAmplitude;
+		const newMatrix = identity(createZeroMatrix());
+		translate(newMatrix, newMatrix, [0, posY - sphereCrushY, 0]);
+
+		scale(newMatrix, newMatrix, [
+			sphereScaleXZ - elasticBounce / 2,
+			sphereScaleY + elasticBounce,
+			sphereScaleXZ - elasticBounce / 2
+		]);
+
+		sphere.matrix.set(newMatrix);
+	}
+
+	function canvas_1_binding($$value) {
+		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+			canvas = $$value;
+			$$invalidate(0, canvas);
+		});
+	}
+
+	return [canvas, canvas_1_binding];
+}
+
+class Matrix extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance, create_fragment, safe_not_equal, {});
+	}
+}
+
+export { Matrix as default };

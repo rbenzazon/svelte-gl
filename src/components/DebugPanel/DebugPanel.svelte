@@ -4,10 +4,12 @@ import DebugRenderer from "./DebugRenderer.svelte";
 import DebugLights from "./DebugLights.svelte";
 import DebugMeshes from "./DebugMeshes.svelte";
 
+export let initialCollapsed = false;
+
 function collapse() {
 	collapsed = !collapsed;
 }
-let collapsed = false;
+let collapsed = initialCollapsed;
 </script>
 
 <div

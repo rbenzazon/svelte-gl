@@ -14,10 +14,10 @@ import {
 } from "./blur";
 import { selectProgram } from "./engine";
 import { appContext } from "./engine";
-import { createZeroMatrix } from "../geometries/common";
+import { createVec3, createZeroMatrix } from "../geometries/common";
 /**
  * @typedef {Object} ContactShadowPass
- * @property {import("./engine").SvelteGLProgram[]} programs array of programs used in the pass
+ * @property {import("./programs").SvelteGLProgram[]} programs array of programs used in the pass
  * @property {() => WebGLTexture} getTexture function to get the shadow texture
  * @property {number} order order of the pass in the rendering pipeline
  */
@@ -43,7 +43,7 @@ export function createContactShadowPass(
 	blurSize = 128,
 	darkness = 1,
 ) {
-	const groundTranslation = getTranslation([], groundMatrix);
+	const groundTranslation = getTranslation(createVec3(), groundMatrix);
 	const aspect = width / height;
 	const textureWidth = textureSize * aspect;
 	const textureHeight = textureSize / aspect;
