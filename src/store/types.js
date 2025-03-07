@@ -136,7 +136,7 @@
 /**
  * material model using store to be added into scene
  * @typedef {Object} SvelteGLBaseMeshDataMaterialStore
- * @property {import("./engine.js").MaterialCustomStore} material
+ * @property {import("./materials.js").MaterialCustomStore} material
  */
 /**
  * MESH DATA BEFORE create3DObject
@@ -153,7 +153,7 @@
  * @typedef {Object} SvelteGLBaseMesh
  * @property {SvelteGLAttributes} attributes
  * @property {import("./webgl").DrawMode} drawMode
- * @property {import("./engine.js").MaterialCustomStore} material
+ * @property {import("./materials.js").MaterialCustomStore} material
  * @property {SvelteGLMeshAnimation[]} [animations]
  */
 /**

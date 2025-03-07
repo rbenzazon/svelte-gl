@@ -3,6 +3,7 @@ import { hasSameShallow as arrayHasSameShallow } from "../utils/array";
 import { writable, get } from "svelte/store";
 import { setupAmbientLight } from "./gl";
 import { programs } from "./programs";
+import { appContext } from "./engine";
 
 export function findMaterialProgram() {
 	const matPrograms = get(programs).filter((program) => program.meshes?.length !== 0 && program.allMeshes !== true);
@@ -22,7 +23,7 @@ function createRenderer() {
 		//value
 		backgroundColor: 0xffffff,
 		//value
-		ambientLightColor: [0xffffff, 0],
+		ambientLightColor: /** @type {vec2} */([0xffffff, 0]),
 		//values
 		toneMappings: [],
 		//value
@@ -104,7 +105,7 @@ function createRenderer() {
 		 */
 		get processed() {
 			const values = get(store);
-			return Object.entries(values)
+			return /** @type {SvelteGLProcessedRenderer} */ (Object.entries(values)
 				.map(([key, value]) => {
 					if (processed.has(key)) {
 						return [key, processed.get(key)];
@@ -114,7 +115,7 @@ function createRenderer() {
 				.reduce((acc, [key, value]) => {
 					acc[key] = value;
 					return acc;
-				}, {});
+				}, {}));
 		},
 		get revision() {
 			return get(revisionStore);

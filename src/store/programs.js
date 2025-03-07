@@ -19,6 +19,7 @@ import {
 import { numLigths, lights } from "./lights";
 import { materials } from "./materials";
 import { renderer } from "./renderer";
+import { createVec3, createZeroMatrix } from "../geometries/common";
 
 export const renderPasses = writable([]);
 
@@ -44,14 +45,14 @@ export function sortMeshesByZ(programs) {
 	let transparent = false;
 	const canvas = get(renderer).canvas;
 	const { projection, view } = getCameraProjectionView(get(camera), canvas.width, canvas.height);
-	const projScreen = multiply([], projection, view);
+	const projScreen = multiply(createZeroMatrix(), projection, view);
 
 	programs.forEach((program) => {
 		if (transparent || isTransparent(program.material)) {
 			transparent = true;
 			program.meshes.forEach((mesh, i) => {
-				const meshPosition = getTranslation([], mesh.matrix);
-				mesh.clipSpacePosition = transformMat4([], meshPosition, projScreen);
+				const meshPosition = getTranslation(createVec3(), mesh.matrix);
+				mesh.clipSpacePosition = transformMat4(createVec3(), meshPosition, projScreen);
 			});
 			program.meshes = program.meshes.sort((a, b) => {
 				return b.clipSpacePosition[2] - a.clipSpacePosition[2];

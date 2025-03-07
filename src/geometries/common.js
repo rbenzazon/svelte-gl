@@ -1,7 +1,10 @@
 import { subtract as subtractVec3, cross as crossVec3, normalize as normalizeVec3 } from "gl-matrix/esm/vec3.js";
-
+/**
+ * Creates an identity matrix that satisfies the mat4 type constraint
+ * @returns {vec3}
+ */
 export function createVec3() {
-	return new Array(3).fill(0);
+	return /** @type {vec3} */(new Array(3).fill(0));
 }
 
 export function multiplyScalarVec3(a, scalar) {

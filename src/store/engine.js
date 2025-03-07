@@ -124,7 +124,7 @@ function selectMesh(programStore, mesh) {
 }
 
 /**
- * @typedef {Object} appContext
+ * @typedef {Object} AppContext
  * @property {Map<import("./programs.js").SvelteGLProgram,WebGLProgram>} programMap
  * @property {Map<import("./programs.js").SvelteGLProgram,Map<SvelteGLMesh,WebGLVertexArrayObject>>} vaoMap
  * @property {WebGL2RenderingContext} gl
@@ -137,7 +137,7 @@ function selectMesh(programStore, mesh) {
  * @property {boolean} existingProgram during a pipeline creation, informs the procedure that the program already exists
  */
 /**
- * @type {appContext}
+ * @type {AppContext}
  */
 export let appContext = {
 	programMap: new Map(),
