@@ -1,7 +1,7 @@
-import { I as cross, J as subtract, K as normalize, L as drawModes, y as identity, z as createZeroMatrix, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, q as renderPasses, x as translate, A as set_store_value, B as skyblue, C as createLightStore, D as createPointLight, N as rotateY, w as scale, H as createMaterialStore, E as create3DObject, F as createOrbitControls, G as binding_callbacks } from './Menu-UltLtXLd.js';
-import { c as createPlane } from './plane-Ds5CdqOO.js';
-import { c as createTexture } from './texture-B-EpJeyV.js';
-import { c as createContactShadowPass } from './contact-shadow-Co5eso8Q.js';
+import { I as cross, J as subtract, K as normalize, L as drawModes, y as identity, z as createZeroMatrix, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, p as camera, q as renderPasses, x as translate, A as set_store_value, B as skyblue, C as createLightStore, D as createPointLight, N as rotateY, w as scale, H as createMaterialStore, E as create3DObject, F as createOrbitControls, G as binding_callbacks } from './Menu-Cr0GMpwH.js';
+import { c as createPlane } from './plane-BAHAY5S-.js';
+import { c as createTexture } from './texture-CDpHm2qR.js';
+import { c as createContactShadowPass } from './contact-shadow-Bulycgqc.js';
 
 async function loadOBJFile(url) {
 	try {

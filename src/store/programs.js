@@ -87,6 +87,7 @@ export function sortMeshesByZ(programs) {
  * @property {Function[]} setupMaterial
  * @property {Function} useProgram
  * @property {Function} selectProgram
+ * @property {Function} [setupAttributes]
  * @property {Function[]} [bindTextures]
  * @property {Function} [setFrameBuffer]
  * @property {Function} [setupCamera]
@@ -113,7 +114,18 @@ export const programs = derived(
 			}, [])
 			.map((program) => ({
 				...program,
-				updateProgram: [],
+				...(program.updateProgram ? {} : { updateProgram: [] }),
+				...(program.allMeshes ? { meshes: $scene } : {}),
+			}));
+
+		let postPasses = $renderPasses
+			.filter((pass) => pass.order > 0)
+			.reduce((acc, pass) => {
+				return acc.concat(...pass.programs);
+			}, [])
+			.map((program) => ({
+				...program,
+				...(program.updateProgram ? {} : { updateProgram: [] }),
 				...(program.allMeshes ? { meshes: $scene } : {}),
 			}));
 
@@ -235,6 +247,7 @@ export const programs = derived(
 				);
 				return program;
 			}),
+			...postPasses,
 		];
 		clearUnusedCache(next);
 		return next;

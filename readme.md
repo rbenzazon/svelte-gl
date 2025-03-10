@@ -43,6 +43,12 @@ To give credit where credit is due, most of the 3d science is plundered from thr
 - Tone mapping : linear, AGX
 - Interactive Debug Panel
 
+## Roadmap
+- implement environment map for background and lighting
+
+- use the following feature to improve the engine
+https://developer.mozilla.org/en-US/docs/Web/API/KHR_parallel_shader_compile
+
 ## How to use
 
 ### installation

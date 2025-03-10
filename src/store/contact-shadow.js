@@ -154,7 +154,7 @@ export function createContactShadowPass(
 				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL, getGeometryTexture),
-				setupCamera: () => {},
+				setupCamera: () => () => {},
 				setFrameBuffer: setFrameBuffer(getHorizontalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
 				postDraw: unbindTexture,
@@ -168,7 +168,7 @@ export function createContactShadowPass(
 				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL, getHorizontalBlurTexture),
-				setupCamera: () => {},
+				setupCamera: () => () => {},
 				setFrameBuffer: setFrameBuffer(getVerticalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
 				postDraw: unbindTexture,
@@ -241,14 +241,16 @@ function setFrameBuffer(getFBO = null, width, height) {
 
 function setupShadowCamera(projection, view) {
 	return function setupShadowCamera() {
-		const { gl, program } = appContext;
+		return function setupShadowCamera() {
+			const { gl, program } = appContext;
 
-		const projectionLocation = gl.getUniformLocation(program, "projection");
+			const projectionLocation = gl.getUniformLocation(program, "projection");
 
-		gl.uniformMatrix4fv(projectionLocation, false, projection);
+			gl.uniformMatrix4fv(projectionLocation, false, projection);
 
-		const viewLocation = gl.getUniformLocation(program, "view");
-		gl.uniformMatrix4fv(viewLocation, false, view);
+			const viewLocation = gl.getUniformLocation(program, "view");
+			gl.uniformMatrix4fv(viewLocation, false, view);
+		};
 	};
 }
 

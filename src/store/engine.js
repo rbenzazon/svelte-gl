@@ -296,7 +296,7 @@ const renderPipeline = derived(
 								...program.updateProgram,
 							]),
 					...(program.setupCamera
-						? [program.setupCamera]
+						? [program.setupCamera($camera)]
 						: [...(updateMap.has(camera) || !appContext.existingProgram ? [setupCamera($camera)] : [])]),
 					...(program.setFrameBuffer ? [program.setFrameBuffer] : []),
 					...program.meshes.reduce(

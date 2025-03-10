@@ -18,6 +18,7 @@ const links = [
 	{ name: "Lights", href: "./lights" },
 	{ name: "Vertex Animation", href: "./vertex-anim" },
 	{ name: "Scene Update", href: "./scene-update" },
+	{ name: "Skybox", href: "./skybox" },
 ];
 </script>
 <button on:click={toggleMenu}>examples</button>
