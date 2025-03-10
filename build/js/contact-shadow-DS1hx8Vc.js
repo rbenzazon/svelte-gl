@@ -1,4 +1,4 @@
-import { R as appContext, L as drawModes, T as getTranslation, U as createVec3, V as orthoNO, W as lookAt, z as createZeroMatrix, X as linkProgram, Y as validateProgram, Z as useProgram, _ as selectProgram } from './Menu-Cr0GMpwH.js';
+import { R as appContext, L as drawModes, T as getTranslation, U as createVec3, V as orthoNO, W as lookAt, z as createZeroMatrix, X as linkProgram, Y as validateProgram, Z as useProgram, _ as selectProgram } from './Menu-Bxv9xIi-.js';
 
 var depthVertexShader = "#version 300 es\r\n\r\nprecision highp float;\r\n\r\nuniform mat4 view;\r\nuniform mat4 projection;\r\nuniform mat4 world;\r\n\r\nin vec3 position;\r\n\r\nout vec2 vHighPrecisionZW;\r\n\r\nvoid main() {\r\n\tgl_Position = projection * view * world * vec4( position, 1.0 );\r\n\tvHighPrecisionZW = gl_Position.zw;\r\n}";
 
@@ -304,7 +304,7 @@ function createContactShadowPass(
 				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL, getGeometryTexture),
-				setupCamera: () => ()=>{},
+				setupCamera: () => () => {},
 				setFrameBuffer: setFrameBuffer(getHorizontalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
 				postDraw: unbindTexture,
@@ -318,7 +318,7 @@ function createContactShadowPass(
 				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL, getHorizontalBlurTexture),
-				setupCamera: () => ()=>{},
+				setupCamera: () => () => {},
 				setFrameBuffer: setFrameBuffer(getVerticalBlurFBO, textureWidth, textureHeight),
 				meshes: [blurMesh],
 				postDraw: unbindTexture,

@@ -2530,7 +2530,7 @@ const programs = derived(
 			}, [])
 			.map((program) => ({
 				...program,
-				...(program.updateProgram?{}:{updateProgram: []}),
+				...(program.updateProgram ? {} : { updateProgram: [] }),
 				...(program.allMeshes ? { meshes: $scene } : {}),
 			}));
 
@@ -2541,7 +2541,7 @@ const programs = derived(
 			}, [])
 			.map((program) => ({
 				...program,
-				...(program.updateProgram?{}:{updateProgram: []}),
+				...(program.updateProgram ? {} : { updateProgram: [] }),
 				...(program.allMeshes ? { meshes: $scene } : {}),
 			}));
 
@@ -2674,8 +2674,6 @@ function findMaterialProgram() {
 	const matPrograms = get_store_value(programs).filter((program) => program.meshes?.length !== 0 && program.allMeshes !== true);
 	return matPrograms;
 }
-
-
 
 /**
  *

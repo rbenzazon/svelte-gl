@@ -7,8 +7,9 @@ import { multiply, invert } from "gl-matrix/esm/mat4.js";
 import { createVec3, createZeroMatrix } from "../geometries/common";
 import { cross, normalize, subtract } from "gl-matrix/esm/vec3.js";
 import { renderer } from "./renderer";
+import { templateLiteralRenderer } from "../shaders/template";
 
-export function createSkyBox(props) {
+export async function createSkyBox(props) {
 	let buffer;
 	function setBuffer(value) {
 		buffer = value;
@@ -23,10 +24,19 @@ export function createSkyBox(props) {
 	function getOriginalDepthFunc() {
 		return originalDepthFunc;
 	}
+	let setupSkybox, typedArray, toneMapping;
+	if ("url" in props && typeof props.url === "string") {
+		setupSkybox = await setupSkyBoxTexture(props.url, setBuffer);
+	} else if ("typedArray" in props && props.typedArray instanceof Uint16Array) {
+		typedArray = props.typedArray;
+
+		setupSkybox = setupHDRTexture(typedArray, setBuffer, props.convertToCube, props.width, props.height, props.cubeSize);
+		toneMapping = props.toneMapping;
+	}
 	const skyboxProgram = {
 		createProgram,
-		setupProgram: [createShaders, linkProgram, validateProgram],
-		setupMaterial: [setupSkyBoxTexture(props.url, setBuffer)],
+		setupProgram: [createShaders(toneMapping), linkProgram, validateProgram],
+		setupMaterial: [setupSkybox],
 		bindTextures: [bindSkyBoxTexture(getBuffer)],
 		setupCamera: setupSkyBoxCamera,
 		useProgram,
@@ -43,23 +53,47 @@ export function createSkyBox(props) {
 	};
 }
 
-function createShaders() {
-	const { gl, program } = appContext;
-	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-	gl.shaderSource(vertexShader, skyBoxVertex);
-	gl.compileShader(vertexShader);
-	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-		console.error(gl.getShaderInfoLog(vertexShader));
-	}
-	gl.attachShader(program, vertexShader);
+function setupHDRTexture(typedArray, setBuffer, convertToCube, width, height, cubeSize) {
+	return function setupHDRTexture() {
+		const { gl } = appContext;
+		const cubemapTexture = convertToCube(typedArray, gl, width, height, cubeSize);
+		setBuffer(cubemapTexture);
+	};
+}
 
-	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-	gl.shaderSource(fragmentShader, skyBoxFragment);
-	gl.compileShader(fragmentShader);
-	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-		console.error(gl.getShaderInfoLog(fragmentShader));
-	}
-	gl.attachShader(program, fragmentShader);
+function createShaders(toneMapping) {
+	return function createShaders() {
+		const { gl, program } = appContext;
+		const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+		gl.shaderSource(vertexShader, skyBoxVertex);
+		gl.compileShader(vertexShader);
+		if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+			console.error(gl.getShaderInfoLog(vertexShader));
+		}
+		gl.attachShader(program, vertexShader);
+
+		const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+		let declarations = "";
+		let toneMappings = "";
+		if (toneMapping != null) {
+			declarations = toneMapping.shader({ declaration: true, exposure: toneMapping.exposure });
+			toneMappings = toneMapping.shader({ color: true });
+		}
+		const fragmentSource = templateLiteralRenderer(skyBoxFragment, {
+			declarations: "",
+			toneMappings: "",
+		})({
+			declarations,
+			toneMappings,
+		});
+		gl.shaderSource(fragmentShader, fragmentSource);
+		gl.compileShader(fragmentShader);
+		if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+			console.error(gl.getShaderInfoLog(fragmentShader));
+		}
+		gl.attachShader(program, fragmentShader);
+	};
 }
 
 export function createSkyBoxMesh() {
@@ -92,7 +126,16 @@ function setupSkyBoxCamera(camera) {
 	};
 }
 
-function setupSkyBoxTexture(url, setBuffer) {
+async function setupSkyBoxTexture(url, setBuffer) {
+	const image = new Image();
+	await new Promise((resolve, reject) => {
+		image.src = url;
+		image.onload = function () {
+			resolve(image);
+		};
+		image.onerror = reject;
+	});
+
 	return function setupSkyBoxTexture() {
 		const { gl } = appContext;
 		const texture = gl.createTexture();
@@ -101,17 +144,15 @@ function setupSkyBoxTexture(url, setBuffer) {
 		// create a CUBE MAP texture from a single file where the faces arranged in a cross pattern
 		const image = new Image();
 		image.src = url;
-		image.onload = function () {
-			gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
-			sliceImageAndUpload(image, gl);
-			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-			gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
-			gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-			renderer.update((renderer) => renderer);
-		};
+		gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+		sliceImageAndUpload(image, gl);
+		gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+		gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+		renderer.update((renderer) => renderer);
 	};
 }
 

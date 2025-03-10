@@ -1,5 +1,7 @@
 import { createZeroMatrix } from "../geometries/common";
 import { mat4 } from "gl-matrix";
+import ACESFilmicShader from "../tone-mapping/aces-filmic-tone-mapping.glsl";
+import { templateLiteralRenderer } from "../shaders/template.js";
 
 /**
  * Converts the HDR image to a cube map texture
@@ -10,7 +12,7 @@ import { mat4 } from "gl-matrix";
  * @param {number} cubeSize - Size of each face of the output cubemap
  * @returns {WebGLTexture} The created cubemap texture
  */
-export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
+export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024, exposure = 1) {
 	const ext = gl.getExtension("EXT_color_buffer_float");
 	if (!ext) {
 		throw new Error("EXT_color_buffer_float extension not supported");
@@ -124,6 +126,17 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
 	gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
 
 	return cubemapTexture;
+}
+
+export function getToneMapping(exposure) {
+	return {
+		exposure: `${exposure.toLocaleString("en", { minimumFractionDigits: 1 })}f`,
+		shader: templateLiteralRenderer(ACESFilmicShader, {
+			declaration: false,
+			exposure: 1,
+			color: false,
+		}),
+	};
 }
 
 /**
@@ -261,7 +274,7 @@ function createEquirectToCubeProgram(gl) {
         // Map from [-π to π] for phi and [-π/2 to π/2] for theta to [0,1] range
         vec2 uv = vec2(
             0.5 + 0.5 * phi / 3.1415926535897932,
-            0.5 + theta / 3.1415926535897932
+            0.5 - theta / 3.1415926535897932
         );
         
         return uv;
