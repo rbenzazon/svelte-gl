@@ -1,7 +1,14 @@
 import { appContext, selectMesh, selectProgram } from "./engine";
 import skyBoxVertex from "../shaders/skybox-vertex.glsl";
 import skyBoxFragment from "../shaders/skybox-fragment.glsl";
-import { createProgram, getCameraProjectionView, linkProgram, useProgram, validateProgram } from "./gl";
+import {
+	createProgram,
+	getCameraProjectionView,
+	linkProgram,
+	resetViewportToCanvas,
+	useProgram,
+	validateProgram,
+} from "./gl";
 import { drawModes } from "./webgl";
 import { multiply, invert } from "gl-matrix/esm/mat4.js";
 import { createVec3, createZeroMatrix } from "../geometries/common";
@@ -148,13 +155,9 @@ function createSkyBoxProgram(setupHDRTexture) {
 function setupHDRTexture(typedArray, setBuffer, convertToCube, width, height, cubeSize) {
 	return function setupHDRTexture() {
 		const { gl } = appContext;
-		//const previousProgram = program;
 		const cubemapTexture = convertToCube(typedArray, gl, width, height, cubeSize);
 		setBuffer(cubemapTexture);
-		console.log("setupHDRTexture");
-		//gl.useProgram(previousProgram);
-		//selectMesh(skyboxProgram,skyboxProgram.meshes[0])();
-
+		resetViewportToCanvas();
 		renderer.update((renderer) => renderer);
 	};
 }
@@ -217,7 +220,6 @@ function setupSkyBoxCamera(camera) {
 		const { gl, program, canvas } = appContext;
 
 		const { projection } = getCameraProjectionView(camera, canvas.width, canvas.height);
-		console.log("camera", camera);
 
 		const viewCamera = lookAt(camera.position, camera.target, camera.up, createZeroMatrix());
 		const viewMatrix = invert(createZeroMatrix(), viewCamera);
@@ -230,9 +232,7 @@ function setupSkyBoxCamera(camera) {
 		const viewDirectionProjectionMatrix = multiply(createZeroMatrix(), projection, viewMatrix);
 		const viewDirectionProjectionInverseMatrix = invert(createZeroMatrix(), viewDirectionProjectionMatrix);
 		const viewDirectionProjectionInverseLocation = gl.getUniformLocation(program, "viewDirectionProjectionInverse");
-		console.log("viewDirectionProjectionInverseMatrix", viewDirectionProjectionInverseMatrix);
 		gl.uniformMatrix4fv(viewDirectionProjectionInverseLocation, false, viewDirectionProjectionInverseMatrix);
-		console.log("after");
 	};
 }
 
@@ -306,8 +306,6 @@ function sliceImageAndUpload(image, gl) {
 
 function bindSkyBoxTexture(getBuffer) {
 	return function bindSkyBoxTexture() {
-		console.log("bindSkyBoxTexture");
-
 		const { gl, program } = appContext;
 		const textureLocation = gl.getUniformLocation(program, "skybox");
 		gl.uniform1i(textureLocation, 0);

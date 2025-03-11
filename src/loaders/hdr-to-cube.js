@@ -1,6 +1,8 @@
 import { createVec3, createZeroMatrix } from "../geometries/common";
 import { mat4 } from "gl-matrix";
 import { createACESFilmicToneMapping } from "../tone-mapping/aces-filmic-tone-mapping";
+import { createAGXToneMapping } from "../tone-mapping/agx";
+import { createNeutralToneMapping } from "../tone-mapping/neutral-tone-mapping";
 
 /**
  * Converts the HDR image to a cube map texture
@@ -12,8 +14,6 @@ import { createACESFilmicToneMapping } from "../tone-mapping/aces-filmic-tone-ma
  * @returns {WebGLTexture} The created cubemap texture
  */
 export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
-	console.log("hdrToCube");
-
 	const ext = gl.getExtension("EXT_color_buffer_float");
 	if (!ext) {
 		throw new Error("EXT_color_buffer_float extension not supported");
@@ -51,7 +51,6 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
 	projectionMatrix[11] = -1;
 	projectionMatrix[14] = (2 * far * near) / (near - far);
 	const projectionLocation = gl.getUniformLocation(program, "projection");
-	console.log("projectionLocation", projectionLocation);
 	gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
 
 	// ... inside your function
@@ -107,9 +106,6 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
 			console.error("Framebuffer not complete:", status);
 			continue;
 		}
-		const viewLocation = gl.getUniformLocation(program, "view");
-		console.log("viewLocation", viewLocation);
-
 		// Set the view matrix for this face
 		gl.uniformMatrix4fv(gl.getUniformLocation(program, "view"), false, views[i]);
 
@@ -129,7 +125,6 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
 	// Generate mipmaps for the cubemap
 	gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);
 	gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-	console.log("hdrToCube end");
 	return cubemapTexture;
 }
 /**
@@ -138,7 +133,7 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
  * @returns {SvelteGLToneMapping}
  */
 export function getToneMapping(exposure) {
-	return createACESFilmicToneMapping({ exposure });
+	return createAGXToneMapping({ exposure });
 }
 
 /**

@@ -13,7 +13,7 @@ export async function loadRGBE(url) {
  * @returns {{
  * width: number,
  * height: number,
- * data: Float32Array | Uint16Array,
+ * data: Uint16Array,
  * header: string,
  * gamma: number,
  * exposure: number,

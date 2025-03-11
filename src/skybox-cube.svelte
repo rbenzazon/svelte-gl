@@ -22,10 +22,6 @@ import { appContext } from "./store/engine.js";
 let canvas;
 let rgbeImage;
 onMount(async () => {
-	//rgbeImage = await loadRGBE("christmas_photo_studio_01_2k.hdr");
-
-	//console.log("rgbeImage", rgbeImage);
-
 	$renderer = {
 		...$renderer,
 		canvas,
@@ -94,12 +90,6 @@ onMount(async () => {
 	};
 
 	createOrbitControls(canvas, camera);
-	/*setTimeout(() => {
-		console.log("go", rgbeImage);
-		const { gl } = appContext;
-		const texture = hdrToCube(rgbeImage.data, gl, rgbeImage.width, rgbeImage.height, 1024);
-		console.log("texture", texture);
-	}, 0);*/
 });
 
 function animate() {}

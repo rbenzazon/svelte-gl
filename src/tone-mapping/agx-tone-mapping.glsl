@@ -67,10 +67,14 @@ vec3 AgXToneMapping(vec3 color) {
     return color;
 
 }
+vec4 sRGBTransferOETF( in vec4 value ) {
+    return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );
+}
 ` : ''
 }
 ${color?
 `
     fragColor = vec4(AgXToneMapping(fragColor.xyz),1.0f);
+    fragColor = sRGBTransferOETF(fragColor);
 ` : ''
 }

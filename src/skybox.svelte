@@ -24,10 +24,6 @@ import { appContext } from "./store/engine.js";
 let canvas;
 let rgbeImage;
 onMount(async () => {
-	//rgbeImage = await loadRGBE("christmas_photo_studio_01_2k.hdr");
-
-	//console.log("rgbeImage", rgbeImage);
-
 	$renderer = {
 		...$renderer,
 		canvas,
@@ -37,14 +33,12 @@ onMount(async () => {
 
 	$camera = {
 		...$camera,
-		position: [0, 2, -5],
+		position: [-4.5, 0.8, -2.5],
 		target: [0, 0, 0],
 		fov: 75,
 	};
-	rgbeImage = await loadRGBE("christmas_photo_studio_01_2k.hdr");
-
-	//const skyBox = await createSkyBox({ url: "skybox-flamingo-tonemapped.png" });
-	const hdrToneMapping = getToneMapping(3);
+	rgbeImage = await loadRGBE("christmas_photo_studio_01_4k.hdr");
+	const hdrToneMapping = getToneMapping(1.5);
 	const skyBox = await createSkyBox({
 		typedArray: rgbeImage.data,
 		convertToCube: hdrToCube,
@@ -59,7 +53,7 @@ onMount(async () => {
 
 	const light = createLightStore(
 		createPointLight({
-			position: [-2, 2, -2],
+			position: [-2, 2, 2],
 			color: [1, 1, 1],
 			intensity: 20,
 			cutoffDistance: 0,
@@ -105,12 +99,6 @@ onMount(async () => {
 	};
 
 	createOrbitControls(canvas, camera);
-	/*setTimeout(() => {
-		console.log("go", rgbeImage);
-		const { gl } = appContext;
-		const texture = hdrToCube(rgbeImage.data, gl, rgbeImage.width, rgbeImage.height, 1024);
-		console.log("texture", texture);
-	}, 0);*/
 });
 
 function animate() {}
