@@ -1,5 +1,7 @@
 #version 300 es
 precision mediump float;
+
+#define SHADER_NAME defaultVertex
     
 in vec3 position;
 in vec3 normal;

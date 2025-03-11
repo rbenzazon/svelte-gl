@@ -1,6 +1,8 @@
 #version 300 es
 precision mediump float;
 
+#define SHADER_NAME basicFragment
+
 // Input from vertex shader
 in vec3 vertexColor;
 in vec3 vNormal;

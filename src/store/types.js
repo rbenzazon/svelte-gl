@@ -67,9 +67,10 @@
 /**
  * @typedef {Object} SvelteGLAttributes
  * @property {Float32Array|SvelteGLInterleavedAttribute} positions
- * @property {Float32Array|SvelteGLInterleavedAttribute} normals
+ * @property {Float32Array|SvelteGLInterleavedAttribute} [normals]
  * @property {Float32Array} [uvs]
  * @property {Uint16Array} [elements]
+ * @property {number} [positionsSize]
  */
 /**
  * @typedef {Object} SvelteGLMaterial
@@ -179,7 +180,7 @@
 
 /**
  * @typedef {Object} SvelteGLToneMapping
- * @property {number} exposure
+ * @property {string} exposure
  * @property {import("src/shaders/template").TemplateRenderer} shader
  */
 

@@ -1,6 +1,8 @@
 #version 300 es
 precision mediump float;
 
+#define SHADER_NAME defaultFragment
+
 ${defines}
 
 #define RECIPROCAL_PI 0.3183098861837907

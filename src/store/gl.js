@@ -96,6 +96,7 @@ export function render(mesh, instances, drawMode) {
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / positionSize;
 
+		console.log("render");
 		if (instances) {
 			if (mesh.attributes.elements) {
 				gl.drawElementsInstanced(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0, instances);
@@ -118,11 +119,14 @@ export function render(mesh, instances, drawMode) {
 
 export function bindVAO() {
 	const { gl, vao } = appContext;
+	console.log("bindVAO", vao);
 	gl.bindVertexArray(vao);
 }
 
 export function createProgram(programStore) {
 	return function createProgram() {
+		console.log("createProgram");
+
 		const { gl } = appContext;
 		const program = gl.createProgram();
 		appContext.programMap.set(programStore, program);
@@ -149,6 +153,7 @@ export function validateProgram() {
 
 export function useProgram() {
 	const { gl, program } = appContext;
+	console.log("useProgram", program);
 	gl.useProgram(program);
 }
 
@@ -587,6 +592,7 @@ function getBuffer(variable) {
 
 export function setupAttributes(programStore, mesh) {
 	return function setupAttributes() {
+		console.log("setupAttributes");
 		const { gl, program, vaoMap } = appContext;
 		const { positions, normals, elements, uvs, positionsSize } = mesh.attributes;
 		let vao;

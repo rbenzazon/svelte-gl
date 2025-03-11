@@ -111,13 +111,16 @@ export function selectProgram(programStore) {
 	return function selectProgram() {
 		const { programMap } = appContext;
 		const cachedProgram = programMap.get(programStore);
+		console.log("selectProgram", cachedProgram);
 		appContext.program = cachedProgram;
 	};
 }
 
-function selectMesh(programStore, mesh) {
+export function selectMesh(programStore, mesh) {
 	return function selectMesh() {
 		const { vaoMap } = appContext;
+		console.log("selectMesh", mesh);
+
 		const cachedVAO = vaoMap.get(programStore).get(mesh);
 		appContext.vao = cachedVAO;
 	};

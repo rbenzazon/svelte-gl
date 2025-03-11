@@ -1,6 +1,8 @@
 #version 300 es
 precision highp float;
 
+#define SHADER_NAME skyboxFragment
+
 uniform samplerCube skybox;
 uniform mat4 viewDirectionProjectionInverse;
 

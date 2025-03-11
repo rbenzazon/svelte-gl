@@ -37,7 +37,7 @@ onMount(async () => {
 
 	$camera = {
 		...$camera,
-		position: [0, 5, -5],
+		position: [0, 2, -5],
 		target: [0, 0, 0],
 		fov: 75,
 	};

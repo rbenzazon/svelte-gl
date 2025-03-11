@@ -1,7 +1,6 @@
-import { createZeroMatrix } from "../geometries/common";
+import { createVec3, createZeroMatrix } from "../geometries/common";
 import { mat4 } from "gl-matrix";
-import ACESFilmicShader from "../tone-mapping/aces-filmic-tone-mapping.glsl";
-import { templateLiteralRenderer } from "../shaders/template.js";
+import { createACESFilmicToneMapping } from "../tone-mapping/aces-filmic-tone-mapping";
 
 /**
  * Converts the HDR image to a cube map texture
@@ -12,7 +11,9 @@ import { templateLiteralRenderer } from "../shaders/template.js";
  * @param {number} cubeSize - Size of each face of the output cubemap
  * @returns {WebGLTexture} The created cubemap texture
  */
-export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024, exposure = 1) {
+export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
+	console.log("hdrToCube");
+
 	const ext = gl.getExtension("EXT_color_buffer_float");
 	if (!ext) {
 		throw new Error("EXT_color_buffer_float extension not supported");
@@ -49,12 +50,14 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024, e
 	projectionMatrix[10] = (far + near) / (near - far);
 	projectionMatrix[11] = -1;
 	projectionMatrix[14] = (2 * far * near) / (near - far);
-
-	gl.uniformMatrix4fv(gl.getUniformLocation(program, "projection"), false, projectionMatrix);
+	const projectionLocation = gl.getUniformLocation(program, "projection");
+	console.log("projectionLocation", projectionLocation);
+	gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
 
 	// ... inside your function
 	const views = [];
-	const eye = [0, 0, 0];
+	/**@type {import("gl-matrix").ReadonlyVec3} */
+	const eye = createVec3();
 
 	// For each face
 	for (let i = 0; i < 6; i++) {
@@ -104,6 +107,8 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024, e
 			console.error("Framebuffer not complete:", status);
 			continue;
 		}
+		const viewLocation = gl.getUniformLocation(program, "view");
+		console.log("viewLocation", viewLocation);
 
 		// Set the view matrix for this face
 		gl.uniformMatrix4fv(gl.getUniformLocation(program, "view"), false, views[i]);
@@ -124,57 +129,16 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024, e
 	// Generate mipmaps for the cubemap
 	gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);
 	gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
-
+	console.log("hdrToCube end");
 	return cubemapTexture;
 }
-
-export function getToneMapping(exposure) {
-	return {
-		exposure: `${exposure.toLocaleString("en", { minimumFractionDigits: 1 })}f`,
-		shader: templateLiteralRenderer(ACESFilmicShader, {
-			declaration: false,
-			exposure: 1,
-			color: false,
-		}),
-	};
-}
-
 /**
- * Creates a view matrix for the specified direction
- * @param {Array<number>} eye - Camera position
- * @param {Array<number>} target - Look direction
- * @param {Array<number>} up - Up vector
- * @returns {Float32Array} View matrix
+ *
+ * @param {number} exposure
+ * @returns {SvelteGLToneMapping}
  */
-function createViewMatrix(eye, target, up) {
-	// Calculate z axis (normalized eye to target)
-	const z = normalize([target[0] - eye[0], target[1] - eye[1], target[2] - eye[2]]);
-
-	// Calculate x axis (normalized cross product of up and z)
-	const x = normalize(cross(up, z));
-
-	// Calculate y axis (cross product of z and x)
-	const y = cross(z, x);
-
-	// Create view matrix
-	return new Float32Array([
-		x[0],
-		y[0],
-		z[0],
-		0,
-		x[1],
-		y[1],
-		z[1],
-		0,
-		x[2],
-		y[2],
-		z[2],
-		0,
-		-dot(x, eye),
-		-dot(y, eye),
-		-dot(z, eye),
-		1,
-	]);
+export function getToneMapping(exposure) {
+	return createACESFilmicToneMapping({ exposure });
 }
 
 /**
@@ -239,11 +203,14 @@ function createCubemapTexture(gl, size) {
 /**
  * Create the shader program and VAO for equirect to cubemap conversion
  * @param {WebGL2RenderingContext} gl - WebGL2 rendering context
- * @returns {Object} Object containing the program and VAO
+ * @returns {{program:WebGLProgram,vertexArray:WebGLVertexArrayObject}} Object containing the program and VAO
  */
 function createEquirectToCubeProgram(gl) {
 	// Vertex shader: render a fullscreen quad properly mapped to cube face
 	const vertexShaderSource = /*glsl*/ `#version 300 es
+
+    #define SHADER_NAME hdrToCubeVertex
+
     layout(location = 0) in vec2 position;
     out vec3 localPos;
     uniform mat4 projection;
@@ -261,6 +228,9 @@ function createEquirectToCubeProgram(gl) {
 
 	// Fragment shader with improved spherical mapping
 	const fragmentShaderSource = /*glsl*/ `#version 300 es
+
+    #define SHADER_NAME hdrToCubeFragment
+
     precision highp float;
     in vec3 localPos;
     out vec4 fragColor;
@@ -335,21 +305,4 @@ function createEquirectToCubeProgram(gl) {
 	gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
 	return { program, vertexArray };
-}
-
-// Vector math helper functions
-function normalize(v) {
-	const length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-	if (length > 0) {
-		return [v[0] / length, v[1] / length, v[2] / length];
-	}
-	return [0, 0, 0];
-}
-
-function cross(a, b) {
-	return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-}
-
-function dot(a, b) {
-	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
