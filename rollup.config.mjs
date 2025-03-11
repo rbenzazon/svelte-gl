@@ -24,6 +24,7 @@ export default {
         'vertex-anim':'src/vertex-anim.svelte',
         'scene-update':'src/scene-update.svelte',
         'skybox':'src/skybox.svelte',
+        'skybox-cube':'src/skybox-cube.svelte',
     },
     output: {
         dir: 'build/js',

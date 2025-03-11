@@ -9,7 +9,7 @@ import { cross, normalize, subtract } from "gl-matrix/esm/vec3.js";
 import { renderer } from "./renderer";
 import { templateLiteralRenderer } from "../shaders/template";
 /**
- * @callback ConvertToCube
+ * @callback ConvertHDRToCube
  * @param {Uint16Array} typedArray
  * @param {WebGL2RenderingContext} gl
  * @param {number} width
@@ -17,15 +17,21 @@ import { templateLiteralRenderer } from "../shaders/template";
  * @param {number} cubeSize
  * @returns {WebGLTexture}
  */
+/**
+ * @callback LoadCubeMap
+ * @param {string} url
+ * @param {setBuffer} setBuffer
+ */
 
 /**
  * @typedef {Object} SvelteGLCubeMapSkyboxProps
  * @property {string} url
+ * @property {LoadCubeMap} convertToCube
  */
 /**
  * @typedef {Object} SvelteGLHDRSkyboxProps
  * @property {Uint16Array} typedArray
- * @property {ConvertToCube} convertToCube
+ * @property {ConvertHDRToCube} convertToCube
  * @property {number} width
  * @property {number} height
  * @property {number} cubeSize
@@ -88,7 +94,7 @@ export async function createSkyBox(props) {
 	};
 	let returnProps, typedArray, toneMapping;
 	if (isCubeMapSkyboxProps(props)) {
-		skyboxProgram.setupMaterial = [await setupSkyBoxTexture(props.url, setBuffer)];
+		skyboxProgram.setupMaterial = [await props.convertToCube(props.url, setBuffer)];
 		skyboxProgram.setupProgram = [createShaders(), ...skyboxProgram.setupProgram];
 		returnProps = {
 			url: props.url,
@@ -230,7 +236,7 @@ function setupSkyBoxCamera(camera) {
 	};
 }
 
-async function setupSkyBoxTexture(url, setBuffer) {
+export async function setupSkyBoxTexture(url, setBuffer) {
 	const image = new Image();
 	await new Promise((resolve, reject) => {
 		image.src = url;
