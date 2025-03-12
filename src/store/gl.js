@@ -197,13 +197,6 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			declarations: vertexDeclarations,
 			positionModifier: vertexPositionModifiers,
 		});
-		//(vertexShaderSource);
-		const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-		gl.shaderSource(vertexShader, vertexShaderSource);
-		gl.compileShader(vertexShader);
-		if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-			console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
-		}
 		let specularIrradiance = "";
 		let specularDeclaration = "";
 		if (material.specular) {
@@ -292,15 +285,50 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			//todo, remove this after decoupling the point light shader
 			numPointLights,
 		});
-		const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-		gl.shaderSource(fragmentShader, fragmentShaderSource);
-		gl.compileShader(fragmentShader);
-		if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-			console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
-		}
-		gl.attachShader(program, vertexShader);
-		gl.attachShader(program, fragmentShader);
+		compileShaders(gl,program,vertexShaderSource,fragmentShaderSource);
 	};
+}
+
+export function compileShaders(gl,program,vertexShaderSource,fragmentShaderSource) {
+	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+	gl.shaderSource(vertexShader, vertexShaderSource);
+	gl.compileShader(vertexShader);
+	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+		console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
+	}
+	gl.attachShader(program, vertexShader);
+	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+	gl.shaderSource(fragmentShader, fragmentShaderSource);
+	gl.compileShader(fragmentShader);
+	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+		console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
+	}
+	gl.attachShader(program, fragmentShader);
+}
+
+export function createFBO(width, height, setFBO, setTexture) {
+	return function createFBO() {
+		const { gl } = appContext;
+		// The geometry texture will be sampled during the HORIZONTAL pass
+		const texture = gl.createTexture();
+		setTexture(texture);
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+		const fbo = gl.createFramebuffer();
+		setFBO(fbo);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+
+		gl.bindTexture(gl.TEXTURE_2D, null);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	};
+}
+export function unbindTexture() {
+	const { gl } = appContext;
+	gl.bindTexture(gl.TEXTURE_2D, null);
 }
 /**
  *
@@ -586,7 +614,7 @@ function getBuffer(variable) {
 	return {
 		data,
 		interleaved,
-		...(interleaved ? { byteStride: variable.byteStride, byteOffset: variable.byteOffset } : {}),
+		...(interleaved ? { byteStride: variable.byteStride, byteOffset: variable.byteOffset } : {byteStride:0,byteOffset:0}),
 	};
 }
 
@@ -656,6 +684,26 @@ export function setupAttributes(programStore, mesh) {
 				gl.enableVertexAttribArray(uvLocation);
 			}
 		}
+		// this sets up special custom attributes
+		// these are attributes that are not part of the base mesh
+		const baseAttributes = ["positions", "normals", "uvs", "elements"];
+		Object.entries(mesh.attributes)
+			.filter(([key])=>!baseAttributes.includes(key))
+			.forEach(([key, value]) => {
+				if(typeof value === "object" && "itemSize" in value && "array" in value){
+					const data = new Float32Array(value.array);
+					const buffer = gl.createBuffer();
+					gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+					gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+					const location = gl.getAttribLocation(program, key);
+					if (location != -1) {
+						gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+						gl.vertexAttribPointer(location, value.itemSize, gl.FLOAT, false, 0, 0);
+						gl.enableVertexAttribArray(location);
+					}
+
+				}
+			});
 
 		gl.bindVertexArray(null);
 	};

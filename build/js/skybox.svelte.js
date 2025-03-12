@@ -1,1 +1,1276 @@
-import{a7 as r,U as e,av as n,W as t,z as a,S as o,i,s,M as c,e as f,a as l,c as E,b as u,m,n as p,t as g,d as T,f as A,g as _,h as R,o as d,r as h,l as v,j as x,k as M,q as b,p as w,A as U,B as L,C as y,D as F,y as P,E as I,F as X,G as B,H as C}from"./Menu-BeccOEjd.js";import{c as S}from"./skybox-DkcOsqvo.js";import{c as D}from"./cube-CIxgEHM0.js";import{c as G,a as O}from"./debug-program-Bwhl8KtH.js";const N=1016,k=1015;async function H(r){const e=await fetch(r);return function(r){const e=N,n=1,t=2,a=3,o=4,i=1,s=2,c=4,f="\n",l=new Uint8Array(r);l.pos=0;const E=R(l),u=E.width,m=E.height,p=d(l.subarray(l.pos),u,m);let g,T;switch(e){case k:T=p.length/4;const r=new Float32Array(4*T);for(let e=0;e<T;e++)h(p,4*e,r,4*e);g=r;break;case N:T=p.length/4;const n=new Uint16Array(4*T);for(let r=0;r<T;r++)v(p,4*r,n,4*r);g=n;break;default:throw new Error("THREE.RGBELoader: Unsupported type: "+e)}return{width:u,height:m,data:g,header:E.string,gamma:E.gamma,exposure:E.exposure,type:e};function A(r,e){switch(r){case n:throw new Error("THREE.RGBELoader: Read Error: "+(e||""));case t:throw new Error("THREE.RGBELoader: Write Error: "+(e||""));case a:throw new Error("THREE.RGBELoader: Bad File Format: "+(e||""));default:throw new Error("THREE.RGBELoader: Memory Error: "+(e||""))}}function _(r,e,n){const t=128;e=e||1024;let a=r.pos,o=-1,i=0,s="",c=String.fromCharCode.apply(null,new Uint16Array(r.subarray(a,a+t)));for(;0>(o=c.indexOf(f))&&i<e&&a<r.byteLength;)s+=c,i+=c.length,a+=t,c+=String.fromCharCode.apply(null,new Uint16Array(r.subarray(a,a+t)));return-1<o&&(r.pos+=i+o+1,s+c.slice(0,o))}function R(r){const e=/^#\?(\S+)/,t=/^\s*GAMMA\s*=\s*(\d+(\.\d+)?)\s*$/,o=/^\s*EXPOSURE\s*=\s*(\d+(\.\d+)?)\s*$/,f=/^\s*FORMAT=(\S+)\s*$/,l=/^\s*\-Y\s+(\d+)\s+\+X\s+(\d+)\s*$/,E={valid:0,string:"",comments:"",programtype:"RGBE",format:"",gamma:1,exposure:1,width:0,height:0};let u,m;for((r.pos>=r.byteLength||!(u=_(r)))&&A(n,"no header found"),(m=u.match(e))||A(a,"bad initial token"),E.valid|=i,E.programtype=m[1],E.string+=u+"\n";u=_(r),!1!==u;)if(E.string+=u+"\n","#"!==u.charAt(0)){if((m=u.match(t))&&(E.gamma=parseFloat(m[1])),(m=u.match(o))&&(E.exposure=parseFloat(m[1])),(m=u.match(f))&&(E.valid|=s,E.format=m[1]),(m=u.match(l))&&(E.valid|=c,E.height=parseInt(m[1],10),E.width=parseInt(m[2],10)),E.valid&s&&E.valid&c)break}else E.comments+=u+"\n";return E.valid&s||A(a,"missing format specifier"),E.valid&c||A(a,"missing image size specifier"),E}function d(r,e,t){const i=e;if(i<8||i>32767||2!==r[0]||2!==r[1]||128&r[2])return new Uint8Array(r);i!==(r[2]<<8|r[3])&&A(a,"wrong scanline width");const s=new Uint8Array(4*e*t);s.length||A(o,"unable to allocate buffer space");let c=0,f=0;const l=4*i,E=new Uint8Array(4),u=new Uint8Array(l);let m=t;for(;m>0&&f<r.byteLength;){f+4>r.byteLength&&A(n),E[0]=r[f++],E[1]=r[f++],E[2]=r[f++],E[3]=r[f++],2==E[0]&&2==E[1]&&(E[2]<<8|E[3])==i||A(a,"bad rgbe scanline format");let e,t=0;for(;t<l&&f<r.byteLength;){e=r[f++];const n=e>128;if(n&&(e-=128),(0===e||t+e>l)&&A(a,"bad scanline data"),n){const n=r[f++];for(let r=0;r<e;r++)u[t++]=n}else u.set(r.subarray(f,f+e),t),t+=e,f+=e}const o=i;for(let r=0;r<o;r++){let e=0;s[c]=u[r+e],e+=i,s[c+1]=u[r+e],e+=i,s[c+2]=u[r+e],e+=i,s[c+3]=u[r+e],c+=4}m--}return s}function h(r,e,n,t){const a=r[e+3],o=Math.pow(2,a-128)/255;n[t+0]=r[e+0]*o,n[t+1]=r[e+1]*o,n[t+2]=r[e+2]*o,n[t+3]=1}function v(r,e,n,t){const a=r[e+3],o=Math.pow(2,a-128)/255;n[t+0]=V(Math.min(r[e+0]*o,65504)),n[t+1]=V(Math.min(r[e+1]*o,65504)),n[t+2]=V(Math.min(r[e+2]*o,65504)),n[t+3]=V(1)}}(await e.arrayBuffer())}function V(r){var e,n,t;Math.abs(r)>65504&&console.warn("THREE.DataUtils.toHalfFloat(): Value out of range."),e=r,n=-65504,t=65504,r=Math.max(n,Math.min(t,e)),$.floatView[0]=r;const a=$.uint32View[0],o=a>>23&511;return $.baseTable[o]+((8388607&a)>>$.shiftTable[o])}const $=j();function j(){const r=new ArrayBuffer(4),e=new Float32Array(r),n=new Uint32Array(r),t=new Uint32Array(512),a=new Uint32Array(512);for(let r=0;r<256;++r){const e=r-127;e<-27?(t[r]=0,t[256|r]=32768,a[r]=24,a[256|r]=24):e<-14?(t[r]=1024>>-e-14,t[256|r]=1024>>-e-14|32768,a[r]=-e-1,a[256|r]=-e-1):e<=15?(t[r]=e+15<<10,t[256|r]=e+15<<10|32768,a[r]=13,a[256|r]=13):e<128?(t[r]=31744,t[256|r]=64512,a[r]=24,a[256|r]=24):(t[r]=31744,t[256|r]=64512,a[r]=13,a[256|r]=13)}const o=new Uint32Array(2048),i=new Uint32Array(64),s=new Uint32Array(64);for(let r=1;r<1024;++r){let e=r<<13,n=0;for(;!(8388608&e);)e<<=1,n-=8388608;e&=-8388609,n+=947912704,o[r]=e|n}for(let r=1024;r<2048;++r)o[r]=939524096+(r-1024<<13);for(let r=1;r<31;++r)i[r]=r<<23;i[31]=1199570944,i[32]=2147483648;for(let r=33;r<63;++r)i[r]=2147483648+(r-32<<23);i[63]=3347054592;for(let r=1;r<64;++r)32!==r&&(s[r]=1024);return{floatView:e,uint32View:n,baseTable:t,shiftTable:a,mantissaTable:o,exponentTable:i,offsetTable:s}}const z=e=>({exposure:`${e.exposure.toLocaleString("en",{minimumFractionDigits:1})}f`,shader:r("${declaration?\r\n`\r\n// tone mapping taken from three.js\r\nfloat toneMappingExposure = ${exposure};\r\n\r\n    // Matrices for rec 2020 <> rec 709 color space conversion\r\n    // matrix provided in row-major order so it has been transposed\r\n    // https://www.itu.int/pub/R-REP-BT.2407-2017\r\nconst mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(vec3(1.6605f, -0.1246f, -0.0182f), vec3(-0.5876f, 1.1329f, -0.1006f), vec3(-0.0728f, -0.0083f, 1.1187f));\r\n\r\nconst mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(vec3(0.6274f, 0.0691f, 0.0164f), vec3(0.3293f, 0.9195f, 0.0880f), vec3(0.0433f, 0.0113f, 0.8956f));\r\n\r\n    // https://iolite-engine.com/blog_posts/minimal_agx_implementation\r\n    // Mean error^2: 3.6705141e-06\r\nvec3 agxDefaultContrastApprox(vec3 x) {\r\n\r\n    vec3 x2 = x * x;\r\n    vec3 x4 = x2 * x2;\r\n\r\n    return +15.5f * x4 * x2 - 40.14f * x4 * x + 31.96f * x4 - 6.868f * x2 * x + 0.4298f * x2 + 0.1191f * x - 0.00232f;\r\n\r\n}\r\n\r\nvec3 AgXToneMapping(vec3 color) {\r\n\r\n        // AgX constants\r\n    const mat3 AgXInsetMatrix = mat3(vec3(0.856627153315983f, 0.137318972929847f, 0.11189821299995f), vec3(0.0951212405381588f, 0.761241990602591f, 0.0767994186031903f), vec3(0.0482516061458583f, 0.101439036467562f, 0.811302368396859f));\r\n\r\n        // explicit AgXOutsetMatrix generated from Filaments AgXOutsetMatrixInv\r\n    const mat3 AgXOutsetMatrix = mat3(vec3(1.1271005818144368f, -0.1413297634984383f, -0.14132976349843826f), vec3(-0.11060664309660323f, 1.157823702216272f, -0.11060664309660294f), vec3(-0.016493938717834573f, -0.016493938717834257f, 1.2519364065950405f));\r\n\r\n        // LOG2_MIN      = -10.0\r\n        // LOG2_MAX      =  +6.5\r\n        // MIDDLE_GRAY   =  0.18\r\n    const float AgxMinEv = -12.47393f;  // log2( pow( 2, LOG2_MIN ) * MIDDLE_GRAY )\r\n    const float AgxMaxEv = 4.026069f;    // log2( pow( 2, LOG2_MAX ) * MIDDLE_GRAY )\r\n\r\n    color *= toneMappingExposure;\r\n\r\n    color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;\r\n\r\n    color = AgXInsetMatrix * color;\r\n\r\n        // Log2 encoding\r\n    color = max(color, 1e-10f); // avoid 0 or negative numbers for log2\r\n    color = log2(color);\r\n    color = (color - AgxMinEv) / (AgxMaxEv - AgxMinEv);\r\n\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n        // Apply sigmoid\r\n    color = agxDefaultContrastApprox(color);\r\n\r\n        // Apply AgX look\r\n        // v = agxLook(v, look);\r\n\r\n    color = AgXOutsetMatrix * color;\r\n\r\n        // Linearize\r\n    color = pow(max(vec3(0.0f), color), vec3(2.2f));\r\n\r\n    color = LINEAR_REC2020_TO_LINEAR_SRGB * color;\r\n\r\n        // Gamut mapping. Simple clamp for now.\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n    return color;\r\n\r\n}\r\nvec4 sRGBTransferOETF( in vec4 value ) {\r\n    return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );\r\n}\r\n` : ''\r\n}\r\n${color?\r\n`\r\n    fragColor = vec4(AgXToneMapping(fragColor.xyz),1.0f);\r\n    fragColor = sRGBTransferOETF(fragColor);\r\n` : ''\r\n}",{declaration:!1,exposure:1,color:!1})});function W(r,o,i,s,c=1024){if(!o.getExtension("EXT_color_buffer_float"))throw new Error("EXT_color_buffer_float extension not supported");const f=function(r,e,n,t){const a=r.createTexture();return r.bindTexture(r.TEXTURE_2D,a),r.texImage2D(r.TEXTURE_2D,0,r.RGBA16F,n,t,0,r.RGBA,r.HALF_FLOAT,e),r.texParameteri(r.TEXTURE_2D,r.TEXTURE_WRAP_S,r.CLAMP_TO_EDGE),r.texParameteri(r.TEXTURE_2D,r.TEXTURE_WRAP_T,r.CLAMP_TO_EDGE),r.texParameteri(r.TEXTURE_2D,r.TEXTURE_MIN_FILTER,r.LINEAR),r.texParameteri(r.TEXTURE_2D,r.TEXTURE_MAG_FILTER,r.LINEAR),a}(o,r,i,s),l=function(r,e){const n=r.createTexture();r.bindTexture(r.TEXTURE_CUBE_MAP,n);for(let n=0;n<6;n++)r.texImage2D(r.TEXTURE_CUBE_MAP_POSITIVE_X+n,0,r.RGBA16F,e,e,0,r.RGBA,r.HALF_FLOAT,null);return r.texParameteri(r.TEXTURE_CUBE_MAP,r.TEXTURE_WRAP_S,r.CLAMP_TO_EDGE),r.texParameteri(r.TEXTURE_CUBE_MAP,r.TEXTURE_WRAP_T,r.CLAMP_TO_EDGE),r.texParameteri(r.TEXTURE_CUBE_MAP,r.TEXTURE_WRAP_R,r.CLAMP_TO_EDGE),r.texParameteri(r.TEXTURE_CUBE_MAP,r.TEXTURE_MIN_FILTER,r.LINEAR_MIPMAP_LINEAR),r.texParameteri(r.TEXTURE_CUBE_MAP,r.TEXTURE_MAG_FILTER,r.LINEAR),n}(o,c),{program:E,vertexArray:u}=function(r){const e="#version 300 es\n\n    #define SHADER_NAME hdrToCubeVertex\n\n    layout(location = 0) in vec2 position;\n    out vec3 localPos;\n    uniform mat4 projection;\n    uniform mat4 view;\n\n    void main() {\n        // Use the quad positions directly for rendering\n        gl_Position = vec4(position, 0.0, 1.0);\n        \n        // Create the ray direction for this fragment\n        // Map from [-1,1] to [-1,1] in view space for proper cubemap sampling\n        vec4 viewPos = inverse(projection * view) * vec4(position, 1.0, 1.0);\n        localPos = viewPos.xyz / viewPos.w;\n    }",n="#version 300 es\n\n    #define SHADER_NAME hdrToCubeFragment\n\n    precision highp float;\n    in vec3 localPos;\n    out vec4 fragColor;\n    uniform sampler2D equirectangularMap;\n\n    vec2 SampleSphericalMap(vec3 v) {\n        // Convert direction vector to spherical coordinates\n        float phi = atan(v.z, v.x);\n        float theta = asin(v.y);\n        \n        // Map from [-π to π] for phi and [-π/2 to π/2] for theta to [0,1] range\n        vec2 uv = vec2(\n            0.5 + 0.5 * phi / 3.1415926535897932,\n            0.5 - theta / 3.1415926535897932\n        );\n        \n        return uv;\n    }\n\n    void main() {\n        vec3 direction = normalize(localPos);\n        vec2 uv = SampleSphericalMap(direction);\n        fragColor = texture(equirectangularMap, uv);\n    }",t=r.createShader(r.VERTEX_SHADER);r.shaderSource(t,e),r.compileShader(t);const a=r.createShader(r.FRAGMENT_SHADER);r.shaderSource(a,n),r.compileShader(a);const o=r.createProgram();if(r.attachShader(o,t),r.attachShader(o,a),r.linkProgram(o),!r.getProgramParameter(o,r.LINK_STATUS))throw console.error("Shader program error:",r.getProgramInfoLog(o)),console.error("Vertex shader log:",r.getShaderInfoLog(t)),console.error("Fragment shader log:",r.getShaderInfoLog(a)),new Error("Failed to compile shaders");const i=r.createVertexArray();r.bindVertexArray(i);const s=new Float32Array([-1,-1,1,-1,-1,1,1,1]),c=r.createBuffer();return r.bindBuffer(r.ARRAY_BUFFER,c),r.bufferData(r.ARRAY_BUFFER,s,r.STATIC_DRAW),r.enableVertexAttribArray(0),r.vertexAttribPointer(0,2,r.FLOAT,!1,0,0),{program:o,vertexArray:i}}(o),m=o.createFramebuffer();o.bindFramebuffer(o.FRAMEBUFFER,m),o.useProgram(E),o.bindVertexArray(u),o.activeTexture(o.TEXTURE0),o.bindTexture(o.TEXTURE_2D,f),o.uniform1i(o.getUniformLocation(E,"equirectangularMap"),0);const p=a(),g=Math.PI/2,T=1/Math.tan(g/2);p[0]=T/1,p[5]=T,p[10]=10.1/-9.9,p[11]=-1,p[14]=2/-9.9;const A=o.getUniformLocation(E,"projection");o.uniformMatrix4fv(A,!1,p);const _=[],R=e();for(let r=0;r<6;r++){const e=n();let a,o;switch(r){case 0:a=[1,0,0],o=[0,-1,0];break;case 1:a=[-1,0,0],o=[0,-1,0];break;case 2:a=[0,1,0],o=[0,0,1];break;case 3:a=[0,-1,0],o=[0,0,-1];break;case 4:a=[0,0,1],o=[0,-1,0];break;case 5:a=[0,0,-1],o=[0,-1,0]}const i=[R[0]+a[0],R[1]+a[1],R[2]+a[2]];t(e,R,i,o),_.push(e)}for(let r=0;r<6;r++){o.framebufferTexture2D(o.FRAMEBUFFER,o.COLOR_ATTACHMENT0,o.TEXTURE_CUBE_MAP_POSITIVE_X+r,l,0);const e=o.checkFramebufferStatus(o.FRAMEBUFFER);e===o.FRAMEBUFFER_COMPLETE?(o.uniformMatrix4fv(o.getUniformLocation(E,"view"),!1,_[r]),o.viewport(0,0,c,c),o.clear(o.COLOR_BUFFER_BIT|o.DEPTH_BUFFER_BIT),o.drawArrays(o.TRIANGLE_STRIP,0,4)):console.error("Framebuffer not complete:",e)}return o.bindFramebuffer(o.FRAMEBUFFER,null),o.deleteFramebuffer(m),o.deleteTexture(f),o.bindTexture(o.TEXTURE_CUBE_MAP,l),o.generateMipmap(o.TEXTURE_CUBE_MAP),l}function q(r){let e,n,t,a;return t=new c({}),{c(){e=f("canvas"),n=l(),E(t.$$.fragment)},m(o,i){u(o,e,i),r[1](e),u(o,n,i),m(t,o,i),a=!0},p:p,i(r){a||(g(t.$$.fragment,r),a=!0)},o(r){T(t.$$.fragment,r),a=!1},d(a){a&&(A(e),A(n)),r[1](null),_(t,a)}}}function Y(){}function K(r,e,n){let t,o,i,s,c,f,l,E;return R(r,h,(r=>n(3,t=r))),R(r,v,(r=>n(4,o=r))),R(r,x,(r=>n(5,i=r))),R(r,M,(r=>n(6,s=r))),R(r,b,(r=>n(7,c=r))),R(r,w,(r=>n(8,f=r))),d((async()=>{U(h,t={...t,canvas:l,backgroundColor:L,ambientLightColor:[16777215,.1]},t),U(w,f={...f,position:[-4.5,.8,-2.5],target:[0,0,0],fov:75},f),E=await H("christmas_photo_studio_01_4k.hdr");const r=z({exposure:1.5});const e=await S({typedArray:E.data,convertToCube:W,width:E.width,height:E.height,cubeSize:2048,toneMapping:r});U(b,c=[e],c);const n=D(),u=y(F({position:[-2,2,2],color:[1,1,1],intensity:20,cutoffDistance:0,decayExponent:2})),m=P(a()),p=C({diffuse:[1,0,0],metalness:0,program:O()}),g=G({...n,matrix:m,material:p}),T=C({diffuse:[1,.5,.5],metalness:0});U(M,s=[...s,T,p],s),U(x,i=[...i,I({...n,matrix:m,material:T}),I(g)],i),U(v,o=[...o,u],o),U(h,t={...t,loop:Y,enabled:!0},t),X(l,w)})),[l,function(r){B[r?"unshift":"push"]((()=>{l=r,n(0,l)}))}]}class J extends o{constructor(r){super(),i(this,r,K,q,s,{})}}export{J as default};
+import { aa as templateLiteralRenderer, V as createVec3, ay as create, X as lookAt, T as compileShaders, z as createZeroMatrix, Y as linkProgram, Z as validateProgram, $ as useProgram, a0 as selectProgram, a1 as unbindTexture, az as createProgram, R as appContext, L as drawModes, S as SvelteComponent, i as init, s as safe_not_equal, M as Menu, e as element, a as space, c as create_component, b as insert, m as mount_component, n as noop, t as transition_in, d as transition_out, f as detach, g as destroy_component, h as component_subscribe, o as onMount, r as renderer, l as lights, j as scene, k as materials, q as renderPasses, p as camera, A as set_store_value, B as skyblue, C as createLightStore, D as createPointLight, y as identity, E as create3DObject, F as createOrbitControls, G as binding_callbacks, H as createMaterialStore } from './Menu-l0HugrEy.js';
+import { c as createSkyBox } from './skybox-DMzpRMKC.js';
+import { c as createCube } from './cube-CWs5judv.js';
+import { c as createDebugObject, a as createDebugNormalsProgram } from './debug-program-BMfuwhHg.js';
+
+const HalfFloatType = 1016;
+const FloatType = 1015;
+
+/**
+ * @typedef {Object} RGBE
+ * @property {number} width
+ * @property {number} height
+ * @property {Uint16Array} data
+ * @property {string} header
+ * @property {number} gamma
+ * @property {number} exposure
+ * @property {number} type
+ */
+
+async function loadRGBE(url) {
+	const response = await fetch(url);
+	const buffer = await response.arrayBuffer();
+	return parseRGBE(buffer);
+}
+
+/**
+ *
+ * @param {ArrayBuffer} buffer
+ * @returns {RGBE}
+ */
+function parseRGBE(buffer) {
+	/* default error routine.  change this to change error handling */
+	const type = HalfFloatType;
+	const rgbe_read_error = 1;
+	const rgbe_write_error = 2;
+	const rgbe_format_error = 3;
+	const rgbe_memory_error = 4;
+
+	/* offsets to red, green, and blue components in a data (float) pixel */
+	//RGBE_DATA_RED = 0,
+	//RGBE_DATA_GREEN = 1,
+	//RGBE_DATA_BLUE = 2,
+
+	/* number of floats per pixel, use 4 since stored in rgba image format */
+	//RGBE_DATA_SIZE = 4,
+
+	/* flags indicating which fields in an rgbe_header_info are valid */
+	const RGBE_VALID_PROGRAMTYPE = 1;
+	const RGBE_VALID_FORMAT = 2;
+	const RGBE_VALID_DIMENSIONS = 4;
+
+	const NEWLINE = "\n";
+
+	const byteArray = new Uint8Array(buffer);
+	byteArray.pos = 0;
+	const rgbe_header_info = RGBE_ReadHeader(byteArray);
+
+	const w = rgbe_header_info.width,
+		h = rgbe_header_info.height,
+		image_rgba_data = RGBE_ReadPixels_RLE(byteArray.subarray(byteArray.pos), w, h);
+
+	let data;
+	let numElements;
+
+	switch (type) {
+		case FloatType:
+			numElements = image_rgba_data.length / 4;
+			const floatArray = new Float32Array(numElements * 4);
+
+			for (let j = 0; j < numElements; j++) {
+				RGBEByteToRGBFloat(image_rgba_data, j * 4, floatArray, j * 4);
+			}
+
+			data = floatArray;
+			break;
+
+		case HalfFloatType:
+			numElements = image_rgba_data.length / 4;
+			const halfArray = new Uint16Array(numElements * 4);
+
+			for (let j = 0; j < numElements; j++) {
+				RGBEByteToRGBHalf(image_rgba_data, j * 4, halfArray, j * 4);
+			}
+
+			data = halfArray;
+			break;
+
+		default:
+			throw new Error("THREE.RGBELoader: Unsupported type: " + type);
+	}
+
+	return {
+		width: w,
+		height: h,
+		data: data,
+		header: rgbe_header_info.string,
+		gamma: rgbe_header_info.gamma,
+		exposure: rgbe_header_info.exposure,
+		type: type,
+	};
+
+	function rgbe_error(rgbe_error_code, msg) {
+		switch (rgbe_error_code) {
+			case rgbe_read_error:
+				throw new Error("THREE.RGBELoader: Read Error: " + (msg || ""));
+			case rgbe_write_error:
+				throw new Error("THREE.RGBELoader: Write Error: " + (msg || ""));
+			case rgbe_format_error:
+				throw new Error("THREE.RGBELoader: Bad File Format: " + (msg || ""));
+			default:
+			case rgbe_memory_error:
+				throw new Error("THREE.RGBELoader: Memory Error: " + (msg || ""));
+		}
+	}
+
+	function fgets(buffer, lineLimit, consume) {
+		const chunkSize = 128;
+
+		lineLimit = !lineLimit ? 1024 : lineLimit;
+		let p = buffer.pos,
+			i = -1,
+			len = 0,
+			s = "",
+			chunk = String.fromCharCode.apply(null, new Uint16Array(buffer.subarray(p, p + chunkSize)));
+
+		while (0 > (i = chunk.indexOf(NEWLINE)) && len < lineLimit && p < buffer.byteLength) {
+			s += chunk;
+			len += chunk.length;
+			p += chunkSize;
+			chunk += String.fromCharCode.apply(null, new Uint16Array(buffer.subarray(p, p + chunkSize)));
+		}
+
+		if (-1 < i) {
+			/*for (i=l-1; i>=0; i--) {
+                byteCode = m.charCodeAt(i);
+                if (byteCode > 0x7f && byteCode <= 0x7ff) byteLen++;
+                else if (byteCode > 0x7ff && byteCode <= 0xffff) byteLen += 2;
+                if (byteCode >= 0xDC00 && byteCode <= 0xDFFF) i--; //trail surrogate
+            }*/
+			buffer.pos += len + i + 1;
+			return s + chunk.slice(0, i);
+		}
+
+		return false;
+	}
+
+	/* minimal header reading.  modify if you want to parse more information */
+	function RGBE_ReadHeader(buffer) {
+		// regexes to parse header info fields
+		const magic_token_re = /^#\?(\S+)/,
+			gamma_re = /^\s*GAMMA\s*=\s*(\d+(\.\d+)?)\s*$/,
+			exposure_re = /^\s*EXPOSURE\s*=\s*(\d+(\.\d+)?)\s*$/,
+			format_re = /^\s*FORMAT=(\S+)\s*$/,
+			dimensions_re = /^\s*\-Y\s+(\d+)\s+\+X\s+(\d+)\s*$/,
+			// RGBE format header struct
+			header = {
+				valid: 0 /* indicate which fields are valid */,
+
+				string: "" /* the actual header string */,
+
+				comments: "" /* comments found in header */,
+
+				programtype: "RGBE" /* listed at beginning of file to identify it after "#?". defaults to "RGBE" */,
+
+				format: "" /* RGBE format, default 32-bit_rle_rgbe */,
+
+				gamma: 1.0 /* image has already been gamma corrected with given gamma. defaults to 1.0 (no correction) */,
+
+				exposure: 1.0 /* a value of 1.0 in an image corresponds to <exposure> watts/steradian/m^2. defaults to 1.0 */,
+
+				width: 0,
+				height: 0 /* image dimensions, width/height */,
+			};
+
+		let line, match;
+
+		if (buffer.pos >= buffer.byteLength || !(line = fgets(buffer))) {
+			rgbe_error(rgbe_read_error, "no header found");
+		}
+
+		/* if you want to require the magic token then uncomment the next line */
+		if (!(match = line.match(magic_token_re))) {
+			rgbe_error(rgbe_format_error, "bad initial token");
+		}
+
+		header.valid |= RGBE_VALID_PROGRAMTYPE;
+		header.programtype = match[1];
+		header.string += line + "\n";
+
+		while (true) {
+			line = fgets(buffer);
+			if (false === line) break;
+			header.string += line + "\n";
+
+			if ("#" === line.charAt(0)) {
+				header.comments += line + "\n";
+				continue; // comment line
+			}
+
+			if ((match = line.match(gamma_re))) {
+				header.gamma = parseFloat(match[1]);
+			}
+
+			if ((match = line.match(exposure_re))) {
+				header.exposure = parseFloat(match[1]);
+			}
+
+			if ((match = line.match(format_re))) {
+				header.valid |= RGBE_VALID_FORMAT;
+				header.format = match[1]; //'32-bit_rle_rgbe';
+			}
+
+			if ((match = line.match(dimensions_re))) {
+				header.valid |= RGBE_VALID_DIMENSIONS;
+				header.height = parseInt(match[1], 10);
+				header.width = parseInt(match[2], 10);
+			}
+
+			if (header.valid & RGBE_VALID_FORMAT && header.valid & RGBE_VALID_DIMENSIONS) break;
+		}
+
+		if (!(header.valid & RGBE_VALID_FORMAT)) {
+			rgbe_error(rgbe_format_error, "missing format specifier");
+		}
+
+		if (!(header.valid & RGBE_VALID_DIMENSIONS)) {
+			rgbe_error(rgbe_format_error, "missing image size specifier");
+		}
+
+		return header;
+	}
+
+	function RGBE_ReadPixels_RLE(buffer, w, h) {
+		const scanline_width = w;
+
+		if (
+			// run length encoding is not allowed so read flat
+			scanline_width < 8 ||
+			scanline_width > 0x7fff ||
+			// this file is not run length encoded
+			2 !== buffer[0] ||
+			2 !== buffer[1] ||
+			buffer[2] & 0x80
+		) {
+			// return the flat buffer
+			return new Uint8Array(buffer);
+		}
+
+		if (scanline_width !== ((buffer[2] << 8) | buffer[3])) {
+			rgbe_error(rgbe_format_error, "wrong scanline width");
+		}
+
+		const data_rgba = new Uint8Array(4 * w * h);
+
+		if (!data_rgba.length) {
+			rgbe_error(rgbe_memory_error, "unable to allocate buffer space");
+		}
+
+		let offset = 0,
+			pos = 0;
+
+		const ptr_end = 4 * scanline_width;
+		const rgbeStart = new Uint8Array(4);
+		const scanline_buffer = new Uint8Array(ptr_end);
+		let num_scanlines = h;
+
+		// read in each successive scanline
+		while (num_scanlines > 0 && pos < buffer.byteLength) {
+			if (pos + 4 > buffer.byteLength) {
+				rgbe_error(rgbe_read_error);
+			}
+
+			rgbeStart[0] = buffer[pos++];
+			rgbeStart[1] = buffer[pos++];
+			rgbeStart[2] = buffer[pos++];
+			rgbeStart[3] = buffer[pos++];
+
+			if (2 != rgbeStart[0] || 2 != rgbeStart[1] || ((rgbeStart[2] << 8) | rgbeStart[3]) != scanline_width) {
+				rgbe_error(rgbe_format_error, "bad rgbe scanline format");
+			}
+
+			// read each of the four channels for the scanline into the buffer
+			// first red, then green, then blue, then exponent
+			let ptr = 0,
+				count;
+
+			while (ptr < ptr_end && pos < buffer.byteLength) {
+				count = buffer[pos++];
+				const isEncodedRun = count > 128;
+				if (isEncodedRun) count -= 128;
+
+				if (0 === count || ptr + count > ptr_end) {
+					rgbe_error(rgbe_format_error, "bad scanline data");
+				}
+
+				if (isEncodedRun) {
+					// a (encoded) run of the same value
+					const byteValue = buffer[pos++];
+					for (let i = 0; i < count; i++) {
+						scanline_buffer[ptr++] = byteValue;
+					}
+					//ptr += count;
+				} else {
+					// a literal-run
+					scanline_buffer.set(buffer.subarray(pos, pos + count), ptr);
+					ptr += count;
+					pos += count;
+				}
+			}
+
+			// now convert data from buffer into rgba
+			// first red, then green, then blue, then exponent (alpha)
+			const l = scanline_width; //scanline_buffer.byteLength;
+			for (let i = 0; i < l; i++) {
+				let off = 0;
+				data_rgba[offset] = scanline_buffer[i + off];
+				off += scanline_width; //1;
+				data_rgba[offset + 1] = scanline_buffer[i + off];
+				off += scanline_width; //1;
+				data_rgba[offset + 2] = scanline_buffer[i + off];
+				off += scanline_width; //1;
+				data_rgba[offset + 3] = scanline_buffer[i + off];
+				offset += 4;
+			}
+
+			num_scanlines--;
+		}
+
+		return data_rgba;
+	}
+
+	function RGBEByteToRGBFloat(sourceArray, sourceOffset, destArray, destOffset) {
+		const e = sourceArray[sourceOffset + 3];
+		const scale = Math.pow(2.0, e - 128.0) / 255.0;
+
+		destArray[destOffset + 0] = sourceArray[sourceOffset + 0] * scale;
+		destArray[destOffset + 1] = sourceArray[sourceOffset + 1] * scale;
+		destArray[destOffset + 2] = sourceArray[sourceOffset + 2] * scale;
+		destArray[destOffset + 3] = 1;
+	}
+
+	function RGBEByteToRGBHalf(sourceArray, sourceOffset, destArray, destOffset) {
+		const e = sourceArray[sourceOffset + 3];
+		const scale = Math.pow(2.0, e - 128.0) / 255.0;
+
+		// clamping to 65504, the maximum representable value in float16
+		destArray[destOffset + 0] = toHalfFloat(Math.min(sourceArray[sourceOffset + 0] * scale, 65504));
+		destArray[destOffset + 1] = toHalfFloat(Math.min(sourceArray[sourceOffset + 1] * scale, 65504));
+		destArray[destOffset + 2] = toHalfFloat(Math.min(sourceArray[sourceOffset + 2] * scale, 65504));
+		destArray[destOffset + 3] = toHalfFloat(1);
+	}
+}
+
+function toHalfFloat(val) {
+	if (Math.abs(val) > 65504) console.warn("THREE.DataUtils.toHalfFloat(): Value out of range.");
+
+	val = clamp(val, -65504, 65504);
+
+	_tables.floatView[0] = val;
+	const f = _tables.uint32View[0];
+	const e = (f >> 23) & 0x1ff;
+	return _tables.baseTable[e] + ((f & 0x007fffff) >> _tables.shiftTable[e]);
+}
+
+function clamp(value, min, max) {
+	return Math.max(min, Math.min(max, value));
+}
+
+const _tables = /*@__PURE__*/ _generateTables();
+
+function _generateTables() {
+	// float32 to float16 helpers
+
+	const buffer = new ArrayBuffer(4);
+	const floatView = new Float32Array(buffer);
+	const uint32View = new Uint32Array(buffer);
+
+	const baseTable = new Uint32Array(512);
+	const shiftTable = new Uint32Array(512);
+
+	for (let i = 0; i < 256; ++i) {
+		const e = i - 127;
+
+		// very small number (0, -0)
+
+		if (e < -27) {
+			baseTable[i] = 0x0000;
+			baseTable[i | 0x100] = 0x8000;
+			shiftTable[i] = 24;
+			shiftTable[i | 0x100] = 24;
+
+			// small number (denorm)
+		} else if (e < -14) {
+			baseTable[i] = 0x0400 >> (-e - 14);
+			baseTable[i | 0x100] = (0x0400 >> (-e - 14)) | 0x8000;
+			shiftTable[i] = -e - 1;
+			shiftTable[i | 0x100] = -e - 1;
+
+			// normal number
+		} else if (e <= 15) {
+			baseTable[i] = (e + 15) << 10;
+			baseTable[i | 0x100] = ((e + 15) << 10) | 0x8000;
+			shiftTable[i] = 13;
+			shiftTable[i | 0x100] = 13;
+
+			// large number (Infinity, -Infinity)
+		} else if (e < 128) {
+			baseTable[i] = 0x7c00;
+			baseTable[i | 0x100] = 0xfc00;
+			shiftTable[i] = 24;
+			shiftTable[i | 0x100] = 24;
+
+			// stay (NaN, Infinity, -Infinity)
+		} else {
+			baseTable[i] = 0x7c00;
+			baseTable[i | 0x100] = 0xfc00;
+			shiftTable[i] = 13;
+			shiftTable[i | 0x100] = 13;
+		}
+	}
+
+	// float16 to float32 helpers
+
+	const mantissaTable = new Uint32Array(2048);
+	const exponentTable = new Uint32Array(64);
+	const offsetTable = new Uint32Array(64);
+
+	for (let i = 1; i < 1024; ++i) {
+		let m = i << 13; // zero pad mantissa bits
+		let e = 0; // zero exponent
+
+		// normalized
+		while ((m & 0x00800000) === 0) {
+			m <<= 1;
+			e -= 0x00800000; // decrement exponent
+		}
+
+		m &= ~0x00800000; // clear leading 1 bit
+		e += 0x38800000; // adjust bias
+
+		mantissaTable[i] = m | e;
+	}
+
+	for (let i = 1024; i < 2048; ++i) {
+		mantissaTable[i] = 0x38000000 + ((i - 1024) << 13);
+	}
+
+	for (let i = 1; i < 31; ++i) {
+		exponentTable[i] = i << 23;
+	}
+
+	exponentTable[31] = 0x47800000;
+	exponentTable[32] = 0x80000000;
+
+	for (let i = 33; i < 63; ++i) {
+		exponentTable[i] = 0x80000000 + ((i - 32) << 23);
+	}
+
+	exponentTable[63] = 0xc7800000;
+
+	for (let i = 1; i < 64; ++i) {
+		if (i !== 32) {
+			offsetTable[i] = 1024;
+		}
+	}
+
+	return {
+		floatView: floatView,
+		uint32View: uint32View,
+		baseTable: baseTable,
+		shiftTable: shiftTable,
+		mantissaTable: mantissaTable,
+		exponentTable: exponentTable,
+		offsetTable: offsetTable,
+	};
+}
+
+var AGXShader = "${declaration?\r\n`\r\n// tone mapping taken from three.js\r\nfloat toneMappingExposure = ${exposure};\r\n\r\n    // Matrices for rec 2020 <> rec 709 color space conversion\r\n    // matrix provided in row-major order so it has been transposed\r\n    // https://www.itu.int/pub/R-REP-BT.2407-2017\r\nconst mat3 LINEAR_REC2020_TO_LINEAR_SRGB = mat3(vec3(1.6605f, -0.1246f, -0.0182f), vec3(-0.5876f, 1.1329f, -0.1006f), vec3(-0.0728f, -0.0083f, 1.1187f));\r\n\r\nconst mat3 LINEAR_SRGB_TO_LINEAR_REC2020 = mat3(vec3(0.6274f, 0.0691f, 0.0164f), vec3(0.3293f, 0.9195f, 0.0880f), vec3(0.0433f, 0.0113f, 0.8956f));\r\n\r\n    // https://iolite-engine.com/blog_posts/minimal_agx_implementation\r\n    // Mean error^2: 3.6705141e-06\r\nvec3 agxDefaultContrastApprox(vec3 x) {\r\n\r\n    vec3 x2 = x * x;\r\n    vec3 x4 = x2 * x2;\r\n\r\n    return +15.5f * x4 * x2 - 40.14f * x4 * x + 31.96f * x4 - 6.868f * x2 * x + 0.4298f * x2 + 0.1191f * x - 0.00232f;\r\n\r\n}\r\n\r\nvec3 AgXToneMapping(vec3 color) {\r\n\r\n        // AgX constants\r\n    const mat3 AgXInsetMatrix = mat3(vec3(0.856627153315983f, 0.137318972929847f, 0.11189821299995f), vec3(0.0951212405381588f, 0.761241990602591f, 0.0767994186031903f), vec3(0.0482516061458583f, 0.101439036467562f, 0.811302368396859f));\r\n\r\n        // explicit AgXOutsetMatrix generated from Filaments AgXOutsetMatrixInv\r\n    const mat3 AgXOutsetMatrix = mat3(vec3(1.1271005818144368f, -0.1413297634984383f, -0.14132976349843826f), vec3(-0.11060664309660323f, 1.157823702216272f, -0.11060664309660294f), vec3(-0.016493938717834573f, -0.016493938717834257f, 1.2519364065950405f));\r\n\r\n        // LOG2_MIN      = -10.0\r\n        // LOG2_MAX      =  +6.5\r\n        // MIDDLE_GRAY   =  0.18\r\n    const float AgxMinEv = -12.47393f;  // log2( pow( 2, LOG2_MIN ) * MIDDLE_GRAY )\r\n    const float AgxMaxEv = 4.026069f;    // log2( pow( 2, LOG2_MAX ) * MIDDLE_GRAY )\r\n\r\n    color *= toneMappingExposure;\r\n\r\n    color = LINEAR_SRGB_TO_LINEAR_REC2020 * color;\r\n\r\n    color = AgXInsetMatrix * color;\r\n\r\n        // Log2 encoding\r\n    color = max(color, 1e-10f); // avoid 0 or negative numbers for log2\r\n    color = log2(color);\r\n    color = (color - AgxMinEv) / (AgxMaxEv - AgxMinEv);\r\n\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n        // Apply sigmoid\r\n    color = agxDefaultContrastApprox(color);\r\n\r\n        // Apply AgX look\r\n        // v = agxLook(v, look);\r\n\r\n    color = AgXOutsetMatrix * color;\r\n\r\n        // Linearize\r\n    color = pow(max(vec3(0.0f), color), vec3(2.2f));\r\n\r\n    color = LINEAR_REC2020_TO_LINEAR_SRGB * color;\r\n\r\n        // Gamut mapping. Simple clamp for now.\r\n    color = clamp(color, 0.0f, 1.0f);\r\n\r\n    return color;\r\n\r\n}\r\nvec4 sRGBTransferOETF( in vec4 value ) {\r\n    return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );\r\n}\r\n` : ''\r\n}\r\n${color?\r\n`\r\n    fragColor = vec4(AgXToneMapping(fragColor.xyz),1.0f);\r\n    fragColor = sRGBTransferOETF(fragColor);\r\n` : ''\r\n}";
+
+/**
+ *
+ * @param {{exposure:number}} props
+ * @returns {SvelteGLToneMapping}
+ */
+const createAGXToneMapping = (props) => {
+	return {
+		exposure: `${props.exposure.toLocaleString("en", { minimumFractionDigits: 1 })}f`,
+		shader: templateLiteralRenderer(AGXShader, {
+			declaration: false,
+			exposure: 1,
+			color: false,
+		}),
+	};
+};
+
+/**
+ * Converts the HDR image to a cube map texture
+ * @param {Uint16Array} halfFloatRGBA16 - Uint16Array containing RGBA16F data
+ * @param {WebGL2RenderingContext} gl - WebGL2 rendering context
+ * @param {number} width - Width of the equirectangular HDR image
+ * @param {number} height - Height of the equirectangular HDR image
+ * @param {number} cubeSize - Size of each face of the output cubemap
+ * @returns {WebGLTexture} The created cubemap texture
+ */
+function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
+	const ext = gl.getExtension("EXT_color_buffer_float");
+	if (!ext) {
+		throw new Error("EXT_color_buffer_float extension not supported");
+	}
+	// 2. Create a temporary framebuffer and textures for conversion
+	const equirectTexture = createEquirectTexture(gl, halfFloatRGBA16, width, height);
+	const cubemapTexture = createCubemapTexture(gl, cubeSize);
+
+	// 3. Set up conversion shader
+	const { program, vertexArray } = createEquirectToCubeProgram(gl);
+
+	// 4. Render each face of the cubemap
+	const framebuffer = gl.createFramebuffer();
+	gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+
+	// Set up common state
+	gl.useProgram(program);
+	gl.bindVertexArray(vertexArray);
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, equirectTexture);
+	gl.uniform1i(gl.getUniformLocation(program, "equirectangularMap"), 0);
+
+	// Projection matrix for each face view
+	const projectionMatrix = createZeroMatrix();
+	// Create a perspective projection with a 90-degree FOV
+	const fov = Math.PI / 2; // 90 degrees in radians
+	const aspect = 1; // cube faces are square
+	const near = 0.1;
+	const far = 10.0;
+	const f = 1.0 / Math.tan(fov / 2); // cotangent of the FOV
+
+	projectionMatrix[0] = f / aspect;
+	projectionMatrix[5] = f;
+	projectionMatrix[10] = (far + near) / (near - far);
+	projectionMatrix[11] = -1;
+	projectionMatrix[14] = (2 * far * near) / (near - far);
+	const projectionLocation = gl.getUniformLocation(program, "projection");
+	gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
+
+	// ... inside your function
+	const views = [];
+	/**@type {import("gl-matrix").ReadonlyVec3} */
+	const eye = createVec3();
+
+	// For each face
+	for (let i = 0; i < 6; i++) {
+		const viewMatrix = create();
+		let lookDir, upDir;
+
+		switch (i) {
+			case 0: // POSITIVE_X
+				lookDir = [1, 0, 0];
+				upDir = [0, -1, 0];
+				break;
+			case 1: // NEGATIVE_X
+				lookDir = [-1, 0, 0];
+				upDir = [0, -1, 0];
+				break;
+			case 2: // POSITIVE_Y
+				lookDir = [0, 1, 0];
+				upDir = [0, 0, 1];
+				break;
+			case 3: // NEGATIVE_Y
+				lookDir = [0, -1, 0];
+				upDir = [0, 0, -1];
+				break;
+			case 4: // POSITIVE_Z
+				lookDir = [0, 0, 1];
+				upDir = [0, -1, 0];
+				break;
+			case 5: // NEGATIVE_Z
+				lookDir = [0, 0, -1];
+				upDir = [0, -1, 0];
+				break;
+		}
+
+		const target = [eye[0] + lookDir[0], eye[1] + lookDir[1], eye[2] + lookDir[2]];
+		lookAt(viewMatrix, eye, target, upDir);
+		views.push(viewMatrix);
+	}
+
+	// Render each face
+	for (let i = 0; i < 6; i++) {
+		// Attach the corresponding cubemap face to the framebuffer
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, cubemapTexture, 0);
+
+		// Check framebuffer status
+		const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+		if (status !== gl.FRAMEBUFFER_COMPLETE) {
+			console.error("Framebuffer not complete:", status);
+			continue;
+		}
+		// Set the view matrix for this face
+		gl.uniformMatrix4fv(gl.getUniformLocation(program, "view"), false, views[i]);
+
+		// Clear and render
+		gl.viewport(0, 0, cubeSize, cubeSize);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+		// Draw a full-screen quad with two triangles (6 vertices)
+		gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+	}
+
+	// Clean up
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	gl.deleteFramebuffer(framebuffer);
+	gl.deleteTexture(equirectTexture);
+
+	// Generate mipmaps for the cubemap
+	gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);
+	gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+	return cubemapTexture;
+}
+/**
+ *
+ * @param {number} exposure
+ * @returns {SvelteGLToneMapping}
+ */
+function getToneMapping(exposure) {
+	return createAGXToneMapping({ exposure });
+}
+
+/**
+ * Create a texture for the equirectangular HDR data
+ * @param {WebGL2RenderingContext} gl - WebGL2 rendering context
+ * @param {Uint16Array} data - RGBA16F data
+ * @param {number} width - Width of the texture
+ * @param {number} height - Height of the texture
+ * @returns {WebGLTexture} The created texture
+ */
+function createEquirectTexture(gl, data, width, height) {
+	const texture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+
+	// Upload the data
+	gl.texImage2D(
+		gl.TEXTURE_2D,
+		0,
+		gl.RGBA16F, // Internal format for HDR
+		width,
+		height,
+		0,
+		gl.RGBA,
+		gl.HALF_FLOAT,
+		data,
+	);
+
+	// Set texture parameters
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+	return texture;
+}
+
+/**
+ * Create an empty cubemap texture
+ * @param {WebGL2RenderingContext} gl - WebGL2 rendering context
+ * @param {number} size - Size of each face
+ * @returns {WebGLTexture} The created cubemap texture
+ */
+function createCubemapTexture(gl, size) {
+	const texture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+
+	// Create empty texture for each face
+	for (let i = 0; i < 6; i++) {
+		gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA16F, size, size, 0, gl.RGBA, gl.HALF_FLOAT, null);
+	}
+
+	// Set texture parameters
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+	return texture;
+}
+
+/**
+ * Create the shader program and VAO for equirect to cubemap conversion
+ * @param {WebGL2RenderingContext} gl - WebGL2 rendering context
+ * @returns {{program:WebGLProgram,vertexArray:WebGLVertexArrayObject}} Object containing the program and VAO
+ */
+function createEquirectToCubeProgram(gl) {
+	// Vertex shader: render a fullscreen quad properly mapped to cube face
+	const vertexShaderSource = /*glsl*/ `#version 300 es
+
+    #define SHADER_NAME hdrToCubeVertex
+
+    layout(location = 0) in vec2 position;
+    out vec3 localPos;
+    uniform mat4 projection;
+    uniform mat4 view;
+
+    void main() {
+        // Use the quad positions directly for rendering
+        gl_Position = vec4(position, 0.0, 1.0);
+        
+        // Create the ray direction for this fragment
+        // Map from [-1,1] to [-1,1] in view space for proper cubemap sampling
+        vec4 viewPos = inverse(projection * view) * vec4(position, 1.0, 1.0);
+        localPos = viewPos.xyz / viewPos.w;
+    }`;
+
+	// Fragment shader with improved spherical mapping
+	const fragmentShaderSource = /*glsl*/ `#version 300 es
+
+    #define SHADER_NAME hdrToCubeFragment
+
+    precision highp float;
+    in vec3 localPos;
+    out vec4 fragColor;
+    uniform sampler2D equirectangularMap;
+
+    vec2 SampleSphericalMap(vec3 v) {
+        // Convert direction vector to spherical coordinates
+        float phi = atan(v.z, v.x);
+        float theta = asin(v.y);
+        
+        // Map from [-π to π] for phi and [-π/2 to π/2] for theta to [0,1] range
+        vec2 uv = vec2(
+            0.5 + 0.5 * phi / 3.1415926535897932,
+            0.5 - theta / 3.1415926535897932
+        );
+        
+        return uv;
+    }
+
+    void main() {
+        vec3 direction = normalize(localPos);
+        vec2 uv = SampleSphericalMap(direction);
+        fragColor = texture(equirectangularMap, uv);
+    }`;
+	
+	const program = gl.createProgram();
+
+	compileShaders(gl,program,vertexShaderSource,fragmentShaderSource);
+
+	gl.linkProgram(program);
+
+	// Check for shader compilation and program link errors
+	if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+		console.error("Shader program error:", gl.getProgramInfoLog(program));
+		throw new Error("Failed to compile shaders");
+	}
+
+	// Use a simple full-screen quad
+	const vertexArray = gl.createVertexArray();
+	gl.bindVertexArray(vertexArray);
+
+	// Define a full-screen quad (two triangles)
+	const vertices = new Float32Array([
+		-1.0,
+		-1.0, // bottom-left
+		1.0,
+		-1.0, // bottom-right
+		-1.0,
+		1.0, // top-left
+		1.0,
+		1.0, // top-right
+	]);
+
+	// Create and bind buffers
+	const vertexBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+	// Set up vertex attribute
+	gl.enableVertexAttribArray(0);
+	gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+	return { program, vertexArray };
+}
+
+var PMREMVertex = "#version 300 es\r\n\r\nprecision mediump float;\r\nprecision mediump int;\r\n\r\nin vec3 position;\r\nin vec2 uv;\r\nin float faceIndex;\r\n\r\nout vec3 vOutputDirection;\r\n\r\n// RH coordinate system; PMREM face-indexing convention\r\nvec3 getDirection(vec2 uv, float face) {\r\n\r\n    uv = 2.0 * uv - 1.0;\r\n\r\n    vec3 direction = vec3(uv, 1.0);\r\n\r\n    if(face == 0.0) {\r\n\r\n        direction = direction.zyx; // ( 1, v, u ) pos x\r\n\r\n    } else if(face == 1.0) {\r\n\r\n        direction = direction.xzy;\r\n        direction.xz *= -1.0; // ( -u, 1, -v ) pos y\r\n\r\n    } else if(face == 2.0) {\r\n\r\n        direction.x *= -1.0; // ( -u, v, 1 ) pos z\r\n\r\n    } else if(face == 3.0) {\r\n\r\n        direction = direction.zyx;\r\n        direction.xz *= -1.0; // ( -1, v, -u ) neg x\r\n\r\n    } else if(face == 4.0) {\r\n\r\n        direction = direction.xzy;\r\n        direction.xy *= -1.0; // ( -u, -1, v ) neg y\r\n\r\n    } else if(face == 5.0) {\r\n\r\n        direction.z *= -1.0; // ( u, v, -1 ) neg z\r\n\r\n    }\r\n\r\n    return direction;\r\n\r\n}\r\n\r\nvoid main() {\r\n\r\n    vOutputDirection = getDirection(uv, faceIndex);\r\n    gl_Position = vec4(position, 1.0);\r\n\r\n}";
+
+var EquiRectangularToCubeUV = "#version 300 es\r\n\r\nprecision mediump float;\r\nprecision mediump int;\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n#define RECIPROCAL_PI2 0.15915494309189535\r\n\r\nuniform float flipEnvMap;\r\n\r\nin vec3 vOutputDirection;\r\n\r\nuniform sampler2D skyBox;\r\n\r\nout vec4 fragColor;\r\n\r\nvec2 equirectUv( in vec3 dir ) {\r\n    float u = atan( dir.z, dir.x ) * RECIPROCAL_PI2 + 0.5;\r\n    float v = asin( clamp( dir.y, - 1.0, 1.0 ) ) * RECIPROCAL_PI + 0.5;\r\n    return vec2( u, v );\r\n}\r\n\r\nvoid main() {\r\n    vec3 outputDirection = normalize( vOutputDirection );\r\n    vec2 uv = equirectUv( outputDirection );\r\n    fragColor = vec4( texture ( skyBox, uv ).rgb, 1.0 );\r\n}";
+
+const LOD_MIN = 4;
+const EXTRA_LOD_SIGMA = [
+    0.125,
+    0.215,
+    0.35,
+    0.446,
+    0.526,
+    0.582
+];
+/**
+ * @typedef {Object} EnvMapPass
+ * @property {import("src/store/programs").SvelteGLProgram[]} programs array of programs used in the pass
+ * @property {() => WebGLTexture} getTexture function to get the shadow texture
+ * @property {number} order order of the pass in the rendering pipeline
+ */
+
+/**
+ * 
+ * @param {import("src/loaders/rgbe-loader").RGBE} image 
+ * @return {EnvMapPass} 
+ */
+function createEnvironmentMap(image) {
+    let context = {};
+
+    //context.cubeMapTexture = getCubeMapTexture();
+    context.image = image;
+    context.cubeImageSize = image.width / 4;//??
+    context.lodMax = Math.floor(Math.log2(context.cubeImageSize));
+    context.cubeSize = Math.pow(2, context.lodMax);
+    context.renderTargetWidth = 3 * Math.max(context.cubeSize, 16 * 7);
+    context.renderTargetHeight = 4 * context.cubeSize;
+    createLodPlanes(context);
+
+    logLodPlane(context.lodPlanes[0]);
+
+    let hdrTexture;
+    function setHDRTexture(texture) {
+        hdrTexture = texture;
+    }
+    function getHDRTexture() {
+        return hdrTexture;
+    }
+
+    let pingTexture;
+    function setPingTexture(texture) {
+        pingTexture = texture;
+    }
+    function getPingTexture() {
+        return pingTexture;
+    }
+    let pingFBO;
+    function setPingFBO(fbo) {
+        pingFBO = fbo;
+    }
+    function getPingFBO() {
+        return pingFBO;
+    }
+    
+    return {
+        programs: [
+            {
+                createProgram: createEquiRectangularToCubeUVProgram(context, image, setHDRTexture),
+                setupProgram: [
+                    createEquiRectangularToCubeUVShaders,
+                    linkProgram,
+                    validateProgram,
+                    createFBO(context, setPingFBO, setPingTexture),
+                ],
+                useProgram,
+                selectProgram,
+                setupMaterial: [setupEquiRectangularToCubeUVUniforms, bindEnvMapTexture(getHDRTexture)],
+                setupCamera: () => () => { },
+                setFrameBuffer: setFrameBuffer(getPingFBO, context,getViewportSize),
+                meshes: [context.lodPlanes[0]],
+                postDraw: unbindTexture,
+            }
+        ],
+        getTexture: getPingTexture,
+        order: -1,
+    }
+}
+function getViewportSize(context) {
+    const size = context.cubeSize;
+    return {
+        width: 3 * size,
+        height: 2 * size,
+    }
+}
+
+/**
+ * 
+ * @param {Object} context 
+ * @param {import("src/loaders/rgbe-loader").RGBE} image 
+ * @param {(value:WebGLTexture)=>void} setHDRTexture 
+ * @returns {(programStore)=>()=>void}
+ */
+function createEquiRectangularToCubeUVProgram(context, image,setHDRTexture) {
+    console.log("createCubeMapToCubeUVProgram", context, image);
+    return function createEquiRectangularToCubeUVProgram(programStore) {
+        return function createEquiRectangularToCubeUVProgram() {
+            setupHDRTexture(image, setHDRTexture);
+            createProgram(programStore)();
+        }
+    }
+}
+
+function setupHDRTexture(image, setHDRTexture) {
+    const { gl } = appContext;
+    const texture = gl.createTexture();
+    setHDRTexture(texture);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA16F,
+        image.width,
+        image.height,
+        0,
+        gl.RGBA,
+        gl.HALF_FLOAT,
+        image.data
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+}
+
+function createEquiRectangularToCubeUVShaders() {
+    const { gl, program } = appContext;
+    compileShaders(gl, program, PMREMVertex, EquiRectangularToCubeUV);
+}
+
+function createFBO(context, setFBO, setTexture) {
+    return function createFBO() {
+        const { gl } = appContext;
+        const { renderTargetWidth, renderTargetHeight } = context;
+        console.log("createFBO", renderTargetWidth, renderTargetHeight);
+        
+        // The geometry texture will be sampled during the HORIZONTAL pass
+        const texture = gl.createTexture();
+        setTexture(texture);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, renderTargetWidth, renderTargetHeight);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+        const fbo = gl.createFramebuffer();
+        setFBO(fbo);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    };
+}
+
+function setupEquiRectangularToCubeUVUniforms() {
+    return function setupEquiRectangularToCubeUVUniforms() {
+        const { gl, program } = appContext;
+        const location = gl.getUniformLocation(program, "flipEnvMap");
+        gl.uniform1f(location, -1);
+    }
+}
+
+function bindEnvMapTexture(getBuffer) {
+    return function bindEnvMapTexture() {
+        const { gl, program } = appContext;
+        const textureLocation = gl.getUniformLocation(program, "skyBox");
+        gl.uniform1i(textureLocation, 0);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, getBuffer());
+    };
+}
+
+
+function setFrameBuffer(getFBO = null, context,getViewportSize) {
+    return function setFrameBuffer() {
+        const { gl } = appContext;
+        const fbo = getFBO ? getFBO() : null;
+        const { renderTargetWidth, renderTargetHeight } = context;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        if (appContext.fbo !== fbo && fbo != null) {
+            console.log("framebuffer change clearing from", appContext.fbo, "to", fbo, [0, 0, 0, 1], renderTargetWidth, renderTargetHeight);
+            const {width, height} = getViewportSize(context);
+            gl.viewport(0, 0, width, height);
+            appContext.frameBufferWidth = renderTargetWidth;
+            appContext.frameBufferHeight = renderTargetHeight;
+            gl.clearColor(...[0, 0, 0, 0]);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        }
+        appContext.fbo = fbo;
+    };
+}
+
+function createLodPlanes(context) {
+    const lodPlanes = [];
+    const sizeLods = [];
+    const sigmas = [];
+
+    let lod = context.lodMax;
+    console.log("context.lodMax", context.lodMax);
+    const totalLods = context.lodMax - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
+
+    for (let lodIndex = 0; lodIndex < totalLods; lodIndex++) {
+        const sizeLod = Math.pow(2, lod);
+        console.log("lod", lod,"sizeLod", sizeLod);
+        
+        sizeLods.push(sizeLod);
+        let sigma = 1.0 / sizeLod;
+
+        if (lodIndex > context.lodMax - LOD_MIN) {
+
+            sigma = EXTRA_LOD_SIGMA[lodIndex - context.lodMax + LOD_MIN - 1];
+
+        } else if (lodIndex === 0) {
+
+            sigma = 0;
+
+        }
+
+        sigmas.push(sigma);
+
+        const texelSize = 1.0 / (sizeLod - 2);
+        const min = - texelSize;
+        const max = 1 + texelSize;
+        const uv1 = [min, min, max, min, max, max, min, min, max, max, min, max];
+
+        const cubeFaces = 6;
+        const vertices = 6;
+        const positionSize = 3;
+        const uvSize = 2;
+        const faceIndexSize = 1;
+
+        const position = new Float32Array(positionSize * vertices * cubeFaces);
+        const uv = new Float32Array(uvSize * vertices * cubeFaces);
+        const faceIndex = new Float32Array(faceIndexSize * vertices * cubeFaces);
+        for (let face = 0; face < cubeFaces; face++) {
+
+            const x = (face % 3) * 2 / 3 - 1;
+            const y = face > 2 ? 0 : - 1;
+            const coordinates = [
+                x, y, 0,
+                x + 2 / 3, y, 0,
+                x + 2 / 3, y + 1, 0,
+                x, y, 0,
+                x + 2 / 3, y + 1, 0,
+                x, y + 1, 0
+            ];
+            position.set(coordinates, positionSize * vertices * face);
+            uv.set(uv1, uvSize * vertices * face);
+            const fill = [face, face, face, face, face, face];
+            faceIndex.set(fill, faceIndexSize * vertices * face);
+
+        }
+        const geometry = {
+            attributes: {
+                positions: position,
+                uvs: uv,
+                faceIndex:{
+                    array: faceIndex,
+                    itemSize: faceIndexSize
+                },
+            },
+            drawMode:drawModes[4],
+        };
+        lodPlanes.push(geometry);
+
+        if (lod > LOD_MIN) {
+
+            lod--;
+            console.log("lod", lod);
+
+        }
+    }
+    context.lodPlanes = lodPlanes;
+    context.sizeLods = sizeLods;
+    context.sigmas = sigmas;
+
+}
+
+function logLodPlane(lodPlane){
+    const faces = [];
+    //one face is composed of 6 vertices, which are composed of 3 positions
+    //
+    for(let i = 0;i<6;i++){
+        //ignore z the triangles are flat
+        //positions is a typearray
+        //const points = lodPlane.attributes.positions.slice(i*3*6, 3*6);
+        const point = lodPlane.attributes.positions;
+        const points = [
+            [point[i*3], point[i*3+1], point[i*3+2]],
+            [point[i*3+3], point[i*3+4], point[i*3+5]],
+            [point[i*3+6], point[i*3+7], point[i*3+8]],
+            [point[i*3+9], point[i*3+10], point[i*3+11]],
+            [point[i*3+12], point[i*3+13], point[i*3+14]],
+            [point[i*3+15], point[i*3+16], point[i*3+17]],
+        ];
+        //take the smallest x
+        const x = points.map(p=>p[0]).reduce((a,b)=>Math.min(a,b));
+        const y = points.map(p=>p[1]).reduce((a,b)=>Math.min(a,b));
+        const width = points.map(p=>p[0]).reduce((a,b)=>Math.max(a,b)) - x;
+        const height = points.map(p=>p[1]).reduce((a,b)=>Math.max(a,b)) - y;
+
+
+        
+        
+        faces.push({
+            x,
+            y,
+            width,
+            height,
+        });
+
+    }
+    console.log("faces",faces);
+}
+
+/* src\skybox.svelte generated by Svelte v4.2.18 */
+
+function create_fragment(ctx) {
+	let canvas_1;
+	let t;
+	let menu;
+	let current;
+	menu = new Menu({});
+
+	return {
+		c() {
+			canvas_1 = element("canvas");
+			t = space();
+			create_component(menu.$$.fragment);
+		},
+		m(target, anchor) {
+			insert(target, canvas_1, anchor);
+			/*canvas_1_binding*/ ctx[1](canvas_1);
+			insert(target, t, anchor);
+			mount_component(menu, target, anchor);
+			current = true;
+		},
+		p: noop,
+		i(local) {
+			if (current) return;
+			transition_in(menu.$$.fragment, local);
+			current = true;
+		},
+		o(local) {
+			transition_out(menu.$$.fragment, local);
+			current = false;
+		},
+		d(detaching) {
+			if (detaching) {
+				detach(canvas_1);
+				detach(t);
+			}
+
+			/*canvas_1_binding*/ ctx[1](null);
+			destroy_component(menu, detaching);
+		}
+	};
+}
+
+function animate() {
+	
+}
+
+function instance($$self, $$props, $$invalidate) {
+	let $renderer;
+	let $lights;
+	let $scene;
+	let $materials;
+	let $renderPasses;
+	let $camera;
+	component_subscribe($$self, renderer, $$value => $$invalidate(3, $renderer = $$value));
+	component_subscribe($$self, lights, $$value => $$invalidate(4, $lights = $$value));
+	component_subscribe($$self, scene, $$value => $$invalidate(5, $scene = $$value));
+	component_subscribe($$self, materials, $$value => $$invalidate(6, $materials = $$value));
+	component_subscribe($$self, renderPasses, $$value => $$invalidate(7, $renderPasses = $$value));
+	component_subscribe($$self, camera, $$value => $$invalidate(8, $camera = $$value));
+	let canvas;
+	let rgbeImage;
+
+	onMount(async () => {
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				canvas,
+				backgroundColor: skyblue,
+				ambientLightColor: [0xffffff, 0.1]
+			},
+			$renderer
+		);
+
+		set_store_value(
+			camera,
+			$camera = {
+				...$camera,
+				position: [-4.5, 0.8, -2.5],
+				target: [0, 0, 0],
+				fov: 75
+			},
+			$camera
+		);
+
+		rgbeImage = await loadRGBE("christmas_photo_studio_01_4k.hdr");
+		const hdrToneMapping = getToneMapping(1.5);
+
+		const skyBox = await createSkyBox({
+			typedArray: rgbeImage.data,
+			convertToCube: hdrToCube,
+			width: rgbeImage.width,
+			height: rgbeImage.height,
+			cubeSize: 2048,
+			toneMapping: hdrToneMapping
+		});
+
+		const environmentMap = createEnvironmentMap(rgbeImage);
+		console.log("environmentMap", environmentMap);
+		set_store_value(renderPasses, $renderPasses = [skyBox, environmentMap], $renderPasses);
+		const cubeMesh = createCube();
+
+		const light = createLightStore(createPointLight({
+			position: [-2, 2, 2],
+			color: [1, 1, 1],
+			intensity: 20,
+			cutoffDistance: 0,
+			decayExponent: 2
+		}));
+
+		const matrix = identity(createZeroMatrix());
+
+		const debugProgram = createMaterialStore({
+			diffuse: [1, 0, 0],
+			metalness: 0,
+			program: createDebugNormalsProgram()
+		});
+
+		const debugNormalMesh = createDebugObject({
+			...cubeMesh,
+			matrix,
+			material: debugProgram
+		});
+
+		const material = createMaterialStore({ diffuse: [1, 0.5, 0.5], metalness: 0 }); //enviromentMap,
+		set_store_value(materials, $materials = [...$materials, material, debugProgram], $materials);
+
+		set_store_value(
+			scene,
+			$scene = [
+				...$scene,
+				create3DObject({ ...cubeMesh, matrix, material }),
+				create3DObject(debugNormalMesh)
+			],
+			$scene
+		);
+
+		set_store_value(lights, $lights = [...$lights, light], $lights);
+
+		set_store_value(
+			renderer,
+			$renderer = {
+				...$renderer,
+				loop: animate,
+				enabled: true
+			},
+			$renderer
+		);
+
+		createOrbitControls(canvas, camera);
+	});
+
+	function canvas_1_binding($$value) {
+		binding_callbacks[$$value ? 'unshift' : 'push'](() => {
+			canvas = $$value;
+			$$invalidate(0, canvas);
+		});
+	}
+
+	return [canvas, canvas_1_binding];
+}
+
+class Skybox extends SvelteComponent {
+	constructor(options) {
+		super();
+		init(this, options, instance, create_fragment, safe_not_equal, {});
+	}
+}
+
+export { Skybox as default };

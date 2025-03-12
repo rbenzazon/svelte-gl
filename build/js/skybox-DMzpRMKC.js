@@ -1,21 +1,9 @@
-import { appContext, selectMesh, selectProgram } from "./engine";
-import skyBoxVertex from "../shaders/skybox-vertex.glsl";
-import skyBoxFragment from "../shaders/skybox-fragment.glsl";
-import {
-	compileShaders,
-	createProgram,
-	getCameraProjectionView,
-	linkProgram,
-	resetViewportToCanvas,
-	useProgram,
-	validateProgram,
-} from "./gl";
-import { drawModes } from "./webgl";
-import { multiply, invert } from "gl-matrix/esm/mat4.js";
-import { createVec3, createZeroMatrix } from "../geometries/common";
-import { cross, normalize, subtract } from "gl-matrix/esm/vec3.js";
-import { renderer } from "./renderer";
-import { templateLiteralRenderer } from "../shaders/template";
+import { az as createProgram, aA as resetViewportToCanvas, r as renderer, aa as templateLiteralRenderer, T as compileShaders, Y as linkProgram, Z as validateProgram, $ as useProgram, a0 as selectProgram, R as appContext, L as drawModes, aB as getCameraProjectionView, aC as invert, z as createZeroMatrix, a2 as multiply, K as normalize, J as subtract, V as createVec3, I as cross } from './Menu-l0HugrEy.js';
+
+var skyBoxVertex = "#version 300 es\r\n\r\n#define SHADER_NAME skyboxVertex\r\n\r\nin vec4 position;\r\nout vec4 v_position;\r\nvoid main() {\r\n    v_position = position;\r\n    gl_Position = position;\r\n    gl_Position.z = 1.0;\r\n}";
+
+var skyBoxFragment = "#version 300 es\r\nprecision highp float;\r\n\r\n#define SHADER_NAME skyboxFragment\r\n\r\nuniform samplerCube skybox;\r\nuniform mat4 viewDirectionProjectionInverse;\r\n\r\n${declarations}\r\n  \r\nin vec4 v_position;\r\n  \r\n// we need to declare an output for the fragment shader\r\nout vec4 fragColor;\r\n  \r\nvoid main() {\r\n  vec4 t = viewDirectionProjectionInverse * v_position;\r\n  fragColor = texture(skybox, normalize(t.xyz / t.w));\r\n  ${toneMappings}\r\n}";
+
 /**
  * @callback ConvertHDRToCube
  * @param {Uint16Array} typedArray
@@ -73,7 +61,7 @@ function isHDRSkyboxProps(props) {
  *  getTexture: () => WebGLTexture,
  * }>}
  */
-export async function createSkyBox(props) {
+async function createSkyBox(props) {
 	let buffer;
 	function setBuffer(value) {
 		buffer = value;
@@ -193,7 +181,7 @@ function createShaders(toneMapping) {
  *
  * @returns {SvelteGLMesh}
  */
-export function createSkyBoxMesh() {
+function createSkyBoxMesh() {
 	return /** @type {SvelteGLMesh} */ {
 		attributes: {
 			positionsSize: 2,
@@ -224,7 +212,7 @@ function setupSkyBoxCamera(camera) {
 	};
 }
 
-export async function setupSkyBoxTexture(url, setBuffer) {
+async function setupSkyBoxTexture(url, setBuffer) {
 	const image = new Image();
 	await new Promise((resolve, reject) => {
 		image.src = url;
@@ -381,3 +369,5 @@ function lookAt(cameraPosition, target, up, dst) {
 
 	return dst;
 }
+
+export { createSkyBox as c, setupSkyBoxTexture as s };

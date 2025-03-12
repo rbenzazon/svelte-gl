@@ -3,6 +3,7 @@ import { mat4 } from "gl-matrix";
 import { createACESFilmicToneMapping } from "../tone-mapping/aces-filmic-tone-mapping";
 import { createAGXToneMapping } from "../tone-mapping/agx";
 import { createNeutralToneMapping } from "../tone-mapping/neutral-tone-mapping";
+import { compileShaders } from "../store/gl";
 
 /**
  * Converts the HDR image to a cube map texture
@@ -250,27 +251,16 @@ function createEquirectToCubeProgram(gl) {
         vec2 uv = SampleSphericalMap(direction);
         fragColor = texture(equirectangularMap, uv);
     }`;
-
-	// Create and compile shaders
-	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-	gl.shaderSource(vertexShader, vertexShaderSource);
-	gl.compileShader(vertexShader);
-
-	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-	gl.shaderSource(fragmentShader, fragmentShaderSource);
-	gl.compileShader(fragmentShader);
-
-	// Create and link program
+	
 	const program = gl.createProgram();
-	gl.attachShader(program, vertexShader);
-	gl.attachShader(program, fragmentShader);
+
+	compileShaders(gl,program,vertexShaderSource,fragmentShaderSource);
+
 	gl.linkProgram(program);
 
 	// Check for shader compilation and program link errors
 	if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
 		console.error("Shader program error:", gl.getProgramInfoLog(program));
-		console.error("Vertex shader log:", gl.getShaderInfoLog(vertexShader));
-		console.error("Fragment shader log:", gl.getShaderInfoLog(fragmentShader));
 		throw new Error("Failed to compile shaders");
 	}
 

@@ -1,6 +1,17 @@
 const HalfFloatType = 1016;
 const FloatType = 1015;
 
+/**
+ * @typedef {Object} RGBE
+ * @property {number} width
+ * @property {number} height
+ * @property {Uint16Array} data
+ * @property {string} header
+ * @property {number} gamma
+ * @property {number} exposure
+ * @property {number} type
+ */
+
 export async function loadRGBE(url) {
 	const response = await fetch(url);
 	const buffer = await response.arrayBuffer();
@@ -10,15 +21,7 @@ export async function loadRGBE(url) {
 /**
  *
  * @param {ArrayBuffer} buffer
- * @returns {{
- * width: number,
- * height: number,
- * data: Uint16Array,
- * header: string,
- * gamma: number,
- * exposure: number,
- * type: number
- * }}
+ * @returns {RGBE}
  */
 export function parseRGBE(buffer) {
 	/* default error routine.  change this to change error handling */

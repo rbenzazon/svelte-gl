@@ -2,6 +2,7 @@ import vertexShaderSource from "../shaders/blur-vertex.glsl";
 import fragmentShaderSource from "../shaders/blur-fragment.glsl";
 import { drawModes } from "./webgl";
 import { appContext } from "./engine";
+import { compileShaders } from "./gl";
 
 export const BLUR_DIRECTION_HORIZONTAL = 0;
 export const BLUR_DIRECTION_VERTICAL = 1;
@@ -83,7 +84,7 @@ const convertKernelToOffsetsAndScales = (kernel) => {
  *
  * @param {boolean} mapCurrent makes the previous program the current one
  * which allows to reuse one program in two consecutive and different draw passes
- * This case is necessary to draw twice with different settings (unitforms)
+ * This case is necessary to draw twice with different settings (uniforms)
  *
  */
 export function createBlurProgram(mapCurrent = false) {
@@ -108,22 +109,7 @@ export function createBlurProgram(mapCurrent = false) {
 
 export function createBlurShaders() {
 	const { gl, program } = appContext;
-
-	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-	gl.shaderSource(vertexShader, vertexShaderSource);
-	gl.compileShader(vertexShader);
-	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-		console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
-	}
-	gl.attachShader(program, vertexShader);
-
-	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-	gl.shaderSource(fragmentShader, fragmentShaderSource);
-	gl.compileShader(fragmentShader);
-	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-		console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
-	}
-	gl.attachShader(program, fragmentShader);
+	compileShaders(gl, program, vertexShaderSource, fragmentShaderSource);
 }
 
 // Create a simple quad mesh for the blur shader

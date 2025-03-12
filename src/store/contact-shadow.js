@@ -1,7 +1,7 @@
 import { getTranslation, orthoNO, lookAt } from "gl-matrix/mat4";
 import depthVertexShader from "../shaders/depth-vertex.glsl";
 import depthFragmentShader from "../shaders/depth-fragment.glsl";
-import { getCameraProjectionView, linkProgram, useProgram, validateProgram } from "./gl";
+import { compileShaders, createFBO, getCameraProjectionView, linkProgram, unbindTexture, useProgram, validateProgram } from "./gl";
 import {
 	BLUR_DIRECTION_HORIZONTAL,
 	BLUR_DIRECTION_VERTICAL,
@@ -200,11 +200,6 @@ function setupBlurKernel(size) {
 	};
 }
 
-function unbindTexture() {
-	const { gl } = appContext;
-	gl.bindTexture(gl.TEXTURE_2D, null);
-}
-
 function selectBlurProgram(blurDirection, getTexture) {
 	return function selectBlurProgram(programStore) {
 		return function selectBlurProgram() {
@@ -256,22 +251,7 @@ function setupShadowCamera(projection, view) {
 
 function createShaders() {
 	const { gl, program } = appContext;
-
-	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-	gl.shaderSource(vertexShader, depthVertexShader);
-	gl.compileShader(vertexShader);
-	if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-		console.error(gl.getShaderInfoLog(vertexShader));
-	}
-	gl.attachShader(program, vertexShader);
-
-	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-	gl.shaderSource(fragmentShader, depthFragmentShader);
-	gl.compileShader(fragmentShader);
-	if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-		console.error(gl.getShaderInfoLog(fragmentShader));
-	}
-	gl.attachShader(program, fragmentShader);
+	compileShaders(gl, program, depthVertexShader, depthFragmentShader);
 }
 
 function createShadowProgram() {
@@ -286,26 +266,5 @@ function createShadowProgram() {
 
 			appContext.program = program;
 		};
-	};
-}
-
-function createFBO(width, height, setFBO, setTexture) {
-	return function createFBO() {
-		const { gl } = appContext;
-		// The geometry texture will be sampled during the HORIZONTAL pass
-		const texture = gl.createTexture();
-		setTexture(texture);
-		gl.bindTexture(gl.TEXTURE_2D, texture);
-		gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-		const fbo = gl.createFramebuffer();
-		setFBO(fbo);
-		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
-
-		gl.bindTexture(gl.TEXTURE_2D, null);
-		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	};
 }

@@ -74,6 +74,10 @@ export function sortMeshesByZ(programs) {
 	// @ts-ignore, trust me bro
 	return sortedPrograms;
 }
+
+function sortOrder(a, b) {
+	return a.order - b.order;
+}
 /**
  * @typedef {Object} SvelteGLProgramProject
  * @property {SvelteGLMaterial} material
@@ -127,7 +131,8 @@ export const programs = derived(
 				...program,
 				...(program.updateProgram ? {} : { updateProgram: [] }),
 				...(program.allMeshes ? { meshes: $scene } : {}),
-			}));
+			}))
+			.sort(sortOrder);
 
 		//this sublist mesh items require their own respective program (shader)
 		const specialMeshes = new Set(
