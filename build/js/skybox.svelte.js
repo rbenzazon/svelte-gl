@@ -780,9 +780,11 @@ function createEquirectToCubeProgram(gl) {
 	return { program, vertexArray };
 }
 
-var PMREMVertex = "#version 300 es\r\n\r\nprecision mediump float;\r\nprecision mediump int;\r\n\r\nin vec3 position;\r\nin vec2 uv;\r\nin float faceIndex;\r\n\r\nout vec3 vOutputDirection;\r\n\r\n// RH coordinate system; PMREM face-indexing convention\r\nvec3 getDirection(vec2 uv, float face) {\r\n\r\n    uv = 2.0 * uv - 1.0;\r\n\r\n    vec3 direction = vec3(uv, 1.0);\r\n\r\n    if(face == 0.0) {\r\n\r\n        direction = direction.zyx; // ( 1, v, u ) pos x\r\n\r\n    } else if(face == 1.0) {\r\n\r\n        direction = direction.xzy;\r\n        direction.xz *= -1.0; // ( -u, 1, -v ) pos y\r\n\r\n    } else if(face == 2.0) {\r\n\r\n        direction.x *= -1.0; // ( -u, v, 1 ) pos z\r\n\r\n    } else if(face == 3.0) {\r\n\r\n        direction = direction.zyx;\r\n        direction.xz *= -1.0; // ( -1, v, -u ) neg x\r\n\r\n    } else if(face == 4.0) {\r\n\r\n        direction = direction.xzy;\r\n        direction.xy *= -1.0; // ( -u, -1, v ) neg y\r\n\r\n    } else if(face == 5.0) {\r\n\r\n        direction.z *= -1.0; // ( u, v, -1 ) neg z\r\n\r\n    }\r\n\r\n    return direction;\r\n\r\n}\r\n\r\nvoid main() {\r\n\r\n    vOutputDirection = getDirection(uv, faceIndex);\r\n    gl_Position = vec4(position, 1.0);\r\n\r\n}";
+var PMREMVertex = "#version 300 es\r\n\r\nprecision mediump float;\r\nprecision mediump int;\r\n\r\nin vec3 position;\r\nin vec2 uv;\r\nin float faceIndex;\r\n\r\nout vec3 vOutputDirection;\r\n\r\n// RH coordinate system; PMREM face-indexing convention\r\nvec3 getDirection(vec2 uv, float face) {\r\n\r\n    uv = 2.0 * uv - 1.0;\r\n\r\n    vec3 direction = vec3(uv, 1.0);\r\n\r\n    if(face == 0.0) {\r\n        // 0 0 0\r\n        // X 0 0\r\n        direction = direction.zyx; // ( 1, v, u ) pos x\r\n        direction.y *= -1.0;\r\n\r\n    } else if(face == 1.0) {\r\n        //0 0 0\r\n        //0 X 0\r\n        direction = direction.xzy;\r\n        direction.xyz *= -1.0; // ( -u, 1, -v ) pos y\r\n\r\n    } else if(face == 2.0) {\r\n        //0 0 0\r\n        //0 0 X\r\n        direction.x *= -1.0; // ( -u, v, 1 ) pos z\r\n        direction.y *= -1.0;\r\n\r\n    } else if(face == 3.0) {\r\n        // X 0 0\r\n        // 0 0 0\r\n        direction = direction.zyx;\r\n        direction.xyz *= -1.0; // ( -1, v, -u ) neg x\r\n\r\n    } else if(face == 4.0) {\r\n        //0 X 0\r\n        //0 0 0\r\n        direction = direction.xzy;\r\n        direction.x *= -1.0; // ( -u, -1, v ) neg y\r\n\r\n    } else if(face == 5.0) {\r\n        //0 0 X\r\n        //0 0 0\r\n        direction.zy *= -1.0; // ( u, v, -1 ) neg z\r\n    }\r\n\r\n    return direction;\r\n\r\n}\r\n\r\nvoid main() {\r\n\r\n    vOutputDirection = getDirection(uv, faceIndex);\r\n    gl_Position = vec4(position, 1.0);\r\n\r\n}";
 
-var EquiRectangularToCubeUV = "#version 300 es\r\n\r\nprecision mediump float;\r\nprecision mediump int;\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n#define RECIPROCAL_PI2 0.15915494309189535\r\n\r\nuniform float flipEnvMap;\r\n\r\nin vec3 vOutputDirection;\r\n\r\nuniform sampler2D skyBox;\r\n\r\nout vec4 fragColor;\r\n\r\nvec2 equirectUv( in vec3 dir ) {\r\n    float u = atan( dir.z, dir.x ) * RECIPROCAL_PI2 + 0.5;\r\n    float v = asin( clamp( dir.y, - 1.0, 1.0 ) ) * RECIPROCAL_PI + 0.5;\r\n    return vec2( u, v );\r\n}\r\n\r\nvoid main() {\r\n    vec3 outputDirection = normalize( vOutputDirection );\r\n    vec2 uv = equirectUv( outputDirection );\r\n    fragColor = vec4( texture ( skyBox, uv ).rgb, 1.0 );\r\n}";
+var SphericalGaussianBlurFragment = "#version 300 es\r\n\r\nprecision mediump float;\r\nprecision mediump int;\r\n\r\n#define MAX_SAMPLES 20\r\n\r\nin vec3 vOutputDirection;\r\n\r\nuniform sampler2D envMap;\r\n\r\nuniform int samples;\r\nuniform float weights[MAX_SAMPLES];\r\nuniform bool latitudinal;\r\nuniform float dTheta;\r\nuniform float mipInt;\r\nuniform vec3 poleAxis;\r\n\r\nout vec4 fragColor;\r\n\r\nfloat getFace(vec3 direction) {\r\n    vec3 absDirection = abs(direction);\r\n    float face = -1.0f;\r\n    if(absDirection.x > absDirection.z) {\r\n        if(absDirection.x > absDirection.y)\r\n            face = direction.x > 0.0f ? 0.0f : 3.0f;\r\n        else\r\n            face = direction.y > 0.0f ? 1.0f : 4.0f;\r\n    } else {\r\n        if(absDirection.z > absDirection.y)\r\n            face = direction.z > 0.0f ? 2.0f : 5.0f;\r\n        else\r\n            face = direction.y > 0.0f ? 1.0f : 4.0f;\r\n    }\r\n    return face;\r\n}\r\n\r\n// RH coordinate system; PMREM face-indexing convention\r\nvec2 getUV( vec3 direction, float face ) {\r\n    vec2 uv;\r\n    if ( face == 0.0 ) {\r\n        uv = vec2( direction.z, direction.y ) / abs( direction.x );\r\n    }\r\n    else if ( face == 1.0 ) {\r\n        uv = vec2( - direction.x, - direction.z ) / abs( direction.y );\r\n    }\r\n    else if ( face == 2.0 ) {\r\n        uv = vec2( - direction.x, direction.y ) / abs( direction.z );\r\n    }\r\n    else if ( face == 3.0 ) {\r\n        uv = vec2( - direction.z, direction.y ) / abs( direction.x );\r\n    }\r\n    else if ( face == 4.0 ) {\r\n        uv = vec2( - direction.x, direction.z ) / abs( direction.y );\r\n    }\r\n    else {\r\n        uv = vec2( direction.x, direction.y ) / abs( direction.z );\r\n    }\r\n    return 0.5 * ( uv + 1.0 );\r\n}\r\n\r\nvec3 bilinearCubeUV( sampler2D envMap, vec3 direction, float mipInt ) {\r\n    float face = getFace( direction );\r\n    float filterInt = max( 4.0 - mipInt, 0.0 );\r\n    mipInt = max( mipInt, 4.0 );\r\n    float faceSize = exp2( mipInt );\r\n    highp vec2 uv = getUV( direction, face ) * ( faceSize - 2.0 ) + 1.0;\r\n    if ( face > 2.0 ) {\r\n        uv.y += faceSize;\r\n        face -= 3.0;\r\n    }\r\n    uv.x += face * faceSize;\r\n    uv.x += filterInt * 3.0 * 16.0;\r\n    uv.y += 4.0 * ( exp2( 8.0 ) - faceSize );\r\n    uv.x *= 0.0013020833333333333;\r\n    uv.y *= 0.0009765625;\r\n    return textureGrad( envMap, uv, vec2( 0.0 ), vec2( 0.0 ) ).rgb;\r\n}\r\n\r\nvec3 getSample(float theta, vec3 axis) {\r\n    float cosTheta = cos(theta);\r\n    // Rodrigues' axis-angle rotation\r\n    vec3 sampleDirection = vOutputDirection * cosTheta + cross(axis, vOutputDirection) * sin(theta) + axis * dot(axis, vOutputDirection) * (1.0f - cosTheta);\r\n    return bilinearCubeUV(envMap, sampleDirection, mipInt);\r\n}\r\n\r\nvoid main() {\r\n\r\n    vec3 axis = latitudinal ? poleAxis : cross(poleAxis, vOutputDirection);\r\n    if(all(equal(axis, vec3(0.0f)))) {\r\n        axis = vec3(vOutputDirection.z, 0.0f, -vOutputDirection.x);\r\n    }\r\n\r\n    axis = normalize(axis);\r\n    fragColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);\r\n    fragColor.rgb += weights[0] * getSample(0.0f, axis);\r\n    for(int i = 1; i < MAX_SAMPLES; i++) {\r\n        if(i >= samples) {\r\n            break;\r\n        }\r\n        float theta = dTheta * float(i);\r\n        fragColor.rgb += weights[i] * getSample(-1.0f * theta, axis);\r\n        fragColor.rgb += weights[i] * getSample(theta, axis);\r\n    }\r\n\r\n}";
+
+var EquiRectangularToCubeUV = "#version 300 es\r\n\r\nprecision highp float;\r\nprecision highp int;\r\nprecision highp sampler2D;\r\n\r\n#define RECIPROCAL_PI 0.3183098861837907\r\n#define RECIPROCAL_PI2 0.15915494309189535\r\n\r\nuniform float flipEnvMap;\r\n\r\nin vec3 vOutputDirection;\r\n\r\nuniform sampler2D skyBox;\r\n\r\nout highp vec4 fragColor;\r\n\r\nvec2 equirectUv( in vec3 dir ) {\r\n    float u = atan( dir.z, dir.x ) * RECIPROCAL_PI2 + 0.5;\r\n    float v = asin( clamp( dir.y, - 1.0, 1.0 ) ) * RECIPROCAL_PI + 0.5;\r\n    return vec2( u, v );\r\n}\r\n\r\nvoid main() {\r\n    vec3 outputDirection = normalize( vOutputDirection );\r\n    vec2 uv = equirectUv( outputDirection );\r\n    fragColor = vec4( texture ( skyBox, uv ).rgb, 1.0 );\r\n}";
 
 const LOD_MIN = 4;
 const EXTRA_LOD_SIGMA = [
@@ -792,6 +794,50 @@ const EXTRA_LOD_SIGMA = [
     0.446,
     0.526,
     0.582
+];
+const MAX_SAMPLES = 20;
+const sigmas = [
+    0,
+    0.0078125,
+    0.015625,
+    0.03125,
+    0.0625,
+    0.125,
+    0.215,
+    0.35,
+    0.446,
+    0.526,
+    0.582
+];
+// Golden Ratio
+const PHI = (1 + Math.sqrt(5)) / 2;
+const INV_PHI = 1 / PHI;
+/*
+const _axisDirections = [
+     new Vector3( - PHI, INV_PHI, 0 ),
+     new Vector3( PHI, INV_PHI, 0 ),
+     new Vector3( - INV_PHI, 0, PHI ),
+     new Vector3( INV_PHI, 0, PHI ),
+     new Vector3( 0, PHI, - INV_PHI ),
+     new Vector3( 0, PHI, INV_PHI ),
+     new Vector3( - 1, 1, - 1 ),
+     new Vector3( 1, 1, - 1 ),
+     new Vector3( - 1, 1, 1 ),
+     new Vector3( 1, 1, 1 )
+];
+*/
+/** @type {vec3[]} */
+const axisDirections = [
+    [-PHI, INV_PHI, 0],
+    [PHI, INV_PHI, 0],
+    [-INV_PHI, 0, PHI],
+    [INV_PHI, 0, PHI],
+    [0, PHI, -INV_PHI],
+    [0, PHI, INV_PHI],
+    [-1, 1, -1],
+    [1, 1, -1],
+    [-1, 1, 1],
+    [1, 1, 1]
 ];
 /**
  * @typedef {Object} EnvMapPass
@@ -829,9 +875,11 @@ function createEnvironmentMap(image) {
 
     let pingTexture;
     function setPingTexture(texture) {
+        console.log("setPingTexture", texture);
         pingTexture = texture;
     }
     function getPingTexture() {
+        console.log("getPingTexture", pingTexture);
         return pingTexture;
     }
     let pingFBO;
@@ -840,6 +888,16 @@ function createEnvironmentMap(image) {
     }
     function getPingFBO() {
         return pingFBO;
+    }
+    function setPongTexture(texture) {
+        console.log("setPongTexture", texture);
+    }
+    let pongFBO;
+    function setPongFBO(fbo) {
+        pongFBO = fbo;
+    }
+    function getPongFBO() {
+        return pongFBO;
     }
     
     return {
@@ -856,20 +914,160 @@ function createEnvironmentMap(image) {
                 selectProgram,
                 setupMaterial: [setupEquiRectangularToCubeUVUniforms, bindEnvMapTexture(getHDRTexture)],
                 setupCamera: () => () => { },
-                setFrameBuffer: setFrameBuffer(getPingFBO, context,getViewportSize),
+                setFrameBuffer: setFrameBuffer(getPingFBO, context,getViewportSize,true),
                 meshes: [context.lodPlanes[0]],
-                postDraw: unbindTexture,
-            }
+                /*postDraw: unbindTexture,*/
+            },
+            ...(new Array((context.lodPlanes.length - 1)*2)).fill(0).map((_, programIndex) => {
+                const STANDARD_DEVIATIONS = 3;
+                const lodIndex = Math.floor(programIndex / 2)+1;
+                
+                const pair = programIndex % 2 === 0;
+                const direction = pair ? 'latitudinal' : 'longitudinal';
+                const getCurrentFBO = pair ? getPongFBO : getPingFBO;
+                
+                const sigma = Math.sqrt(sigmas[lodIndex] * sigmas[lodIndex] - sigmas[lodIndex - 1] * sigmas[lodIndex - 1]);
+                const poleAxis = (axisDirections[(context.lodPlanes.length - lodIndex - 1) % axisDirections.length]);
+                const lodIn = lodIndex - 1;
+                const lodOut = lodIndex;
+                const pixels = context.sizeLods[lodIn] - 1;
+                const radiansPerPixel = isFinite(sigma) ? Math.PI / (2 * pixels) : 2 * Math.PI / (2 * MAX_SAMPLES - 1);
+                const sigmaPixels = sigma / radiansPerPixel;
+                const samples = isFinite(sigma) ? 1 + Math.floor(STANDARD_DEVIATIONS * sigmaPixels) : MAX_SAMPLES;
+
+                const weights = [];
+                let sum = 0;
+                for (let i = 0; i < MAX_SAMPLES; ++i) {
+                    const x = i / sigmaPixels;
+                    const weight = Math.exp(- x * x / 2);
+                    weights.push(weight);
+                    if (i === 0) {
+                        sum += weight;
+                    } else if (i < samples) {
+                        sum += 2 * weight;
+                    }
+                }
+
+                for (let i = 0; i < weights.length; i++) {
+                    weights[i] = weights[i] / sum;
+                }
+                const outputSize = context.sizeLods[ lodOut ];
+                const x = 3 * outputSize * ( lodOut > context.lodMax - LOD_MIN ? lodOut - context.lodMax + LOD_MIN : 0 );
+                const y = 4 * ( context.cubeSize - outputSize );
+                const width = 3 * outputSize;
+                const height = 2 * outputSize;
+                return {
+                    createProgram:createBlurProgram(programIndex !== 0),
+                    setupProgram: [
+                        ...(programIndex === 0 ? [
+                            createBlurShader,
+                            linkProgram,
+                            validateProgram,
+                            createFBO(context, setPongFBO, setPongTexture),
+                        ] : []),
+                    ],
+                    setupMaterial: [
+                    ],
+                    useProgram,
+                    selectProgram,
+                    setupCamera: () => () => {},
+                    setFrameBuffer: setFrameBuffer(getCurrentFBO, context,getBlurViewportSize(x,y,width,height)),
+                    updateProgram: [
+                        bindEnvMapTexture(getHDRTexture),
+                        setupBlurUniforms(samples,weights,direction === 'latitudinal',poleAxis,radiansPerPixel,context.lodMax-lodIn),
+                    ],
+                    meshes: [context.lodPlanes[lodIndex]],
+                    ...(programIndex === ((context.lodPlanes.length - 1)*2-1) ?{postDraw:restoreState}:{}),
+                }
+            }),
         ],
         getTexture: getPingTexture,
         order: -1,
     }
 }
+
+function disableDepthTest(){
+    const { gl } = appContext;
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+}
+
+function restoreDepthTest(){
+    const { gl } = appContext;
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+}
+
+function enableScissorTest(){
+    const { gl } = appContext;
+    gl.enable(gl.SCISSOR_TEST);
+}
+
+function restoreScissorTest(){
+    const { gl } = appContext;
+    gl.disable(gl.SCISSOR_TEST);
+}
+
+function restoreFlipY(){
+    const { gl } = appContext;
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+}
+
+function restoreState(){
+    restoreDepthTest();
+    restoreScissorTest();
+    restoreFlipY();
+    unbindTexture();
+}
+
+/**
+ * 
+ * @param {number} samples 
+ * @param {number[]} weights 
+ * @param {boolean} latitudinal 
+ * @param {vec3} poleAxis 
+ * @param {number} dTheta 
+ * @param {number} mipInt 
+ * 
+ * @returns 
+ */
+function setupBlurUniforms(samples,weights,latitudinal,poleAxis,dTheta,mipInt){
+    return function setupBlurUniforms(){
+        const { gl, program } = appContext;
+        const samplesLocation = gl.getUniformLocation(program, "samples");
+        gl.uniform1i(samplesLocation, samples);
+        const weightsLocation = gl.getUniformLocation(program, "weights");
+        gl.uniform1fv(weightsLocation, weights);
+        const latitudinalLocation = gl.getUniformLocation(program, "latitudinal");
+        gl.uniform1i(latitudinalLocation, latitudinal ? 1 : 0);
+        if (poleAxis) {
+            const poleAxisLocation = gl.getUniformLocation(program, "poleAxis");
+            gl.uniform3fv(poleAxisLocation, poleAxis);
+        }
+        const dThetaLocation = gl.getUniformLocation(program, "dTheta");
+        gl.uniform1f(dThetaLocation, dTheta);
+        const mipIntLocation = gl.getUniformLocation(program, "mipInt");
+        gl.uniform1f(mipIntLocation, mipInt);
+        //setSourceTexture(getTexture);
+    }
+}
 function getViewportSize(context) {
     const size = context.cubeSize;
     return {
+        x: 0,
+        y: 0,
         width: 3 * size,
         height: 2 * size,
+    }
+}
+function getBlurViewportSize(x,y,width,height) {
+    return function getBlurViewportSize(){
+        return {
+            x,
+            y,
+            width,
+            height,
+        }
     }
 }
 
@@ -886,6 +1084,8 @@ function createEquiRectangularToCubeUVProgram(context, image,setHDRTexture) {
         return function createEquiRectangularToCubeUVProgram() {
             setupHDRTexture(image, setHDRTexture);
             createProgram(programStore)();
+            disableDepthTest();
+            enableScissorTest();
         }
     }
 }
@@ -910,11 +1110,22 @@ function setupHDRTexture(image, setHDRTexture) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    //flip y
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    //pre multiply alpha false
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
 function createEquiRectangularToCubeUVShaders() {
     const { gl, program } = appContext;
     compileShaders(gl, program, PMREMVertex, EquiRectangularToCubeUV);
+}
+
+function createBlurShader() {
+    const { gl, program } = appContext;
+    compileShaders(gl, program, PMREMVertex, SphericalGaussianBlurFragment);
 }
 
 function createFBO(context, setFBO, setTexture) {
@@ -926,10 +1137,42 @@ function createFBO(context, setFBO, setTexture) {
         // The geometry texture will be sampled during the HORIZONTAL pass
         const texture = gl.createTexture();
         setTexture(texture);
+        /*
+        alphaSize: 16
+        blueSize: 16
+        componentType: FLOAT
+        depthSize: 0
+        encoding: LINEAR
+        format: RGBA
+        greenSize: 16
+        height: 4096
+        internalFormat: RGBA16F
+        redSize: 16
+        stencilSize: 0
+        texture: WebGLTexture - ID: 6
+        textureCubeMapFace: NONE
+        textureLayer: 0
+        textureLevel: 0
+        textureType: HALF_FLOAT
+        type: TEXTURE
+        width: 3072
+        */
         gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, renderTargetWidth, renderTargetHeight);
+        //gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA16F, renderTargetWidth, renderTargetHeight);
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA16F, // Internal format for HDR
+            renderTargetWidth,
+            renderTargetHeight,
+            0,
+            gl.RGBA,
+            gl.HALF_FLOAT,
+            null,
+        );
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        
 
         const fbo = gl.createFramebuffer();
         setFBO(fbo);
@@ -940,6 +1183,13 @@ function createFBO(context, setFBO, setTexture) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     };
 }
+/*
+
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, renderTargetWidth, renderTargetHeight);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        */
 
 function setupEquiRectangularToCubeUVUniforms() {
     return function setupEquiRectangularToCubeUVUniforms() {
@@ -952,15 +1202,12 @@ function setupEquiRectangularToCubeUVUniforms() {
 function bindEnvMapTexture(getBuffer) {
     return function bindEnvMapTexture() {
         const { gl, program } = appContext;
-        const textureLocation = gl.getUniformLocation(program, "skyBox");
-        gl.uniform1i(textureLocation, 0);
-        gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, getBuffer());
     };
 }
 
 
-function setFrameBuffer(getFBO = null, context,getViewportSize) {
+function setFrameBuffer(getFBO = null, context,getViewportSize,clear = false) {
     return function setFrameBuffer() {
         const { gl } = appContext;
         const fbo = getFBO ? getFBO() : null;
@@ -968,15 +1215,47 @@ function setFrameBuffer(getFBO = null, context,getViewportSize) {
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         if (appContext.fbo !== fbo && fbo != null) {
             console.log("framebuffer change clearing from", appContext.fbo, "to", fbo, [0, 0, 0, 1], renderTargetWidth, renderTargetHeight);
-            const {width, height} = getViewportSize(context);
-            gl.viewport(0, 0, width, height);
+            const {x,y,width, height} = getViewportSize(context);
+            console.log("viewport",x,y,width,height);
+            
+            gl.viewport(x,y, width, height);
+            gl.scissor(x,y, width, height);
             appContext.frameBufferWidth = renderTargetWidth;
             appContext.frameBufferHeight = renderTargetHeight;
-            gl.clearColor(...[0, 0, 0, 0]);
-            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            if(clear){
+                gl.clearColor(...[0, 0, 0, 0]);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+            }
         }
         appContext.fbo = fbo;
     };
+}
+
+/**
+ *
+ * @param {boolean} mapCurrent makes the previous program the current one
+ * which allows to reuse one program in two consecutive and different draw passes
+ * This case is necessary to draw twice with different settings (uniforms)
+ *
+ */
+function createBlurProgram(mapCurrent = false) {
+	return function createBlurProgram(programStore) {
+		return function createBlurProgram() {
+			const { gl, programMap, vaoMap } = appContext;
+			if (!programMap.has(programStore) && !mapCurrent) {
+				const program = gl.createProgram();
+				programMap.set(programStore, program);
+				vaoMap.set(programStore, new Map());
+				appContext.program = program;
+			} else if (mapCurrent) {
+				programMap.set(programStore, appContext.program);
+				vaoMap.set(programStore, new Map());
+			} else {
+				//todo check if necessary, this check is done in engine already, if it exists, createProgram is not called
+				appContext.program = appContext.programMap.get(programStore);
+			}
+		};
+	};
 }
 
 function createLodPlanes(context) {
@@ -985,24 +1264,18 @@ function createLodPlanes(context) {
     const sigmas = [];
 
     let lod = context.lodMax;
-    console.log("context.lodMax", context.lodMax);
     const totalLods = context.lodMax - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
 
     for (let lodIndex = 0; lodIndex < totalLods; lodIndex++) {
         const sizeLod = Math.pow(2, lod);
-        console.log("lod", lod,"sizeLod", sizeLod);
         
         sizeLods.push(sizeLod);
         let sigma = 1.0 / sizeLod;
 
         if (lodIndex > context.lodMax - LOD_MIN) {
-
             sigma = EXTRA_LOD_SIGMA[lodIndex - context.lodMax + LOD_MIN - 1];
-
         } else if (lodIndex === 0) {
-
             sigma = 0;
-
         }
 
         sigmas.push(sigma);
@@ -1053,10 +1326,7 @@ function createLodPlanes(context) {
         lodPlanes.push(geometry);
 
         if (lod > LOD_MIN) {
-
             lod--;
-            console.log("lod", lod);
-
         }
     }
     context.lodPlanes = lodPlanes;

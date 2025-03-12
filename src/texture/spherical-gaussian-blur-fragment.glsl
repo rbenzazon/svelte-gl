@@ -1,239 +1,106 @@
+#version 300 es
+
 precision mediump float;
 precision mediump int;
 
-varying vec3 vOutputDirection;
+#define MAX_SAMPLES 20
+
+in vec3 vOutputDirection;
 
 uniform sampler2D envMap;
+
 uniform int samples;
-uniform float weights[n];
+uniform float weights[MAX_SAMPLES];
 uniform bool latitudinal;
 uniform float dTheta;
 uniform float mipInt;
 uniform vec3 poleAxis;
 
-#define ENVMAP_TYPE_CUBE_UV
-#ifdef ENVMAP_TYPE_CUBE_UV
-
-#define cubeUV_minMipLevel 4.0
-#define cubeUV_minTileSize 16.0
-
-// These shader functions convert between the UV coordinates of a single face of
-// a cubemap, the 0-5 integer index of a cube face, and the direction vector for
-// sampling a textureCube (not generally normalized ).
+out vec4 fragColor;
 
 float getFace(vec3 direction) {
-
     vec3 absDirection = abs(direction);
-
-    float face = -1.0;
-
+    float face = -1.0f;
     if(absDirection.x > absDirection.z) {
-
         if(absDirection.x > absDirection.y)
-
-            face = direction.x > 0.0 ? 0.0 : 3.0;
-
+            face = direction.x > 0.0f ? 0.0f : 3.0f;
         else
-
-            face = direction.y > 0.0 ? 1.0 : 4.0;
-
+            face = direction.y > 0.0f ? 1.0f : 4.0f;
     } else {
-
         if(absDirection.z > absDirection.y)
-
-            face = direction.z > 0.0 ? 2.0 : 5.0;
-
+            face = direction.z > 0.0f ? 2.0f : 5.0f;
         else
-
-            face = direction.y > 0.0 ? 1.0 : 4.0;
-
+            face = direction.y > 0.0f ? 1.0f : 4.0f;
     }
-
     return face;
-
 }
 
 // RH coordinate system; PMREM face-indexing convention
-vec2 getUV(vec3 direction, float face) {
-
+vec2 getUV( vec3 direction, float face ) {
     vec2 uv;
-
-    if(face == 0.0) {
-
-        uv = vec2(direction.z, direction.y) / abs(direction.x); // pos x
-
-    } else if(face == 1.0) {
-
-        uv = vec2(-direction.x, -direction.z) / abs(direction.y); // pos y
-
-    } else if(face == 2.0) {
-
-        uv = vec2(-direction.x, direction.y) / abs(direction.z); // pos z
-
-    } else if(face == 3.0) {
-
-        uv = vec2(-direction.z, direction.y) / abs(direction.x); // neg x
-
-    } else if(face == 4.0) {
-
-        uv = vec2(-direction.x, direction.z) / abs(direction.y); // neg y
-
-    } else {
-
-        uv = vec2(direction.x, direction.y) / abs(direction.z); // neg z
-
+    if ( face == 0.0 ) {
+        uv = vec2( direction.z, direction.y ) / abs( direction.x );
     }
-
-    return 0.5 * (uv + 1.0);
-
+    else if ( face == 1.0 ) {
+        uv = vec2( - direction.x, - direction.z ) / abs( direction.y );
+    }
+    else if ( face == 2.0 ) {
+        uv = vec2( - direction.x, direction.y ) / abs( direction.z );
+    }
+    else if ( face == 3.0 ) {
+        uv = vec2( - direction.z, direction.y ) / abs( direction.x );
+    }
+    else if ( face == 4.0 ) {
+        uv = vec2( - direction.x, direction.z ) / abs( direction.y );
+    }
+    else {
+        uv = vec2( direction.x, direction.y ) / abs( direction.z );
+    }
+    return 0.5 * ( uv + 1.0 );
 }
 
-vec3 bilinearCubeUV(sampler2D envMap, vec3 direction, float mipInt) {
-
-    float face = getFace(direction);
-
-    float filterInt = max(cubeUV_minMipLevel - mipInt, 0.0);
-
-    mipInt = max(mipInt, cubeUV_minMipLevel);
-
-    float faceSize = exp2(mipInt);
-
-    highp vec2 uv = getUV(direction, face) * (faceSize - 2.0) + 1.0; // #25071
-
-    if(face > 2.0) {
-
+vec3 bilinearCubeUV( sampler2D envMap, vec3 direction, float mipInt ) {
+    float face = getFace( direction );
+    float filterInt = max( 4.0 - mipInt, 0.0 );
+    mipInt = max( mipInt, 4.0 );
+    float faceSize = exp2( mipInt );
+    highp vec2 uv = getUV( direction, face ) * ( faceSize - 2.0 ) + 1.0;
+    if ( face > 2.0 ) {
         uv.y += faceSize;
-
         face -= 3.0;
-
     }
-
     uv.x += face * faceSize;
-
-    uv.x += filterInt * 3.0 * cubeUV_minTileSize;
-
-    uv.y += 4.0 * (exp2(CUBEUV_MAX_MIP) - faceSize);
-
-    uv.x *= CUBEUV_TEXEL_WIDTH;
-    uv.y *= CUBEUV_TEXEL_HEIGHT;
-
-    #ifdef texture2DGradEXT
-
-    return texture2DGradEXT(envMap, uv, vec2(0.0), vec2(0.0)).rgb; // disable anisotropic filtering
-
-    #else
-
-    return texture2D(envMap, uv).rgb;
-
-    #endif
-
+    uv.x += filterInt * 3.0 * 16.0;
+    uv.y += 4.0 * ( exp2( 8.0 ) - faceSize );
+    uv.x *= 0.0013020833333333333;
+    uv.y *= 0.0009765625;
+    return textureGrad( envMap, uv, vec2( 0.0 ), vec2( 0.0 ) ).rgb;
 }
-
-// These defines must match with PMREMGenerator
-
-#define cubeUV_r0 1.0
-#define cubeUV_m0 - 2.0
-#define cubeUV_r1 0.8
-#define cubeUV_m1 - 1.0
-#define cubeUV_r4 0.4
-#define cubeUV_m4 2.0
-#define cubeUV_r5 0.305
-#define cubeUV_m5 3.0
-#define cubeUV_r6 0.21
-#define cubeUV_m6 4.0
-
-float roughnessToMip(float roughness) {
-
-    float mip = 0.0;
-
-    if(roughness >= cubeUV_r1) {
-
-        mip = (cubeUV_r0 - roughness) * (cubeUV_m1 - cubeUV_m0) / (cubeUV_r0 - cubeUV_r1) + cubeUV_m0;
-
-    } else if(roughness >= cubeUV_r4) {
-
-        mip = (cubeUV_r1 - roughness) * (cubeUV_m4 - cubeUV_m1) / (cubeUV_r1 - cubeUV_r4) + cubeUV_m1;
-
-    } else if(roughness >= cubeUV_r5) {
-
-        mip = (cubeUV_r4 - roughness) * (cubeUV_m5 - cubeUV_m4) / (cubeUV_r4 - cubeUV_r5) + cubeUV_m4;
-
-    } else if(roughness >= cubeUV_r6) {
-
-        mip = (cubeUV_r5 - roughness) * (cubeUV_m6 - cubeUV_m5) / (cubeUV_r5 - cubeUV_r6) + cubeUV_m5;
-
-    } else {
-
-        mip = -2.0 * log2(1.16 * roughness); // 1.16 = 1.79^0.25
-    }
-
-    return mip;
-
-}
-
-vec4 textureCubeUV(sampler2D envMap, vec3 sampleDir, float roughness) {
-
-    float mip = clamp(roughnessToMip(roughness), cubeUV_m0, CUBEUV_MAX_MIP);
-
-    float mipF = fract(mip);
-
-    float mipInt = floor(mip);
-
-    vec3 color0 = bilinearCubeUV(envMap, sampleDir, mipInt);
-
-    if(mipF == 0.0) {
-
-        return vec4(color0, 1.0);
-
-    } else {
-
-        vec3 color1 = bilinearCubeUV(envMap, sampleDir, mipInt + 1.0);
-
-        return vec4(mix(color0, color1, mipF), 1.0);
-
-    }
-
-}
-
-#endif
 
 vec3 getSample(float theta, vec3 axis) {
-
     float cosTheta = cos(theta);
-				// Rodrigues' axis-angle rotation
-    vec3 sampleDirection = vOutputDirection * cosTheta + cross(axis, vOutputDirection) * sin(theta) + axis * dot(axis, vOutputDirection) * (1.0 - cosTheta);
-
+    // Rodrigues' axis-angle rotation
+    vec3 sampleDirection = vOutputDirection * cosTheta + cross(axis, vOutputDirection) * sin(theta) + axis * dot(axis, vOutputDirection) * (1.0f - cosTheta);
     return bilinearCubeUV(envMap, sampleDirection, mipInt);
-
 }
 
 void main() {
 
     vec3 axis = latitudinal ? poleAxis : cross(poleAxis, vOutputDirection);
-
-    if(all(equal(axis, vec3(0.0)))) {
-
-        axis = vec3(vOutputDirection.z, 0.0, -vOutputDirection.x);
-
+    if(all(equal(axis, vec3(0.0f)))) {
+        axis = vec3(vOutputDirection.z, 0.0f, -vOutputDirection.x);
     }
 
     axis = normalize(axis);
-
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    gl_FragColor.rgb += weights[0] * getSample(0.0, axis);
-
-    for(int i = 1; i < n; i++) {
-
+    fragColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    fragColor.rgb += weights[0] * getSample(0.0f, axis);
+    for(int i = 1; i < MAX_SAMPLES; i++) {
         if(i >= samples) {
-
             break;
-
         }
-
         float theta = dTheta * float(i);
-        gl_FragColor.rgb += weights[i] * getSample(-1.0 * theta, axis);
-        gl_FragColor.rgb += weights[i] * getSample(theta, axis);
-
+        fragColor.rgb += weights[i] * getSample(-1.0f * theta, axis);
+        fragColor.rgb += weights[i] * getSample(theta, axis);
     }
 
 }

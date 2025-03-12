@@ -1,7 +1,8 @@
 #version 300 es
 
-precision mediump float;
-precision mediump int;
+precision highp float;
+precision highp int;
+precision highp sampler2D;
 
 #define RECIPROCAL_PI 0.3183098861837907
 #define RECIPROCAL_PI2 0.15915494309189535
@@ -12,7 +13,7 @@ in vec3 vOutputDirection;
 
 uniform sampler2D skyBox;
 
-out vec4 fragColor;
+out highp vec4 fragColor;
 
 vec2 equirectUv( in vec3 dir ) {
     float u = atan( dir.z, dir.x ) * RECIPROCAL_PI2 + 0.5;
