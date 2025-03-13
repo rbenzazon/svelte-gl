@@ -20,36 +20,34 @@ vec3 getDirection(vec2 uv, float face) {
         // 0 0 0
         // X 0 0
         direction = direction.zyx; // ( 1, v, u ) pos x
-        direction.y *= -1.0;
 
     } else if(face == 1.0) {
         //0 0 0
         //0 X 0
         direction = direction.xzy;
-        direction.xyz *= -1.0; // ( -u, 1, -v ) pos y
+        direction.xz *= -1.0; // ( -u, 1, -v ) pos y
 
     } else if(face == 2.0) {
         //0 0 0
         //0 0 X
         direction.x *= -1.0; // ( -u, v, 1 ) pos z
-        direction.y *= -1.0;
 
     } else if(face == 3.0) {
         // X 0 0
         // 0 0 0
         direction = direction.zyx;
-        direction.xyz *= -1.0; // ( -1, v, -u ) neg x
+        direction.xz *= -1.0; // ( -1, v, -u ) neg x
 
     } else if(face == 4.0) {
         //0 X 0
         //0 0 0
         direction = direction.xzy;
-        direction.x *= -1.0; // ( -u, -1, v ) neg y
+        direction.xy *= -1.0; // ( -u, -1, v ) neg y
 
     } else if(face == 5.0) {
         //0 0 X
         //0 0 0
-        direction.zy *= -1.0; // ( u, v, -1 ) neg z
+        direction.z *= -1.0; // ( u, v, -1 ) neg z
     }
 
     return direction;

@@ -66,12 +66,7 @@ function isHDRSkyboxProps(props) {
 /**
  *
  * @param {SvelteGLSkyboxProps} props
- * @returns {Promise<{
- * 	url?: string,
- *	order: number,
- * 	programs:import("./programs").SvelteGLProgram[],
- *  getTexture: () => WebGLTexture,
- * }>}
+ * @returns {Promise<import("./programs").RenderPass>}
  */
 export async function createSkyBox(props) {
 	let buffer;
@@ -111,7 +106,7 @@ export async function createSkyBox(props) {
 	} else if (isHDRSkyboxProps(props)) {
 		typedArray = props.typedArray;
 		skyboxProgram.createProgram = createSkyBoxProgram(
-			setupHDRTexture(typedArray, setBuffer, props.convertToCube, props.width, props.height, props.cubeSize),
+			setupHDRTexture(typedArray, setBuffer, getBuffer, props.convertToCube, props.width, props.height, props.cubeSize),
 		);
 		toneMapping = props.toneMapping;
 		skyboxProgram.setupProgram = [createShaders(toneMapping), ...skyboxProgram.setupProgram];
@@ -148,20 +143,22 @@ function createSkyBoxProgram(setupHDRTexture) {
 /**
  * @param typedArray:Uint16Array,
  * @param {(value:WebGLTexture)=>void} setBuffer
- * @param {ConvertToCube} convertToCube
+ * @param {ConvertHDRToCube} convertToCube
  * @param gl:WebGL2RenderingContext,
  * @param width:number,
  * @param height:number,
  * @param cubeSize:number
  * @returns {()=>void}
  */
-function setupHDRTexture(typedArray, setBuffer, convertToCube, width, height, cubeSize) {
+function setupHDRTexture(typedArray, setBuffer, getBuffer, convertToCube, width, height, cubeSize) {
 	return function setupHDRTexture() {
 		const { gl } = appContext;
-		const cubemapTexture = convertToCube(typedArray, gl, width, height, cubeSize);
-		setBuffer(cubemapTexture);
-		resetViewportToCanvas();
-		renderer.update((renderer) => renderer);
+		if (getBuffer() == null) {
+			const cubemapTexture = convertToCube(typedArray, gl, width, height, cubeSize);
+			setBuffer(cubemapTexture);
+			resetViewportToCanvas();
+			renderer.update((renderer) => renderer);
+		}
 	};
 }
 
@@ -295,7 +292,7 @@ function sliceImageAndUpload(image, gl) {
 function bindSkyBoxTexture(getBuffer) {
 	return function bindSkyBoxTexture() {
 		const { gl, program } = appContext;
-		const textureLocation = gl.getUniformLocation(program, "skybox");
+		const textureLocation = gl.getUniformLocation(program, "envMap");
 		gl.uniform1i(textureLocation, 0);
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_CUBE_MAP, getBuffer());

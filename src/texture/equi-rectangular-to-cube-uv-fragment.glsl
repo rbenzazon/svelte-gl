@@ -11,7 +11,7 @@ uniform float flipEnvMap;
 
 in vec3 vOutputDirection;
 
-uniform sampler2D skyBox;
+uniform sampler2D envMap;
 
 out highp vec4 fragColor;
 
@@ -24,5 +24,5 @@ vec2 equirectUv( in vec3 dir ) {
 void main() {
     vec3 outputDirection = normalize( vOutputDirection );
     vec2 uv = equirectUv( outputDirection );
-    fragColor = vec4( texture ( skyBox, uv ).rgb, 1.0 );
+    fragColor = vec4( texture ( envMap, uv ).rgb, 1.0 );
 }

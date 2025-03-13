@@ -20,7 +20,7 @@ import { createDebugNormalsProgram } from "./store/debug-program.js";
 import { loadRGBE } from "./loaders/rgbe-loader.js";
 import { hdrToCube, getToneMapping } from "./loaders/hdr-to-cube.js";
 import { appContext } from "./store/engine.js";
-  import { createEnvironmentMap } from "./texture/environment-map.js";
+import { createEnvironmentMap } from "./texture/environment-map.js";
 
 let canvas;
 let rgbeImage;
@@ -52,7 +52,7 @@ onMount(async () => {
 	const environmentMap = createEnvironmentMap(rgbeImage);
 	console.log("environmentMap", environmentMap);
 
-	$renderPasses = [skyBox,environmentMap];
+	$renderPasses = [skyBox, environmentMap];
 
 	const cubeMesh = createCube();
 
@@ -78,8 +78,6 @@ onMount(async () => {
 		matrix,
 		material: debugProgram,
 	});
-
-	
 
 	const material = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],

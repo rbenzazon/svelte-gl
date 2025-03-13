@@ -21,6 +21,16 @@ import { materials } from "./materials";
 import { renderer } from "./renderer";
 import { createVec3, createZeroMatrix } from "../geometries/common";
 
+/**
+ * @typedef {Object} RenderPass
+ * @property {import("src/store/programs").SvelteGLProgram[]} programs array of programs used in the pass
+ * @property {() => WebGLTexture} getTexture function to get the shadow texture
+ * @property {number} order order of the pass in the rendering pipeline
+ * @property {string} [type] type of the pass
+ */
+/**
+ * @type {import("svelte/store").Writable<RenderPass[]>}
+ */
 export const renderPasses = writable([]);
 
 export const RENDER_PASS_TYPES = {
@@ -113,9 +123,12 @@ export const programs = derived(
 	([$scene, $numLigths, $materials, $renderPasses]) => {
 		let prePasses = $renderPasses
 			.filter((pass) => pass.order < 0)
-			.reduce((acc, pass) => {
-				return acc.concat(...pass.programs);
-			}, [])
+			.reduce(
+				(acc, pass) => {
+					return acc.concat(...pass.programs);
+				},
+				/** @type {SvelteGLProgram[]} */ [],
+			)
 			.map((program) => ({
 				...program,
 				...(program.updateProgram ? {} : { updateProgram: [] }),

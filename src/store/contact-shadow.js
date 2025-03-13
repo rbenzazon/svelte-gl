@@ -1,7 +1,15 @@
 import { getTranslation, orthoNO, lookAt } from "gl-matrix/mat4";
 import depthVertexShader from "../shaders/depth-vertex.glsl";
 import depthFragmentShader from "../shaders/depth-fragment.glsl";
-import { compileShaders, createFBO, getCameraProjectionView, linkProgram, unbindTexture, useProgram, validateProgram } from "./gl";
+import {
+	compileShaders,
+	createFBO,
+	getCameraProjectionView,
+	linkProgram,
+	unbindTexture,
+	useProgram,
+	validateProgram,
+} from "./gl";
 import {
 	BLUR_DIRECTION_HORIZONTAL,
 	BLUR_DIRECTION_VERTICAL,

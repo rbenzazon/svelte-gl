@@ -125,6 +125,7 @@ export function createProgram(programStore) {
 	return function createProgram() {
 		const { gl } = appContext;
 		const program = gl.createProgram();
+		console.log("createProgram", program);
 		appContext.programMap.set(programStore, program);
 		appContext.vaoMap.set(programStore, new Map());
 		appContext.program = program;
@@ -285,11 +286,11 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			//todo, remove this after decoupling the point light shader
 			numPointLights,
 		});
-		compileShaders(gl,program,vertexShaderSource,fragmentShaderSource);
+		compileShaders(gl, program, vertexShaderSource, fragmentShaderSource);
 	};
 }
 
-export function compileShaders(gl,program,vertexShaderSource,fragmentShaderSource) {
+export function compileShaders(gl, program, vertexShaderSource, fragmentShaderSource) {
 	const vertexShader = gl.createShader(gl.VERTEX_SHADER);
 	gl.shaderSource(vertexShader, vertexShaderSource);
 	gl.compileShader(vertexShader);
@@ -614,7 +615,9 @@ function getBuffer(variable) {
 	return {
 		data,
 		interleaved,
-		...(interleaved ? { byteStride: variable.byteStride, byteOffset: variable.byteOffset } : {byteStride:0,byteOffset:0}),
+		...(interleaved
+			? { byteStride: variable.byteStride, byteOffset: variable.byteOffset }
+			: { byteStride: 0, byteOffset: 0 }),
 	};
 }
 
@@ -666,14 +669,14 @@ export function setupAttributes(programStore, mesh) {
 				gl.enableVertexAttribArray(normalLocation);
 			}
 		}
-		if (mesh.attributes.elements) {
-			const elementsData = new Uint16Array(mesh.attributes.elements);
+		if (elements) {
+			const elementsData = Array.isArray(elements) ? new Uint16Array(elements) : elements;
 			const elementBuffer = gl.createBuffer();
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
 			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, elementsData, gl.STATIC_DRAW);
 		}
-		if (mesh.attributes.uvs) {
-			const uvsData = new Float32Array(mesh.attributes.uvs);
+		if (uvs) {
+			const uvsData = Array.isArray(uvs) ? new Float32Array(uvs) : uvs;
 			const uvBuffer = gl.createBuffer();
 			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, uvsData, gl.STATIC_DRAW);
@@ -688,10 +691,10 @@ export function setupAttributes(programStore, mesh) {
 		// these are attributes that are not part of the base mesh
 		const baseAttributes = ["positions", "normals", "uvs", "elements"];
 		Object.entries(mesh.attributes)
-			.filter(([key])=>!baseAttributes.includes(key))
+			.filter(([key]) => !baseAttributes.includes(key))
 			.forEach(([key, value]) => {
-				if(typeof value === "object" && "itemSize" in value && "array" in value){
-					const data = new Float32Array(value.array);
+				if (typeof value === "object" && "itemSize" in value && "array" in value) {
+					const data = Array.isArray(value.array) ? new Float32Array(value.array) : value.array;
 					const buffer = gl.createBuffer();
 					gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 					gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
@@ -701,7 +704,6 @@ export function setupAttributes(programStore, mesh) {
 						gl.vertexAttribPointer(location, value.itemSize, gl.FLOAT, false, 0, 0);
 						gl.enableVertexAttribArray(location);
 					}
-
 				}
 			});
 

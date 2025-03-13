@@ -251,10 +251,10 @@ function createEquirectToCubeProgram(gl) {
         vec2 uv = SampleSphericalMap(direction);
         fragColor = texture(equirectangularMap, uv);
     }`;
-	
+
 	const program = gl.createProgram();
 
-	compileShaders(gl,program,vertexShaderSource,fragmentShaderSource);
+	compileShaders(gl, program, vertexShaderSource, fragmentShaderSource);
 
 	gl.linkProgram(program);
 
