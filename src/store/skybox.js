@@ -116,7 +116,7 @@ export async function createSkyBox(props) {
 
 	return {
 		...returnProps,
-		order: 1,
+		order: 0,
 		programs: [skyboxProgram],
 		getTexture: getBuffer,
 	};

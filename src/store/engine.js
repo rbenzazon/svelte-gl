@@ -45,6 +45,12 @@ export const renderState = writable({
 	init: false,
 });
 
+function isSameProgram(a, b) {
+	return "material" in a
+		? a.material === b.material
+		: a.createProgram === b.createProgram && arrayHasSameShallow(a.meshes, b.meshes);
+}
+
 /**
  * Clears the cache map of unused programs and VAOs
  * @param {import("./programs.js").SvelteGLProgram[]} next - The next programs
@@ -53,7 +59,7 @@ export const renderState = writable({
 export function clearUnusedCache(next) {
 	const { programMap, vaoMap } = appContext;
 	programMap.forEach((glProgram, programStore) => {
-		if (!next.some((program) => program.material === programStore.material)) {
+		if (!next.some((program) => isSameProgram(program, programStore))) {
 			programMap.delete(programStore);
 			vaoMap.delete(programStore);
 		}

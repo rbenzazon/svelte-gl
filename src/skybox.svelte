@@ -21,6 +21,8 @@ import { loadRGBE } from "./loaders/rgbe-loader.js";
 import { hdrToCube, getToneMapping } from "./loaders/hdr-to-cube.js";
 import { appContext } from "./store/engine.js";
 import { createEnvironmentMap } from "./texture/environment-map.js";
+import { createTexture } from "./texture/texture.js";
+import { createPlane } from "./geometries/plane.js";
 
 let canvas;
 let rgbeImage;
@@ -85,7 +87,21 @@ onMount(async () => {
 		//enviromentMap,
 	});
 
-	$materials = [...$materials, material, debugProgram];
+	const groundMesh = createPlane(10, 10, 1, 1);
+	const groundMatrix = identity(createZeroMatrix());
+	const diffuseMap = await createTexture({
+		textureBuffer: environmentMap.getTexture,
+		type: "diffuse",
+	});
+
+	const groundMaterial = createMaterialStore({
+		diffuse: [1, 0.5, 0.5],
+		metalness: 0,
+		transparent: true,
+		diffuseMap,
+	});
+
+	$materials = [...$materials, material, debugProgram, groundMaterial];
 
 	$scene = [
 		...$scene,
@@ -95,6 +111,11 @@ onMount(async () => {
 			material,
 		}),
 		create3DObject(debugNormalMesh),
+		create3DObject({
+			...groundMesh,
+			matrix: groundMatrix,
+			material: groundMaterial,
+		}),
 	];
 	$lights = [...$lights, light];
 

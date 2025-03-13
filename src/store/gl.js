@@ -125,7 +125,6 @@ export function createProgram(programStore) {
 	return function createProgram() {
 		const { gl } = appContext;
 		const program = gl.createProgram();
-		console.log("createProgram", program);
 		appContext.programMap.set(programStore, program);
 		appContext.vaoMap.set(programStore, new Map());
 		appContext.program = program;

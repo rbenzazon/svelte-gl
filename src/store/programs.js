@@ -61,8 +61,13 @@ export function sortMeshesByZ(programs) {
 		if (transparent || isTransparent(program.material)) {
 			transparent = true;
 			program.meshes.forEach((mesh, i) => {
-				const meshPosition = getTranslation(createVec3(), mesh.matrix);
-				mesh.clipSpacePosition = transformMat4(createVec3(), meshPosition, projScreen);
+				if (!mesh.matrix) {
+					// max number value
+					mesh.clipSpacePosition = [0, 0, Number.MAX_VALUE];
+				} else {
+					const meshPosition = getTranslation(createVec3(), get(mesh.matrix));
+					mesh.clipSpacePosition = transformMat4(createVec3(), meshPosition, projScreen);
+				}
 			});
 			program.meshes = program.meshes.sort((a, b) => {
 				return b.clipSpacePosition[2] - a.clipSpacePosition[2];
@@ -123,6 +128,20 @@ export const programs = derived(
 	([$scene, $numLigths, $materials, $renderPasses]) => {
 		let prePasses = $renderPasses
 			.filter((pass) => pass.order < 0)
+			.reduce(
+				(acc, pass) => {
+					return acc.concat(...pass.programs);
+				},
+				/** @type {SvelteGLProgram[]} */ [],
+			)
+			.map((program) => ({
+				...program,
+				...(program.updateProgram ? {} : { updateProgram: [] }),
+				...(program.allMeshes ? { meshes: $scene } : {}),
+			}));
+
+		let concurrentPasses = $renderPasses
+			.filter((pass) => pass.order === 0)
 			.reduce(
 				(acc, pass) => {
 					return acc.concat(...pass.programs);
@@ -203,6 +222,7 @@ export const programs = derived(
 		/** @type {SvelteGLProgram[]} */
 		const next = [
 			...prePasses,
+			...concurrentPasses,
 			...sortedPrograms.map((p, index) => {
 				if (p.material.program) {
 					p.material.program.meshes = p.meshes;
@@ -229,7 +249,7 @@ export const programs = derived(
 					linkProgram,
 					validateProgram,
 				];
-				if (firstCall) {
+				if (firstCall && concurrentPasses.length === 0) {
 					program.setFrameBuffer = bindDefaultFramebuffer;
 				}
 				if (p.material?.specular) {

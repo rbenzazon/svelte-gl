@@ -91,7 +91,8 @@ export function createEnvironmentMap(image) {
 	function getPongFBO() {
 		return pongFBO;
 	}
-
+	const finalFBOTexture =
+		(Math.floor(((context.lodPlanes.length - 1) * 2 - 1) / 2) + 1) % 2 === 0 ? getPingTexture : getPongTexture;
 	return {
 		programs: [
 			{
@@ -118,7 +119,6 @@ export function createEnvironmentMap(image) {
 				const direction = pair ? "latitudinal" : "longitudinal";
 				const getCurrentFBO = pair ? getPongFBO : getPingFBO;
 				const getCurrentTexture = pair ? getPingTexture : getPongTexture;
-
 				const sigma = Math.sqrt(
 					context.sigmas[lodIndex] * context.sigmas[lodIndex] - context.sigmas[lodIndex - 1] * context.sigmas[lodIndex - 1],
 				);
@@ -181,7 +181,7 @@ export function createEnvironmentMap(image) {
 				};
 			}),
 		],
-		getTexture: getPingTexture,
+		getTexture: finalFBOTexture,
 		order: -1,
 		type: "environmentMap",
 	};
