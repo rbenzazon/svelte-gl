@@ -12,6 +12,7 @@ uniform float opacity;
 uniform float metalness;
 uniform vec3 ambientLightColor;
 uniform vec3 cameraPosition;
+uniform mat4 viewMatrix;
 //uniform mat3 normalMatrix;
 
 in vec3 vertex;
@@ -69,7 +70,7 @@ void main() {
 
     vec3 totalIrradiance = vec3(0.0f);
     ${irradiance}
-	vec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular;
+	vec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular + reflectedLight.indirectSpecular;
     fragColor = vec4(outgoingLight, opacity*material.diffuseAlpha);
     //fragColor = vec4(totalIrradiance, 1.0f);
     ${toneMapping}

@@ -267,6 +267,10 @@ export const programs = derived(
 					program.setupMaterial.push(p.material.roughnessMap.setupTexture);
 					program.bindTextures.push(p.material.roughnessMap.bindTexture);
 				}
+				if (p.material?.envMap) {
+					program.setupMaterial.push(p.material.envMap.setupTexture);
+					program.bindTextures.push(p.material.envMap.bindTexture);
+				}
 				if (p.requireTime) {
 					program.updateProgram.push(setupTime);
 				}

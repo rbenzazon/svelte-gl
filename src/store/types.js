@@ -81,6 +81,7 @@
  * @property {import("src/texture/texture").SvelteGLTexture} [diffuseMap]
  * @property {import("src/texture/texture").SvelteGLTexture} [normalMap]
  * @property {import("src/texture/texture").SvelteGLTexture} [roughnessMap]
+ * @property {import("src/texture/environment-map-texture.js").EnvMapTexture} [envMap]
  * @property {boolean} [transparent]
  * @property {number} [opacity]
  * @property {import("./programs.js").SvelteGLProgram} [program]

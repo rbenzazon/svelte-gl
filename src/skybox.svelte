@@ -12,6 +12,7 @@ import { create, identity, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createCube } from "./geometries/cube.js";
+import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { createZeroMatrix } from "./geometries/common.js";
@@ -21,8 +22,10 @@ import { loadRGBE } from "./loaders/rgbe-loader.js";
 import { hdrToCube, getToneMapping } from "./loaders/hdr-to-cube.js";
 import { appContext } from "./store/engine.js";
 import { createEnvironmentMap } from "./texture/environment-map.js";
+import { createEnvMapTexture } from "./texture/environment-map-texture.js";
 import { createTexture } from "./texture/texture.js";
 import { createPlane } from "./geometries/plane.js";
+import { createSpecular } from "./material/specular/specular.js";
 
 let canvas;
 let rgbeImage;
@@ -56,7 +59,7 @@ onMount(async () => {
 
 	$renderPasses = [skyBox, environmentMap];
 
-	const cubeMesh = createCube();
+	const sphereMesh = createPolyhedron(2, 3, createSmoothShadedNormals);
 
 	const light = createLightStore(
 		createPointLight({
@@ -70,51 +73,34 @@ onMount(async () => {
 
 	const matrix = identity(createZeroMatrix());
 
-	const debugProgram = createMaterialStore({
-		diffuse: [1, 0, 0],
-		metalness: 0,
-		program: createDebugNormalsProgram(),
+	const envMap = createEnvMapTexture({
+		envMap: environmentMap.getTexture,
+		width: environmentMap.width,
+		height: environmentMap.height,
+		lodMax: environmentMap.lodMax,
 	});
-	const debugNormalMesh = createDebugObject({
-		...cubeMesh,
-		matrix,
-		material: debugProgram,
-	});
+	console.log("envMap", envMap);
 
 	const material = createMaterialStore({
-		diffuse: [1, 0.5, 0.5],
-		metalness: 0,
-		//enviromentMap,
+		diffuse: [1, 1, 1],
+		metalness: 0.9,
+		specular: createSpecular({
+			roughness: 0.9,
+			ior: 1,
+			intensity: 2,
+			color: [1, 1, 1],
+		}),
+		envMap,
 	});
 
-	const groundMesh = createPlane(10, 10, 1, 1);
-	const groundMatrix = identity(createZeroMatrix());
-	const diffuseMap = await createTexture({
-		textureBuffer: environmentMap.getTexture,
-		type: "diffuse",
-	});
-
-	const groundMaterial = createMaterialStore({
-		diffuse: [1, 0.5, 0.5],
-		metalness: 0,
-		transparent: true,
-		diffuseMap,
-	});
-
-	$materials = [...$materials, material, debugProgram, groundMaterial];
+	$materials = [...$materials, material];
 
 	$scene = [
 		...$scene,
 		create3DObject({
-			...cubeMesh,
+			...sphereMesh,
 			matrix,
 			material,
-		}),
-		create3DObject(debugNormalMesh),
-		create3DObject({
-			...groundMesh,
-			matrix: groundMatrix,
-			material: groundMaterial,
 		}),
 	];
 	$lights = [...$lights, light];

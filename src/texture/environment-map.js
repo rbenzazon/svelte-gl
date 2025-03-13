@@ -1,7 +1,6 @@
 import { createVec3 } from "../geometries/common";
 import PMREMVertex from "./pmrem-vertex.glsl";
 import SphericalGaussianBlurFragment from "./spherical-gaussian-blur-fragment.glsl";
-import CubemapToCubeUVFragment from "./cubemap-to-cube-uv-fragment.glsl";
 import EquiRectangularToCubeUV from "./equi-rectangular-to-cube-uv-fragment.glsl";
 import { createProgram, compileShaders, linkProgram, validateProgram, useProgram, unbindTexture } from "../store/gl";
 import { appContext, selectProgram } from "../store/engine";
@@ -12,9 +11,7 @@ import { get } from "svelte/store";
 
 const LOD_MIN = 4;
 const EXTRA_LOD_SIGMA = [0.125, 0.215, 0.35, 0.446, 0.526, 0.582];
-const NoBlending = 0;
 const MAX_SAMPLES = 20;
-const sigmas = [0, 0.0078125, 0.015625, 0.03125, 0.0625, 0.125, 0.215, 0.35, 0.446, 0.526, 0.582];
 // Golden Ratio
 const PHI = (1 + Math.sqrt(5)) / 2;
 const INV_PHI = 1 / PHI;
@@ -34,15 +31,28 @@ const axisDirections = [
 ];
 
 /**
+ * @typedef {Object} EnvMapContext
+ * @property {import("src/loaders/rgbe-loader").RGBE} image
+ * @property {number} cubeImageSize
+ * @property {number} lodMax
+ * @property {number} cubeSize
+ * @property {number} renderTargetWidth
+ * @property {number} renderTargetHeight
+ * @property {SvelteGLBaseMeshData[]} lodPlanes
+ * @property {number[]} sizeLods
+ * @property {number[]} sigmas
+ */
+
+/**
  *
  * @param {import("src/loaders/rgbe-loader").RGBE} image
  * @return {import("../store/programs").RenderPass}
  */
 export function createEnvironmentMap(image) {
+	/** @type {EnvMapContext} */
 	let context = {};
-
 	context.image = image;
-	context.cubeImageSize = image.width / 4; //??
+	context.cubeImageSize = image.width / 4;
 	context.lodMax = Math.floor(Math.log2(context.cubeImageSize));
 	context.cubeSize = Math.pow(2, context.lodMax);
 	context.renderTargetWidth = 3 * Math.max(context.cubeSize, 16 * 7);
@@ -176,7 +186,7 @@ export function createEnvironmentMap(image) {
 							context.lodMax - lodIn,
 						),
 					],
-					meshes: [context.lodPlanes[lodIndex]],
+					meshes: [/** @type {SvelteGLMesh} */ (context.lodPlanes[lodIndex])],
 					...(programIndex === (context.lodPlanes.length - 1) * 2 - 1 ? { postDraw: restoreState } : {}),
 				};
 			}),
@@ -184,6 +194,9 @@ export function createEnvironmentMap(image) {
 		getTexture: finalFBOTexture,
 		order: -1,
 		type: "environmentMap",
+		width: context.renderTargetWidth,
+		height: context.renderTargetHeight,
+		lodMax: context.lodMax,
 	};
 }
 
@@ -226,14 +239,6 @@ function removePassFromStore() {
 	renderPasses.set(get(renderPasses).filter((pass) => pass.type !== "environmentMap"));
 }
 
-function setSourceTexture(getTexture) {
-	const { gl, program } = appContext;
-	const textureLocation = gl.getUniformLocation(program, "envMap");
-	gl.uniform1i(textureLocation, 0);
-	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, getTexture());
-}
-
 /**
  *
  * @param {number} samples
@@ -274,6 +279,7 @@ function getViewportSize(context) {
 		height: 2 * size,
 	};
 }
+
 function getBlurViewportSize(x, y, width, height) {
 	return function getBlurViewportSize() {
 		return {
@@ -295,6 +301,11 @@ function getBlurViewportSize(x, y, width, height) {
 function createEquiRectangularToCubeUVProgram(context, image, setHDRTexture) {
 	return function createEquiRectangularToCubeUVProgram(programStore) {
 		return function createEquiRectangularToCubeUVProgram() {
+			const { gl } = appContext;
+			const ext = gl.getExtension("EXT_color_buffer_float");
+			if (!ext) {
+				throw new Error("EXT_color_buffer_float extension not supported");
+			}
 			setupHDRTexture(image, setHDRTexture);
 			createProgram(programStore)();
 			disableDepthTest();
@@ -303,6 +314,11 @@ function createEquiRectangularToCubeUVProgram(context, image, setHDRTexture) {
 	};
 }
 
+/**
+ *
+ * @param {import("src/loaders/rgbe-loader").RGBE} image
+ * @param {(value:WebGLTexture)=>void} setHDRTexture
+ */
 function setupHDRTexture(image, setHDRTexture) {
 	const { gl } = appContext;
 	//flip y
@@ -331,11 +347,13 @@ function createEquiRectangularToCubeUVShaders() {
 	compileShaders(gl, program, PMREMVertex, EquiRectangularToCubeUV);
 }
 
-function createCubemapToCubeUVShaders() {
-	const { gl, program } = appContext;
-	compileShaders(gl, program, PMREMVertex, CubemapToCubeUVFragment);
-}
-
+/**
+ * 
+ * @param {{
+        [x: string]: string | number | boolean;
+    }} shaderDefines 
+ * @returns 
+ */
 function createBlurShader(shaderDefines) {
 	return function createBlurShader() {
 		const { gl, program } = appContext;
@@ -344,6 +362,13 @@ function createBlurShader(shaderDefines) {
 	};
 }
 
+/**
+ *
+ * @param {*} context
+ * @param {*} setFBO
+ * @param {*} setTexture
+ * @returns
+ */
 function createFBO(context, setFBO, setTexture) {
 	return function createFBO() {
 		const { gl } = appContext;
@@ -377,13 +402,6 @@ function createFBO(context, setFBO, setTexture) {
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	};
 }
-/*
-
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, renderTargetWidth, renderTargetHeight);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        */
 
 function setupEquiRectangularToCubeUVUniforms() {
 	return function setupEquiRectangularToCubeUVUniforms() {
@@ -429,7 +447,7 @@ function setFrameBuffer(getFBO = null, context, getViewportSize, clear = false) 
  * @param {boolean} mapCurrent makes the previous program the current one
  * which allows to reuse one program in two consecutive and different draw passes
  * This case is necessary to draw twice with different settings (uniforms)
- *
+ * @return {(programStore)=>()=>void}
  */
 export function createBlurProgram(mapCurrent = false) {
 	return function createBlurProgram(programStore) {
@@ -451,6 +469,10 @@ export function createBlurProgram(mapCurrent = false) {
 	};
 }
 
+/**
+ *
+ * @param {EnvMapContext} context
+ */
 function createLodPlanes(context) {
 	const lodPlanes = [];
 	const sizeLods = [];
@@ -506,7 +528,6 @@ function createLodPlanes(context) {
 				},
 			},
 			drawMode: drawModes[4],
-			lodPlaneID: lodPlanes.length,
 		};
 		lodPlanes.push(geometry);
 
@@ -517,175 +538,4 @@ function createLodPlanes(context) {
 	context.lodPlanes = lodPlanes;
 	context.sizeLods = sizeLods;
 	context.sigmas = sigmas;
-}
-
-export function createEnvironmentMap_project(cubeMapTexture) {
-	const cubeImageSize = cubeMapTexture.image.width;
-	const lodMax = Math.floor(Math.log2(cubeImageSize));
-	const cubeSize = Math.pow(2, lodMax);
-
-	const renderTargetWidth = 3 * Math.max(cubeSize, 16 * 7);
-	const renderTargetHeight = 4 * cubeSize;
-
-	const lodPlanes = [];
-	const sizeLods = [];
-	const sigmas = [];
-
-	let lod = lodMax;
-
-	const totalLods = lodMax - LOD_MIN + 1 + EXTRA_LOD_SIGMA.length;
-
-	for (let i = 0; i < totalLods; i++) {
-		const sizeLod = Math.pow(2, lod);
-		sizeLods.push(sizeLod);
-		let sigma = 1.0 / sizeLod;
-
-		if (i > lodMax - LOD_MIN) {
-			sigma = EXTRA_LOD_SIGMA[i - lodMax + LOD_MIN - 1];
-		} else if (i === 0) {
-			sigma = 0;
-		}
-
-		sigmas.push(sigma);
-
-		const texelSize = 1.0 / (sizeLod - 2);
-		const min = -texelSize;
-		const max = 1 + texelSize;
-		const uv1 = [min, min, max, min, max, max, min, min, max, max, min, max];
-
-		const cubeFaces = 6;
-		const vertices = 6;
-		const positionSize = 3;
-		const uvSize = 2;
-		const faceIndexSize = 1;
-
-		const position = new Float32Array(positionSize * vertices * cubeFaces);
-		const uv = new Float32Array(uvSize * vertices * cubeFaces);
-		const faceIndex = new Float32Array(faceIndexSize * vertices * cubeFaces);
-		for (let face = 0; face < cubeFaces; face++) {
-			const x = ((face % 3) * 2) / 3 - 1;
-			const y = face > 2 ? 0 : -1;
-			const coordinates = [x, y, 0, x + 2 / 3, y, 0, x + 2 / 3, y + 1, 0, x, y, 0, x + 2 / 3, y + 1, 0, x, y + 1, 0];
-			position.set(coordinates, positionSize * vertices * face);
-			uv.set(uv1, uvSize * vertices * face);
-			const fill = [face, face, face, face, face, face];
-			faceIndex.set(fill, faceIndexSize * vertices * face);
-
-			const geometry = {
-				attributes: {
-					position: { array: position, itemSize: positionSize },
-					uv: { array: uv, itemSize: uvSize },
-					faceIndex: { array: faceIndex, itemSize: faceIndexSize },
-				},
-			};
-			lodPlanes.push(geometry);
-
-			if (lod > LOD_MIN) {
-				lod--;
-			}
-		}
-	}
-
-	renderCubeMaterial(lodPlanes);
-
-	renderBlurShader(lodMax, renderTargetWidth, renderTargetHeight, lodPlanes, sizeLods);
-}
-
-function renderBlurShader(lodMax, width, height, lodPlanes, sizeLods) {
-	const weights = new Float32Array(MAX_SAMPLES);
-	const poleAxis = [0, 1, 0];
-	/*
-    const shaderParams = {
-
-        name: 'SphericalGaussianBlur',
-
-        defines: {
-            'n': MAX_SAMPLES,
-            'CUBEUV_TEXEL_WIDTH': 1.0 / width,
-            'CUBEUV_TEXEL_HEIGHT': 1.0 / height,
-            'CUBEUV_MAX_MIP': `${lodMax}.0`,
-        },
-
-        uniforms: {
-            'envMap': { value: null },
-            'samples': { value: 1 },
-            'weights': { value: weights },
-            'latitudinal': { value: false },
-            'dTheta': { value: 0 },
-            'mipInt': { value: 0 },
-            'poleAxis': { value: poleAxis }
-        },
-        blending: NoBlending,
-        depthTest: false,
-        depthWrite: false
-    };
-    */
-	const vertexShaderSource = PMREMVertex;
-
-	const fragmentShaderSource = SphericalGaussianBlurFragment;
-
-	//create program
-
-	const n = lodPlanes.length;
-
-	for (let i = 1; i < n; i++) {
-		const sigma = Math.sqrt(sigmas[i] * sigmas[i] - sigmas[i - 1] * sigmas[i - 1]);
-
-		const poleAxis = axisDirections[(n - i - 1) % axisDirections.length];
-		const lodIn = i - 1;
-		const lodOut = i;
-
-		//cubeUVRenderTarget is a framebuffer
-		//pingPongRenderTarget is a framebuffer
-		//render
-		halfBlur(
-			cubeUVRenderTarget,
-			pingPongRenderTarget,
-			lodIn,
-			lodOut,
-			sigma,
-			"latitudinal",
-			poleAxis,
-			lodPlanes,
-			sizeLods,
-			lodMax,
-		);
-
-		halfBlur(
-			pingPongRenderTarget,
-			cubeUVRenderTarget,
-			lodOut,
-			lodOut,
-			sigma,
-			"longitudinal",
-			poleAxis,
-			lodPlanes,
-			sizeLods,
-			lodMax,
-		);
-		//this._blur( cubeUVRenderTarget, i - 1, i, sigma, poleAxis );
-	}
-}
-
-function renderCubeMaterial(lodPlanes) {
-	const options = {
-		name: "CubemapToCubeUV",
-
-		uniforms: {
-			envMap: { value: null },
-			flipEnvMap: { value: -1 },
-		},
-		blending: NoBlending,
-		depthTest: false,
-		depthWrite: false,
-		envMap: texture,
-	};
-
-	const vertexShaderSource = PMREMVertex;
-
-	const fragmentShaderSource = CubemapToCubeUVFragment;
-
-	//create program
-
-	//render with lodPlanes[0]
 }

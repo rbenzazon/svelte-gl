@@ -243,6 +243,17 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 				mapType: material.roughnessMap.type,
 			});
 		}
+		let envMapDeclaration = "";
+		let envMapIrradiance = "";
+		if (material.envMap) {
+			envMapDeclaration = material.envMap.shader({
+				declaration: true,
+				...material.envMap.shaderDefines,
+			});
+			envMapIrradiance = material.envMap.shader({
+				irradiance: true,
+			});
+		}
 
 		const fragmentShaderSource = templateLiteralRenderer(defaultFragment, {
 			defines: "",
@@ -270,12 +281,14 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 				...(material.diffuseMap ? [diffuseMapDeclaration] : []),
 				...(material.normalMap ? [normalMapDeclaration] : []),
 				...(material.roughnessMap ? [roughnessMapDeclaration] : []),
+				...(material.envMap ? [envMapDeclaration] : []),
 			].join("\n"),
 			diffuseMapSample,
 			normalMapSample,
 			roughnessMapSample,
 			irradiance: [
 				...(numPointLights ? [pointLightShader({ declaration: false, irradiance: true, specularIrradiance })] : []),
+				...(material.envMap ? [envMapIrradiance] : []),
 			].join("\n"),
 			toneMapping: [
 				...(appContext.toneMappings?.length > 0
@@ -382,6 +395,10 @@ export function setupCamera(camera) {
 
 		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");
 		gl.uniform3fv(cameraPositionLocation, camera.position);
+
+		const viewMatrixLocation = gl.getUniformLocation(program, "viewMatrix");
+		const viewMatrix = invert(createZeroMatrix(), view);
+		gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
 	};
 }
 
