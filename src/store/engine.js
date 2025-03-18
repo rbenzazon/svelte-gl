@@ -178,10 +178,12 @@ const renderPipeline = derived(
 										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
 										...(isSvelteGLSingleMesh(mesh)
 											? [setupObjectMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)]
-											: [
-													setupObjectMatrix(program, mesh, mesh.matrices, mesh.instances),
-													setupNormalMatrix(program, mesh, mesh.instances),
-												]),
+											: updateMap.has(camera)
+												? [
+														setupObjectMatrix(program, mesh, mesh.matrices, mesh.instances),
+														setupNormalMatrix(program, mesh, mesh.instances),
+													]
+												: []),
 									]
 								: [
 										setupAttributes(program, mesh),
@@ -190,7 +192,7 @@ const renderPipeline = derived(
 										setupNormalMatrix(program, mesh, mesh.instances),
 										...(mesh.animations?.map((animation) => animation.setupAnimation) || []),
 									]),
-							...(mesh.matrix != null
+							...(mesh.matrix != null || mesh.matrices != null
 								? [
 										...(isSvelteGLInstancedMesh(mesh)
 											? [setFaceWinding(determinant(mesh.matrices.getInstance(0)) > 0)]

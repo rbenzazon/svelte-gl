@@ -9,9 +9,9 @@ const dev = process.env.DEV;
 
 export default {
     input: {
-        matrix:'src/matrix.svelte',
         cube:'src/cube.svelte',
         instances:'src/instances.svelte',
+        matrix:'src/matrix.svelte',
         
         main:'src/main-refactor.svelte',
         'golf-ball':'src/golf-ball.svelte',

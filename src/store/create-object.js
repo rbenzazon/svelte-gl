@@ -108,6 +108,7 @@ const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances
 	const normalMatricesWindows = [];
 
 	let cameraRevision = camera.revision;
+	let buffer;
 	let modelViewBuffer;
 	let normalMatrixBuffer;
 
@@ -123,6 +124,8 @@ const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances
 		setModelViewMatrix(modelViewWindows[instance], matrix);
 		derivateNormalMatrix(normalMatricesWindows[instance], modelViewWindows[instance]);
 	}
+
+	updateModelViewMatrix();
 
 	function updateModelViewMatrix() {
 		windows.forEach((matrix, i) => {
@@ -145,6 +148,12 @@ const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances
 		},
 		get windows() {
 			return windows;
+		},
+		set buffer(value) {
+			buffer = value;
+		},
+		get buffer() {
+			return buffer;
 		},
 		setInstance(index, nextMatrix) {
 			windows[index].set(nextMatrix);

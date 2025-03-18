@@ -423,6 +423,7 @@ export function setupObjectMatrix(programStore, mesh, objectMatrix, numInstances
 				"modelViewMatrix",
 				objectMatrix.modelView,
 				4,
+				objectMatrix.modelViewBuffer,
 			);
 			/*setAppContext({
 				matrixBuffer: modelViewBuffer,
@@ -430,24 +431,39 @@ export function setupObjectMatrix(programStore, mesh, objectMatrix, numInstances
 			});*/
 
 			//const objectMatricesValues = objectMatrix.reduce((acc, m) => [...acc, ...get(m)], []);
-			createMatInstanceBuffer(gl, program, vao, "modelMatrix", objectMatrix.value, 4);
+			objectMatrix.buffer = createMatInstanceBuffer(
+				gl,
+				program,
+				vao,
+				"modelMatrix",
+				objectMatrix.value,
+				4,
+				objectMatrix.buffer,
+			);
 		};
 	}
 }
 
-function createMatInstanceBuffer(gl, program, vao, attributeName, matData, size) {
+function createMatInstanceBuffer(gl, program, vao, attributeName, matData, size, buffer = null) {
 	gl.bindVertexArray(vao);
 	const location = gl.getAttribLocation(program, attributeName);
-	const matBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, matBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, matData.byteLength, gl.DYNAMIC_DRAW);
-	const bytesPerMatrix = 4 * size * size;
-	for (let i = 0; i < size; ++i) {
-		const loc = location + i;
-		gl.enableVertexAttribArray(loc);
-		const offset = i * size * 4; //
-		gl.vertexAttribPointer(loc, size, gl.FLOAT, false, bytesPerMatrix, offset);
-		gl.vertexAttribDivisor(loc, 1);
+	let matBuffer;
+	if (buffer == null) {
+		console.log("createMatInstanceBuffer", attributeName, matData);
+		matBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, matBuffer);
+		gl.bufferData(gl.ARRAY_BUFFER, matData.byteLength, gl.DYNAMIC_DRAW);
+		const bytesPerMatrix = 4 * size * size;
+		for (let i = 0; i < size; ++i) {
+			const loc = location + i;
+			gl.enableVertexAttribArray(loc);
+			const offset = i * size * 4; //
+			gl.vertexAttribPointer(loc, size, gl.FLOAT, false, bytesPerMatrix, offset);
+			gl.vertexAttribDivisor(loc, 1);
+		}
+	} else {
+		matBuffer = buffer;
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 	}
 	gl.bufferSubData(gl.ARRAY_BUFFER, 0, matData);
 
@@ -503,6 +519,7 @@ export function setupNormalMatrix(programStore, mesh, numInstances) {
 				"normalMatrix",
 				mesh.matrices.normalMatrices,
 				3,
+				mesh.matrices.normalMatrixBuffer,
 			);
 		};
 	}
