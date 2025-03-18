@@ -1,7 +1,7 @@
 import vertexShaderSource from "../shaders/blur-vertex.glsl";
 import fragmentShaderSource from "../shaders/blur-fragment.glsl";
 import { drawModes } from "./webgl";
-import { appContext } from "./engine";
+import { appContext } from "./app-context";
 import { compileShaders } from "./gl";
 
 export const BLUR_DIRECTION_HORIZONTAL = 0;

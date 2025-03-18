@@ -153,15 +153,12 @@ void RE_IndirectSpecular_Physical( const in vec3 radiance, const in vec3 irradia
 }
 ${irradiance?
 `
-vec3 geometryPosition = - vViewPosition;
-vec3 geometryNormal = normal;
-vec3 geometryViewDir = normalize( vViewPosition );
-vec3 geometryClearcoatNormal = vec3( 0.0 );
-vec3 clearcoatRadiance = vec3( 0.0 );
-vec3 iblIrradiance = vec3( 0.0 );
-vec3 radiance = vec3( 0.0 );
-iblIrradiance += getIBLIrradiance( geometryNormal );
-radiance += getIBLRadiance( geometryViewDir, geometryNormal, material.roughness );
-RE_IndirectSpecular_Physical( radiance, iblIrradiance, clearcoatRadiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
+    vec3 geometryClearcoatNormal = vec3( 0.0 );
+    vec3 clearcoatRadiance = vec3( 0.0 );
+    vec3 iblIrradiance = vec3( 0.0 );
+    vec3 radiance = vec3( 0.0 );
+    iblIrradiance += getIBLIrradiance( geometryNormal );
+    radiance += getIBLRadiance( geometryViewDir, geometryNormal, material.roughness );
+    RE_IndirectSpecular_Physical( radiance, iblIrradiance, clearcoatRadiance, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight );
 ` : ''
 }

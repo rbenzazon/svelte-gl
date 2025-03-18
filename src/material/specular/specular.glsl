@@ -1,12 +1,10 @@
 ${declaration?
 `
-
 uniform float roughness;
-float roughnessFactor;
+float roughnessFactor = 1.0;
 uniform float ior;
 uniform float specularIntensity;
 uniform vec3 specularColor;
-
 
 
 #define EPSILON 1e-6
@@ -72,16 +70,16 @@ vec3 BRDF_GGX( const in vec3 lightDir, const in vec3 viewDir, const in vec3 norm
 }
 ` : ''
 }
-${irradiance?
+${material?
 `
 	material.roughness = clamp(roughness * roughnessFactor, 0.0525, 1.0);
 	material.ior = ior;
 	material.specularF90 = mix(specularIntensity, 1.0, metalness);
 	material.specularColor = mix(min(pow2((material.ior - 1.0) / (material.ior + 1.0)) * specularColor, vec3(1.0)) * specularIntensity, diffuse.rgb, metalness);
-
-        vec3 geometryViewDir = normalize( cameraPosition - vertex );
-        reflectedLight.directSpecular += lightParams.irradiance * BRDF_GGX( lightParams.direction, geometryViewDir, normal, material.specularColor, material.specularF90, material.roughness);//lightParams.irradiance; //* 
-        //totalIrradiance = -vec3(geometryViewDir.z,geometryViewDir.z,geometryViewDir.z);//BRDF_GGX( lightParams.direction, geometryViewDir, normalize(vNormal), specularColor, specularF90, roughness);
-		//totalIrradiance = lightParams.irradiance;//vec3(-lightParams.direction.z,-lightParams.direction.z,-lightParams.direction.z);
+` : ''
+}
+${irradiance?
+`
+		reflectedLight.directSpecular += lightParams.irradiance * BRDF_GGX( lightParams.direction, geometryViewDir, normal, material.specularColor, material.specularF90, material.roughness);
 ` : ''
 }

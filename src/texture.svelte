@@ -27,8 +27,8 @@ onMount(async () => {
 
 	$camera = {
 		...$camera,
-		position: [0, 5, -5],
-		target: [0, 0.5, 0],
+		position: [0, 5, 5],
+		target: [0, 0, 0],
 		fov: 75,
 	};
 
@@ -39,17 +39,17 @@ onMount(async () => {
 		createPointLight({
 			position: [-3, 2.5, 2],
 			color: [1, 1, 1],
-			intensity: 1,
-			cutoffDistance: 8,
+			intensity: 10,
+			cutoffDistance: 10,
 			decayExponent: 0.1,
 		}),
 	);
 	const light2 = createLightStore(
 		createPointLight({
-			position: [3, 3.5, -3],
+			position: [0, 3.5, -3],
 			color: [1, 1, 1],
 			intensity: 10,
-			cutoffDistance: 8,
+			cutoffDistance: 10,
 			decayExponent: 0.1,
 		}),
 	);

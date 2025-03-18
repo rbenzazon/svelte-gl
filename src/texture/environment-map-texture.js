@@ -1,7 +1,7 @@
 import envMapShader from "./environment-map-fragment.glsl";
 import { templateLiteralRenderer } from "../shaders/template.js";
 import { get } from "svelte/store";
-import { appContext } from "../store/engine.js";
+import { appContext } from "../store/app-context";
 import { createZeroMatrix } from "../geometries/common";
 import { identity } from "gl-matrix/cjs/mat3.js";
 

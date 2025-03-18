@@ -17,7 +17,6 @@ import Menu from "./Menu.svelte";
 import { createZeroMatrix } from "./geometries/common.js";
 import { createDebugObject } from "./geometries/debug.js";
 import { createDebugNormalsProgram } from "./store/debug-program.js";
-import { appContext } from "./store/engine.js";
 
 let canvas;
 let rgbeImage;

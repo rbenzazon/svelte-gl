@@ -1,55 +1,24 @@
-import {
-	create,
-	invert,
-	transpose,
-	identity,
-	lookAt,
-	perspective,
-	getTranslation,
-	getRotation,
-} from "gl-matrix/esm/mat4.js";
+import { invert, multiply } from "gl-matrix/esm/mat4.js";
+import { create as createM3, invert as invertM3, transpose as transposeM3, fromMat4 } from "gl-matrix/esm/mat3.js";
 import { get } from "svelte/store";
 import defaultVertex from "../shaders/default-vertex.glsl";
 import defaultFragment from "../shaders/default-fragment.glsl";
 import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";
 import { SRGBToLinear } from "../color/color-space.js";
-import { appContext, setAppContext } from "./engine.js";
+import { appContext, setAppContext } from "./app-context";
+import { camera } from "./camera.js";
 import { createZeroMatrix } from "../geometries/common";
 
 // Uniform Buffer Objects, must have unique binding points
 export const UBO_BINDING_POINT_POINTLIGHT = 0;
 export const UBO_BINDING_POINT_SPOTLIGHT = 1;
 
-const degree = Math.PI / 180;
-/**
- * Convert Degree To Radian
- *
- * @param {Number} a Angle in Degrees
- */
-
-function toRadian(a) {
-	return a * degree;
-}
-
 export function initRenderer() {
-	const canvasRect = appContext.canvas.getBoundingClientRect();
-	appContext.canvas.width = canvasRect.width;
-	appContext.canvas.height = canvasRect.height;
 	/** @type {WebGL2RenderingContext} */
 	const gl = appContext.canvas.getContext("webgl2");
 	appContext.gl = gl;
 
-	/*gl.viewportWidth = canvasRect.width;
-	gl.viewportHeight = canvasRect.height;*/
-
 	gl.enable(gl.DEPTH_TEST);
-
-	/*
-	gl.disable(gl.DEPTH_TEST);
-	
-	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-*/
 	gl.enable(gl.CULL_FACE);
 	gl.frontFace(gl.CCW);
 	gl.cullFace(gl.BACK);
@@ -88,7 +57,7 @@ export function clearFrame() {
 
 export function render(mesh, instances, drawMode) {
 	return function render() {
-		const { gl, program } = appContext;
+		const { gl } = appContext;
 
 		const positionSize = mesh.attributes.positionsSize ?? 3;
 
@@ -107,11 +76,8 @@ export function render(mesh, instances, drawMode) {
 				gl.drawElements(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0);
 			} else {
 				gl.drawArrays(gl[drawMode], 0, attributeLength);
-				//add mesh visualization (lines)
-				//gl.drawArrays(gl.LINE_STRIP, 0, contextValue.attributeLength);
 			}
 		}
-		// when binding vertex array objects you must unbind it after rendering
 		gl.bindVertexArray(null);
 	};
 }
@@ -193,14 +159,18 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			declarations: "",
 			positionModifier: "",
 		})({
-			instances: mesh.instances > 1,
+			instances: mesh.instances >= 1,
 			declarations: vertexDeclarations,
 			positionModifier: vertexPositionModifiers,
 		});
-		let specularIrradiance = "";
+		//console.log("vertexShaderSource", vertexShaderSource);
+
 		let specularDeclaration = "";
+		let specularMaterial = "";
+		let specularIrradiance = "";
 		if (material.specular) {
 			specularDeclaration = material.specular.shader({ declaration: true });
+			specularMaterial = material.specular.shader({ material: true });
 			specularIrradiance = material.specular.shader({ irradiance: true });
 		}
 		let diffuseMapDeclaration = "";
@@ -261,6 +231,7 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			diffuseMapSample: "",
 			normalMapSample: "",
 			roughnessMapSample: "",
+			material: "",
 			irradiance: "",
 			toneMapping: "",
 			numPointLights: 0,
@@ -286,6 +257,7 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			diffuseMapSample,
 			normalMapSample,
 			roughnessMapSample,
+			material: [...(material.specular ? [specularMaterial] : [])].join("\n"),
 			irradiance: [
 				...(numPointLights ? [pointLightShader({ declaration: false, irradiance: true, specularIrradiance })] : []),
 				...(material.envMap ? [envMapIrradiance] : []),
@@ -298,6 +270,8 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			//todo, remove this after decoupling the point light shader
 			numPointLights,
 		});
+		//console.log(fragmentShaderSource);
+
 		compileShaders(gl, program, vertexShaderSource, fragmentShaderSource);
 	};
 }
@@ -374,167 +348,126 @@ export function setupAmbientLight(programOverride, ambientLightColorOverride) {
 	gl.uniform3fv(ambientLightColorLocation, new Float32Array(currentAmbientLightColor));
 }
 
-export function getCameraProjectionView(camera, width, height) {
-	return {
-		projection: perspective(createZeroMatrix(), toRadian(camera.fov), width / height, camera.near, camera.far),
-		view: lookAt(createZeroMatrix(), camera.position, camera.target, camera.up),
-	};
+function deriveViewMatrix(view) {
+	return invert(createZeroMatrix(), view);
 }
 
 export function setupCamera(camera) {
 	return function createCamera() {
-		const { gl, program, canvas } = appContext;
-		const { projection, view } = getCameraProjectionView(camera, canvas.width, canvas.height);
+		const { gl, program } = appContext;
+		const { projection, view } = camera;
+		//console.log("camera", projection, view);
+
 		// projection matrix
-		const projectionLocation = gl.getUniformLocation(program, "projection");
+		const projectionLocation = gl.getUniformLocation(program, "projectionMatrix");
 		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
-		// view matrix
-		const viewLocation = gl.getUniformLocation(program, "view");
-		gl.uniformMatrix4fv(viewLocation, false, view);
-
 		const cameraPositionLocation = gl.getUniformLocation(program, "cameraPosition");
-		gl.uniform3fv(cameraPositionLocation, camera.position);
+		gl.uniform3fv(cameraPositionLocation, get(camera).position);
 
 		const viewMatrixLocation = gl.getUniformLocation(program, "viewMatrix");
-		const viewMatrix = invert(createZeroMatrix(), view);
-		gl.uniformMatrix4fv(viewMatrixLocation, false, viewMatrix);
+		gl.uniformMatrix4fv(viewMatrixLocation, false, deriveViewMatrix(view));
 	};
 }
 
-function getEuler(out, quat) {
-	let x = quat[0],
-		y = quat[1],
-		z = quat[2],
-		w = quat[3],
-		x2 = x * x,
-		y2 = y * y,
-		z2 = z * z,
-		w2 = w * w;
-	let unit = x2 + y2 + z2 + w2;
-	let test = x * w - y * z;
-	if (test > 0.499995 * unit) {
-		//TODO: Use glmatrix.EPSILON
-		// singularity at the north pole
-		out[0] = ((Math.PI / 2) * 180) / Math.PI;
-		out[1] = (2 * Math.atan2(y, x) * 180) / Math.PI;
-		out[2] = (0 * 180) / Math.PI;
-	} else if (test < -0.499995 * unit) {
-		//TODO: Use glmatrix.EPSILON
-		// singularity at the south pole
-		out[0] = ((-Math.PI / 2) * 180) / Math.PI;
-		out[1] = (2 * Math.atan2(y, x) * 180) / Math.PI;
-		out[2] = (0 * 180) / Math.PI;
-	} else {
-		out[0] = (Math.asin(2 * (x * z - w * y)) * 180) / Math.PI;
-		out[1] = (Math.atan2(2 * (x * w + y * z), 1 - 2 * (z2 + w2)) * 180) / Math.PI;
-		out[2] = (Math.atan2(2 * (x * y + z * w), 1 - 2 * (y2 + z2)) * 180) / Math.PI;
+function setObjectMatrixUniforms(gl, program, objectMatrix) {
+	const modelMatrixLocation = gl.getUniformLocation(program, "modelMatrix");
+	if (modelMatrixLocation != null) {
+		gl.uniformMatrix4fv(modelMatrixLocation, false, objectMatrix.value);
 	}
-	return out;
+	const modelViewMatrixLocation = gl.getUniformLocation(program, "modelViewMatrix");
+	if (modelViewMatrixLocation != null) {
+		gl.uniformMatrix4fv(modelViewMatrixLocation, false, objectMatrix.modelView);
+	}
 }
 
-export function setupTransformMatrix(programStore, mesh, transformMatrix, numInstances) {
+function getModelViewMatrix(objectMatrix) {
+	return multiply([], camera.view, objectMatrix);
+}
+
+export function setupObjectMatrix(programStore, mesh, objectMatrix, numInstances) {
 	if (numInstances == null) {
-		return function setupTransformMatrix() {
+		return function setupObjectMatrix() {
 			const { gl, program } = appContext;
-			const worldLocation = gl.getUniformLocation(program, "world");
-			if (worldLocation == null) {
-				return;
-			}
-			//todo check why we have that, we shouldn't need this
-			if (!transformMatrix) {
-				transformMatrix = identity(createZeroMatrix());
-			}
-			gl.uniformMatrix4fv(worldLocation, false, get(transformMatrix));
+			setObjectMatrixUniforms(gl, program, objectMatrix);
 		};
 	} else {
-		return function setupTransformMatrix() {
-			if (transformMatrix == null) {
+		return function setupObjectMatrix() {
+			if (objectMatrix == null) {
 				return;
 			}
-			const attributeName = "world";
 			const { gl, program, vaoMap } = appContext;
-
 			//TODO, clean that it's useless since we overwrite it anyway and storing this way is not good
-			let transformMatricesWindows;
-			if (appContext.transformMatricesWindows == null) {
-				transformMatricesWindows = [];
+			/*let modelViewMatricesWindows;
+			if (appContext.modelViewMatricesWindows == null) {
+				modelViewMatricesWindows = [];
 			} else {
-				transformMatricesWindows = appContext.transformMatricesWindows;
+				modelViewMatricesWindows = appContext.modelViewMatricesWindows;
 			}
-
-			const transformMatricesValues = transformMatrix.reduce((acc, m) => [...acc, ...get(m)], []);
-			const transformMatricesData = new Float32Array(transformMatricesValues);
-
+			const modelViewMatricesValues = objectMatrix.flatMap((m) => getModelViewMatrix(get(m)));
+			console.log("modelViewMatricesValues", modelViewMatricesValues);
+			
+			const modelViewMatricesData = new Float32Array(modelViewMatricesValues);
 			// create windows for each matrix
 			for (let i = 0; i < numInstances; ++i) {
 				const byteOffsetToMatrix = i * 16 * 4;
 				const numFloatsForView = 16;
-				transformMatricesWindows.push(new Float32Array(transformMatricesData.buffer, byteOffsetToMatrix, numFloatsForView));
-			}
-			/*
-			transformMatricesWindows.forEach((mat, index) => {
-				const count = index - Math.floor(numInstances / 2);
-				identity(mat);
-				//transform the model matrix
-				translate(mat, mat, [count * 2, 0, 0]);
-				rotateY(mat, mat, toRadian(count * 10));
-				scale(mat, mat, [0.5, 0.5, 0.5]);
-			});
-			*/
+				modelViewMatricesWindows.push(new Float32Array(modelViewMatricesData.buffer, byteOffsetToMatrix, numFloatsForView));
+			}*/
 			const vao = vaoMap.get(programStore).get(mesh);
 
-			gl.bindVertexArray(vao);
-			const matrixBuffer = gl.createBuffer();
+			objectMatrix.modelViewBuffer = createMatInstanceBuffer(
+				gl,
+				program,
+				vao,
+				"modelViewMatrix",
+				objectMatrix.modelView,
+				4,
+			);
+			/*setAppContext({
+				matrixBuffer: modelViewBuffer,
+				modelViewMatricesWindows: modelViewMatricesWindows,
+			});*/
 
-			setAppContext({
-				matrixBuffer,
-				transformMatricesWindows,
-			});
-
-			const transformMatricesLocation = gl.getAttribLocation(program, attributeName);
-			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, transformMatricesData.byteLength, gl.DYNAMIC_DRAW);
-			// set all 4 attributes for matrix
-			const bytesPerMatrix = 4 * 16;
-			for (let i = 0; i < 4; ++i) {
-				const loc = transformMatricesLocation + i;
-				gl.enableVertexAttribArray(loc);
-				// note the stride and offset
-				const offset = i * 16; // 4 floats per row, 4 bytes per float
-				gl.vertexAttribPointer(
-					loc, // location
-					4, // size (num values to pull from buffer per iteration)
-					gl.FLOAT, // type of data in buffer
-					false, // normalize
-					bytesPerMatrix, // stride, num bytes to advance to get to next set of values
-					offset, // offset in buffer
-				);
-				// this line says this attribute only changes for each 1 instance
-				gl.vertexAttribDivisor(loc, 1);
-			}
-			gl.bufferSubData(gl.ARRAY_BUFFER, 0, transformMatricesData);
-
-			gl.bindVertexArray(null);
+			//const objectMatricesValues = objectMatrix.reduce((acc, m) => [...acc, ...get(m)], []);
+			createMatInstanceBuffer(gl, program, vao, "modelMatrix", objectMatrix.value, 4);
 		};
 	}
 }
-export function updateTransformMatrix(programStore, worldMatrix) {
+
+function createMatInstanceBuffer(gl, program, vao, attributeName, matData, size) {
+	gl.bindVertexArray(vao);
+	const location = gl.getAttribLocation(program, attributeName);
+	const matBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, matBuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, matData.byteLength, gl.DYNAMIC_DRAW);
+	const bytesPerMatrix = 4 * size * size;
+	for (let i = 0; i < size; ++i) {
+		const loc = location + i;
+		gl.enableVertexAttribArray(loc);
+		const offset = i * size * 4; //
+		gl.vertexAttribPointer(loc, size, gl.FLOAT, false, bytesPerMatrix, offset);
+		gl.vertexAttribDivisor(loc, 1);
+	}
+	gl.bufferSubData(gl.ARRAY_BUFFER, 0, matData);
+
+	gl.bindVertexArray(null);
+	return matBuffer;
+}
+export function updateObjectMatrix(programStore, objectMatrix) {
 	const { gl, programMap } = appContext;
 	const program = programMap.get(programStore);
-	const worldLocation = gl.getUniformLocation(program, "world");
 	gl.useProgram(program);
-	gl.uniformMatrix4fv(worldLocation, false, worldMatrix);
+	setObjectMatrixUniforms(gl, program, objectMatrix);
 }
-export function updateInstanceTransformMatrix(programStore, mesh, newMatrix, instanceIndex) {
+export function updateInstanceObjectMatrix(programStore, mesh, newMatrix, instanceIndex, modelViewBuffer) {
+	// TODO must use a map to store the matrix buffer and normal buffer for instances
 	const { gl, vaoMap, matrixBuffer } = appContext;
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
-	gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffer);
+	gl.bindBuffer(gl.ARRAY_BUFFER, modelViewBuffer);
 	const bytesPerMatrix = 4 * 16;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, newMatrix);
 	gl.bindVertexArray(null);
-
-	updateInstanceNormalMatrix(programStore, mesh, derivateNormalMatrix(newMatrix), instanceIndex);
 }
 
 export function setupNormalMatrix(programStore, mesh, numInstances) {
@@ -546,75 +479,59 @@ export function setupNormalMatrix(programStore, mesh, numInstances) {
 			if (normalMatrixLocation == null) {
 				return;
 			}
-			const normalMatrix = derivateNormalMatrix(get(mesh.matrix));
-			gl.uniformMatrix4fv(normalMatrixLocation, false, normalMatrix);
+			/*const modelViewMatrix = getModelViewMatrix(mesh.matrix.value);
+			const normalMatrix = derivateNormalMatrix(modelViewMatrix);*/
+			gl.uniformMatrix3fv(normalMatrixLocation, false, mesh.matrix.normalMatrix);
 		};
 	} else {
 		return function setupNormalMatrix() {
-			const { gl, program, vaoMap, transformMatricesWindows } = appContext;
+			const { gl, program, vaoMap /*, modelViewMatricesWindows*/ } = appContext;
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
 			if (normalMatricesLocation == null) {
 				return;
 			}
 			const vao = vaoMap.get(programStore).get(mesh);
-
-			gl.bindVertexArray(vao);
-			const normalMatricesValues = [];
-
+			/*const normalMatricesValues = [];
 			for (let i = 0; i < numInstances; i++) {
-				normalMatricesValues.push(...derivateNormalMatrix(transformMatricesWindows[i]));
+				normalMatricesValues.push(...derivateNormalMatrix(modelViewMatricesWindows[i]));
 			}
-			const normalMatrices = new Float32Array(normalMatricesValues);
-
-			const normalMatrixBuffer = gl.createBuffer();
-			//TODO store this in a map ?
-			appContext.normalMatrixBuffer = normalMatrixBuffer;
-			gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
-			gl.bufferData(gl.ARRAY_BUFFER, normalMatrices.byteLength, gl.DYNAMIC_DRAW);
-
-			gl.bufferSubData(gl.ARRAY_BUFFER, 0, normalMatrices);
-			// set all 4 attributes for matrix
-			const bytesPerMatrix = 4 * 16;
-			for (let i = 0; i < 4; ++i) {
-				const loc = normalMatricesLocation + i;
-				gl.enableVertexAttribArray(loc);
-				// note the stride and offset
-				const offset = i * 16; // 4 floats per row, 4 bytes per float
-				gl.vertexAttribPointer(
-					loc, // location
-					4, // size (num values to pull from buffer per iteration)
-					gl.FLOAT, // type of data in buffer
-					false, // normalize
-					bytesPerMatrix, // stride, num bytes to advance to get to next set of values
-					offset, // offset in buffer
-				);
-				// this line says this attribute only changes for each 1 instance
-				gl.vertexAttribDivisor(loc, 1);
-			}
-			gl.bindVertexArray(null);
+			const normalMatrices = new Float32Array(normalMatricesValues);*/
+			mesh.matrices.normalMatrixBuffer = createMatInstanceBuffer(
+				gl,
+				program,
+				vao,
+				"normalMatrix",
+				mesh.matrices.normalMatrices,
+				3,
+			);
 		};
 	}
 }
-export function updateNormalMatrix(programStore, worldMatrix) {
+export function updateNormalMatrix(programStore, objectMatrix) {
 	const { gl, programMap } = appContext;
 	const program = programMap.get(programStore);
 	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
-	gl.uniformMatrix4fv(normalMatrixLocation, false, derivateNormalMatrix(worldMatrix));
+	gl.uniformMatrix3fv(normalMatrixLocation, false, objectMatrix.normalMatrix);
 }
 
-export function updateInstanceNormalMatrix(programStore, mesh, normalMatrix, instanceIndex) {
-	const { gl, vaoMap, normalMatrixBuffer } = appContext;
+export function updateInstanceNormalMatrix(programStore, mesh, normalMatrix, instanceIndex, normalMatrixBuffer) {
+	const { gl, vaoMap } = appContext;
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
-	const bytesPerMatrix = 4 * 16;
+	const bytesPerMatrix = 4 * 9;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, normalMatrix);
 	gl.bindVertexArray(null);
 }
-
-export function derivateNormalMatrix(transformMatrix) {
-	const normalMatrix = create();
-	invert(normalMatrix, transformMatrix);
-	transpose(normalMatrix, normalMatrix);
+/**
+ * Derives a 3x3 normal matrix from a 4x4 transform matrix
+ * Normal matrix is the transpose of the inverse of the upper-left 3x3 submatrix
+ * @param {mat4} modelViewMatrix - 4x4 transformation matrix (column-major)
+ * @returns {mat3} 3x3 normal matrix (column-major)
+ */
+export function derivateNormalMatrix(modelViewMatrix) {
+	let normalMatrix = fromMat4(createM3(), modelViewMatrix);
+	normalMatrix = invertM3(normalMatrix, normalMatrix);
+	normalMatrix = transposeM3(normalMatrix, normalMatrix);
 	return normalMatrix;
 }
 

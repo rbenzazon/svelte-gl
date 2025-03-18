@@ -15,6 +15,7 @@ import Menu from "./Menu.svelte";
 import { createZeroMatrix } from "./geometries/common.js";
 import { createDebugObject } from "./geometries/debug.js";
 import { createDebugNormalsProgram } from "./store/debug-program.js";
+import { renderState } from "./store/engine";
 
 let canvas;
 onMount(async () => {
@@ -45,7 +46,7 @@ onMount(async () => {
 	);
 
 	const matrix = identity(createZeroMatrix());
-
+	/*
 	const debugProgram = createMaterialStore({
 		diffuse: [1, 0, 0],
 		metalness: 0,
@@ -55,23 +56,25 @@ onMount(async () => {
 		...cubeMesh,
 		matrix,
 		material: debugProgram,
-	});
+	});*/
 
 	const material = createMaterialStore({
 		diffuse: [1, 0.5, 0.5],
 		metalness: 0,
 	});
 
-	$materials = [...$materials, material, debugProgram];
+	$materials = [...$materials, material /*, debugProgram*/];
 
 	$scene = [
 		...$scene,
 		create3DObject({
 			...cubeMesh,
-			matrix,
+			instances: 1,
+			matrices: [matrix],
+			/*matrix,*/
 			material,
 		}),
-		create3DObject(debugNormalMesh),
+		/*create3DObject(debugNormalMesh),*/
 	];
 	$lights = [...$lights, light];
 

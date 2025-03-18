@@ -6,15 +6,15 @@ import { createMaterialStore, materials } from "./store/materials.js";
 import { createLightStore, lights } from "./store/lights.js";
 import { renderer } from "./store/renderer.js";
 import { camera } from "./store/camera.js";
-import { identity, scale, translate } from "gl-matrix/esm/mat4.js";
+import { create, identity, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
-import { createPlane } from "./geometries/plane.js";
+import { createCube } from "./geometries/cube.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
-import { createNoiseDistortionAnimation } from "./animation/noise-distortion/noise-distortion.js";
 import Menu from "./Menu.svelte";
-import { createSpecular } from "./material/specular/specular.js";
 import { createZeroMatrix } from "./geometries/common.js";
+import { createDebugObject } from "./geometries/debug.js";
+import { createDebugNormalsProgram } from "./store/debug-program.js";
 
 let canvas;
 onMount(async () => {
@@ -27,54 +27,52 @@ onMount(async () => {
 
 	$camera = {
 		...$camera,
-		position: [0, 3, -5],
-		target: [0, 0, -1],
+		position: [0, 5, -5],
+		target: [0, 0.5, 0],
 		fov: 75,
 	};
 
+	const cubeMesh = createCube();
+
 	const light = createLightStore(
 		createPointLight({
-			position: [0, 1, 0],
+			position: [-2, 2, -2],
 			color: [1, 1, 1],
-			intensity: 2,
-			cutoffDistance: 15,
-			decayExponent: 0,
+			intensity: 20,
+			cutoffDistance: 0,
+			decayExponent: 2,
 		}),
 	);
 
-	const groundMesh = createPlane(10, 10, 200, 200);
-	const groundMatrix = identity(createZeroMatrix());
+	const matrix = identity(createZeroMatrix());
 
-	const groundMaterial = createMaterialStore({
-		diffuse: [0, 102 / 255, 204 / 255],
+	const debugProgram = createMaterialStore({
+		diffuse: [1, 0, 0],
 		metalness: 0,
-		specular: createSpecular({
-			roughness: 0.1,
-			ior: 1.4,
-			intensity: 0.5,
-			color: [1, 1, 1],
-		}),
+		program: createDebugNormalsProgram(),
+	});
+	const debugNormalMesh = createDebugObject({
+		...cubeMesh,
+		matrix,
+		material: debugProgram,
 	});
 
-	$materials = [...$materials, groundMaterial];
+	const material = createMaterialStore({
+		diffuse: [1, 0.5, 0.5],
+		metalness: 0,
+	});
+
+	$materials = [...$materials, material, debugProgram];
 
 	$scene = [
 		...$scene,
 		create3DObject({
-			...groundMesh,
-			matrix: groundMatrix,
-			material: groundMaterial,
-			animations: [
-				createNoiseDistortionAnimation({
-					frequency: 1,
-					speed: 1,
-					amplitude: 1,
-					normalTangentLength: 0.01,
-				}),
-			],
+			...cubeMesh,
+			matrix,
+			material,
 		}),
+		create3DObject(debugNormalMesh),
 	];
-
 	$lights = [...$lights, light];
 
 	$renderer = {
@@ -87,7 +85,7 @@ onMount(async () => {
 });
 
 function animate() {
-	// animate here
+	//animate here
 }
 </script>
 <canvas bind:this={canvas}></canvas>

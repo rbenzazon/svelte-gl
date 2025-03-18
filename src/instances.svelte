@@ -15,6 +15,7 @@ import Menu from "./Menu.svelte";
 import { cloneMatrix, createZeroMatrix, toRadian } from "./geometries/common.js";
 import { get } from "svelte/store";
 import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
+import { renderState } from "./store/engine";
 
 let canvas;
 let cube;
@@ -102,11 +103,11 @@ onMount(async () => {
 });
 function rotateCube(cube, index) {
 	const rotation = 0.001 * Math.PI;
-	const tmp = get(cube.matrices[index]);
+	const tmp = cube.matrices.getInstance(index);
 	rotateY(tmp, tmp, rotation / 2);
 	rotateX(tmp, tmp, rotation);
 	rotateZ(tmp, tmp, rotation / 3);
-	cube.matrices[index].set(tmp);
+	cube.matrices.setInstance(index, tmp);
 }
 function animate() {
 	for (let i = 0; i < numInstances; i++) {

@@ -1,15 +1,7 @@
 import { getTranslation, orthoNO, lookAt } from "gl-matrix/mat4";
 import depthVertexShader from "../shaders/depth-vertex.glsl";
 import depthFragmentShader from "../shaders/depth-fragment.glsl";
-import {
-	compileShaders,
-	createFBO,
-	getCameraProjectionView,
-	linkProgram,
-	unbindTexture,
-	useProgram,
-	validateProgram,
-} from "./gl";
+import { compileShaders, createFBO, linkProgram, unbindTexture, useProgram, validateProgram } from "./gl";
 import {
 	BLUR_DIRECTION_HORIZONTAL,
 	BLUR_DIRECTION_VERTICAL,
@@ -21,7 +13,7 @@ import {
 	setKernelUniforms,
 } from "./blur";
 import { selectProgram } from "./engine";
-import { appContext } from "./engine";
+import { appContext } from "./app-context";
 import { createVec3, createZeroMatrix } from "../geometries/common";
 /**
  * @typedef {Object} ContactShadowPass
@@ -247,7 +239,7 @@ function setupShadowCamera(projection, view) {
 		return function setupShadowCamera() {
 			const { gl, program } = appContext;
 
-			const projectionLocation = gl.getUniformLocation(program, "projection");
+			const projectionLocation = gl.getUniformLocation(program, "projectionMatrix");
 
 			gl.uniformMatrix4fv(projectionLocation, false, projection);
 

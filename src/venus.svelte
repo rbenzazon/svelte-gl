@@ -18,6 +18,7 @@ import { loadOBJFile } from "./loaders/obj-loader.js";
 import Menu from "./Menu.svelte";
 import { get } from "svelte/store";
 import { cloneMatrix, createZeroMatrix } from "./geometries/common.js";
+import { createSpecular } from "./material/specular/specular.js";
 
 let canvas;
 onMount(async () => {
@@ -28,7 +29,7 @@ onMount(async () => {
 		...$renderer,
 		canvas,
 		backgroundColor: skyblue,
-		ambientLightColor: [0xffffff, 0.1],
+		ambientLightColor: [0xffffff, 0.15],
 	};
 
 	const shadowPass = createContactShadowPass(groundMatrix, 1, 10, 10, 1024, 128, 0.5);
@@ -61,6 +62,15 @@ onMount(async () => {
 			decayExponent: 2,
 		}),
 	);
+	const light3 = createLightStore(
+		createPointLight({
+			position: [-1, 3, 4],
+			color: [1, 1, 1],
+			intensity: 10,
+			cutoffDistance: 0,
+			decayExponent: 2,
+		}),
+	);
 
 	const groundMesh = createPlane(10, 10, 1, 1);
 	const groundDiffuseMap = await createTexture({
@@ -79,7 +89,15 @@ onMount(async () => {
 	rotateY(venusMatrix, venusMatrix, Math.PI);
 	scale(venusMatrix, venusMatrix, [0.003, 0.003, 0.003]);
 	translate(venusMatrix, venusMatrix, [0, -450, 0]);
-	const venusMaterial = createMaterialStore(venus.material);
+	const venusMaterial = createMaterialStore({
+		...venus.material,
+		specular: createSpecular({
+			roughness: 0.45,
+			ior: 1.5,
+			intensity: 1,
+			color: [1, 1, 1],
+		}),
+	});
 
 	$materials = [...$materials, venusMaterial, groundMaterial];
 
@@ -96,7 +114,7 @@ onMount(async () => {
 			material: venusMaterial,
 		}),
 	];
-	$lights = [...$lights, light, light2];
+	$lights = [...$lights, light, light2, light3];
 
 	$renderer = {
 		...$renderer,

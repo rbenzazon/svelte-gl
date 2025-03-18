@@ -121,5 +121,5 @@ ${position ? `
     vec3 modifiedPositionTangent = nearby1 + displacementTangent * normal;
     float displacementBitangent = getDisplacement(nearby2);
     vec3 modifiedPositionBitangent = nearby2 + displacementBitangent * normal;
-    modifiedNormal = normalize(cross(modifiedPositionTangent - animatedPosition, modifiedPositionBitangent - animatedPosition));
+    transformedNormal = normalize(cross(modifiedPositionTangent - animatedPosition, modifiedPositionBitangent - animatedPosition));
 ` : ''}

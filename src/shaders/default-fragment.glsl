@@ -1,5 +1,8 @@
 #version 300 es
-precision mediump float;
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+precision highp samplerCube;
 
 #define SHADER_NAME defaultFragment
 
@@ -21,6 +24,18 @@ in highp vec2 vUv;
 in vec3 vViewPosition;
 
 out vec4 fragColor;
+
+float pow4(const in float x) {
+    float x2 = x * x;
+    return x2 * x2;
+}
+float pow2(const in float x) {
+    return x * x;
+}
+
+float saturate(const in float a) {
+    return clamp(a, 0.0f, 1.0f);
+}
 
 struct ReflectedLight {
 	vec3 directDiffuse;
@@ -57,12 +72,17 @@ void main() {
     PhysicalMaterial material;
 	material.diffuseAlpha = 1.0;
 	material.diffuseColor = diffuse.rgb * (1.0 - metalness);
+	${roughnessMapSample}
+	${material}
 	${diffuseMapSample}
 	
 
 	vec3 normal = normalize( vNormal );
+	vec3 geometryPosition = - vViewPosition;
+    vec3 geometryNormal = normal;
+    vec3 geometryViewDir = normalize( vViewPosition );
 	${normalMapSample}
-	${roughnessMapSample}
+	
 
     ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
 
@@ -75,4 +95,6 @@ void main() {
     //fragColor = vec4(totalIrradiance, 1.0f);
     ${toneMapping}
 	fragColor = linearToOutputTexel(fragColor);
+	//fragColor = vec4(pointLights[0].position - geometryPosition,1.0);
+	//fragColor = vec4(material.roughness,material.roughness,material.roughness,1.0);
 }

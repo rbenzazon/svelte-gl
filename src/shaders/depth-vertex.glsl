@@ -3,14 +3,14 @@
 precision highp float;
 
 uniform mat4 view;
-uniform mat4 projection;
-uniform mat4 world;
+uniform mat4 projectionMatrix;
+uniform mat4 modelViewMatrix;
 
 in vec3 position;
 
 out vec2 vHighPrecisionZW;
 
 void main() {
-	gl_Position = projection * view * world * vec4( position, 1.0 );
+	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 	vHighPrecisionZW = gl_Position.zw;
 }

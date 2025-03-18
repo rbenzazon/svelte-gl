@@ -1,7 +1,7 @@
 import textureShader from "./texture.glsl";
 import { templateLiteralRenderer } from "../shaders/template.js";
 import { get } from "svelte/store";
-import { appContext } from "../store/engine.js";
+import { appContext } from "../store/app-context";
 
 const types = {
 	diffuse: "diffuseMap",

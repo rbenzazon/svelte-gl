@@ -1,21 +1,15 @@
-import { appContext, selectMesh, selectProgram } from "./engine";
+import { appContext } from "./app-context";
+import { selectMesh, selectProgram } from "./engine";
 import skyBoxVertex from "../shaders/skybox-vertex.glsl";
 import skyBoxFragment from "../shaders/skybox-fragment.glsl";
-import {
-	compileShaders,
-	createProgram,
-	getCameraProjectionView,
-	linkProgram,
-	resetViewportToCanvas,
-	useProgram,
-	validateProgram,
-} from "./gl";
+import { compileShaders, createProgram, linkProgram, resetViewportToCanvas, useProgram, validateProgram } from "./gl";
 import { drawModes } from "./webgl";
 import { multiply, invert } from "gl-matrix/esm/mat4.js";
 import { createVec3, createZeroMatrix } from "../geometries/common";
 import { cross, normalize, subtract } from "gl-matrix/esm/vec3.js";
 import { renderer } from "./renderer";
 import { templateLiteralRenderer } from "../shaders/template";
+import { get } from "svelte/store";
 /**
  * @callback ConvertHDRToCube
  * @param {Uint16Array} typedArray
@@ -202,11 +196,11 @@ export function createSkyBoxMesh() {
 
 function setupSkyBoxCamera(camera) {
 	return function setupSkyBoxCamera() {
-		const { gl, program, canvas } = appContext;
+		const { gl, program } = appContext;
+		const cameraValues = get(camera);
+		const { projection } = camera;
 
-		const { projection } = getCameraProjectionView(camera, canvas.width, canvas.height);
-
-		const viewCamera = lookAt(camera.position, camera.target, camera.up, createZeroMatrix());
+		const viewCamera = lookAt(cameraValues.position, cameraValues.target, cameraValues.up, createZeroMatrix());
 		const viewMatrix = invert(createZeroMatrix(), viewCamera);
 
 		//set translation to 0

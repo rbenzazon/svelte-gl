@@ -1,14 +1,9 @@
 import { convertToVector3 } from "../color/color-space";
 import { hasSameShallow as arrayHasSameShallow } from "../utils/array";
 import { writable, get } from "svelte/store";
-import { setupAmbientLight } from "./gl";
-import { programs } from "./programs";
-import { appContext } from "./engine";
-
-export function findMaterialProgram() {
-	const matPrograms = get(programs).filter((program) => program.meshes?.length !== 0 && program.allMeshes !== true);
-	return matPrograms;
-}
+/*import { setupAmbientLight } from "./gl";
+import { findMaterialProgram } from "./programs-utils";*/
+import { appContext, setAppContext } from "./app-context";
 
 /**
  *
@@ -33,6 +28,7 @@ function createRenderer() {
 	let cache = initialValue;
 	// some values have a different internal format
 	let processed = new Map();
+
 	/** @type {SvelteGLRendererStore} */
 	const store = writable(initialValue);
 	const { subscribe, update } = store;
@@ -44,7 +40,21 @@ function createRenderer() {
 	 * Update functions are called when a different value is set.
 	 * processed values are updated here
 	 */
-	function updateCanvas(canvas) {}
+	function updateCanvas(canvas) {
+		const canvasRect = canvas.getBoundingClientRect();
+		const appContextValues = {
+			canvas: {
+				width: canvasRect.width,
+				height: canvasRect.height,
+			},
+		};
+		canvas.width = canvasRect.width;
+		canvas.height = canvasRect.height;
+		setAppContext({
+			...appContext,
+			...appContextValues,
+		});
+	}
 	function updateLoop(loop) {}
 	function updateBackgroundColor(color) {
 		processed.set("backgroundColor", [...convertToVector3(color), 1]);
@@ -62,7 +72,7 @@ function createRenderer() {
 		update((renderer) => {
 			const next = updater(renderer);
 			revisionStore.update((revision) => revision + 1);
-			if (cache.canvas != null && next.canvas !== cache.canvas) {
+			if (next.canvas !== cache.canvas) {
 				updateCanvas(next.canvas);
 			}
 			if (cache.loop != null && next.loop !== cache.loop) {
@@ -71,14 +81,19 @@ function createRenderer() {
 			if (next.backgroundColor !== cache.backgroundColor) {
 				updateBackgroundColor(next.backgroundColor);
 			}
+			const processedAmbient = processed.get("ambientLightColor");
+			if (processedAmbient == null || processed.get("ambientLightColor").length !== 4) {
+				updateAmbientLightColor(next.ambientLightColor);
+			}
 			if (!arrayHasSameShallow(next.ambientLightColor, cache.ambientLightColor)) {
 				updateAmbientLightColor(next.ambientLightColor);
-				const programs = findMaterialProgram();
+				//todo check if we can update the programs from the renderer updating or create an ambient light store
+				/*const programs = findMaterialProgram();
 				if (programs) {
 					programs.forEach((program) => {
 						setupAmbientLight(appContext.programMap.get(program), processed.get("ambientLightColor"));
 					});
-				}
+				}*/
 			}
 			if (!arrayHasSameShallow(next.toneMappings, cache.toneMappings)) {
 				updateToneMappings(next.toneMappings);
@@ -125,3 +140,8 @@ function createRenderer() {
 	};
 }
 export const renderer = createRenderer();
+
+//this is necessary because the store needs to be subscribed to to be activated
+const unsubPipeline = renderer.subscribe((value) => {
+	//console.log("render loop store subscribed", value);
+});

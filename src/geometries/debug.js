@@ -26,7 +26,7 @@ export function createDebugObject(object) {
 		attributes: {
 			positions: new Float32Array(lines),
 		},
-		matrix: object.matrix,
+		matrix: object.matrix.value,
 		material: object.material,
 		drawMode: drawModes[1],
 	};

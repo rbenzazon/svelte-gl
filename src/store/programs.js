@@ -1,12 +1,8 @@
-import { multiply, getTranslation } from "gl-matrix/esm/mat4.js";
-import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import { writable, get, derived } from "svelte/store";
-import { camera } from "./camera";
-import { reconciliateCacheMap, clearUnusedCache, selectProgram } from "./engine";
+import { reconciliateCacheMap, clearUnusedCache, selectProgram } from "./programs-cache";
 import { isSvelteGLInstancedMesh } from "./mesh-types.js";
 import { scene } from "./scene";
 import {
-	getCameraProjectionView,
 	setupAmbientLight,
 	createShaders,
 	linkProgram,
@@ -18,9 +14,11 @@ import {
 } from "./gl";
 import { numLigths, lights } from "./lights";
 import { materials } from "./materials";
+import { sortMeshesByZ } from "./programs-utils";
 import { renderer } from "./renderer";
-import { createVec3, createZeroMatrix } from "../geometries/common";
-
+function isTransparent(material) {
+	return material?.opacity < 1 || material?.transparent;
+}
 /**
  * @typedef {Object} RenderPass
  * @property {import("src/store/programs").SvelteGLProgram[]} programs array of programs used in the pass
@@ -36,58 +34,8 @@ export const renderPasses = writable([]);
 export const RENDER_PASS_TYPES = {
 	FRAMEBUFFER_TO_TEXTURE: 0,
 };
-export function isTransparent(material) {
-	return material?.opacity < 1 || material?.transparent;
-}
 function sortTransparency(a, b) {
 	return (isTransparent(a.material) ? 1 : -1) - (isTransparent(b.material) ? 1 : -1);
-}
-/**
- * Sorts meshes by Z depth for transparency rendering
- * @template {SvelteGLProgram[]|SvelteGLProgramProject[]} T
- * @param {T} programs - Array of programs to sort
- * @returns {T} - Sorted array with the same type as input
- */
-export function sortMeshesByZ(programs) {
-	if (programs.length === 0 || get(renderer).canvas == null) {
-		return programs;
-	}
-	let transparent = false;
-	const canvas = get(renderer).canvas;
-	const { projection, view } = getCameraProjectionView(get(camera), canvas.width, canvas.height);
-	const projScreen = multiply(createZeroMatrix(), projection, view);
-
-	programs.forEach((program) => {
-		if (transparent || isTransparent(program.material)) {
-			transparent = true;
-			program.meshes.forEach((mesh, i) => {
-				if (!mesh.matrix) {
-					// max number value
-					mesh.clipSpacePosition = [0, 0, Number.MAX_VALUE];
-				} else {
-					const meshPosition = getTranslation(createVec3(), get(mesh.matrix));
-					mesh.clipSpacePosition = transformMat4(createVec3(), meshPosition, projScreen);
-				}
-			});
-			program.meshes = program.meshes.sort((a, b) => {
-				return b.clipSpacePosition[2] - a.clipSpacePosition[2];
-			});
-		}
-	});
-
-	const sortedPrograms = programs.sort((a, b) => {
-		if (
-			a.material == null ||
-			b.material == null ||
-			a.meshes[0].clipSpacePosition == null ||
-			b.meshes[0].clipSpacePosition == null
-		) {
-			return 0;
-		}
-		return b.meshes[0].clipSpacePosition[2] - a.meshes[0].clipSpacePosition[2];
-	});
-	// @ts-ignore, trust me bro
-	return sortedPrograms;
 }
 
 function sortOrder(a, b) {
@@ -274,7 +222,7 @@ export const programs = derived(
 				if (p.requireTime) {
 					program.updateProgram.push(setupTime);
 				}
-				program.setupMaterial.push(
+				program.updateProgram.push(
 					...Array.from(
 						get(lights).reduce((acc, light) => {
 							const lightValue = get(light);

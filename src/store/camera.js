@@ -1,4 +1,7 @@
+import { lookAt, perspective } from "gl-matrix/esm/mat4.js";
+import { createZeroMatrix } from "../geometries/common";
 import { writable, get } from "svelte/store";
+import { appContext } from "./app-context";
 
 /**
  * @typedef {Object} SvelteGLCameraCustomStore
@@ -6,6 +9,8 @@ import { writable, get } from "svelte/store";
  * @property {SvelteGLCameraStore['set']} set
  * @property {SvelteGLCameraStore['update']} update
  * @property {number} revision
+ * @property {mat4} view
+ * @property {mat4} projection
  */
 /**
  * @return {SvelteGLCameraCustomStore}
@@ -30,11 +35,18 @@ export function createCameraStore() {
 				...updater(camera),
 			};
 			revisionStore.update((revision) => revision + 1);
+			updateComputed(next);
 			return next;
 		});
 	}
 	function customSet(next) {
 		customUpdate((camera) => next);
+	}
+	let view, projection;
+	function updateComputed(next) {
+		const { canvas } = appContext;
+		view = lookAt(createZeroMatrix(), next.position, next.target, next.up);
+		projection = perspective(createZeroMatrix(), toRadian(next.fov), canvas.width / canvas.height, next.near, next.far);
 	}
 	return {
 		subscribe,
@@ -43,7 +55,24 @@ export function createCameraStore() {
 		get revision() {
 			return get(revisionStore);
 		},
+		get view() {
+			return view;
+		},
+		get projection() {
+			return projection;
+		},
 	};
+}
+
+const degree = Math.PI / 180;
+/**
+ * Convert Degree To Radian
+ *
+ * @param {Number} a Angle in Degrees
+ */
+
+function toRadian(a) {
+	return a * degree;
 }
 
 export const camera = createCameraStore();

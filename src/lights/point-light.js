@@ -1,9 +1,11 @@
 import pointLightShader from "./point-light.glsl";
 import { templateLiteralRenderer } from "../shaders/template.js";
 import { get } from "svelte/store";
-import { multiplyScalarVec3 } from "../geometries/common.js";
+import { createVec3, multiplyScalarVec3 } from "../geometries/common.js";
 import { UBO_BINDING_POINT_POINTLIGHT } from "../store/gl.js";
-import { appContext } from "../store/engine.js";
+import { appContext } from "../store/app-context";
+import { camera } from "../store/camera";
+import { transformMat4 } from "gl-matrix/esm/vec3.js";
 
 /**
  * @typedef {"point" | "spot"} SvelteGLLightType
@@ -79,23 +81,29 @@ export function createPointLightBuffer(pointLigths) {
 		const offset = lightIndex * 12; // Each point light takes up 8 positions in the array
 		writeLightBuffer(pointLightsData, light, offset);
 	}
+	let pointLightsUBO = getPointLightsUBO();
+	if (pointLightsUBO) {
+		gl.bindBuffer(gl.UNIFORM_BUFFER, pointLightsUBO);
+	} else {
+		// Create UBO for point lights
+		const pointLightsUBO = gl.createBuffer();
+		gl.bindBufferBase(gl.UNIFORM_BUFFER, UBO_BINDING_POINT_POINTLIGHT, pointLightsUBO);
+		setPointLightsUBO(pointLightsUBO);
+	}
 
-	// Create UBO for point lights
-	const tmpPointLightsUBO = gl.createBuffer();
-	setPointLightsUBO(tmpPointLightsUBO);
-
-	gl.bindBufferBase(gl.UNIFORM_BUFFER, UBO_BINDING_POINT_POINTLIGHT, tmpPointLightsUBO);
 	// Set the data in the UBO using bufferData
 	gl.bufferData(gl.UNIFORM_BUFFER, pointLightsData, gl.DYNAMIC_DRAW);
 }
 
 function writeLightBuffer(buffer, light, offset) {
 	light.preMultipliedColor = [...light.color];
+
+	const lightPosition = transformMat4(createVec3(), light.position, camera.view);
 	multiplyScalarVec3(light.preMultipliedColor, light.intensity);
 	// Set the position data
-	buffer[offset] = light.position[0];
-	buffer[offset + 1] = light.position[1];
-	buffer[offset + 2] = light.position[2];
+	buffer[offset] = lightPosition[0];
+	buffer[offset + 1] = lightPosition[1];
+	buffer[offset + 2] = lightPosition[2];
 	buffer[offset + 4] = light.preMultipliedColor[0];
 	buffer[offset + 5] = light.preMultipliedColor[1];
 	buffer[offset + 6] = light.preMultipliedColor[2];
@@ -110,15 +118,14 @@ function writeLightBuffer(buffer, light, offset) {
 export function setupLights(lights) {
 	return function setupLights() {
 		const { gl, program } = appContext;
-
 		//only create the UBO once per app, not per program, todo move the only once logic to webglapp store
 		if (!getPointLightsUBO()) {
-			createPointLightBuffer(lights);
+			//program specific
+			const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
+			// Bind the UBO to the binding point
+			gl.uniformBlockBinding(program, pointLightsBlockIndex, UBO_BINDING_POINT_POINTLIGHT);
 		}
-		//program specific
-		const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
-		// Bind the UBO to the binding point
-		gl.uniformBlockBinding(program, pointLightsBlockIndex, UBO_BINDING_POINT_POINTLIGHT);
+		createPointLightBuffer(lights);
 	};
 }
 /**

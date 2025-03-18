@@ -15,6 +15,7 @@ import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { easeOutCubic } from "easing-utils";
 import { createZeroMatrix } from "./geometries/common.js";
+import { renderState } from "./store/engine";
 
 let canvas;
 let sphere;

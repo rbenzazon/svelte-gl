@@ -1,4 +1,5 @@
-import { appContext, selectProgram } from "./engine";
+import { appContext } from "./app-context";
+import { selectProgram } from "./programs-cache";
 import { compileShaders, createProgram, linkProgram, useProgram, validateProgram } from "./gl";
 import defaultVertex from "../shaders/default-vertex.glsl";
 import basicFragment from "../shaders/basic-fragment.glsl";

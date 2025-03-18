@@ -124,6 +124,7 @@ onMount(async () => {
 	});
 	const ennemi1Material = createMaterialStore({
 		...ennemi1Mesh.material,
+		metalness: 0.8090909123420715,
 		specular: createSpecular({
 			roughness: 1,
 			ior: 1.4,

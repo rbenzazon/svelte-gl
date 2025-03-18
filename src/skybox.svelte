@@ -20,12 +20,12 @@ import { createDebugObject } from "./geometries/debug.js";
 import { createDebugNormalsProgram } from "./store/debug-program.js";
 import { loadRGBE } from "./loaders/rgbe-loader.js";
 import { hdrToCube, getToneMapping } from "./loaders/hdr-to-cube.js";
-import { appContext } from "./store/engine.js";
 import { createEnvironmentMap } from "./texture/environment-map.js";
 import { createEnvMapTexture } from "./texture/environment-map-texture.js";
 import { createTexture } from "./texture/texture.js";
 import { createPlane } from "./geometries/plane.js";
 import { createSpecular } from "./material/specular/specular.js";
+import { createACESFilmicToneMapping } from "./tone-mapping/aces-filmic-tone-mapping.js";
 
 let canvas;
 let rgbeImage;
@@ -35,6 +35,11 @@ onMount(async () => {
 		canvas,
 		backgroundColor: skyblue,
 		ambientLightColor: [0xffffff, 0.1],
+		toneMappings: [
+			createACESFilmicToneMapping({
+				exposure: 1,
+			}),
+		],
 	};
 
 	$camera = {
@@ -44,7 +49,7 @@ onMount(async () => {
 		fov: 75,
 	};
 	rgbeImage = await loadRGBE("christmas_photo_studio_01_4k.hdr");
-	const hdrToneMapping = getToneMapping(1.5);
+	const hdrToneMapping = getToneMapping(1);
 	const skyBox = await createSkyBox({
 		typedArray: rgbeImage.data,
 		convertToCube: hdrToCube,
@@ -61,17 +66,28 @@ onMount(async () => {
 
 	const sphereMesh = createPolyhedron(2, 3, createSmoothShadedNormals);
 
+	const matrix = identity(createZeroMatrix());
+
+	const debugProgram = createMaterialStore({
+		diffuse: [1, 0, 0],
+		metalness: 0,
+		program: createDebugNormalsProgram(),
+	});
+	const debugNormalMesh = createDebugObject({
+		...sphereMesh,
+		matrix,
+		material: debugProgram,
+	});
+
 	const light = createLightStore(
 		createPointLight({
 			position: [-2, 2, 2],
 			color: [1, 1, 1],
-			intensity: 20,
+			intensity: 5,
 			cutoffDistance: 0,
 			decayExponent: 2,
 		}),
 	);
-
-	const matrix = identity(createZeroMatrix());
 
 	const envMap = createEnvMapTexture({
 		envMap: environmentMap.getTexture,
@@ -83,17 +99,17 @@ onMount(async () => {
 
 	const material = createMaterialStore({
 		diffuse: [1, 1, 1],
-		metalness: 0.9,
+		metalness: 0,
 		specular: createSpecular({
-			roughness: 0.9,
-			ior: 1,
-			intensity: 2,
+			roughness: 0.05,
+			ior: 1.5,
+			intensity: 1,
 			color: [1, 1, 1],
 		}),
-		envMap,
+		/*envMap,*/
 	});
 
-	$materials = [...$materials, material];
+	$materials = [...$materials, material /*,debugProgram*/];
 
 	$scene = [
 		...$scene,
@@ -102,6 +118,7 @@ onMount(async () => {
 			matrix,
 			material,
 		}),
+		/*create3DObject(debugNormalMesh),*/
 	];
 	$lights = [...$lights, light];
 

@@ -51,7 +51,7 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
 	projectionMatrix[10] = (far + near) / (near - far);
 	projectionMatrix[11] = -1;
 	projectionMatrix[14] = (2 * far * near) / (near - far);
-	const projectionLocation = gl.getUniformLocation(program, "projection");
+	const projectionLocation = gl.getUniformLocation(program, "projectionMatrix");
 	gl.uniformMatrix4fv(projectionLocation, false, projectionMatrix);
 
 	// ... inside your function
@@ -209,7 +209,7 @@ function createEquirectToCubeProgram(gl) {
 
     layout(location = 0) in vec2 position;
     out vec3 localPos;
-    uniform mat4 projection;
+    uniform mat4 projectionMatrix;
     uniform mat4 view;
 
     void main() {
@@ -218,7 +218,7 @@ function createEquirectToCubeProgram(gl) {
         
         // Create the ray direction for this fragment
         // Map from [-1,1] to [-1,1] in view space for proper cubemap sampling
-        vec4 viewPos = inverse(projection * view) * vec4(position, 1.0, 1.0);
+        vec4 viewPos = inverse(projectionMatrix * view) * vec4(position, 1.0, 1.0);
         localPos = viewPos.xyz / viewPos.w;
     }`;
 

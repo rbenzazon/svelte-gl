@@ -1,18 +1,5 @@
 ${declaration?
 `
-
-float pow4(const in float x) {
-    float x2 = x * x;
-    return x2 * x2;
-}
-float pow2(const in float x) {
-    return x * x;
-}
-
-float saturate(const in float a) {
-    return clamp(a, 0.0f, 1.0f);
-}
-
 struct LightParams {
     vec3 irradiance;
     vec3 direction;
@@ -43,9 +30,9 @@ float getDistanceAttenuation(const in float lightDistance, const in float cutoff
 
 }
 
-LightParams getDirectDiffuse(const in PointLight pointLight,const in vec3 vertexPosition, const in vec3 normal,const in PhysicalMaterial material, inout ReflectedLight reflectedLight) {
+LightParams getDirectDiffuse(const in PointLight pointLight,const in vec3 geometryPosition, const in vec3 normal,const in PhysicalMaterial material, inout ReflectedLight reflectedLight) {
     LightParams lightParams = LightParams(vec3(0.0f), vec3(0.0f), vec3(0.0f), 0.0f);
-    vec3 lVector = pointLight.position - vertexPosition;
+    vec3 lVector = pointLight.position - geometryPosition;
     lightParams.distance = length(lVector);
     lightParams.direction = normalize(lVector);
     float dotNL = saturate(dot(normal, lightParams.direction));
@@ -68,9 +55,7 @@ ${irradiance?
     vec3 direction = vec3(0.0f);
     for(int i = 0; i < NUM_POINT_LIGHTS; i++) {
         PointLight pointLight = pointLights[i];
-        
-
-        LightParams lightParams = getDirectDiffuse(pointLight, vertex, normal, material, reflectedLight);
+        LightParams lightParams = getDirectDiffuse(pointLight, geometryPosition, normal, material, reflectedLight);
         totalIrradiance += reflectedLight.directDiffuse;
         ${specularIrradiance}
     }
