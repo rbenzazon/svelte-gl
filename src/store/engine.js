@@ -176,20 +176,16 @@ const renderPipeline = derived(
 								? [
 										selectMesh(program, mesh),
 										//setupMeshColor(program.material),// is it necessary ?multiple meshes only render with same material so same color
-										...(isSvelteGLSingleMesh(mesh)
-											? [setupObjectMatrix(program, mesh, mesh.matrix), setupNormalMatrix(program, mesh)]
-											: updateMap.has(camera)
-												? [
-														setupObjectMatrix(program, mesh, mesh.matrices, mesh.instances),
-														setupNormalMatrix(program, mesh, mesh.instances),
-													]
-												: []),
+										...((mesh.matrix != null || mesh.matrices != null) && (isSvelteGLSingleMesh(mesh) || updateMap.has(camera))
+											? [setupObjectMatrix(program, mesh), setupNormalMatrix(program, mesh)]
+											: []),
 									]
 								: [
 										setupAttributes(program, mesh),
 										...(program.material ? [setupMeshColor(program.material)] : []),
-										setupObjectMatrix(program, mesh, isSvelteGLSingleMesh(mesh) ? mesh.matrix : mesh.matrices, mesh.instances),
-										setupNormalMatrix(program, mesh, mesh.instances),
+										...(mesh.matrix != null || mesh.matrices != null
+											? [setupObjectMatrix(program, mesh), setupNormalMatrix(program, mesh)]
+											: []),
 										...(mesh.animations?.map((animation) => animation.setupAnimation) || []),
 									]),
 							...(mesh.matrix != null || mesh.matrices != null

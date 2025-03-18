@@ -1,6 +1,26 @@
 /**
  * matrix store
- * @typedef {import("svelte/store").Writable<mat4>} MatrixStore
+ * @typedef {Object} MatrixStore
+ * @property {(nextMatrix:mat4) => void} set - Sets the matrix
+ * @property {mat4} value - The current matrix
+ * @property {mat4} modelView - The calculated model-view matrix
+ * @property {mat3} normalMatrix - The calculated normal matrix
+ */
+/**
+ * matrix store
+ * @typedef {Object} MatricesStore
+ * @property {(nextMatrix:Float32Array) => void} set
+ * @property {Float32Array} value
+ * @property {mat4[]} windows
+ * @property {WebGLBuffer} buffer
+ * @property {(index: number, nextMatrix: mat4) => void} setInstance - Sets a specific instance matrix
+ * @property {(index: number) => mat4} getInstance - Gets a specific instance matrix
+ * @property {mat4} modelView - The calculated model-view matrix
+ * @property {(index: number) => mat4} getModelViewInstance - Gets model-view matrix for specific instance
+ * @property {mat4[]} modelViewWindows - All model-view matrices for instances
+ * @property {WebGLBuffer} modelViewBuffer - The buffer for model-view matrices
+ * @property {Float32Array} normalMatrices - The calculated normal matrices
+ * @property {WebGLBuffer} normalMatrixBuffer - The buffer for normal matrices
  */
 
 /**
@@ -160,7 +180,7 @@
  * @property {SvelteGLMeshAnimation[]} [animations]
  * @property {MatrixStore} [matrix]
  * @property {number} [instances]
- * @property {MatrixStore[]} [matrices]
+ * @property {MatricesStore} [matrices]
  */
 /**
  * @typedef {Object} SvelteGLSingleMesh
@@ -169,7 +189,7 @@
 /**
  * @typedef {Object} SvelteGLInstancedMesh
  * @property {number} instances
- * @property {MatrixStore[]} matrices
+ * @property {MatricesStore} matrices
  */
 /**
  * @typedef {SvelteGLBaseMesh & (SvelteGLSingleMesh | SvelteGLInstancedMesh)} SvelteGLMesh

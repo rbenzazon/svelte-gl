@@ -79,7 +79,13 @@ const createMeshMatrixStore = (mesh, rendererUpdate, initialValue) => {
 function setModelViewMatrix(mvMatrix, objectMatrix) {
 	multiply(mvMatrix, camera.view, objectMatrix);
 }
-
+/**
+ * Derives a 3x3 normal matrix from a 4x4 transform matrix
+ * Normal matrix is the transpose of the inverse of the upper-left 3x3 submatrix
+ * @param {mat3} normalMatrix - 3x3 output transformation matrix (column-major)
+ * @param {mat4} modelViewMatrix - 4x4 input transformation matrix to derivate (column-major)
+ * @returns {mat3} 3x3 normal matrix (column-major)
+ */
 function derivateNormalMatrix(normalMatrix, modelViewMatrix) {
 	fromMat4(normalMatrix, modelViewMatrix);
 	normalMatrix = invert(normalMatrix, normalMatrix);
@@ -130,18 +136,13 @@ const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances
 	function updateModelViewMatrix() {
 		windows.forEach((matrix, i) => {
 			updateInstance(matrix, i);
-			/*setModelViewMatrix(modelViewWindows[i], matrix);
-			derivateNormalMatrix(normalMatricesWindows[i], modelViewWindows[i]);*/
 		});
 	}
 
 	return {
 		set: (nextMatrix) => {
 			value = nextMatrix;
-			/*const program = findProgram(mesh);
-			updateObjectMatrix(program, nextMatrix);
-			updateNormalMatrix(program, nextMatrix);
-			rendererUpdate(get(renderer));*/
+			// TODO: update UBOS
 		},
 		get value() {
 			return value;
@@ -159,10 +160,8 @@ const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances
 			windows[index].set(nextMatrix);
 			updateInstance(windows[index], index);
 			const program = findProgram(mesh);
-
 			updateInstanceObjectMatrix(program, mesh, modelViewWindows[index], index, modelViewBuffer);
 			updateInstanceNormalMatrix(program, mesh, normalMatricesWindows[index], index, normalMatrixBuffer);
-
 			//rendererUpdate(get(renderer));
 		},
 		getInstance(index) {

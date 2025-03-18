@@ -8,6 +8,7 @@ import { SRGBToLinear } from "../color/color-space.js";
 import { appContext, setAppContext } from "./app-context";
 import { camera } from "./camera.js";
 import { createZeroMatrix } from "../geometries/common";
+import { isSvelteGLSingleMesh } from "./mesh-types";
 
 // Uniform Buffer Objects, must have unique binding points
 export const UBO_BINDING_POINT_POINTLIGHT = 0;
@@ -348,7 +349,7 @@ export function setupAmbientLight(programOverride, ambientLightColorOverride) {
 	gl.uniform3fv(ambientLightColorLocation, new Float32Array(currentAmbientLightColor));
 }
 
-function deriveViewMatrix(view) {
+function invertViewMatrix(view) {
 	return invert(createZeroMatrix(), view);
 }
 
@@ -356,9 +357,7 @@ export function setupCamera(camera) {
 	return function createCamera() {
 		const { gl, program } = appContext;
 		const { projection, view } = camera;
-		//console.log("camera", projection, view);
 
-		// projection matrix
 		const projectionLocation = gl.getUniformLocation(program, "projectionMatrix");
 		gl.uniformMatrix4fv(projectionLocation, false, projection);
 
@@ -366,7 +365,7 @@ export function setupCamera(camera) {
 		gl.uniform3fv(cameraPositionLocation, get(camera).position);
 
 		const viewMatrixLocation = gl.getUniformLocation(program, "viewMatrix");
-		gl.uniformMatrix4fv(viewMatrixLocation, false, deriveViewMatrix(view));
+		gl.uniformMatrix4fv(viewMatrixLocation, false, invertViewMatrix(view));
 	};
 }
 
@@ -381,64 +380,39 @@ function setObjectMatrixUniforms(gl, program, objectMatrix) {
 	}
 }
 
-function getModelViewMatrix(objectMatrix) {
-	return multiply([], camera.view, objectMatrix);
-}
-
-export function setupObjectMatrix(programStore, mesh, objectMatrix, numInstances) {
-	if (numInstances == null) {
+/**
+ * @param {import("./programs").SvelteGLProgram} programStore
+ * @param {SvelteGLMesh} mesh
+ */
+export function setupObjectMatrix(programStore, mesh) {
+	if (isSvelteGLSingleMesh(mesh)) {
 		return function setupObjectMatrix() {
 			const { gl, program } = appContext;
-			setObjectMatrixUniforms(gl, program, objectMatrix);
+			setObjectMatrixUniforms(gl, program, mesh.matrix);
 		};
 	} else {
 		return function setupObjectMatrix() {
-			if (objectMatrix == null) {
-				return;
-			}
 			const { gl, program, vaoMap } = appContext;
-			//TODO, clean that it's useless since we overwrite it anyway and storing this way is not good
-			/*let modelViewMatricesWindows;
-			if (appContext.modelViewMatricesWindows == null) {
-				modelViewMatricesWindows = [];
-			} else {
-				modelViewMatricesWindows = appContext.modelViewMatricesWindows;
-			}
-			const modelViewMatricesValues = objectMatrix.flatMap((m) => getModelViewMatrix(get(m)));
-			console.log("modelViewMatricesValues", modelViewMatricesValues);
-			
-			const modelViewMatricesData = new Float32Array(modelViewMatricesValues);
-			// create windows for each matrix
-			for (let i = 0; i < numInstances; ++i) {
-				const byteOffsetToMatrix = i * 16 * 4;
-				const numFloatsForView = 16;
-				modelViewMatricesWindows.push(new Float32Array(modelViewMatricesData.buffer, byteOffsetToMatrix, numFloatsForView));
-			}*/
 			const vao = vaoMap.get(programStore).get(mesh);
 
-			objectMatrix.modelViewBuffer = createMatInstanceBuffer(
+			mesh.matrices.modelViewBuffer = createMatInstanceBuffer(
 				gl,
 				program,
 				vao,
 				"modelViewMatrix",
-				objectMatrix.modelView,
+				mesh.matrices.modelView,
 				4,
-				objectMatrix.modelViewBuffer,
+				mesh.matrices.modelViewBuffer,
 			);
-			/*setAppContext({
-				matrixBuffer: modelViewBuffer,
-				modelViewMatricesWindows: modelViewMatricesWindows,
-			});*/
 
-			//const objectMatricesValues = objectMatrix.reduce((acc, m) => [...acc, ...get(m)], []);
-			objectMatrix.buffer = createMatInstanceBuffer(
+			mesh.matrices.buffer = createMatInstanceBuffer(
 				gl,
 				program,
 				vao,
 				"modelMatrix",
-				objectMatrix.value,
+				mesh.matrices.value,
 				4,
-				objectMatrix.buffer,
+				mesh.matrices.buffer,
 			);
 		};
 	}
@@ -449,7 +423,6 @@ function createMatInstanceBuffer(gl, program, vao, attributeName, matData, size,
 	const location = gl.getAttribLocation(program, attributeName);
 	let matBuffer;
 	if (buffer == null) {
-		console.log("createMatInstanceBuffer", attributeName, matData);
 		matBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, matBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, matData.byteLength, gl.DYNAMIC_DRAW);
@@ -477,17 +450,19 @@ export function updateObjectMatrix(programStore, objectMatrix) {
 	setObjectMatrixUniforms(gl, program, objectMatrix);
 }
 export function updateInstanceObjectMatrix(programStore, mesh, newMatrix, instanceIndex, modelViewBuffer) {
-	// TODO must use a map to store the matrix buffer and normal buffer for instances
-	const { gl, vaoMap, matrixBuffer } = appContext;
+	const { gl, vaoMap } = appContext;
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, modelViewBuffer);
 	const bytesPerMatrix = 4 * 16;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, newMatrix);
 	gl.bindVertexArray(null);
 }
-
-export function setupNormalMatrix(programStore, mesh, numInstances) {
-	if (numInstances == null) {
+/**
+ * @param {import("./programs").SvelteGLProgram} programStore
+ * @param {SvelteGLMesh} mesh
+ */
+export function setupNormalMatrix(programStore, mesh) {
+	if (isSvelteGLSingleMesh(mesh)) {
 		return function setupNormalMatrix() {
 			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
 			const { gl, program } = appContext;
@@ -495,23 +470,16 @@ export function setupNormalMatrix(programStore, mesh, numInstances) {
 			if (normalMatrixLocation == null) {
 				return;
 			}
-			/*const modelViewMatrix = getModelViewMatrix(mesh.matrix.value);
-			const normalMatrix = derivateNormalMatrix(modelViewMatrix);*/
 			gl.uniformMatrix3fv(normalMatrixLocation, false, mesh.matrix.normalMatrix);
 		};
 	} else {
 		return function setupNormalMatrix() {
-			const { gl, program, vaoMap /*, modelViewMatricesWindows*/ } = appContext;
+			const { gl, program, vaoMap } = appContext;
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
 			if (normalMatricesLocation == null) {
 				return;
 			}
 			const vao = vaoMap.get(programStore).get(mesh);
-			/*const normalMatricesValues = [];
-			for (let i = 0; i < numInstances; i++) {
-				normalMatricesValues.push(...derivateNormalMatrix(modelViewMatricesWindows[i]));
-			}
-			const normalMatrices = new Float32Array(normalMatricesValues);*/
 			mesh.matrices.normalMatrixBuffer = createMatInstanceBuffer(
 				gl,
 				program,
@@ -538,18 +506,6 @@ export function updateInstanceNormalMatrix(programStore, mesh, normalMatrix, ins
 	const bytesPerMatrix = 4 * 9;
 	gl.bufferSubData(gl.ARRAY_BUFFER, instanceIndex * bytesPerMatrix, normalMatrix);
 	gl.bindVertexArray(null);
-}
-/**
- * Derives a 3x3 normal matrix from a 4x4 transform matrix
- * Normal matrix is the transpose of the inverse of the upper-left 3x3 submatrix
- * @param {mat4} modelViewMatrix - 4x4 transformation matrix (column-major)
- * @returns {mat3} 3x3 normal matrix (column-major)
- */
-export function derivateNormalMatrix(modelViewMatrix) {
-	let normalMatrix = fromMat4(createM3(), modelViewMatrix);
-	normalMatrix = invertM3(normalMatrix, normalMatrix);
-	normalMatrix = transposeM3(normalMatrix, normalMatrix);
-	return normalMatrix;
 }
 
 function getBuffer(variable) {
