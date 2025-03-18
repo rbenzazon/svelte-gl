@@ -12,7 +12,7 @@ export default {
         matrix:'src/matrix.svelte',
         cube:'src/cube.svelte',
         instances:'src/instances.svelte',
-        /*
+        
         main:'src/main-refactor.svelte',
         'golf-ball':'src/golf-ball.svelte',
         venus:'src/venus.svelte',
@@ -26,7 +26,7 @@ export default {
         'scene-update':'src/scene-update.svelte',
         'skybox':'src/skybox.svelte',
         'skybox-cube':'src/skybox-cube.svelte',
-        */
+        
     },
     output: {
         dir: 'build/js',

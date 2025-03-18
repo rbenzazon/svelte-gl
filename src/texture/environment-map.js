@@ -3,7 +3,7 @@ import PMREMVertex from "./pmrem-vertex.glsl";
 import SphericalGaussianBlurFragment from "./spherical-gaussian-blur-fragment.glsl";
 import EquiRectangularToCubeUV from "./equi-rectangular-to-cube-uv-fragment.glsl";
 import { createProgram, compileShaders, linkProgram, validateProgram, useProgram, unbindTexture } from "../store/gl";
-import { selectProgram } from "../store/engine";
+import { selectProgram } from "../store/programs-cache";
 import { appContext } from "../store/app-context";
 import { renderPasses } from "../store/programs";
 import { drawModes } from "../store/webgl";

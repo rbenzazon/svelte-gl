@@ -143,6 +143,9 @@ const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances
 		get value() {
 			return value;
 		},
+		get windows() {
+			return windows;
+		},
 		setInstance(index, nextMatrix) {
 			windows[index].set(nextMatrix);
 			updateInstance(windows[index], index);

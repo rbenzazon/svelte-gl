@@ -16,6 +16,7 @@ import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { createFlatShadedNormals, createZeroMatrix } from "./geometries/common.js";
 import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
+import { renderState } from "./store/engine";
 
 let canvas;
 onMount(async () => {

@@ -21,6 +21,7 @@ import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import Menu from "./Menu.svelte";
 import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 import { createSpecular } from "./material/specular/specular.js";
+import { renderState } from "./store/engine";
 
 let canvas;
 onMount(async () => {

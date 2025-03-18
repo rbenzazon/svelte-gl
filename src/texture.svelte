@@ -15,6 +15,7 @@ import Menu from "./Menu.svelte";
 import { createTexture } from "./texture/texture.js";
 import { createSpecular } from "./material/specular/specular.js";
 import { createZeroMatrix } from "./geometries/common.js";
+import { renderState } from "./store/engine";
 
 let canvas;
 onMount(async () => {

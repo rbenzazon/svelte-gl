@@ -26,6 +26,7 @@ import { createTexture } from "./texture/texture.js";
 import { createPlane } from "./geometries/plane.js";
 import { createSpecular } from "./material/specular/specular.js";
 import { createACESFilmicToneMapping } from "./tone-mapping/aces-filmic-tone-mapping.js";
+import { renderState } from "./store/engine";
 
 let canvas;
 let rgbeImage;

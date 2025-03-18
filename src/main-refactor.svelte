@@ -29,6 +29,7 @@ import {
 import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import Menu from "./Menu.svelte";
 import { createZeroMatrix } from "./geometries/common.js";
+import { renderState } from "./store/engine";
 
 let canvas;
 onMount(async () => {

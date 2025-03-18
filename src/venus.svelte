@@ -19,6 +19,7 @@ import Menu from "./Menu.svelte";
 import { get } from "svelte/store";
 import { cloneMatrix, createZeroMatrix } from "./geometries/common.js";
 import { createSpecular } from "./material/specular/specular.js";
+import { renderState } from "./store/engine";
 
 let canvas;
 onMount(async () => {

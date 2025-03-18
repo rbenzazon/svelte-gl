@@ -15,6 +15,7 @@ import { createNoiseDistortionAnimation } from "./animation/noise-distortion/noi
 import Menu from "./Menu.svelte";
 import { createSpecular } from "./material/specular/specular.js";
 import { createZeroMatrix } from "./geometries/common.js";
+import { renderState } from "./store/engine";
 
 let canvas;
 onMount(async () => {

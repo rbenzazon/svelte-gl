@@ -12,7 +12,7 @@ import {
 	setDirectionUniform,
 	setKernelUniforms,
 } from "./blur";
-import { selectProgram } from "./engine";
+import { selectProgram } from "./programs-cache";
 import { appContext } from "./app-context";
 import { createVec3, createZeroMatrix } from "../geometries/common";
 /**

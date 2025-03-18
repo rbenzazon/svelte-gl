@@ -1,5 +1,5 @@
 import { appContext } from "./app-context";
-import { selectMesh, selectProgram } from "./engine";
+import { selectProgram } from "./programs-cache";
 import skyBoxVertex from "../shaders/skybox-vertex.glsl";
 import skyBoxFragment from "../shaders/skybox-fragment.glsl";
 import { compileShaders, createProgram, linkProgram, resetViewportToCanvas, useProgram, validateProgram } from "./gl";

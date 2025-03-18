@@ -22,6 +22,7 @@ import { cloneMatrix, createFlatShadedNormals, createZeroMatrix } from "./geomet
 import { createDebugNormalsProgram } from "./store/debug-program.js";
 import { createDebugObject } from "./geometries/debug.js";
 import { createPlane } from "./geometries/plane.js";
+import { renderState } from "./store/engine";
 
 let canvas;
 let light1;
@@ -30,6 +31,19 @@ let ennemi1;
 let cylinder;
 let scrollY = 0;
 onMount(async () => {
+	$renderer = {
+		...$renderer,
+		canvas,
+		backgroundColor: skyblue,
+		ambientLightColor: [0xffffff, 0.1],
+	};
+
+	$camera = {
+		...$camera,
+		position: [0, 3, 21],
+		target: [0, 3, 0],
+		fov: 36,
+	};
 	const rockLeftFile = await loadGLTFFile("models/rock-left.gltf", "models/rock-left.bin");
 
 	const rockLeftData = mapScene(rockLeftFile.scene).find(isGLTFMeshData);
@@ -135,7 +149,7 @@ onMount(async () => {
 		diffuseMap: ennemi1DiffuseMap,
 		roughnessMap: ennemi1RoughnessMap,
 	});
-
+	console.log("ennemi1Mesh", ennemi1Mesh);
 	ennemi1 = create3DObject({
 		...ennemi1Mesh,
 		material: ennemi1Material,
@@ -187,20 +201,6 @@ onMount(async () => {
 			decayExponent: 0.25,
 		}),
 	);
-
-	$renderer = {
-		...$renderer,
-		canvas,
-		backgroundColor: skyblue,
-		ambientLightColor: [0xffffff, 0.1],
-	};
-
-	$camera = {
-		...$camera,
-		position: [0, 3, 21],
-		target: [0, 3, 0],
-		fov: 36,
-	};
 
 	/*
 	const cylinderGeometry = createCylinder(1, 1, 32, 1);

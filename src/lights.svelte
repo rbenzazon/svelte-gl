@@ -18,6 +18,7 @@ import { get } from "svelte/store";
 import { createSpecular } from "./material/specular/specular.js";
 import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 import { createZeroMatrix } from "./geometries/common.js";
+import { renderState } from "./store/engine";
 
 let canvas;
 let light;

@@ -34,13 +34,13 @@ import DebugH4 from "./DebugH4.svelte";
       {#if matrix}
       <DebugBlock level={3}>
         <DebugH4 slot="title">Matrix</DebugH4>
-        <DebugMatrix matrix={get(matrix)} />
+        <DebugMatrix matrix={matrix.value} />
       </DebugBlock>
       {:else if matrices}
       <DebugBlock level={3} initialCollapsed={true}>
         <DebugH4 slot="title">Matrices</DebugH4>
-        {#each matrices as matrix}
-          <DebugMatrix matrix={get(matrix)} />
+        {#each matrices.windows as matrix}
+          <DebugMatrix matrix={matrix} />
         {/each}
       </DebugBlock>
       {/if}
