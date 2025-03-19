@@ -50,7 +50,7 @@ onMount(async () => {
 	const loadedMesh = createMeshFromGLTF(file, meshObject);
 
 	const groundMatrix = identity(createZeroMatrix());
-	translate(groundMatrix, groundMatrix, [0, -1.5, 0]);
+	translate(groundMatrix, groundMatrix, [0, -1.2, 0]);
 
 	$renderer = {
 		...$renderer,
@@ -59,7 +59,7 @@ onMount(async () => {
 		ambientLightColor: [0xffffff, 0.1],
 	};
 
-	const shadowPass = createContactShadowPass(groundMatrix, 1, 10, 10, 1024, 128, 0.5);
+	const shadowPass = createContactShadowPass(groundMatrix, 1, 10, 10, 1024, 64, 0.9);
 	const { getTexture: shadowTexture } = shadowPass;
 
 	$renderPasses = [shadowPass];
@@ -67,7 +67,7 @@ onMount(async () => {
 	$camera = {
 		...$camera,
 		position: [0, 5, -5],
-		target: [0, 2, 0],
+		target: [0, 1, 0],
 		fov: 75,
 	};
 

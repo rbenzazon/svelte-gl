@@ -29,6 +29,7 @@ import { get } from "svelte/store";
  * @typedef {Object} SvelteGLCubeMapSkyboxProps
  * @property {string} url
  * @property {LoadCubeMap} convertToCube
+ * @property {boolean} [hdrEncoding]
  */
 /**
  * @typedef {Object} SvelteGLHDRSkyboxProps
@@ -93,7 +94,8 @@ export async function createSkyBox(props) {
 	let returnProps, typedArray, toneMapping;
 	if (isCubeMapSkyboxProps(props)) {
 		skyboxProgram.setupMaterial = [await props.convertToCube(props.url, setBuffer)];
-		skyboxProgram.setupProgram = [createShaders(), ...skyboxProgram.setupProgram];
+		const hdrEncoding = props.hdrEncoding ?? false;
+		skyboxProgram.setupProgram = [createShaders(null, hdrEncoding), ...skyboxProgram.setupProgram];
 		returnProps = {
 			url: props.url,
 		};
@@ -103,7 +105,7 @@ export async function createSkyBox(props) {
 			setupHDRTexture(typedArray, setBuffer, getBuffer, props.convertToCube, props.width, props.height, props.cubeSize),
 		);
 		toneMapping = props.toneMapping;
-		skyboxProgram.setupProgram = [createShaders(toneMapping), ...skyboxProgram.setupProgram];
+		skyboxProgram.setupProgram = [createShaders(toneMapping, true), ...skyboxProgram.setupProgram];
 		skyboxProgram.setupMaterial = [bindSkyBoxTexture(getBuffer)];
 		returnProps = {};
 	}
@@ -161,7 +163,7 @@ function setupHDRTexture(typedArray, setBuffer, getBuffer, convertToCube, width,
  * @param {SvelteGLToneMapping} [toneMapping]
  * @returns {()=>void}
  */
-function createShaders(toneMapping) {
+function createShaders(toneMapping, hdrEncoding) {
 	return function createShaders() {
 		const { gl, program } = appContext;
 		let declarations = "";
@@ -173,10 +175,14 @@ function createShaders(toneMapping) {
 		const fragmentSource = templateLiteralRenderer(skyBoxFragment, {
 			declarations: "",
 			toneMappings: "",
+			hdrEncoding: false,
 		})({
 			declarations,
 			toneMappings,
+			hdrEncoding,
 		});
+		console.log("hdrEncoding", hdrEncoding);
+
 		compileShaders(gl, program, skyBoxVertex, fragmentSource);
 	};
 }

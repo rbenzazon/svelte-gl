@@ -37,7 +37,7 @@ onMount(async () => {
 	};
 
 	const skyBox = await createSkyBox({ url: "skybox-flamingo-tonemapped.png", convertToCube: setupSkyBoxTexture });
-
+	/*const hdrToneMapping = getToneMapping(1);*/
 	$renderPasses = [skyBox];
 
 	const cubeMesh = createCube();
@@ -49,6 +49,7 @@ onMount(async () => {
 			intensity: 20,
 			cutoffDistance: 0,
 			decayExponent: 2,
+			/*toneMapping: hdrToneMapping,*/
 		}),
 	);
 

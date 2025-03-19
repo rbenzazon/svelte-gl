@@ -366,6 +366,11 @@ export function setupCamera(camera) {
 
 		const viewMatrixLocation = gl.getUniformLocation(program, "viewMatrix");
 		gl.uniformMatrix4fv(viewMatrixLocation, false, invertViewMatrix(view));
+
+		const viewLocation = gl.getUniformLocation(program, "view");
+		if (viewLocation != null) {
+			gl.uniformMatrix4fv(viewMatrixLocation, false, view);
+		}
 	};
 }
 

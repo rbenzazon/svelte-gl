@@ -19,5 +19,7 @@ void main() {
   vec4 t = viewDirectionProjectionInverse * v_position;
   fragColor = texture(skybox, normalize(t.xyz / t.w));
   ${toneMappings}
+  ${hdrEncoding ? `
   fragColor = sRGBTransferOETF(fragColor);
+  ` : ''}
 }
