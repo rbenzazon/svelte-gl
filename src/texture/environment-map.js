@@ -188,7 +188,23 @@ export function createEnvironmentMap(image) {
 						),
 					],
 					meshes: [/** @type {SvelteGLMesh} */ (context.lodPlanes[lodIndex])],
-					...(programIndex === (context.lodPlanes.length - 1) * 2 - 1 ? { postDraw: restoreState } : {}),
+					...(programIndex === (context.lodPlanes.length - 1) * 2 - 1
+						? {
+								postDraw: restoreState(
+									getHDRTexture,
+									setHDRTexture,
+									getPingTexture,
+									setPingTexture,
+									getPingFBO,
+									setPingFBO,
+									getPongTexture,
+									setPongTexture,
+									getPongFBO,
+									setPongFBO,
+									finalFBOTexture,
+								),
+							}
+						: {}),
 				};
 			}),
 		],
@@ -221,6 +237,7 @@ function enableScissorTest() {
 function restoreScissorTest() {
 	const { gl } = appContext;
 	gl.disable(gl.SCISSOR_TEST);
+	gl.scissor(0, 0, gl.canvas.width, gl.canvas.height);
 }
 
 function restoreFlipY() {
@@ -228,12 +245,56 @@ function restoreFlipY() {
 	gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
 }
 
-function restoreState() {
-	restoreDepthTest();
-	restoreScissorTest();
-	restoreFlipY();
-	unbindTexture();
-	removePassFromStore();
+function restoreState(
+	getHDRTexture,
+	setHDRTexture,
+	getPingTexture,
+	setPingTexture,
+	getPingFBO,
+	setPingFBO,
+	getPongTexture,
+	setPongTexture,
+	getPongFBO,
+	setPongFBO,
+	finalFBOTexture,
+) {
+	return function restoreState() {
+		restoreDepthTest();
+		restoreScissorTest();
+		restoreFlipY();
+		unbindTexture();
+		const { gl } = appContext;
+		const hdrTexture = getHDRTexture();
+		if (hdrTexture) {
+			gl.deleteTexture(hdrTexture);
+			setHDRTexture(null);
+		}
+
+		const finalTexture = finalFBOTexture();
+		const pingTexture = getPingTexture();
+		if (pingTexture && pingTexture !== finalTexture) {
+			gl.deleteTexture(pingTexture);
+			setPingTexture(null);
+		}
+		const pongTexture = getPongTexture();
+		if (pongTexture && pongTexture !== finalTexture) {
+			gl.deleteTexture(pongTexture);
+			setPongTexture(null);
+		}
+
+		// 3. Free framebuffers
+		const pingFBO = getPingFBO();
+		if (pingFBO) {
+			gl.deleteFramebuffer(pingFBO);
+			setPingFBO(null);
+		}
+		const pongFBO = getPongFBO();
+		if (pongFBO) {
+			gl.deleteFramebuffer(pongFBO);
+			setPongFBO(null);
+		}
+		removePassFromStore();
+	};
 }
 
 function removePassFromStore() {

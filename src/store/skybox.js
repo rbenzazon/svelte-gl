@@ -2,7 +2,15 @@ import { appContext } from "./app-context";
 import { selectProgram } from "./programs-cache";
 import skyBoxVertex from "../shaders/skybox-vertex.glsl";
 import skyBoxFragment from "../shaders/skybox-fragment.glsl";
-import { compileShaders, createProgram, linkProgram, resetViewportToCanvas, useProgram, validateProgram } from "./gl";
+import {
+	bindDefaultFramebuffer,
+	compileShaders,
+	createProgram,
+	linkProgram,
+	resetViewportToCanvas,
+	useProgram,
+	validateProgram,
+} from "./gl";
 import { drawModes } from "./webgl";
 import { multiply, invert } from "gl-matrix/esm/mat4.js";
 import { createVec3, createZeroMatrix } from "../geometries/common";
@@ -89,6 +97,7 @@ export async function createSkyBox(props) {
 		selectProgram,
 		updateProgram: [setDepthFunc(setOriginalDepthFunc)],
 		meshes: [createSkyBoxMesh()],
+		setFrameBuffer: bindDefaultFramebuffer,
 		postDraw: restoreDepthFunc(getOriginalDepthFunc),
 	};
 	let returnProps, typedArray, toneMapping;

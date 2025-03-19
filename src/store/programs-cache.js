@@ -1,5 +1,7 @@
 import { appContext } from "./app-context.js";
 import { hasSameShallow as arrayHasSameShallow } from "../utils/array.js";
+import { scene } from "./scene.js";
+import { get } from "svelte/store";
 
 function isSameProgram(a, b) {
 	return "material" in a
@@ -13,30 +15,70 @@ function isSameProgram(a, b) {
  * @returns {void}
  */
 export function clearUnusedCache(next) {
-	const { programMap, vaoMap } = appContext;
+	const { programMap, vaoMap, gl } = appContext;
+	// delete programs that are cached but not in the next programs
 	programMap.forEach((glProgram, programStore) => {
 		if (!next.some((program) => isSameProgram(program, programStore))) {
+			// Delete VAOs for this program
+			const vaoMapForProgram = vaoMap.get(programStore);
+			if (vaoMapForProgram) {
+				for (const vao of vaoMapForProgram.values()) {
+					gl.deleteVertexArray(vao);
+				}
+				vaoMap.delete(programStore);
+			}
+			const sceneValue = get(scene);
+			programStore.meshes.forEach((mesh) => {
+				if (!sceneValue.includes(mesh)) {
+					const buffers = appContext.bufferMap.get(mesh);
+					if (buffers) {
+						buffers.forEach((buffer) => {
+							gl.deleteBuffer(buffer);
+						});
+						appContext.bufferMap.delete(mesh);
+					}
+				}
+			});
+			gl.deleteProgram(glProgram);
 			programMap.delete(programStore);
-			vaoMap.delete(programStore);
 		}
 	});
+	// delete meshes that are not in the next programs
 	next.forEach((p) => {
 		let cachedProgram, cachedGLProgram;
-		programMap.forEach((glProgram, programStore) => {
-			if (programStore.material === p.material) {
-				cachedProgram = programStore;
-				cachedGLProgram = glProgram;
-			}
-		});
-		if (cachedProgram != null) {
+		//const {key:cachedProgram,value:cachedGLProgram}
+		const entry = Array.from(programMap).find(([programStore]) => isSameProgram(programStore, p));
+		if (entry) {
+			const [cachedProgram, cachedGLProgram] = entry;
+			p.meshes.forEach((mesh) => {
+				const existingVao = findVaoWithMesh(mesh, vaoMap);
+				if (existingVao) {
+					const existingVAOMap = vaoMap.get(cachedProgram);
+					existingVAOMap.delete(mesh);
+					p.existingVAO = p.existingVAO || new Map();
+					p.existingVAO.set(mesh, existingVao);
+				}
+			});
 			const existingVAOMap = vaoMap.get(cachedProgram);
 			existingVAOMap.forEach((vao, mesh) => {
 				if (!p.meshes.includes(mesh)) {
+					gl.deleteVertexArray(vao);
 					existingVAOMap.delete(mesh);
 				}
 			});
 		}
 	});
+}
+
+function findVaoWithMesh(mesh, vaoMap) {
+	for (const [programStore, map] of vaoMap) {
+		for (const [mappedMesh, vao] of map) {
+			if (mappedMesh === mesh) {
+				return vao;
+			}
+		}
+	}
+	return null;
 }
 
 /**

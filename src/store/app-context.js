@@ -9,6 +9,7 @@ export function setAppContext(context) {
  * @typedef {Object} AppContext
  * @property {Map<import("./programs.js").SvelteGLProgram,WebGLProgram>} programMap
  * @property {Map<import("./programs.js").SvelteGLProgram,Map<SvelteGLMesh,WebGLVertexArrayObject>>} vaoMap
+ * @property {Map<SvelteGLMesh,WebGLBuffer[]>} bufferMap
  * @property {WebGL2RenderingContext} gl
  * @property {WebGLProgram} program
  * @property {WebGLVertexArrayObject} vao
@@ -24,6 +25,7 @@ export function setAppContext(context) {
 export let appContext = {
 	programMap: new Map(),
 	vaoMap: new Map(),
+	bufferMap: new Map(),
 	gl: null,
 	program: null,
 	vao: null,

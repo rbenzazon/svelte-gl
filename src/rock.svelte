@@ -2,6 +2,7 @@
 import { onMount } from "svelte";
 import { scene } from "./store/scene.js";
 import { create3DObject } from "./store/create-object.js";
+import { renderPasses } from "./store/programs.js";
 import { materials, createMaterialStore } from "./store/materials.js";
 import { createLightStore, lights } from "./store/lights.js";
 import { renderer } from "./store/renderer.js";
@@ -22,6 +23,12 @@ import { cloneMatrix, createFlatShadedNormals, createZeroMatrix } from "./geomet
 import { createDebugNormalsProgram } from "./store/debug-program.js";
 import { createDebugObject } from "./geometries/debug.js";
 import { createPlane } from "./geometries/plane.js";
+import { createACESFilmicToneMapping } from "./tone-mapping/aces-filmic-tone-mapping.js";
+import { loadRGBE } from "./loaders/rgbe-loader.js";
+import { hdrToCube, getToneMapping } from "./loaders/hdr-to-cube.js";
+import { createEnvironmentMap } from "./texture/environment-map.js";
+import { createEnvMapTexture } from "./texture/environment-map-texture.js";
+import { createSkyBox } from "./store/skybox.js";
 import { renderState } from "./store/engine";
 
 let canvas;
@@ -36,6 +43,11 @@ onMount(async () => {
 		canvas,
 		backgroundColor: skyblue,
 		ambientLightColor: [0xffffff, 0.1],
+		toneMappings: [
+			createACESFilmicToneMapping({
+				exposure: 1,
+			}),
+		],
 	};
 
 	$camera = {
@@ -44,6 +56,23 @@ onMount(async () => {
 		target: [0, 3, 0],
 		fov: 36,
 	};
+
+	const rgbeImage = await loadRGBE("rogland_clear_night_4k.hdr");
+	const hdrToneMapping = getToneMapping(1);
+	const skyBox = await createSkyBox({
+		typedArray: rgbeImage.data,
+		convertToCube: hdrToCube,
+		width: rgbeImage.width,
+		height: rgbeImage.height,
+		cubeSize: 2048,
+		toneMapping: hdrToneMapping,
+	});
+
+	const environmentMap = createEnvironmentMap(rgbeImage);
+	console.log("environmentMap", environmentMap);
+
+	$renderPasses = [skyBox, environmentMap];
+
 	const rockLeftFile = await loadGLTFFile("models/rock-left.gltf", "models/rock-left.bin");
 
 	const rockLeftData = mapScene(rockLeftFile.scene).find(isGLTFMeshData);
@@ -63,7 +92,7 @@ onMount(async () => {
 		normalMap: rockNormalMap,
 	});
 
-	const numInstances = 20 * 3;
+	let numInstances = 20 * 3;
 	/** @type {mat4} */
 	const rockLeftOriginalMatrix = identity(createZeroMatrix());
 	/*//set translate x to 0
@@ -136,6 +165,12 @@ onMount(async () => {
 		url: "models/ennemi1-roughness.png",
 		type: "roughness",
 	});
+	const envMap = createEnvMapTexture({
+		envMap: environmentMap.getTexture,
+		width: environmentMap.width,
+		height: environmentMap.height,
+		lodMax: environmentMap.lodMax,
+	});
 	const ennemi1Material = createMaterialStore({
 		...ennemi1Mesh.material,
 		metalness: 0.8090909123420715,
@@ -148,6 +183,7 @@ onMount(async () => {
 		diffuse: [1, 1, 1],
 		diffuseMap: ennemi1DiffuseMap,
 		roughnessMap: ennemi1RoughnessMap,
+		envMap,
 	});
 	console.log("ennemi1Mesh", ennemi1Mesh);
 	ennemi1 = create3DObject({
@@ -288,4 +324,4 @@ function animate() {
 </script>
 <canvas bind:this={canvas}></canvas>
 <Menu />
-<DebugPanel initialCollapsed={true} />
+<!--<DebugPanel initialCollapsed={true} />-->

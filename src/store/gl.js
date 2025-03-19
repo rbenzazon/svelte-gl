@@ -128,6 +128,7 @@ export function bindDefaultFramebuffer() {
 	const { gl, backgroundColor } = appContext;
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+	gl.scissor(0, 0, gl.canvas.width, gl.canvas.height);
 	appContext.frameBufferWidth = gl.canvas.width;
 	appContext.frameBufferHeight = gl.canvas.height;
 	gl.clearColor(...backgroundColor);
@@ -534,16 +535,28 @@ function getBuffer(variable) {
 
 export function setupAttributes(programStore, mesh) {
 	return function setupAttributes() {
-		const { gl, program, vaoMap } = appContext;
+		const { gl, program, vaoMap, bufferMap } = appContext;
 		const { positions, normals, elements, uvs, positionsSize } = mesh.attributes;
 		let vao;
 		if (vaoMap.has(programStore) && vaoMap.get(programStore).has(mesh)) {
 			vao = vaoMap.get(programStore).get(mesh);
+		} else if (programStore.existingVAO && programStore.existingVAO.get(mesh)) {
+			vao = programStore.existingVAO.get(mesh);
+			vaoMap.get(programStore).set(mesh, vao);
+			appContext.vao = vao;
+			return;
 		} else {
 			vao = gl.createVertexArray();
 			vaoMap.get(programStore).set(mesh, vao);
 		}
 		appContext.vao = vao;
+		let buffers;
+		if (!bufferMap.has(mesh)) {
+			buffers = [];
+			bufferMap.set(mesh, buffers);
+		} else {
+			buffers = bufferMap.get(mesh);
+		}
 		gl.bindVertexArray(vao);
 		const {
 			data: positionsData,
@@ -553,6 +566,7 @@ export function setupAttributes(programStore, mesh) {
 		} = getBuffer(positions);
 		//position
 		const positionBuffer = gl.createBuffer();
+		buffers.push(positionBuffer);
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 		gl.bufferData(gl.ARRAY_BUFFER, positionsData, gl.STATIC_DRAW);
 		const positionLocation = gl.getAttribLocation(program, "position");
@@ -570,6 +584,7 @@ export function setupAttributes(programStore, mesh) {
 			} = getBuffer(normals);
 			if (!normalsInterleaved) {
 				const normalBuffer = gl.createBuffer();
+				buffers.push(normalBuffer);
 				gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
 				gl.bufferData(gl.ARRAY_BUFFER, normalsData, gl.STATIC_DRAW);
 				gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer); //todo check if redundant
@@ -583,12 +598,14 @@ export function setupAttributes(programStore, mesh) {
 		if (elements) {
 			const elementsData = Array.isArray(elements) ? new Uint16Array(elements) : elements;
 			const elementBuffer = gl.createBuffer();
+			buffers.push(elementBuffer);
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
 			gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, elementsData, gl.STATIC_DRAW);
 		}
 		if (uvs) {
 			const uvsData = Array.isArray(uvs) ? new Float32Array(uvs) : uvs;
 			const uvBuffer = gl.createBuffer();
+			buffers.push(uvBuffer);
 			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
 			gl.bufferData(gl.ARRAY_BUFFER, uvsData, gl.STATIC_DRAW);
 			const uvLocation = gl.getAttribLocation(program, "uv");
@@ -607,6 +624,7 @@ export function setupAttributes(programStore, mesh) {
 				if (typeof value === "object" && "itemSize" in value && "array" in value) {
 					const data = Array.isArray(value.array) ? new Float32Array(value.array) : value.array;
 					const buffer = gl.createBuffer();
+					buffers.push(buffer);
 					gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 					gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
 					const location = gl.getAttribLocation(program, key);

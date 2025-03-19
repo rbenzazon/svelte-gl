@@ -100,9 +100,9 @@ onMount(async () => {
 
 	const material = createMaterialStore({
 		diffuse: [1, 1, 1],
-		metalness: 0,
+		metalness: 1,
 		specular: createSpecular({
-			roughness: 0.1,
+			roughness: 0.05,
 			ior: 1.5,
 			intensity: 1,
 			color: [1, 1, 1],
