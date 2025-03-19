@@ -365,7 +365,7 @@ export function setupCamera(camera) {
 		gl.uniform3fv(cameraPositionLocation, get(camera).position);
 
 		const viewMatrixLocation = gl.getUniformLocation(program, "viewMatrix");
-		gl.uniformMatrix4fv(viewMatrixLocation, false, invertViewMatrix(view));
+		gl.uniformMatrix4fv(viewMatrixLocation, false, view);
 
 		const viewLocation = gl.getUniformLocation(program, "view");
 		if (viewLocation != null) {

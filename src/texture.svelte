@@ -16,6 +16,7 @@ import { createTexture } from "./texture/texture.js";
 import { createSpecular } from "./material/specular/specular.js";
 import { createZeroMatrix } from "./geometries/common.js";
 import { renderState } from "./store/engine";
+import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 
 let canvas;
 onMount(async () => {
@@ -105,3 +106,4 @@ function animate() {
 </script>
 <canvas bind:this={canvas}></canvas>
 <Menu />
+<DebugPanel initialCollapsed={true}/>

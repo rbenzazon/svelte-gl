@@ -65,7 +65,7 @@ onMount(async () => {
 
 	$renderPasses = [skyBox, environmentMap];
 
-	const sphereMesh = createPolyhedron(2, 3, createSmoothShadedNormals);
+	const sphereMesh = createPolyhedron(2, 5, createSmoothShadedNormals);
 
 	const matrix = identity(createZeroMatrix());
 
@@ -102,12 +102,12 @@ onMount(async () => {
 		diffuse: [1, 1, 1],
 		metalness: 0,
 		specular: createSpecular({
-			roughness: 0.05,
+			roughness: 0.1,
 			ior: 1.5,
 			intensity: 1,
 			color: [1, 1, 1],
 		}),
-		/*envMap,*/
+		envMap,
 	});
 
 	$materials = [...$materials, material /*,debugProgram*/];
@@ -121,7 +121,7 @@ onMount(async () => {
 		}),
 		/*create3DObject(debugNormalMesh),*/
 	];
-	$lights = [...$lights, light];
+	//$lights = [...$lights, light];
 
 	$renderer = {
 		...$renderer,

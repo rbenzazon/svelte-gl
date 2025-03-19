@@ -12,7 +12,6 @@ export default {
         cube:'src/cube.svelte',
         instances:'src/instances.svelte',
         matrix:'src/matrix.svelte',
-        
         main:'src/main-refactor.svelte',
         'golf-ball':'src/golf-ball.svelte',
         venus:'src/venus.svelte',
@@ -20,13 +19,12 @@ export default {
         rock:'src/rock.svelte',
         'contact-shadow':'src/contact-shadow.svelte',
         transparency:'src/transparency.svelte',
-        texture:'src/texture.svelte',
         lights:'src/lights.svelte',
         'vertex-anim':'src/vertex-anim.svelte',
         'scene-update':'src/scene-update.svelte',
+        texture:'src/texture.svelte',
         'skybox':'src/skybox.svelte',
         'skybox-cube':'src/skybox-cube.svelte',
-        
     },
     output: {
         dir: 'build/js',
