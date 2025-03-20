@@ -9,6 +9,7 @@ const dev = process.env.DEV;
 
 export default {
     input: {
+        rock:'src/rock.svelte',
         cube:'src/cube.svelte',
         instances:'src/instances.svelte',
         matrix:'src/matrix.svelte',
@@ -16,7 +17,6 @@ export default {
         'golf-ball':'src/golf-ball.svelte',
         venus:'src/venus.svelte',
         gltf:'src/gltf.svelte',
-        rock:'src/rock.svelte',
         'contact-shadow':'src/contact-shadow.svelte',
         transparency:'src/transparency.svelte',
         lights:'src/lights.svelte',

@@ -286,6 +286,7 @@ export function compileShaders(gl, program, vertexShaderSource, fragmentShaderSo
 		console.error("ERROR compiling vertex shader!", gl.getShaderInfoLog(vertexShader));
 	}
 	gl.attachShader(program, vertexShader);
+	gl.deleteShader(vertexShader);
 	const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 	gl.shaderSource(fragmentShader, fragmentShaderSource);
 	gl.compileShader(fragmentShader);
@@ -293,6 +294,7 @@ export function compileShaders(gl, program, vertexShaderSource, fragmentShaderSo
 		console.error("ERROR compiling fragment shader!", gl.getShaderInfoLog(fragmentShader));
 	}
 	gl.attachShader(program, fragmentShader);
+	gl.deleteShader(fragmentShader);
 }
 
 export function createFBO(width, height, setFBO, setTexture) {
@@ -542,6 +544,9 @@ export function setupAttributes(programStore, mesh) {
 			vao = vaoMap.get(programStore).get(mesh);
 		} else if (programStore.existingVAO && programStore.existingVAO.get(mesh)) {
 			vao = programStore.existingVAO.get(mesh);
+			// todo test
+			//delete as it is "consumed"
+			programStore.existingVAO.delete(mesh);
 			vaoMap.get(programStore).set(mesh, vao);
 			appContext.vao = vao;
 			return;

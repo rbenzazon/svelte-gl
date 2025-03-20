@@ -37,6 +37,7 @@ let light2;
 let ennemi1;
 let cylinder;
 let scrollY = 0;
+const ennemiInstances = 7;
 onMount(async () => {
 	$renderer = {
 		...$renderer,
@@ -73,6 +74,13 @@ onMount(async () => {
 
 	$renderPasses = [skyBox, environmentMap];
 
+	const envMap = createEnvMapTexture({
+		envMap: environmentMap.getTexture,
+		width: environmentMap.width,
+		height: environmentMap.height,
+		lodMax: environmentMap.lodMax,
+	});
+
 	const rockLeftFile = await loadGLTFFile("models/rock-left.gltf", "models/rock-left.bin");
 
 	const rockLeftData = mapScene(rockLeftFile.scene).find(isGLTFMeshData);
@@ -88,8 +96,15 @@ onMount(async () => {
 	const rockMaterial = createMaterialStore({
 		metalness: rockLeftMesh.material.metalness,
 		diffuse: [0.67, 0.68, 0.81],
+		specular: createSpecular({
+			roughness: 1,
+			ior: 1.4,
+			intensity: 0.5,
+			color: [1, 1, 1],
+		}),
 		diffuseMap: rockDiffuseMap,
 		normalMap: rockNormalMap,
+		envMap,
 	});
 
 	let numInstances = 20 * 3;
@@ -165,12 +180,6 @@ onMount(async () => {
 		url: "models/ennemi1-roughness.png",
 		type: "roughness",
 	});
-	const envMap = createEnvMapTexture({
-		envMap: environmentMap.getTexture,
-		width: environmentMap.width,
-		height: environmentMap.height,
-		lodMax: environmentMap.lodMax,
-	});
 	const ennemi1Material = createMaterialStore({
 		...ennemi1Mesh.material,
 		metalness: 0.8090909123420715,
@@ -186,8 +195,17 @@ onMount(async () => {
 		envMap,
 	});
 	console.log("ennemi1Mesh", ennemi1Mesh);
+
+	const ennemiInstancesMatrices = new Array(ennemiInstances).fill(0).map((_, index) => {
+		/** @type {mat4} */
+		let mat = identity(createZeroMatrix());
+		return mat;
+	});
+	delete ennemi1Mesh.matrix;
 	ennemi1 = create3DObject({
 		...ennemi1Mesh,
+		matrices: ennemiInstancesMatrices,
+		instances: ennemiInstances,
 		material: ennemi1Material,
 	});
 
@@ -221,7 +239,7 @@ onMount(async () => {
 	light1 = createLightStore(
 		createPointLight({
 			color: [0.996078431372549, 0.9529411764705882, 0.6627450980392157],
-			intensity: 7.5,
+			intensity: 4,
 			position: [0, 9, 3],
 			cutoffDistance: 120,
 			decayExponent: 0.001,
@@ -232,7 +250,7 @@ onMount(async () => {
 		createPointLight({
 			position: [-3, -3, 1],
 			color: [0.6313725490196078, 0.6235294117647059, 0.996078431372549],
-			intensity: 5,
+			intensity: 3,
 			cutoffDistance: 15,
 			decayExponent: 0.25,
 		}),
@@ -307,16 +325,18 @@ function animate() {
 	// make the ennemi1 move in circle
 	//const ennemiMatrix = get(ennemi1.matrix);
 
-	const angle = performance.now() * 0.001;
-	const radius = 4;
-	const x = Math.cos(angle) * radius;
-	const y = Math.sin(angle) * radius;
-	const ennemiMatrix = identity(createZeroMatrix());
-	translate(ennemiMatrix, ennemiMatrix, [x, y + scrollY + 4, 0]);
-	//rotateX(ennemiMatrix, ennemiMatrix, Math.PI / 2);
-	rotateY(ennemiMatrix, ennemiMatrix, performance.now() * 0.003);
-	//rotateZ(ennemiMatrix, ennemiMatrix, performance.now() * 0.005);
-	ennemi1.matrix.set(ennemiMatrix);
+	for (let i = 0; i < ennemiInstances; i++) {
+		const angle = performance.now() * 0.001 + (i * Math.PI * 2) / ennemiInstances;
+		const radius = 4;
+		const x = Math.cos(angle) * radius;
+		const y = Math.sin(angle) * radius;
+		const ennemiMatrix = identity(createZeroMatrix());
+
+		translate(ennemiMatrix, ennemiMatrix, [x, y + scrollY + 4, 0]);
+		rotateY(ennemiMatrix, ennemiMatrix, performance.now() * 0.003 + (i * Math.PI * 2) / ennemiInstances);
+		scale(ennemiMatrix, ennemiMatrix, [0.6, 0.6, 0.6]);
+		ennemi1.matrices.setInstance(i, ennemiMatrix);
+	}
 	/*const cylinderMatrix = get(cylinder.matrix);
 	rotateX(cylinderMatrix, cylinderMatrix, 0.001);
 	cylinder.matrix.set(cylinderMatrix);*/
