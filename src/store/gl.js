@@ -17,6 +17,7 @@ export const UBO_BINDING_POINT_SPOTLIGHT = 1;
 export function initRenderer() {
 	/** @type {WebGL2RenderingContext} */
 	const gl = appContext.canvas.getContext("webgl2");
+	defaultDepthFuncState = gl.getParameter(gl.DEPTH_FUNC);
 	appContext.gl = gl;
 
 	gl.enable(gl.DEPTH_TEST);
@@ -352,10 +353,6 @@ export function setupAmbientLight(programOverride, ambientLightColorOverride) {
 	gl.uniform3fv(ambientLightColorLocation, new Float32Array(currentAmbientLightColor));
 }
 
-function invertViewMatrix(view) {
-	return invert(createZeroMatrix(), view);
-}
-
 export function setupCamera(camera) {
 	return function createCamera() {
 		const { gl, program } = appContext;
@@ -643,4 +640,15 @@ export function setupAttributes(programStore, mesh) {
 
 		gl.bindVertexArray(null);
 	};
+}
+let defaultDepthFuncState;
+export function setDepthFunc(func) {
+	return function setDepthFunc() {
+		const { gl } = appContext;
+		gl.depthFunc(gl[func]);
+	};
+}
+export function restoreDepthFunc() {
+	const { gl } = appContext;
+	gl.depthFunc(defaultDepthFuncState);
 }

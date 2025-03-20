@@ -147,8 +147,12 @@ const renderPipeline = derived(
 
 		const eligible = isEligibleForCache(updateMap);
 		const cacheSignature = getPipelineSignature(updateMap);
-		if (eligible && pipelineCache.has(cacheSignature)) {
-			return pipelineCache.get(cacheSignature);
+		if (eligible) {
+			if (pipelineCache.has(cacheSignature)) {
+				return pipelineCache.get(cacheSignature);
+			}
+		} else {
+			pipelineCache.clear();
 		}
 
 		const init = get(renderState).init;

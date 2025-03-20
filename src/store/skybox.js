@@ -8,6 +8,8 @@ import {
 	createProgram,
 	linkProgram,
 	resetViewportToCanvas,
+	restoreDepthFunc,
+	setDepthFunc,
 	useProgram,
 	validateProgram,
 } from "./gl";
@@ -79,13 +81,6 @@ export async function createSkyBox(props) {
 	function getBuffer() {
 		return buffer;
 	}
-	let originalDepthFunc;
-	function setOriginalDepthFunc(value) {
-		originalDepthFunc = value;
-	}
-	function getOriginalDepthFunc() {
-		return originalDepthFunc;
-	}
 
 	const skyboxProgram = {
 		createProgram,
@@ -95,10 +90,10 @@ export async function createSkyBox(props) {
 		setupCamera: setupSkyBoxCamera,
 		useProgram,
 		selectProgram,
-		updateProgram: [setDepthFunc(setOriginalDepthFunc)],
+		updateProgram: [setDepthFunc("LEQUAL")],
 		meshes: [createSkyBoxMesh()],
 		setFrameBuffer: bindDefaultFramebuffer,
-		postDraw: restoreDepthFunc(getOriginalDepthFunc),
+		postDraw: restoreDepthFunc,
 	};
 	let returnProps, typedArray, toneMapping;
 	if (isCubeMapSkyboxProps(props)) {
@@ -305,21 +300,6 @@ function bindSkyBoxTexture(getBuffer) {
 		gl.uniform1i(textureLocation, 0);
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_CUBE_MAP, getBuffer());
-	};
-}
-
-function setDepthFunc(setOriginalDepthFunc) {
-	return function setDepthFunc() {
-		const { gl } = appContext;
-		setOriginalDepthFunc(gl.getParameter(gl.DEPTH_FUNC));
-		gl.depthFunc(gl.LEQUAL);
-	};
-}
-
-function restoreDepthFunc(getOriginalDepthFunc) {
-	return function restoreDepthFunc() {
-		const { gl } = appContext;
-		gl.depthFunc(getOriginalDepthFunc());
 	};
 }
 
