@@ -44,21 +44,21 @@ revisionMap.set(materials, 0);
 revisionMap.set(lights, 0);
 
 function updated() {
-	const updateMap = new Set();
+	const updateMap = new Map();
 	if (revisionMap.get(renderer) !== renderer.revision) {
-		updateMap.add(renderer);
+		updateMap.set(renderer, "renderer");
 	}
 	if (revisionMap.get(scene) !== scene.revision) {
-		updateMap.add(scene);
+		updateMap.set(scene, "scene");
 	}
 	if (revisionMap.get(camera) !== camera.revision) {
-		updateMap.add(camera);
+		updateMap.set(camera, "camera");
 	}
 	if (revisionMap.get(materials) !== materials.revision) {
-		updateMap.add(materials);
+		updateMap.set(materials, "materials");
 	}
 	if (revisionMap.get(lights) !== lights.revision) {
-		updateMap.add(lights);
+		updateMap.set(lights, "lights");
 	}
 	revisionMap.set(renderer, renderer.revision);
 	revisionMap.set(scene, scene.revision);
@@ -66,6 +66,19 @@ function updated() {
 	revisionMap.set(materials, materials.revision);
 	revisionMap.set(lights, lights.revision);
 	return updateMap;
+}
+
+const pipelineCache = new Map();
+
+function isEligibleForCache(updateMap) {
+	return (
+		(updateMap.size === 1 && (updateMap.has(camera) || updateMap.has(lights))) ||
+		(updateMap.size === 2 && updateMap.has(camera) && updateMap.has(lights))
+	);
+}
+
+function getPipelineSignature(updateMap) {
+	return Array.from(updateMap.values()).join("-");
 }
 
 /**
@@ -132,6 +145,12 @@ const renderPipeline = derived(
 
 		setAppContext(rendererContext);
 
+		const eligible = isEligibleForCache(updateMap);
+		const cacheSignature = getPipelineSignature(updateMap);
+		if (eligible && pipelineCache.has(cacheSignature)) {
+			return pipelineCache.get(cacheSignature);
+		}
+
 		const init = get(renderState).init;
 		if (!init) {
 			pipeline.push(initRenderer);
@@ -142,6 +161,8 @@ const renderPipeline = derived(
 
 		pipeline.push(disableBlend);
 
+		let programCreation = false;
+
 		pipeline.push(
 			...sortedPrograms.reduce((acc, program) => {
 				appContext.existingProgram = false;
@@ -149,9 +170,11 @@ const renderPipeline = derived(
 					transparent = true;
 					acc.push(enableBlend);
 				}
+				const programIsCached = appContext.programMap.has(program);
+				programCreation = programCreation || !programIsCached;
 				return [
 					...acc,
-					...(appContext.programMap.has(program)
+					...(programIsCached
 						? [
 								program.selectProgram(program),
 								program.useProgram,
@@ -204,6 +227,9 @@ const renderPipeline = derived(
 				];
 			}, []),
 		);
+		if (eligible && !programCreation && !pipelineCache.has(cacheSignature)) {
+			pipelineCache.set(cacheSignature, pipeline);
+		}
 
 		return pipeline;
 	},

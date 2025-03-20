@@ -30,6 +30,7 @@ export default {
         dir: 'build/js',
         entryFileNames: '[name].svelte.js',
         format: 'esm',
+        chunkFileNames: '[name].js',
     },
     plugins: [
         del({ targets: 'build/js/*' }),

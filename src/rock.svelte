@@ -37,7 +37,7 @@ let light2;
 let ennemi1;
 let cylinder;
 let scrollY = 0;
-const ennemiInstances = 7;
+const ennemiInstances = 15;
 onMount(async () => {
 	$renderer = {
 		...$renderer,
