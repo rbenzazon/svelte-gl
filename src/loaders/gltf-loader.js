@@ -73,6 +73,12 @@ import { createSpecular } from "../material/specular/specular.js";
  * @property {Number} indices
  * @property {Number} material
  * @property {Number} mode
+ * @property {{
+ * 	KHR_draco_mesh_compression?:{
+ * 		bufferView:Number,
+ * 	    attributes:GLTFAttribute,
+ * 	}
+ * }} [extensions]
  */
 /**
  * @typedef {Object} GLTFAttribute
@@ -241,7 +247,7 @@ const WEBGL_TYPE_SIZES = {
 	VEC4: 4,
 };
 
-export async function loadGLTFFile(url, binUrlPreload = undefined) {
+export async function loadGLTFFile(url, binUrlPreload = undefined, dracoDecode = undefined) {
 	try {
 		let binPreloadMap = new Map();
 		if (binUrlPreload) {
@@ -254,7 +260,7 @@ export async function loadGLTFFile(url, binUrlPreload = undefined) {
 		}
 		/** @type {GLTFFile} **/
 		const content = await response.json();
-		return await parseGLTF(content, url, binPreloadMap);
+		return await parseGLTF(content, url, binPreloadMap, dracoDecode);
 	} catch (error) {
 		console.error("Error loading GLTF file:", error);
 	}
@@ -276,7 +282,7 @@ async function loadBinary(url) {
  * @param {String} url
  * @returns {Promise<GLTFLoadedFile>}
  */
-async function parseGLTF(content, url, binPreloadMap) {
+async function parseGLTF(content, url, binPreloadMap, dracoDecode) {
 	const baseUrl = url.substring(0, url.lastIndexOf("/") + 1);
 	const { buffers, bufferViews, accessors, scenes, nodes, meshes, cameras, materials, scene } = content;
 
@@ -338,7 +344,10 @@ async function parseGLTF(content, url, binPreloadMap) {
 
 	const accessorsData = accessors.map((accessor) => {
 		const { bufferView, byteOffset } = accessor;
-
+		// if the bufferView is null, the accessor is not used
+		if (bufferView == null) {
+			return;
+		}
 		const { dataView, byteStride } = dataViews[bufferView];
 		const { type, componentType, count, min, max } = accessor;
 
@@ -381,7 +390,7 @@ async function parseGLTF(content, url, binPreloadMap) {
 		};
 	});
 
-	const meshesData = meshes.map((mesh) => parseMesh(mesh));
+	const meshesData = await Promise.all(meshes.map((mesh) => parseMesh(mesh)));
 	/**
 	 * Type guard for GLTFMeshNode
 	 * @param {GLTFNode} node - The node to check
@@ -455,13 +464,58 @@ async function parseGLTF(content, url, binPreloadMap) {
 
 	/**
 	 * @param {GLTFMesh} meshData
-	 * @returns {GLTFParsedMesh}
+	 * @returns {Promise<GLTFParsedMesh>}
 	 */
-	function parseMesh(meshData) {
+	async function parseMesh(meshData) {
 		const { primitives } = meshData;
+
 		const primitive = primitives[0];
-		const { attributes, indices } = primitives[0];
+		/*
+extensions":{
+						"KHR_draco_mesh_compression":{
+		*/
+		const { attributes, indices } = primitive;
 		const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
+		if (primitive?.extensions?.KHR_draco_mesh_compression) {
+			const {
+				extensions: { KHR_draco_mesh_compression },
+			} = primitive;
+			const { bufferView, attributes } = KHR_draco_mesh_compression;
+			if (dracoDecode && bufferView != null) {
+				const attributeMap = getDracoAttributeMap(attributes, primitive);
+				const decodedGeometry = await dracoDecode.decode(
+					dracoDecode,
+					dataViews[bufferView].dataView,
+					attributes,
+					attributeMap,
+				);
+				const decodedAttributes = decodedGeometry.geometry.attributes;
+				const position = decodedAttributes[POSITION];
+				const positionAccessor = accessors[POSITION];
+				const normal = decodedAttributes[NORMAL];
+				const normalAccessor = accessors[POSITION];
+				const indicesData = decodedGeometry.geometry.index;
+				const indicesAccessor = accessors[indices];
+
+				return {
+					position: {
+						...positionAccessor,
+						data: position.array,
+					},
+					normal: {
+						...normalAccessor,
+						data: normal.array,
+					},
+					indices: {
+						...indicesAccessor,
+						data: indicesData.array,
+					},
+					material: primitive.material,
+					drawMode: drawModes[primitive.mode],
+				};
+			}
+		}
+
 		const positionAccessor = accessorsData[POSITION];
 		const normalAccessor = accessorsData[NORMAL];
 		const uvAccessor = accessorsData[TEXCOORD_0];
@@ -475,6 +529,18 @@ async function parseGLTF(content, url, binPreloadMap) {
 			material: primitive.material,
 			drawMode: drawModes[primitive.mode],
 		};
+	}
+
+	function getDracoAttributeMap(extensionAttributes, primitive) {
+		const attributeTypeMap = {};
+		for (const attributeName in primitive.attributes) {
+			if (extensionAttributes[attributeName] !== undefined) {
+				const accessorDef = accessors[primitive.attributes[attributeName]];
+				const componentType = WEBGL_COMPONENT_TYPES[accessorDef.componentType];
+				attributeTypeMap[attributeName] = componentType.name;
+			}
+		}
+		return attributeTypeMap;
 	}
 
 	/**

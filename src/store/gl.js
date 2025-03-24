@@ -66,16 +66,16 @@ export function render(mesh, instances, drawMode) {
 		const attributeLength = mesh.attributes.elements
 			? mesh.attributes.elements.length
 			: mesh.attributes.positions.length / positionSize;
-
+		const elementsType = mesh.attributes.elements instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
 		if (instances) {
 			if (mesh.attributes.elements) {
-				gl.drawElementsInstanced(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0, instances);
+				gl.drawElementsInstanced(gl[drawMode], attributeLength, elementsType, 0, instances);
 			} else {
 				gl.drawArraysInstanced(gl[drawMode], 0, attributeLength, instances);
 			}
 		} else {
 			if (mesh.attributes.elements) {
-				gl.drawElements(gl[drawMode], attributeLength, gl.UNSIGNED_SHORT, 0);
+				gl.drawElements(gl[drawMode], attributeLength, elementsType, 0);
 			} else {
 				gl.drawArrays(gl[drawMode], 0, attributeLength);
 			}
@@ -598,7 +598,7 @@ export function setupAttributes(programStore, mesh) {
 			}
 		}
 		if (elements) {
-			const elementsData = Array.isArray(elements) ? new Uint16Array(elements) : elements;
+			let elementsData = Array.isArray(elements) ? new Uint16Array(elements) : elements;
 			const elementBuffer = gl.createBuffer();
 			buffers.push(elementBuffer);
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);

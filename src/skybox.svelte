@@ -8,7 +8,7 @@ import { createMaterialStore, materials } from "./store/materials.js";
 import { createLightStore, lights } from "./store/lights.js";
 import { renderer } from "./store/renderer.js";
 import { camera } from "./store/camera.js";
-import { create, identity, scale, translate } from "gl-matrix/esm/mat4.js";
+import { copy, create, identity, rotateX, rotateY, scale, translate } from "gl-matrix/esm/mat4.js";
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createCube } from "./geometries/cube.js";
@@ -27,9 +27,13 @@ import { createPlane } from "./geometries/plane.js";
 import { createSpecular } from "./material/specular/specular.js";
 import { createACESFilmicToneMapping } from "./tone-mapping/aces-filmic-tone-mapping.js";
 import { renderState } from "./store/engine";
+import { createMeshFromGLTF, isGLTFMeshData, loadGLTFFile, mapScene } from "./loaders/gltf-loader.js";
+import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
+import { initDracoDecoder } from "./loaders/dracoDecoder.js";
 
 let canvas;
 let rgbeImage;
+let orbit;
 onMount(async () => {
 	$renderer = {
 		...$renderer,
@@ -45,8 +49,8 @@ onMount(async () => {
 
 	$camera = {
 		...$camera,
-		position: [-4.5, 0.8, -2.5],
-		target: [0, 0, 0],
+		position: [4, 0.8, 2],
+		target: [2, 0, -1],
 		fov: 75,
 	};
 	rgbeImage = await loadRGBE("christmas_photo_studio_01_4k.hdr");
@@ -109,15 +113,60 @@ onMount(async () => {
 		}),
 		envMap,
 	});
+	const dracoDecoder = await initDracoDecoder("draco/");
+	const letterAFile = await loadGLTFFile("models/gamefont-a.gltf", "models/gamefont-a.bin", dracoDecoder);
+	const letterAData = mapScene(letterAFile.scene).find(isGLTFMeshData);
 
-	$materials = [...$materials, material /*,debugProgram*/];
+	const letterAMesh = createMeshFromGLTF(letterAFile, letterAData);
+	const letterAMetalMaterial = createMaterialStore({
+		metalness: 0.95,
+		specular: createSpecular({
+			roughness: 0.08,
+			ior: 1.4,
+			intensity: 0.8,
+			color: [1, 1, 1],
+		}),
+		diffuse: [255 / 255, 215 / 255, 0 / 255],
+		envMap,
+	});
+	const letterAMaterial = createMaterialStore({
+		metalness: 0,
+		specular: createSpecular({
+			roughness: 0.08,
+			ior: 1.4,
+			intensity: 0.8,
+			color: [1, 1, 1],
+		}),
+		diffuse: [255 / 255, 215 / 255, 0 / 255],
+		envMap,
+	});
+
+	const letterAMatrix = identity(createZeroMatrix());
+	const letterAScale = 8;
+	scale(letterAMatrix, letterAMatrix, [letterAScale, letterAScale, letterAScale]);
+	rotateY(letterAMatrix, letterAMatrix, Math.PI / 4);
+	rotateX(letterAMatrix, letterAMatrix, Math.PI / 2);
+	const letterAMetalMatrix = copy(createZeroMatrix(), letterAMatrix);
+	translate(letterAMetalMatrix, letterAMetalMatrix, [0.5, 0, 0]);
+
+	$materials = [...$materials, /*material,*/ letterAMaterial, letterAMetalMaterial /*,debugProgram*/];
 
 	$scene = [
 		...$scene,
-		create3DObject({
+		/*create3DObject({
 			...sphereMesh,
 			matrix,
 			material,
+		}),*/
+		create3DObject({
+			...letterAMesh,
+			matrix: letterAMatrix,
+			material: letterAMaterial,
+		}),
+		create3DObject({
+			...letterAMesh,
+			matrix: letterAMetalMatrix,
+			material: letterAMetalMaterial,
 		}),
 		/*create3DObject(debugNormalMesh),*/
 	];
@@ -129,10 +178,13 @@ onMount(async () => {
 		enabled: true,
 	};
 
-	createOrbitControls(canvas, camera);
+	orbit = createOrbitControls(canvas, camera);
 });
 
-function animate() {}
+function animate() {
+	orbit.delta(0, 0, 0.002);
+}
 </script>
 <canvas bind:this={canvas}></canvas>
 <Menu />
+<!--<DebugPanel />-->

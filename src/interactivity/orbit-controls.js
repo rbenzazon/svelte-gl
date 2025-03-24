@@ -96,4 +96,25 @@ export function createOrbitControls(canvas, camera) {
 		canvas.removeEventListener(moveEventType, onMouseMove, { passive: false });
 		canvas.removeEventListener(upEventType, onMouseUp, { passive: false });
 	}
+	return {
+		delta(radiusDelta, polarDelta, azimuthDelta) {
+			const cameraValue = get(camera);
+			const { position, target, fov } = cameraValue;
+			const { radius, polar, azimuth } = getCoordinates(position, target);
+			const newPosition = getPositionFromPolar(radius + radiusDelta, polar + polarDelta, azimuth + azimuthDelta);
+			newPosition[0] = newPosition[0] + target[0];
+			newPosition[1] = newPosition[1] + target[1];
+			newPosition[2] = newPosition[2] + target[2];
+			camera.set({
+				position: newPosition,
+				target,
+				fov,
+			});
+		},
+		destroy() {
+			canvas.removeEventListener("touchstart", onMouseDown);
+			canvas.removeEventListener("mousedown", onMouseDown);
+			canvas.removeEventListener("wheel", onMouseWheel);
+		},
+	};
 }
