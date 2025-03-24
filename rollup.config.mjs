@@ -25,6 +25,7 @@ export default {
         texture:'src/texture.svelte',
         'skybox':'src/skybox.svelte',
         'skybox-cube':'src/skybox-cube.svelte',
+        'draco':'src/draco-gltf.svelte',
     },
     output: {
         dir: 'build/js',

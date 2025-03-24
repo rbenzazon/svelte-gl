@@ -111,8 +111,8 @@ onMount(async () => {
 		}),
 		envMap,
 	});
-	//const dracoDecoder = await initDracoDecoder("draco/");
-	const letterAFile = await loadGLTFFile("models/gamefont-a.gltf", "models/gamefont-a.bin" /*, dracoDecoder*/);
+	const dracoDecoder = await initDracoDecoder("draco/");
+	const letterAFile = await loadGLTFFile("models/gamefont-a-draco.gltf", "models/gamefont-a-draco.bin", dracoDecoder);
 	const letterAData = mapScene(letterAFile.scene).find(isGLTFMeshData);
 
 	const letterAMesh = createMeshFromGLTF(letterAFile, letterAData);

@@ -91,7 +91,7 @@ function getPipelineSignature(updateMap) {
  * 4 : loop currently running, renderer updates ignored momentarily	<---|
  */
 const running = writable(0);
-console.log("renderPipeline created");
+
 const renderPipeline = derived(
 	[renderer, programs, camera, running],
 	([$renderer, $programs, $camera, $running]) => {

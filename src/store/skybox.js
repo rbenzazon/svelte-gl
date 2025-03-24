@@ -185,8 +185,6 @@ function createShaders(toneMapping, hdrEncoding) {
 			toneMappings,
 			hdrEncoding,
 		});
-		console.log("hdrEncoding", hdrEncoding);
-
 		compileShaders(gl, program, skyBoxVertex, fragmentSource);
 	};
 }

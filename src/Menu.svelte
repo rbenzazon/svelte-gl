@@ -19,7 +19,8 @@ const links = [
 	{ name: "Vertex Animation", href: "./vertex-anim" },
 	{ name: "Scene Update", href: "./scene-update" },
 	{ name: "Skybox HDR", href: "./skybox" },
-	{ name: "Skybox  Cube Map", href: "./skybox-cube" },
+	{ name: "Skybox Cube Map", href: "./skybox-cube" },
+	{ name: "Draco Compressed GLTF", href: "./draco-gltf" },
 ];
 </script>
 <button on:click={toggleMenu}>examples</button>
