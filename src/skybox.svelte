@@ -29,7 +29,6 @@ import { createACESFilmicToneMapping } from "./tone-mapping/aces-filmic-tone-map
 import { renderState } from "./store/engine";
 import { createMeshFromGLTF, isGLTFMeshData, loadGLTFFile, mapScene } from "./loaders/gltf-loader.js";
 import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
-import { initDracoDecoder } from "./loaders/dracoDecoder.js";
 
 let canvas;
 let rgbeImage;
@@ -111,8 +110,7 @@ onMount(async () => {
 		}),
 		envMap,
 	});
-	//const dracoDecoder = await initDracoDecoder("draco/");
-	const letterAFile = await loadGLTFFile("models/gamefont-a.gltf", "models/gamefont-a.bin" /*, dracoDecoder*/);
+	const letterAFile = await loadGLTFFile("models/gamefont-a.gltf", "models/gamefont-a.bin");
 	const letterAData = mapScene(letterAFile.scene).find(isGLTFMeshData);
 
 	const letterAMesh = createMeshFromGLTF(letterAFile, letterAData);
