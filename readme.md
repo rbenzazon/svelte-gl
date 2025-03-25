@@ -11,11 +11,13 @@ https://rbenzazon.github.io/svelte-gl/build/
 
 ## Phylosophy
 
-One constraint it follows is to never over bundle code, using a simpler more low level API, which leverage dependency injection and composition over OOP to make the bundler job easier at tree shaking.
+Constraints:  
+-never over bundle code, leveraging dependency injection and composition over OOP to maximize tree shaking
+-using a simple almost low level API but no quite, to maximize performance and minimize bundle size
 
 To give credit where credit is due, most of the 3d science is plundered from three.js, but everything must be optimized and rewritten to fit the constraints (no OOP, no over bundling, no over abstraction)
 
-## Features
+## High Level Features
 - PBR material (partial completion)
     * diffuse color
     * opacity
@@ -27,12 +29,15 @@ To give credit where credit is due, most of the 3d science is plundered from thr
     * diffuse map
     * normal map
     * roughness map
-- GLTF loader without draco compression (partial completion)
+    * environment map, including HDR support
+- GLTF loader, basic implementation
+- Optional Draco decoder for GLTF geometry
 - Obj Loader
 - Meshe instances
 - Camera
 - Orbit control
 - Geometries : Cube, PolyHedron Sphere, Plane, Cone
+- Skybox, including HDR support
 - Contact shadow
 - Point light
 - Ambient light
@@ -40,13 +45,31 @@ To give credit where credit is due, most of the 3d science is plundered from thr
     * noise distortion
     * wobbly
     * pulsating scale
-- Tone mapping : linear, AGX
+- Tone mapping : linear, AGX, ACES Filmic
 - Interactive Debug Panel
+- Display mesh normals
+
+## Low Level Features
+
+- separation of pipeline computation and execution
+- pipeline caching
 
 ## Roadmap
-- implement environment map for background and lighting
 
-- use the following feature to improve the engine
+- shadow mapping (cast and receive)
+- complete PBR material : 
+    * emmisive
+    * clear coat
+    * anisotropy
+    * sheen
+    * transmission
+- engine optimizations
+    * material property update without recompiling shader
+- spot light
+- directional light
+- sky simulation shader
+
+- use the following feature to improve the engine :
 https://developer.mozilla.org/en-US/docs/Web/API/KHR_parallel_shader_compile
 
 ## How to use
@@ -77,3 +100,7 @@ https://developer.mozilla.org/en-US/docs/Web/API/KHR_parallel_shader_compile
 ### Lights | [Demo](https://rbenzazon.github.io/svelte-gl/build/lights) | [Code](./src/lights.svelte)
 ### Vertex Animation | [Demo](https://rbenzazon.github.io/svelte-gl/build/vertex-anim) | [Code](./src/vertex-anim.svelte)
 ### Debug Panel | [Demo](https://rbenzazon.github.io/svelte-gl/build/lights) | [Code](./src/lights.svelte) | [Component Code](./src/DebugPanel.svelte)
+### Scene Update | [Demo](https://rbenzazon.github.io/svelte-gl/build/scene-update) | [Code](./src/scene-update.svelte)
+### Skybox HDR | [Demo](https://rbenzazon.github.io/svelte-gl/build/skybox) | [Code](./src/skybox.svelte)
+### Skybox SDR | [Demo](https://rbenzazon.github.io/svelte-gl/build/skybox-cube) | [Code](./src/skybox-cube.svelte)
+### Draco Compressed GLTF | [Demo](https://rbenzazon.github.io/svelte-gl/build/draco-gltf) | [Code](./src/draco-gltf.svelte)
