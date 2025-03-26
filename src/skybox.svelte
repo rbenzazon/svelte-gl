@@ -33,6 +33,7 @@ import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 let canvas;
 let rgbeImage;
 let orbit;
+let jpgHDRImage;
 onMount(async () => {
 	$renderer = {
 		...$renderer,

@@ -65,7 +65,10 @@ function isCubeMapSkyboxProps(props) {
  * @returns {props is SvelteGLHDRSkyboxProps}
  */
 function isHDRSkyboxProps(props) {
-	return "typedArray" in props && props.typedArray instanceof Uint16Array;
+	return (
+		("typedArray" in props && props.typedArray instanceof Uint16Array) ||
+		("texture" in props && props.texture instanceof WebGLTexture)
+	);
 }
 
 /**
@@ -81,7 +84,7 @@ export async function createSkyBox(props) {
 	function getBuffer() {
 		return buffer;
 	}
-
+	console.log("createSkyBox", props);
 	const skyboxProgram = {
 		createProgram,
 		setupProgram: [linkProgram, validateProgram],
@@ -97,6 +100,7 @@ export async function createSkyBox(props) {
 	};
 	let returnProps, typedArray, toneMapping;
 	if (isCubeMapSkyboxProps(props)) {
+		console.log("CubeMap Skybox");
 		skyboxProgram.setupMaterial = [await props.convertToCube(props.url, setBuffer)];
 		const hdrEncoding = props.hdrEncoding ?? false;
 		skyboxProgram.setupProgram = [createShaders(null, hdrEncoding), ...skyboxProgram.setupProgram];
@@ -104,9 +108,10 @@ export async function createSkyBox(props) {
 			url: props.url,
 		};
 	} else if (isHDRSkyboxProps(props)) {
-		typedArray = props.typedArray;
+		console.log("HDR Skybox");
+		const image = props.typedArray ?? props.texture;
 		skyboxProgram.createProgram = createSkyBoxProgram(
-			setupHDRTexture(typedArray, setBuffer, getBuffer, props.convertToCube, props.width, props.height, props.cubeSize),
+			setupHDRTexture(image, setBuffer, getBuffer, props.convertToCube, props.width, props.height, props.cubeSize),
 		);
 		toneMapping = props.toneMapping;
 		skyboxProgram.setupProgram = [createShaders(toneMapping, true), ...skyboxProgram.setupProgram];
@@ -141,7 +146,7 @@ function createSkyBoxProgram(setupHDRTexture) {
 }
 
 /**
- * @param typedArray:Uint16Array,
+ * @param image:Uint16Array|WebGLTexture,
  * @param {(value:WebGLTexture)=>void} setBuffer
  * @param {ConvertHDRToCube} convertToCube
  * @param gl:WebGL2RenderingContext,
@@ -150,11 +155,11 @@ function createSkyBoxProgram(setupHDRTexture) {
  * @param cubeSize:number
  * @returns {()=>void}
  */
-function setupHDRTexture(typedArray, setBuffer, getBuffer, convertToCube, width, height, cubeSize) {
+function setupHDRTexture(image, setBuffer, getBuffer, convertToCube, width, height, cubeSize) {
 	return function setupHDRTexture() {
 		const { gl } = appContext;
 		if (getBuffer() == null) {
-			const cubemapTexture = convertToCube(typedArray, gl, width, height, cubeSize);
+			const cubemapTexture = convertToCube(image, gl, width, height, cubeSize);
 			setBuffer(cubemapTexture);
 			resetViewportToCanvas();
 			renderer.update((renderer) => renderer);
@@ -185,6 +190,7 @@ function createShaders(toneMapping, hdrEncoding) {
 			toneMappings,
 			hdrEncoding,
 		});
+
 		compileShaders(gl, program, skyBoxVertex, fragmentSource);
 	};
 }

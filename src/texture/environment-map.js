@@ -49,11 +49,12 @@ const axisDirections = [
  * @param {import("src/loaders/rgbe-loader").RGBE} image
  * @return {import("../store/programs").RenderPass}
  */
-export function createEnvironmentMap(image) {
+export function createEnvironmentMap(image, width, height) {
 	/** @type {EnvMapContext} */
 	let context = {};
 	context.image = image;
-	context.cubeImageSize = image.width / 4;
+	const imageWidth = image.width ?? width;
+	context.cubeImageSize = imageWidth / 4;
 	context.lodMax = Math.floor(Math.log2(context.cubeImageSize));
 	context.cubeSize = Math.pow(2, context.lodMax);
 	context.renderTargetWidth = 3 * Math.max(context.cubeSize, 16 * 7);
@@ -116,7 +117,10 @@ export function createEnvironmentMap(image) {
 				],
 				useProgram,
 				selectProgram,
-				setupMaterial: [setupEquiRectangularToCubeUVUniforms, bindEnvMapTexture(getHDRTexture)],
+				setupMaterial: [
+					setupEquiRectangularToCubeUVUniforms(image instanceof WebGLTexture),
+					bindEnvMapTexture(getHDRTexture),
+				],
 				setupCamera: () => () => {},
 				setFrameBuffer: setFrameBuffer(getPingFBO, context, getViewportSize, true),
 				meshes: [context.lodPlanes[0]],
@@ -202,6 +206,7 @@ export function createEnvironmentMap(image) {
 									getPongFBO,
 									setPongFBO,
 									finalFBOTexture,
+									context,
 								),
 							}
 						: {}),
@@ -257,6 +262,7 @@ function restoreState(
 	getPongFBO,
 	setPongFBO,
 	finalFBOTexture,
+	context,
 ) {
 	return function restoreState() {
 		restoreDepthTest();
@@ -265,7 +271,7 @@ function restoreState(
 		unbindTexture();
 		const { gl } = appContext;
 		const hdrTexture = getHDRTexture();
-		if (hdrTexture) {
+		if (!(context.image instanceof WebGLTexture) && hdrTexture) {
 			gl.deleteTexture(hdrTexture);
 			setHDRTexture(null);
 		}
@@ -383,6 +389,10 @@ function createEquiRectangularToCubeUVProgram(context, image, setHDRTexture) {
  */
 function setupHDRTexture(image, setHDRTexture) {
 	const { gl } = appContext;
+	if (image instanceof WebGLTexture) {
+		setHDRTexture(image);
+		return;
+	}
 	//flip y
 	gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 	gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -465,11 +475,13 @@ function createFBO(context, setFBO, setTexture) {
 	};
 }
 
-function setupEquiRectangularToCubeUVUniforms() {
+function setupEquiRectangularToCubeUVUniforms(flipEnvMap) {
 	return function setupEquiRectangularToCubeUVUniforms() {
 		const { gl, program } = appContext;
 		const location = gl.getUniformLocation(program, "flipEnvMap");
-		gl.uniform1f(location, -1);
+		console.log("flipEnvMap", flipEnvMap);
+
+		gl.uniform1f(location, flipEnvMap ? 1 : -1);
 	};
 }
 

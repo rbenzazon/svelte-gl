@@ -18,11 +18,13 @@ out highp vec4 fragColor;
 vec2 equirectUv( in vec3 dir ) {
     float u = atan( dir.z, dir.x ) * RECIPROCAL_PI2 + 0.5;
     float v = asin( clamp( dir.y, - 1.0, 1.0 ) ) * RECIPROCAL_PI + 0.5;
+    v = 0.5 * (1.0 + flipEnvMap) * (1.0 - 2.0 * v) + v;
     return vec2( u, v );
 }
 
 void main() {
     vec3 outputDirection = normalize( vOutputDirection );
     vec2 uv = equirectUv( outputDirection );
+
     fragColor = vec4( texture ( envMap, uv ).rgb, 1.0 );
 }

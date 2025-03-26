@@ -7,7 +7,7 @@ import { compileShaders } from "../store/gl";
 
 /**
  * Converts the HDR image to a cube map texture
- * @param {Uint16Array} halfFloatRGBA16 - Uint16Array containing RGBA16F data
+ * @param {Uint16Array|WebGLTexture} halfFloatRGBA16 - Uint16Array containing RGBA16F data
  * @param {WebGL2RenderingContext} gl - WebGL2 rendering context
  * @param {number} width - Width of the equirectangular HDR image
  * @param {number} height - Height of the equirectangular HDR image
@@ -20,7 +20,8 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
 		throw new Error("EXT_color_buffer_float extension not supported");
 	}
 	// 2. Create a temporary framebuffer and textures for conversion
-	const equirectTexture = createEquirectTexture(gl, halfFloatRGBA16, width, height);
+	const equirectTexture =
+		halfFloatRGBA16 instanceof WebGLTexture ? halfFloatRGBA16 : createEquirectTexture(gl, halfFloatRGBA16, width, height);
 	const cubemapTexture = createCubemapTexture(gl, cubeSize);
 
 	// 3. Set up conversion shader
@@ -134,7 +135,9 @@ export function hdrToCube(halfFloatRGBA16, gl, width, height, cubeSize = 1024) {
  * @returns {SvelteGLToneMapping}
  */
 export function getToneMapping(exposure) {
-	return createAGXToneMapping({ exposure });
+	//return createAGXToneMapping({ exposure });
+	return createACESFilmicToneMapping({ exposure });
+	//return createNeutralToneMapping({ exposure });
 }
 
 /**

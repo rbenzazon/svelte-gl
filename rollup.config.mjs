@@ -26,6 +26,7 @@ export default {
         'skybox':'src/skybox.svelte',
         'skybox-cube':'src/skybox-cube.svelte',
         'draco':'src/draco-gltf.svelte',
+        'skybox-jpghdr':'src/skybox-jpghdr.svelte',
     },
     output: {
         dir: 'build/js',
