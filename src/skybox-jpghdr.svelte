@@ -43,9 +43,8 @@ onMount(async () => {
 		fov: 50,
 	};
 
-	jpgHDRImage = await decodeJPEGHDRLoader("spruit-sunrise-4k-hdr.jpg");
+	jpgHDRImage = await decodeJPEGHDRLoader("spruit-sunrise-8k-hdr.jpg");
 	//jpgHDRImage = await loadRGBE("spruit-sunrise-1k.hdr");
-	console.log("jpgHDRImage", jpgHDRImage);
 	const hdrToneMapping = getToneMapping(1);
 	const skyBox = await createSkyBox({
 		/*typedArray: jpgHDRImage.data,*/
@@ -61,7 +60,7 @@ onMount(async () => {
 
 	$renderPasses = [skyBox, environmentMap];
 
-	const sphereMesh = createPolyhedron(2, 5, createSmoothShadedNormals);
+	const sphereMesh = createPolyhedron(2, 6, createSmoothShadedNormals);
 
 	const light = createLightStore(
 		createPointLight({

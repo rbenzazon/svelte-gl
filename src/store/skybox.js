@@ -84,7 +84,6 @@ export async function createSkyBox(props) {
 	function getBuffer() {
 		return buffer;
 	}
-	console.log("createSkyBox", props);
 	const skyboxProgram = {
 		createProgram,
 		setupProgram: [linkProgram, validateProgram],
@@ -100,7 +99,6 @@ export async function createSkyBox(props) {
 	};
 	let returnProps, typedArray, toneMapping;
 	if (isCubeMapSkyboxProps(props)) {
-		console.log("CubeMap Skybox");
 		skyboxProgram.setupMaterial = [await props.convertToCube(props.url, setBuffer)];
 		const hdrEncoding = props.hdrEncoding ?? false;
 		skyboxProgram.setupProgram = [createShaders(null, hdrEncoding), ...skyboxProgram.setupProgram];
@@ -108,7 +106,6 @@ export async function createSkyBox(props) {
 			url: props.url,
 		};
 	} else if (isHDRSkyboxProps(props)) {
-		console.log("HDR Skybox");
 		const image = props.typedArray ?? props.texture;
 		skyboxProgram.createProgram = createSkyBoxProgram(
 			setupHDRTexture(image, setBuffer, getBuffer, props.convertToCube, props.width, props.height, props.cubeSize),

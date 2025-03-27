@@ -48,13 +48,13 @@ export function createOrbitControls(canvas, camera) {
 		const { position, target, fov } = cameraValue;
 		const { radius, polar, azimuth } = getCoordinates(position, target);
 		const fovRatio = Math.pow(fov / 80, 1.5);
-		console.log(fovRatio);
+		const movementFactor = 250 / fovRatio;
 
 		// Constrain polar angle to avoid the singularity at the poles
 		// Keep at least 0.1 radians (about 5.7 degrees) away from poles
-		const newPolar = Math.max(0.01, Math.min(Math.PI - 0.01, polar - y / (250 / fovRatio)));
+		const newPolar = Math.max(0.01, Math.min(Math.PI - 0.01, polar - y / movementFactor));
 
-		const newPosition = getPositionFromPolar(radius, newPolar, azimuth - x / (250 / fovRatio));
+		const newPosition = getPositionFromPolar(radius, newPolar, azimuth - x / movementFactor);
 		newPosition[0] = newPosition[0] + target[0];
 		newPosition[1] = newPosition[1] + target[1];
 		newPosition[2] = newPosition[2] + target[2];

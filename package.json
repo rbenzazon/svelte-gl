@@ -9,7 +9,9 @@
     "watch": "rollup -c rollup.config.mjs -w --environment DEV",
     "build2": "vite build",
     "format": "pnpm biome format --write ./src",
-    "test": "watch-http-server build -p 8080 -a 127.0.0.1 -c-1"
+    "test": "watch-http-server build -p 8080 -a 127.0.0.1 -c-1",
+    "prepare": "npm run stop-watch && npm run format && npm run build",
+    "stop-watch": "node scripts/stop-watch.js"
   },
   "keywords": [],
   "author": "",

@@ -479,8 +479,6 @@ function setupEquiRectangularToCubeUVUniforms(flipEnvMap) {
 	return function setupEquiRectangularToCubeUVUniforms() {
 		const { gl, program } = appContext;
 		const location = gl.getUniformLocation(program, "flipEnvMap");
-		console.log("flipEnvMap", flipEnvMap);
-
 		gl.uniform1f(location, flipEnvMap ? 1 : -1);
 	};
 }

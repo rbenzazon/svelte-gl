@@ -49,9 +49,9 @@ onMount(async () => {
 
 	$camera = {
 		...$camera,
-		position: [4, 0.8, 2],
+		position: [0, 0, 10],
 		target: [2, 0, -1],
-		fov: 75,
+		fov: 50,
 	};
 	rgbeImage = await loadRGBE("christmas_photo_studio_01_4k.hdr");
 	const hdrToneMapping = getToneMapping(1);
@@ -179,7 +179,7 @@ onMount(async () => {
 });
 
 function animate() {
-	orbit.delta(0, 0, 0.002);
+	//orbit.delta(0, 0, 0.002);
 }
 </script>
 <canvas bind:this={canvas}></canvas>

@@ -166,7 +166,6 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			declarations: vertexDeclarations,
 			positionModifier: vertexPositionModifiers,
 		});
-		//console.log("vertexShaderSource", vertexShaderSource);
 
 		let specularDeclaration = "";
 		let specularMaterial = "";
@@ -273,7 +272,6 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			//todo, remove this after decoupling the point light shader
 			numPointLights,
 		});
-		//console.log(fragmentShaderSource);
 
 		compileShaders(gl, program, vertexShaderSource, fragmentShaderSource);
 	};

@@ -29,6 +29,10 @@ export async function decodeJPEGHDRLoader(imageUrl) {
 }
 
 async function renderHDRJPEG(images, gl, metadata) {
+	const ext = gl.getExtension("EXT_color_buffer_float");
+	if (!ext) {
+		throw new Error("EXT_color_buffer_float extension not supported");
+	}
 	const sdr = await getHTMLImageFromBlob(images[0]);
 	const gainMap = await getHTMLImageFromBlob(images[1]);
 	const { width, height } = sdr;
@@ -38,7 +42,6 @@ async function renderHDRJPEG(images, gl, metadata) {
 	const { fbo, texture } = createFBO(gl, width, height);
 
 	const { hdrCapacityMin, hdrCapacityMax } = metadata;
-	console.log(metadata);
 
 	const maxDisplayBoost = Math.pow(2, metadata.hdrCapacityMax);
 
@@ -52,7 +55,6 @@ async function renderHDRJPEG(images, gl, metadata) {
 		gainMapMax: metadata.gainMapMax != null ? new Array(3).fill(metadata.gainMapMax) : [1, 1, 1],
 		weightFactor: (Math.log2(maxDisplayBoost) - hdrCapacityMin) / (hdrCapacityMax - hdrCapacityMin),
 	};
-	console.log(uniforms);
 
 	const attributes = {
 		position: { data: quadPosition, size: 3 },
@@ -92,13 +94,17 @@ function createImageTextures(gl, sdr, gainMap) {
 	//setupTexture
 	gl.bindTexture(gl.TEXTURE_2D, sdrTexture);
 	//gl.RGBA
+	// Enable sRGB conversion
+	gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.SRGB8_ALPHA8, gl.RGBA, gl.UNSIGNED_BYTE, sdr);
 	setTextureParams(gl);
 	const gainMapTexture = gl.createTexture();
 	//setupTexture
 	gl.bindTexture(gl.TEXTURE_2D, gainMapTexture);
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.SRGB8_ALPHA8, gl.RGBA, gl.UNSIGNED_BYTE, gainMap);
+	gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, gainMap);
 	setTextureParams(gl);
+	gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
 	return { sdrTexture, gainMapTexture };
 }
 
@@ -271,6 +277,22 @@ uniform float weightFactor;
 in vec2 vUv;
 
 out vec4 fragColor;
+
+vec4 sRGBToLinear(vec4 srgbColor) {
+	vec3 linearRGB = vec3(0.0);
+	vec3 sRGB = srgbColor.rgb;
+	
+	// For each color channel, apply the proper conversion
+	for (int i = 0; i < 3; i++) {
+	  if (sRGB[i] <= 0.04045) {
+		linearRGB[i] = sRGB[i] / 12.92;
+	  } else {
+		linearRGB[i] = pow((sRGB[i] + 0.055) / 1.055, 2.4);
+	  }
+	}
+	return srgbColor;
+	return vec4(linearRGB, srgbColor.a);
+}
 
 void main() {
   vec3 rgb = texture( sdr, vUv ).rgb;
