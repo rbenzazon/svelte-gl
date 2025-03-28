@@ -5,35 +5,26 @@ import { create3DObject } from "./store/create-object.js";
 import { renderPasses } from "./store/programs.js";
 import { createSkyBox } from "./store/skybox.js";
 import { createMaterialStore, materials } from "./store/materials.js";
-import { createLightStore, lights } from "./store/lights.js";
 import { renderer } from "./store/renderer.js";
 import { camera } from "./store/camera.js";
 import { copy, create, identity, rotateX, rotateY, scale, translate } from "gl-matrix/esm/mat4.js";
-import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
-import { createCube } from "./geometries/cube.js";
-import { createPolyhedron, createSmoothShadedNormals } from "./geometries/polyhedron.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { createZeroMatrix } from "./geometries/common.js";
-import { createDebugObject } from "./geometries/debug.js";
-import { createDebugNormalsProgram } from "./store/debug-program.js";
 import { loadRGBE } from "./loaders/rgbe-loader.js";
 import { hdrToCube, getToneMapping } from "./loaders/hdr-to-cube.js";
 import { createEnvironmentMap } from "./texture/environment-map.js";
 import { createEnvMapTexture } from "./texture/environment-map-texture.js";
-import { createTexture } from "./texture/texture.js";
-import { createPlane } from "./geometries/plane.js";
 import { createSpecular } from "./material/specular/specular.js";
 import { createACESFilmicToneMapping } from "./tone-mapping/aces-filmic-tone-mapping.js";
 import { renderState } from "./store/engine";
 import { createMeshFromGLTF, isGLTFMeshData, loadGLTFFile, mapScene } from "./loaders/gltf-loader.js";
-import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 
 let canvas;
 let rgbeImage;
 let orbit;
-let jpgHDRImage;
+
 onMount(async () => {
 	$renderer = {
 		...$renderer,
@@ -53,7 +44,7 @@ onMount(async () => {
 		target: [2, 0, -1],
 		fov: 50,
 	};
-	rgbeImage = await loadRGBE("christmas_photo_studio_01_4k.hdr");
+	rgbeImage = await loadRGBE("skyboxes/christmas-photo-studio-01-4k.hdr");
 	const hdrToneMapping = getToneMapping(1);
 	const skyBox = await createSkyBox({
 		typedArray: rgbeImage.data,
@@ -68,31 +59,6 @@ onMount(async () => {
 
 	$renderPasses = [skyBox, environmentMap];
 
-	const sphereMesh = createPolyhedron(2, 5, createSmoothShadedNormals);
-
-	const matrix = identity(createZeroMatrix());
-
-	const debugProgram = createMaterialStore({
-		diffuse: [1, 0, 0],
-		metalness: 0,
-		program: createDebugNormalsProgram(),
-	});
-	const debugNormalMesh = createDebugObject({
-		...sphereMesh,
-		matrix,
-		material: debugProgram,
-	});
-
-	const light = createLightStore(
-		createPointLight({
-			position: [-2, 2, 2],
-			color: [1, 1, 1],
-			intensity: 5,
-			cutoffDistance: 0,
-			decayExponent: 2,
-		}),
-	);
-
 	const envMap = createEnvMapTexture({
 		envMap: environmentMap.getTexture,
 		width: environmentMap.width,
@@ -100,17 +66,6 @@ onMount(async () => {
 		lodMax: environmentMap.lodMax,
 	});
 
-	const material = createMaterialStore({
-		diffuse: [1, 1, 1],
-		metalness: 1,
-		specular: createSpecular({
-			roughness: 0.05,
-			ior: 1.5,
-			intensity: 1,
-			color: [1, 1, 1],
-		}),
-		envMap,
-	});
 	const letterAFile = await loadGLTFFile("models/gamefont-a.gltf", "models/gamefont-a.bin");
 	const letterAData = mapScene(letterAFile.scene).find(isGLTFMeshData);
 
@@ -146,15 +101,10 @@ onMount(async () => {
 	const letterAMetalMatrix = copy(createZeroMatrix(), letterAMatrix);
 	translate(letterAMetalMatrix, letterAMetalMatrix, [0.5, 0, 0]);
 
-	$materials = [...$materials, /*material,*/ letterAMaterial, letterAMetalMaterial /*,debugProgram*/];
+	$materials = [...$materials, letterAMaterial, letterAMetalMaterial];
 
 	$scene = [
 		...$scene,
-		/*create3DObject({
-			...sphereMesh,
-			matrix,
-			material,
-		}),*/
 		create3DObject({
 			...letterAMesh,
 			matrix: letterAMatrix,
@@ -165,9 +115,7 @@ onMount(async () => {
 			matrix: letterAMetalMatrix,
 			material: letterAMetalMaterial,
 		}),
-		/*create3DObject(debugNormalMesh),*/
 	];
-	//$lights = [...$lights, light];
 
 	$renderer = {
 		...$renderer,
@@ -184,4 +132,3 @@ function animate() {
 </script>
 <canvas bind:this={canvas}></canvas>
 <Menu />
-<!--<DebugPanel />-->

@@ -91,11 +91,6 @@ export function extractMPF(imageArrayBuffer, extractFII = true, extractNonFII = 
 							continue;
 						}
 						const imageBlob = bufferBlob.slice(image.start, image.end + 1, "image/jpeg");
-						// we don't need this
-						// const imageUrl = URL.createObjectURL(imageBlob)
-						// image.img = document.createElement('img')
-						// image.img.src = imageUrl
-						console.log("imageBlob", imageBlob);
 
 						imgs.push(imageBlob);
 					}

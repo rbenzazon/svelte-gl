@@ -67,22 +67,22 @@
 	"accessors":[
 		{
 			"componentType":5126,
-			"count":19676,
+			"count":19674,
 			"max":[
 				0.18328067660331726,
 				0.07945641130208969,
-				0.1699981540441513
+				0.17000025510787964
 			],
 			"min":[
 				-0.1690806895494461,
 				0.030555622652173042,
-				-0.23248817026615143
+				-0.2324886918067932
 			],
 			"type":"VEC3"
 		},
 		{
 			"componentType":5126,
-			"count":19676,
+			"count":19674,
 			"type":"VEC3"
 		},
 		{
@@ -94,13 +94,13 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":63502,
+			"byteLength":63694,
 			"byteOffset":0
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":63504,
+			"byteLength":63696,
 			"uri":"gamefont-a-draco.bin"
 		}
 	]
