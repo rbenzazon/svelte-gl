@@ -17,24 +17,17 @@
             height:100%;
         }
     </style>
-    <script type="importmap">
-        {
-            "imports": {
-                "main": "./js/contact-shadow.svelte.js"
-            }
-        }
-    </script>
+  <script type="module" crossorigin src="./js/contact-shadow.svelte.js"></script>
+  <link rel="modulepreload" crossorigin href="./js/engine.js">
+  <link rel="modulepreload" crossorigin href="./js/polyhedron.js">
+  <link rel="modulepreload" crossorigin href="./js/cube.js">
+  <link rel="modulepreload" crossorigin href="./js/plane.js">
+  <link rel="modulepreload" crossorigin href="./js/texture.js">
+  <link rel="modulepreload" crossorigin href="./js/contact-shadow.js">
+  <link rel="modulepreload" crossorigin href="./js/specular.js">
+  <link rel="modulepreload" crossorigin href="./js/gltf-loader.js">
 </head>
 <body>
-    <div id="app"></div>
-    <script type="module" >
-        import Main from 'main';
-        new Main({
-            target: document.body
-        });
-        
-
-    </script>
-
+    <div id="app"></div>
 </body>
 </html>
