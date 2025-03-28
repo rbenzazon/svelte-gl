@@ -95,6 +95,8 @@ void main() {
     //fragColor = vec4(totalIrradiance, 1.0f);
     ${toneMapping}
 	fragColor = linearToOutputTexel(fragColor);
+	//UV debug
+	//fragColor = vec4(vUv,0.0,1.0);
 	//fragColor = vec4(pointLights[0].position - geometryPosition,1.0);
 	//fragColor = vec4(material.roughness,material.roughness,material.roughness,1.0);
 }

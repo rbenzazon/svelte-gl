@@ -58,12 +58,16 @@ onMount(async () => {
 
 	const matrix = identity(createZeroMatrix());
 	const diffuseMap = await createTexture({
-		url: "granite.jpg",
+		url: "textures/granite.jpg",
 		type: "diffuse",
 	});
 	const normalMap = await createTexture({
-		url: "granite-normal.jpg",
+		url: "textures/granite-normal.jpg",
 		type: "normal",
+	});
+	const roughnessMap = await createTexture({
+		url: "textures/granite-roughness.jpg",
+		type: "roughness",
 	});
 	const material = createMaterialStore({
 		diffuse: [1, 1, 1],
@@ -76,6 +80,7 @@ onMount(async () => {
 		}),
 		diffuseMap,
 		normalMap,
+		roughnessMap,
 	});
 
 	$materials = [...$materials, material];

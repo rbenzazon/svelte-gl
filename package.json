@@ -5,6 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "dev:vite": "vite",
     "dev": "concurrently \"npm run watch\" \"npm run serve\"",
     "prepare": "npm run stop-watch && npm run format && npm run build",
     "watch": "rollup -c rollup.config.mjs -w --environment DEV",

@@ -60,15 +60,15 @@ onMount(async () => {
 	const groundMesh = createPlane(10, 10, 1, 1);
 	const groundMatrix = identity(createZeroMatrix());
 	const diffuseMap = await createTexture({
-		url: "peeling-painted-metal-diffuse.jpg",
+		url: "textures/peeling-painted-metal-diffuse.jpg",
 		type: "diffuse",
 	});
 	const normalMap = await createTexture({
-		url: "peeling-painted-metal-normal.jpg",
+		url: "textures/peeling-painted-metal-normal.jpg",
 		type: "normal",
 	});
 	const roughnessMap = await createTexture({
-		url: "peeling-painted-metal-roughness.jpg",
+		url: "textures/peeling-painted-metal-roughness.jpg",
 		type: "roughness",
 	});
 	const groundMaterial = createMaterialStore({

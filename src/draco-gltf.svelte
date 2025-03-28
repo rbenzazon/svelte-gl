@@ -44,7 +44,7 @@ onMount(async () => {
 		fov: 75,
 	};
 
-	const jpgHDRImage = await decodeJPEGHDRLoader("spruit-sunrise-8k-hdr.jpg");
+	const jpgHDRImage = await decodeJPEGHDRLoader("skyboxes/spruit-sunrise-8k-hdr.jpg");
 	const hdrToneMapping = getToneMapping(1);
 	const skyBox = await createSkyBox({
 		texture: jpgHDRImage.texture,

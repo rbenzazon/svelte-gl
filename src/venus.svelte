@@ -85,7 +85,7 @@ onMount(async () => {
 		transparent: true,
 	});
 
-	const venus = await loadOBJFile("venus.obj");
+	const venus = await loadOBJFile("models/venus.obj");
 	const venusMatrix = identity(createZeroMatrix());
 	rotateY(venusMatrix, venusMatrix, Math.PI);
 	scale(venusMatrix, venusMatrix, [0.003, 0.003, 0.003]);

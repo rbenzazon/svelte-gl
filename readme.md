@@ -54,6 +54,10 @@ To give credit where credit is due, most of the 3d science is plundered from thr
 - separation of pipeline computation and execution
 - pipeline caching
 
+## Fixes TODO
+
+- fix polyhedrong UVs
+
 ## Roadmap
 
 - shadow mapping (cast and receive)

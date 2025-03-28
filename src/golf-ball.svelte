@@ -21,7 +21,7 @@ let canvas;
 
 onMount(async () => {
 	const normalMap = await createTexture({
-		url: "golfball-normal.jpg",
+		url: "textures/golfball-normal.jpg",
 		normalScale: [1, 1],
 		type: "normal",
 	});

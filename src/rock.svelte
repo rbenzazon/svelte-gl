@@ -11,17 +11,13 @@ import { identity, rotate, rotateX, rotateY, rotateZ, scale, translate } from "g
 import { createPointLight } from "./lights/point-light.js";
 import { skyblue } from "./color/color-keywords.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
-import { createMeshFromGLTF, isGLTFMeshData, loadGLTFFile, mapScene, traverseScene } from "./loaders/gltf-loader.js";
+import { createMeshFromGLTF, isGLTFMeshData, loadGLTFFile, mapScene } from "./loaders/gltf-loader.js";
 import Menu from "./Menu.svelte";
 import DebugPanel from "./components/DebugPanel/DebugPanel.svelte";
 import { createTexture } from "./texture/texture.js";
 import { get } from "svelte/store";
 import { createSpecular } from "./material/specular/specular.js";
-import { createCylinder } from "./geometries/cylinder.js";
-import { createPolyhedron } from "./geometries/polyhedron.js";
 import { cloneMatrix, createFlatShadedNormals, createZeroMatrix } from "./geometries/common.js";
-import { createDebugNormalsProgram } from "./store/debug-program.js";
-import { createDebugObject } from "./geometries/debug.js";
 import { createPlane } from "./geometries/plane.js";
 import { createACESFilmicToneMapping } from "./tone-mapping/aces-filmic-tone-mapping.js";
 import { loadRGBE } from "./loaders/rgbe-loader.js";
@@ -58,7 +54,7 @@ onMount(async () => {
 		fov: 36,
 	};
 
-	const rgbeImage = await loadRGBE("rogland_clear_night_4k.hdr");
+	const rgbeImage = await loadRGBE("skyboxes/rogland-clear-night-4k.hdr");
 	const hdrToneMapping = getToneMapping(1);
 	const skyBox = await createSkyBox({
 		typedArray: rgbeImage.data,
@@ -70,7 +66,6 @@ onMount(async () => {
 	});
 
 	const environmentMap = createEnvironmentMap(rgbeImage);
-	console.log("environmentMap", environmentMap);
 
 	$renderPasses = [skyBox, environmentMap];
 
@@ -86,11 +81,11 @@ onMount(async () => {
 	const rockLeftData = mapScene(rockLeftFile.scene).find(isGLTFMeshData);
 	const rockLeftMesh = createMeshFromGLTF(rockLeftFile, rockLeftData);
 	const rockDiffuseMap = await createTexture({
-		url: "rock-diffuse.jpg",
+		url: "textures/rock-diffuse.jpg",
 		type: "diffuse",
 	});
 	const rockNormalMap = await createTexture({
-		url: "rock-normal.png",
+		url: "textures/rock-normal.png",
 		type: "normal",
 	});
 	const rockMaterial = createMaterialStore({
@@ -194,7 +189,6 @@ onMount(async () => {
 		roughnessMap: ennemi1RoughnessMap,
 		envMap,
 	});
-	console.log("ennemi1Mesh", ennemi1Mesh);
 
 	const ennemiInstancesMatrices = new Array(ennemiInstances).fill(0).map((_, index) => {
 		/** @type {mat4} */
@@ -211,7 +205,7 @@ onMount(async () => {
 
 	const backgroundGeometry = createPlane(100, 100, 1, 1);
 	const backgroundTexture = await createTexture({
-		url: "background.jpg",
+		url: "textures/background.jpg",
 		type: "diffuse",
 	});
 	const backgroundMaterial = createMaterialStore({
@@ -256,37 +250,6 @@ onMount(async () => {
 		}),
 	);
 
-	/*
-	const cylinderGeometry = createCylinder(1, 1, 32, 1);
-	const cylinderMaterial = createMaterialStore({
-		diffuse: [0.916, 0.916, 0.916],
-		metalness: 0.8090909123420715,
-		specular: createSpecular({
-			roughness: 0.1,
-			ior: 1.4,
-			intensity: 0.8,
-			color: [1, 1, 1],
-		}),
-	});
-	const cylinderMatrix = identity(createZeroMatrix());
-	translate(cylinderMatrix, cylinderMatrix, [0, 1, 0]);
-
-	const debugProgram = createMaterialStore({
-		diffuse: [1, 0, 0],
-		metalness: 0,
-		program: createDebugNormalsProgram(),
-	});
-	const debugNormalMesh = createDebugObject({
-		...ennemi1Mesh,
-		material: debugProgram,
-	});
-
-	cylinder = create3DObject({
-		...cylinderGeometry,
-		material: cylinderMaterial,
-		matrix: cylinderMatrix,
-	});*/
-
 	$materials = [...$materials, rockMaterial, ennemi1Material, backgroundMaterial];
 
 	$scene = [...$scene, leftRocks, rightRocks, ennemi1, background];
@@ -317,14 +280,6 @@ function animate() {
 	light1.set({ ...currentLight1 });
 	light2.set({ ...currentLight2 });
 
-	/*
-	const matrix = get(ennemi1.matrix);
-	translate(matrix, matrix, [0, 0.01, 0]);
-	ennemi1.matrix.set( matrix);
-	*/
-	// make the ennemi1 move in circle
-	//const ennemiMatrix = get(ennemi1.matrix);
-
 	for (let i = 0; i < ennemiInstances; i++) {
 		const angle = performance.now() * 0.001 + (i * Math.PI * 2) / ennemiInstances;
 		const radius = 4;
@@ -337,9 +292,6 @@ function animate() {
 		scale(ennemiMatrix, ennemiMatrix, [0.6, 0.6, 0.6]);
 		ennemi1.matrices.setInstance(i, ennemiMatrix);
 	}
-	/*const cylinderMatrix = get(cylinder.matrix);
-	rotateX(cylinderMatrix, cylinderMatrix, 0.001);
-	cylinder.matrix.set(cylinderMatrix);*/
 }
 </script>
 <canvas bind:this={canvas}></canvas>

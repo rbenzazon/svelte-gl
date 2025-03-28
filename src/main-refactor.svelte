@@ -106,10 +106,6 @@ onMount(async () => {
 		textureBuffer: shadowTexture,
 		type: "diffuse",
 	});
-	const diffuseMap = await createTexture({
-		url: "transparent-texture.png",
-		type: "diffuse",
-	});
 	const groundMaterial = createMaterialStore({
 		diffuse: [1, 1, 1],
 		metalness: 0,

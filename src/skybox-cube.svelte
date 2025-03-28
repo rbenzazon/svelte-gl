@@ -36,7 +36,10 @@ onMount(async () => {
 		fov: 75,
 	};
 
-	const skyBox = await createSkyBox({ url: "skybox-flamingo-tonemapped.png", convertToCube: setupSkyBoxTexture });
+	const skyBox = await createSkyBox({
+		url: "skyboxes/skybox-flamingo-tonemapped.png",
+		convertToCube: setupSkyBoxTexture,
+	});
 	/*const hdrToneMapping = getToneMapping(1);*/
 	$renderPasses = [skyBox];
 
