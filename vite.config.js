@@ -26,6 +26,7 @@ const htmlEntryPoints = {
   'skybox-cube': resolve(__dirname, 'src/skybox-cube.html'),
   'draco': resolve(__dirname, 'src/draco-gltf.html'),
   'skybox-jpghdr': resolve(__dirname, 'src/skybox-jpghdr.html'),
+  'text': resolve(__dirname, 'src/text.html'),
 };
 
 // Common plugins for both modes

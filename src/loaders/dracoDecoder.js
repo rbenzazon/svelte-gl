@@ -14,11 +14,6 @@ export async function initDracoDecoder(path) {
 	});
 	loader.promise = pendingPromise;
 	loader.pending = true;
-	/*
-
-			librariesPending.push( this._loadLibrary( 'draco_wasm_wrapper.js', 'text' ) );
-			librariesPending.push( this._loadLibrary( 'draco_decoder.wasm', 'arraybuffer' ) );
-    */
 	const wrapperLoader = fetch(path + "draco_wasm_wrapper.js");
 	const wasmLoader = fetch(path + "draco_decoder.wasm");
 	await Promise.all([wrapperLoader, wasmLoader]);
@@ -52,6 +47,8 @@ export async function initDracoDecoder(path) {
 }
 
 export async function decode(dracoLoader, buffer, attributeIDs, attributeTypes) {
+	let { taskID } = dracoLoader;
+	dracoLoader.taskID++;
 	const taskConfig = {
 		attributeIDs,
 		attributeTypes,
@@ -60,11 +57,11 @@ export async function decode(dracoLoader, buffer, attributeIDs, attributeTypes) 
 	};
 	const geometry = await new Promise((resolve, reject) => {
 		const { worker } = dracoLoader;
-		let { taskID } = dracoLoader;
+
 		worker._callbacks[taskID] = { resolve, reject };
 		worker.postMessage({ type: "decode", id: taskID, taskConfig, buffer }, [buffer]);
-		taskID++;
 	});
+
 	return geometry;
 }
 

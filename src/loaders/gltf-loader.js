@@ -422,6 +422,7 @@ async function parseGLTF(content, url, binPreloadMap, dracoDecode) {
 			return {
 				...meshesData[node.mesh],
 				matrix: createMatrixFromGLTFTransform(node),
+				name: node.name,
 			};
 		} else if (isCameraNode(node)) {
 			return parseCameraNode(node);
@@ -481,6 +482,10 @@ extensions":{
 				extensions: { KHR_draco_mesh_compression },
 			} = primitive;
 			const { bufferView, attributes } = KHR_draco_mesh_compression;
+			const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
+			if (!dracoDecode) {
+				throw new Error("Draco decoder not provided");
+			}
 			if (dracoDecode && bufferView != null) {
 				const attributeMap = getDracoAttributeMap(attributes, primitive);
 				const decodedGeometry = await dracoDecode.decode(
@@ -489,6 +494,7 @@ extensions":{
 					attributes,
 					attributeMap,
 				);
+
 				const decodedAttributes = decodedGeometry.geometry.attributes;
 				const position = decodedAttributes[POSITION];
 				const positionAccessor = accessors[POSITION];
@@ -620,7 +626,7 @@ function isVec3(list) {
  */
 export function createMeshFromGLTF(gltfFile, gltfMeshObject) {
 	const mesh = gltfMeshObject;
-	const gltfMaterial = gltfFile.materials[mesh.material];
+	const gltfMaterial = gltfFile.materials ? gltfFile.materials[mesh?.material] ?? {} : {};
 	/** @type {SvelteGLMaterial} */
 	const material = {
 		diffuse: [1, 1, 1],

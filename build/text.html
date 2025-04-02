@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Svelte GL 3D Text</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body, html { height:100%; }
+        canvas {
+            position:absolute;
+            width:100%;
+            height:100%;
+        }
+    </style>
+  <script type="module" crossorigin src="./js/text.svelte.js"></script>
+  <link rel="modulepreload" crossorigin href="./js/engine.js">
+  <link rel="modulepreload" crossorigin href="./js/skybox.js">
+  <link rel="modulepreload" crossorigin href="./js/jpeg-hdr-loader.js">
+  <link rel="modulepreload" crossorigin href="./js/environment-map-texture.js">
+  <link rel="modulepreload" crossorigin href="./js/specular.js">
+  <link rel="modulepreload" crossorigin href="./js/gltf-loader.js">
+  <link rel="modulepreload" crossorigin href="./js/dracoDecoder.js">
+</head>
+<body>
+    <div id="app"></div>
+
+</body>
+</html>
