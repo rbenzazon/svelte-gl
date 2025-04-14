@@ -8,7 +8,7 @@ import { createMaterialStore, materials } from "./store/materials.js";
 import { renderer } from "./store/renderer.js";
 import { camera } from "./store/camera.js";
 import { copy, create, identity, rotateX, rotateY, scale, translate } from "gl-matrix/esm/mat4.js";
-import { skyblue } from "./color/color-keywords.js";
+import { skyblue, white, black } from "./color/color-keywords.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import Menu from "./Menu.svelte";
 import { createZeroMatrix } from "./geometries/common.js";
@@ -21,6 +21,7 @@ import { createACESFilmicToneMapping } from "./tone-mapping/aces-filmic-tone-map
 import { renderState } from "./store/engine";
 import { createMeshFromGLTF, isGLTFMeshData, loadGLTFFile, mapScene } from "./loaders/gltf-loader.js";
 import { initDracoDecoder } from "./loaders/dracoDecoder.js";
+import { create3DFont, create3DWord } from "./3d-text/3d-text.js";
 
 let canvas;
 let orbit;
@@ -29,7 +30,7 @@ onMount(async () => {
 	$renderer = {
 		...$renderer,
 		canvas,
-		backgroundColor: skyblue,
+		backgroundColor: black,
 		ambientLightColor: [0xffffff, 0.1],
 		toneMappings: [
 			createACESFilmicToneMapping({
@@ -58,7 +59,7 @@ onMount(async () => {
 
 	const environmentMap = createEnvironmentMap(jpgHDRImage.texture, jpgHDRImage.width, jpgHDRImage.height);
 
-	$renderPasses = [skyBox, environmentMap];
+	$renderPasses = [environmentMap];
 
 	const envMap = createEnvMapTexture({
 		envMap: environmentMap.getTexture,
@@ -66,18 +67,10 @@ onMount(async () => {
 		height: environmentMap.height,
 		lodMax: environmentMap.lodMax,
 	});
-	const dracoDecoder = await initDracoDecoder("draco/");
-	const fontFile = await loadGLTFFile("models/xenon-font.gltf", "models/xenon-font.bin", dracoDecoder);
-	const letterMap = mapScene(fontFile.scene).reduce((acc, data) => {
-		if (isGLTFMeshData(data)) {
-			acc[data.name] = data;
-		}
-		return acc;
-	}, {});
 	const chromeMaterial = createMaterialStore({
 		metalness: 0.95,
 		specular: createSpecular({
-			roughness: 0.08,
+			roughness: 0.02,
 			ior: 1.4,
 			intensity: 0.8,
 			color: [1, 1, 1],
@@ -85,50 +78,16 @@ onMount(async () => {
 		diffuse: [1, 1, 1],
 		envMap,
 	});
+
+	const font = await create3DFont("models/xenon-font.gltf", "models/xenon-font.bin", chromeMaterial);
+	const text = "SVELTE GL ROCKS";
+
 	const textMatrix = identity(createZeroMatrix());
 	const textScale = 8;
 	scale(textMatrix, textMatrix, [textScale, textScale, textScale]);
+	translate(textMatrix, textMatrix, [-font.letterSpacing * (text.length / 2) + 0.2, 0, 0]);
 
-	const meshMap = {};
-
-	for (const key in letterMap) {
-		const mesh = createMeshFromGLTF(fontFile, letterMap[key]);
-		delete mesh.matrix;
-		const object = {
-			...mesh,
-			material: chromeMaterial,
-			instances: 0,
-			matrices: [],
-		};
-		meshMap[key] = object;
-	}
-
-	const text = "SVELTE GL ROCKS";
-	const chars = text.split("");
-	const presentLetters = new Set(chars);
-	// remove from set space
-	presentLetters.delete(" ");
-
-	let displayedMeshes = Array.from(presentLetters).map((letter) => meshMap[letter]);
-
-	let cursorPos = 0;
-	const letterSpacing = 0.4;
-
-	translate(textMatrix, textMatrix, [-letterSpacing * (chars.length / 2) + 0.2, 0, 0]);
-
-	for (const char of chars) {
-		if (char === " ") {
-			cursorPos += letterSpacing;
-			continue;
-		}
-		const mesh = meshMap[char];
-		mesh.instances++;
-		const matrix = copy(createZeroMatrix(), textMatrix);
-		translate(matrix, matrix, [cursorPos, 0, 0]);
-		mesh.matrices.push(matrix);
-		cursorPos += letterSpacing;
-	}
-	displayedMeshes = displayedMeshes.map((mesh) => {
+	const displayedMeshes = create3DWord(text, font, textMatrix).map((mesh) => {
 		return create3DObject(mesh);
 	});
 
@@ -149,5 +108,6 @@ function animate() {
 	//orbit.delta(0, 0, 0.002);
 }
 </script>
+
 <canvas bind:this={canvas}></canvas>
 <Menu />

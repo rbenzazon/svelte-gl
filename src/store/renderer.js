@@ -16,7 +16,7 @@ function createRenderer() {
 		//ref
 		loop: null,
 		//value
-		backgroundColor: 0xffffff,
+		backgroundColor: NaN,
 		//value
 		ambientLightColor: /** @type {vec2} */ ([0xffffff, 0]),
 		//values
