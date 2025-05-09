@@ -454,6 +454,9 @@ export function updateObjectMatrix(programStore, objectMatrix) {
 }
 export function updateInstanceObjectMatrix(programStore, mesh, newMatrix, instanceIndex, modelViewBuffer) {
 	const { gl, vaoMap } = appContext;
+	const vaoProgram = vaoMap.get(programStore);
+	console.log("vaoProgram", vaoProgram);
+
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, modelViewBuffer);
 	const bytesPerMatrix = 4 * 16;

@@ -68,6 +68,7 @@ export function clearUnusedCache(next) {
 			});
 		}
 	});
+	console.log("cleared cache map", programMap.size, vaoMap.size);
 }
 
 function findVaoWithMesh(mesh, vaoMap) {
@@ -93,12 +94,17 @@ function findVaoWithMesh(mesh, vaoMap) {
 export function reconciliateCacheMap(p, program) {
 	const { programMap, vaoMap } = appContext;
 	let cachedProgram, cachedGLProgram;
-	programMap.forEach((glProgram, programStore) => {
-		if (programStore.material === p.material) {
+	console.log("reconciliateCacheMap");
+	//make for loop instead of forEach
+	//programMap.forEach((glProgram, programStore) => {
+	for (const [programStore, glProgram] of programMap) {
+		if (isSameProgram(programStore, p)) {
+			console.log("found existing program");
 			cachedProgram = programStore;
 			cachedGLProgram = glProgram;
+			break;
 		}
-	});
+	}
 	if (cachedProgram != null) {
 		const existingVAOMap = vaoMap.get(cachedProgram);
 		if (existingVAOMap != null) {

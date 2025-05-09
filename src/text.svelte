@@ -25,6 +25,7 @@ import { create3DFont, create3DWord } from "./3d-text/3d-text.js";
 
 let canvas;
 let orbit;
+let commonWordMatrix;
 
 onMount(async () => {
 	$renderer = {
@@ -48,18 +49,18 @@ onMount(async () => {
 	const jpgHDRImage = await decodeJPEGHDRLoader("skyboxes/qwantani-noon-4k.jpg");
 
 	const hdrToneMapping = getToneMapping(1);
-	const skyBox = await createSkyBox({
+	/*const skyBox = await createSkyBox({
 		texture: jpgHDRImage.texture,
 		width: jpgHDRImage.texture.width,
 		height: jpgHDRImage.texture.height,
 		cubeSize: 2048,
 		toneMapping: hdrToneMapping,
 		convertToCube: hdrToCube,
-	});
+	});*/
 
 	const environmentMap = createEnvironmentMap(jpgHDRImage.texture, jpgHDRImage.width, jpgHDRImage.height);
 
-	$renderPasses = [environmentMap];
+	$renderPasses = [/*skyBox,*/ environmentMap];
 
 	const envMap = createEnvMapTexture({
 		envMap: environmentMap.getTexture,
@@ -87,7 +88,9 @@ onMount(async () => {
 	scale(textMatrix, textMatrix, [textScale, textScale, textScale]);
 	translate(textMatrix, textMatrix, [-font.letterSpacing * (text.length / 2) + 0.2, 0, 0]);
 
-	const displayedMeshes = create3DWord(text, font, textMatrix).map((mesh) => {
+	const { charSetMeshes, commonMatrix } = create3DWord(text, font, textMatrix);
+	commonWordMatrix = commonMatrix;
+	const displayedMeshes = Object.values(charSetMeshes).map((mesh) => {
 		return create3DObject(mesh);
 	});
 
@@ -105,6 +108,10 @@ onMount(async () => {
 });
 
 function animate() {
+	const { value } = commonWordMatrix;
+	console.log("value", value);
+	rotateY(value, value, 0.001);
+	commonWordMatrix.set(value);
 	//orbit.delta(0, 0, 0.002);
 }
 </script>

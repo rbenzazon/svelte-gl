@@ -1,4 +1,4 @@
-import { identity, multiply } from "gl-matrix/esm/mat4.js";
+import { identity, multiply, copy } from "gl-matrix/esm/mat4.js";
 import { createZeroMatrix } from "../geometries/common";
 import { get, writable } from "svelte/store";
 import { updateObjectMatrix, updateNormalMatrix, updateInstanceObjectMatrix, updateInstanceNormalMatrix } from "./gl";
@@ -34,8 +34,16 @@ const createMeshMatrixStore = (mesh, rendererUpdate, initialValue, instanceIndex
 	return objectMatrix;
 };
 */
-const createMeshMatrixStore = (mesh, rendererUpdate, initialValue) => {
-	let value = initialValue || defaultObjectMatrix;
+function applyCommonMatrix(matrix, commonMatrix) {
+	let newValue = matrix;
+	if (commonMatrix) {
+		newValue = multiply(createZeroMatrix(), commonMatrix, matrix);
+	}
+	return newValue;
+}
+
+const createMeshMatrixStore = (mesh, rendererUpdate, initialValue, commonMatrix) => {
+	let value = applyCommonMatrix(initialValue || defaultObjectMatrix, commonMatrix);
 	let modelView = new Float32Array(16);
 	let normalMatrix = new Float32Array(9);
 	let cameraRevision = camera.revision;
@@ -48,7 +56,7 @@ const createMeshMatrixStore = (mesh, rendererUpdate, initialValue) => {
 
 	const store = {
 		set: (nextMatrix) => {
-			value = nextMatrix;
+			value = applyCommonMatrix(nextMatrix, commonMatrix?.value);
 			update();
 			const program = findProgram(mesh);
 			updateObjectMatrix(program, store);
@@ -105,7 +113,7 @@ function reduceTypedArrays(typedArrays) {
 }
 
 // find if UBO and renderer updates should be sent from here directly
-const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances) => {
+const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances, commonMatrices) => {
 	let value = Array.isArray(objectMatrices) ? reduceTypedArrays(objectMatrices) : objectMatrices;
 	const windows = [];
 	const modelView = new Float32Array(16 * instances);
@@ -122,13 +130,20 @@ const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances
 		const byteOffsetToMatrix = i * 16 * 4;
 		const numFloatsForView = 16;
 		windows.push(new Float32Array(value.buffer, byteOffsetToMatrix, numFloatsForView));
+		if (commonMatrices && commonMatrices[i]) {
+			//commonMatrices[i].registerMatrix(windows[i]);
+			windows[i].set(multiply(createZeroMatrix(), commonMatrices[i].value, windows[i]));
+		}
 		modelViewWindows.push(new Float32Array(modelView.buffer, byteOffsetToMatrix, numFloatsForView));
 		normalMatricesWindows.push(new Float32Array(normalMatrices.buffer, i * 9 * 4, 9));
 	}
 
-	function updateInstance(matrix, instance) {
-		setModelViewMatrix(modelViewWindows[instance], matrix);
-		derivateNormalMatrix(normalMatricesWindows[instance], modelViewWindows[instance]);
+	function updateInstance(matrix, index) {
+		if (commonMatrices && commonMatrices[index]) {
+			matrix = multiply(createZeroMatrix(), commonMatrices[index].value, matrix);
+		}
+		setModelViewMatrix(modelViewWindows[index], matrix);
+		derivateNormalMatrix(normalMatricesWindows[index], modelViewWindows[index]);
 	}
 
 	updateModelViewMatrix();
@@ -139,7 +154,7 @@ const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances
 		});
 	}
 
-	return {
+	const store = {
 		set: (nextMatrix) => {
 			value = nextMatrix;
 			// TODO: update UBOS
@@ -155,6 +170,14 @@ const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances
 		},
 		get buffer() {
 			return buffer;
+		},
+		updateCommonMatrices() {
+			if (commonMatrices) {
+				commonMatrices.forEach((commonMatrix, index) => {
+					store.setInstance(index, windows[index]);
+					//windows[index].set(multiply(createZeroMatrix(), commonMatrix.value, windows[index]));
+				});
+			}
 		},
 		setInstance(index, nextMatrix) {
 			windows[index].set(nextMatrix);
@@ -200,7 +223,53 @@ const createMeshMatricesStore = (mesh, rendererUpdate, objectMatrices, instances
 			return normalMatrixBuffer;
 		},
 	};
+	for (let i = 0; i < instances; ++i) {
+		if (commonMatrices && commonMatrices[i]) {
+			commonMatrices[i].registerMatrices(store);
+		}
+	}
+	return store;
 };
+
+export function createCommonMatrixStore(rendererUpdate, initialValue) {
+	let value = initialValue ?? copy(createZeroMatrix(), defaultObjectMatrix);
+	function getTypedArray(value) {
+		if (value instanceof Float32Array) {
+			return value;
+		}
+		if (Array.isArray(value)) {
+			return new Float32Array(value);
+		}
+		throw new Error("Invalid value type");
+	}
+	let modelView = getTypedArray(value);
+	let meshMatrices = [];
+	function updateMatrices() {
+		meshMatrices.forEach((meshMatrix) => {
+			if ("setInstance" in meshMatrix) {
+				meshMatrix.updateCommonMatrices();
+			} else {
+			}
+		});
+	}
+	const store = {
+		set: (nextMatrix) => {
+			modelView = getTypedArray(nextMatrix);
+			updateMatrices();
+			rendererUpdate(get(renderer));
+		},
+		get value() {
+			return modelView;
+		},
+		registerMatrices: (matrices) => {
+			meshMatrices.push(matrices);
+		},
+		registerMatrix: (matrix) => {
+			meshMatrices.push(matrix);
+		},
+	};
+	return store;
+}
 
 /**
  *
@@ -248,7 +317,7 @@ export function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]
 	};
 	if (isSvelteGLSingleMesh(new3DObject)) {
 		// @ts-ignore
-		new3DObject.matrix = createMeshMatrixStore(new3DObject, renderer.set, new3DObject.matrix);
+		new3DObject.matrix = createMeshMatrixStore(new3DObject, renderer.set, new3DObject.matrix, new3DObject.commonMatrix);
 	} else if (isSvelteGLInstancedMesh(new3DObject)) {
 		// @ts-ignore
 		new3DObject.matrices = createMeshMatricesStore(
@@ -256,6 +325,7 @@ export function create3DObject(value, symmetry = false, symmetryAxis = [0, 0, 0]
 			renderer.set,
 			new3DObject.matrices,
 			new3DObject.instances,
+			new3DObject.commonMatrices,
 		);
 	}
 	return new3DObject;
