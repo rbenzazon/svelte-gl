@@ -7,6 +7,7 @@ precision highp int;
 in vec3 position;
 in vec3 normal;
 in vec2 uv;
+${uv1 ? 'in vec2 uv1;' : ''}
 ${instances ?
 `
 in mat4 modelMatrix;
@@ -29,6 +30,7 @@ out vec3 vNormal;
 out vec3 vertex;
 out vec3 vViewPosition;
 out highp vec2 vUv;
+${uv1 ? 'out highp vec2 vUv1;' : ''}
 
 ${declarations}
 
@@ -39,6 +41,7 @@ void main() {
     ${positionModifier}
 
     vUv = vec3( uv, 1 ).xy;
+    ${uv1 ? 'vUv1 = vec2(uv1.x, uv1.y);' : ''}
     // Pass the color down to the fragment shader (debug)
     vertexColor = vec3(1.27,1.27,1.27);
     // Pass the vertex down to the fragment shader TODO, change to support modelViewMatrix

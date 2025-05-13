@@ -157,14 +157,20 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			vertexDeclarations += vertexAnimationsDeclaration;
 			vertexPositionModifiers += vertexAnimationsModifier;
 		}
+		let hasUV1 = false;
+		if (material.lightMap) {
+			hasUV1 = true && meshes.every((mesh) => mesh.attributes.uvs1);
+		}
 		const vertexShaderSource = templateLiteralRenderer(defaultVertex, {
 			instances: false,
 			declarations: "",
 			positionModifier: "",
+			uv1: false,
 		})({
 			instances: mesh.instances >= 1,
 			declarations: vertexDeclarations,
 			positionModifier: vertexPositionModifiers,
+			uv1: hasUV1,
 		});
 
 		let specularDeclaration = "";
@@ -226,13 +232,29 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 				irradiance: true,
 			});
 		}
+		let lightMapDeclaration = "";
+		let lightMapSample = "";
+		if (material.lightMap) {
+			lightMapDeclaration = material.lightMap.shader({
+				declaration: true,
+				declarationNormal: false,
+				declarationLight: true,
+				mapType: material.lightMap.type,
+			});
+			lightMapSample = material.lightMap.shader({
+				lightMapSample: true,
+				mapType: material.lightMap.type,
+			});
+		}
 
 		const fragmentShaderSource = templateLiteralRenderer(defaultFragment, {
 			defines: "",
 			declarations: "",
+			uv1: false,
 			diffuseMapSample: "",
 			normalMapSample: "",
 			roughnessMapSample: "",
+			lightMapSample: "",
 			material: "",
 			irradiance: "",
 			toneMapping: "",
@@ -255,7 +277,9 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 				...(material.normalMap ? [normalMapDeclaration] : []),
 				...(material.roughnessMap ? [roughnessMapDeclaration] : []),
 				...(material.envMap ? [envMapDeclaration] : []),
+				...(material.lightMap ? [lightMapDeclaration] : []),
 			].join("\n"),
+			uv1: hasUV1,
 			diffuseMapSample,
 			normalMapSample,
 			roughnessMapSample,
@@ -263,6 +287,7 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			irradiance: [
 				...(numPointLights ? [pointLightShader({ declaration: false, irradiance: true, specularIrradiance })] : []),
 				...(material.envMap ? [envMapIrradiance] : []),
+				...(material.lightMap ? [lightMapSample] : []),
 			].join("\n"),
 			toneMapping: [
 				...(appContext.toneMappings?.length > 0
@@ -455,8 +480,6 @@ export function updateObjectMatrix(programStore, objectMatrix) {
 export function updateInstanceObjectMatrix(programStore, mesh, newMatrix, instanceIndex, modelViewBuffer) {
 	const { gl, vaoMap } = appContext;
 	const vaoProgram = vaoMap.get(programStore);
-	console.log("vaoProgram", vaoProgram);
-
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, modelViewBuffer);
 	const bytesPerMatrix = 4 * 16;
@@ -536,7 +559,7 @@ function getBuffer(variable) {
 export function setupAttributes(programStore, mesh) {
 	return function setupAttributes() {
 		const { gl, program, vaoMap, bufferMap } = appContext;
-		const { positions, normals, elements, uvs, positionsSize } = mesh.attributes;
+		const { positions, normals, elements, uvs, uvs1, positionsSize } = mesh.attributes;
 		let vao;
 		if (vaoMap.has(programStore) && vaoMap.get(programStore).has(mesh)) {
 			vao = vaoMap.get(programStore).get(mesh);
@@ -618,9 +641,23 @@ export function setupAttributes(programStore, mesh) {
 				gl.enableVertexAttribArray(uvLocation);
 			}
 		}
+		if (uvs1) {
+			const uvsData = Array.isArray(uvs1) ? new Float32Array(uvs1) : uvs1;
+			const uvBuffer = gl.createBuffer();
+			buffers.push(uvBuffer);
+			gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+			gl.bufferData(gl.ARRAY_BUFFER, uvsData, gl.STATIC_DRAW);
+			const uvLocation = gl.getAttribLocation(program, "uv1");
+			if (uvLocation != -1) {
+				gl.bindBuffer(gl.ARRAY_BUFFER, uvBuffer);
+				gl.vertexAttribPointer(uvLocation, 2, gl.FLOAT, false, 0, 0);
+				gl.enableVertexAttribArray(uvLocation);
+			}
+		}
+
 		// this sets up special custom attributes
 		// these are attributes that are not part of the base mesh
-		const baseAttributes = ["positions", "normals", "uvs", "elements"];
+		const baseAttributes = ["positions", "normals", "uvs", "uvs1", "elements"];
 		Object.entries(mesh.attributes)
 			.filter(([key]) => !baseAttributes.includes(key))
 			.forEach(([key, value]) => {

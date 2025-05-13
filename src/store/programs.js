@@ -219,6 +219,10 @@ export const programs = derived(
 					program.setupMaterial.push(p.material.envMap.setupTexture);
 					program.bindTextures.push(p.material.envMap.bindTexture);
 				}
+				if (p.material?.lightMap) {
+					program.setupMaterial.push(p.material.lightMap.setupTexture);
+					program.bindTextures.push(p.material.lightMap.bindTexture);
+				}
 				if (p.requireTime) {
 					program.updateProgram.push(setupTime);
 				}

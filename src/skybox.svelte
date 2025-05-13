@@ -45,6 +45,7 @@ onMount(async () => {
 		fov: 50,
 	};
 	rgbeImage = await loadRGBE("skyboxes/christmas-photo-studio-01-4k.hdr");
+	console.log("rgbeImage", rgbeImage);
 	const hdrToneMapping = getToneMapping(1);
 	const skyBox = await createSkyBox({
 		typedArray: rgbeImage.data,

@@ -21,6 +21,7 @@ uniform mat4 viewMatrix;
 in vec3 vertex;
 in vec3 vNormal;
 in highp vec2 vUv;
+${uv1 ? 'in highp vec2 vUv1;' : ''}
 in vec3 vViewPosition;
 
 out vec4 fragColor;
@@ -87,8 +88,8 @@ void main() {
     ReflectedLight reflectedLight = ReflectedLight(vec3(0.0), vec3(0.0), vec3(0.0), vec3(0.0));
 
     reflectedLight.indirectDiffuse += ambientLightColor * BRDF_Lambert(material.diffuseColor);
-
-    vec3 totalIrradiance = vec3(0.0f);
+	// TODO, check if deleting the next line is ok
+    //vec3 totalIrradiance = vec3(0.0f);
     ${irradiance}
 	vec3 outgoingLight = reflectedLight.indirectDiffuse + reflectedLight.directDiffuse + reflectedLight.directSpecular + reflectedLight.indirectSpecular;
     fragColor = vec4(outgoingLight, opacity*material.diffuseAlpha);

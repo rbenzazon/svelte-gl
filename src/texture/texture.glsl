@@ -22,6 +22,11 @@ mat3 getTangentFrame( vec3 eye_pos, vec3 surf_norm, vec2 uv ) {
 }
 ` : ''
 }
+${declarationLight?
+`
+uniform float lightMapIntensity;
+` : ''
+}
 ${diffuseMapSample?
 `
     //atan(uv.y, uv.x)
@@ -56,5 +61,12 @@ ${roughnessMapSample?
 `}
     vec4 texelRoughness = texture( ${mapType}, roughnessUv );
     roughnessFactor = texelRoughness.g;
+` : ''
+}
+${lightMapSample?
+`
+    vec4 lightMapTexel = texture( ${mapType}, vUv1 );
+    vec3 lightMapIrradiance = lightMapTexel.rgb * lightMapIntensity;
+    reflectedLight.directDiffuse += lightMapIrradiance * BRDF_Lambert(material.diffuseColor);
 ` : ''
 }

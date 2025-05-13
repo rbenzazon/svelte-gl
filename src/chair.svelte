@@ -13,8 +13,7 @@ import { skyblue } from "./color/color-keywords.js";
 import { createPlane } from "./geometries/plane.js";
 import { createOrbitControls } from "./interactivity/orbit-controls.js";
 import { createTexture } from "./texture/texture.js";
-import { createContactShadowPass } from "./store/contact-shadow.js";
-import { loadOBJFile } from "./loaders/obj-loader.js";
+import { loadRGBE } from "./loaders/rgbe-loader.js";
 import {
 	isGLTFMeshData,
 	createCameraFromGLTF,
@@ -89,13 +88,27 @@ onMount(async () => {
 		url: "textures/arm-chair-normal.jpg",
 		type: "normal",
 	});
+	/*
+	const chairLightMapImage = await loadRGBE("textures/arm-chair-lightmap.hdr");
+	const chairLightMap = await createTexture({
+		image: chairLightMapImage.data,
+		width: chairLightMapImage.width,
+		height: chairLightMapImage.height,
+		type: "light",
+	});
+	*/
+	const chairLightMap = await createTexture({
+		url: "textures/arm-chair-lightmap.jpg",
+		lightMapIntensity: 2.2,
+		type: "light",
+	});
 
 	const chairMaterial = createMaterialStore({
 		diffuse: [1, 1, 1],
 		diffuseMap: chairDiffuseMap,
 		normalMap: chairNormalMap,
+		lightMap: chairLightMap,
 		metalness: 0,
-
 		specular: createSpecular({
 			roughness: 0.9,
 			ior: 1.5,
@@ -103,9 +116,15 @@ onMount(async () => {
 			color: [1, 1, 1],
 		}),
 	});
+	const floorLightMap = await createTexture({
+		url: "textures/arm-chair-floor-lightmap.jpg",
+		lightMapIntensity: 2.2,
+		type: "light",
+	});
 	const floorMaterial = createMaterialStore({
-		diffuse: [1, 1, 1],
+		diffuse: [1, 0.8, 0.8],
 		metalness: 0,
+		lightMap: floorLightMap,
 		specular: createSpecular({
 			roughness: 0.9,
 			ior: 1.5,
@@ -126,7 +145,7 @@ onMount(async () => {
 			material: floorMaterial,
 		}),
 	];
-	$lights = [...$lights, light, light2, light3];
+	$lights = [...$lights /*, light, light2, light3*/];
 
 	$renderer = {
 		...$renderer,

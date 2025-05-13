@@ -27,6 +27,7 @@ function createShaders() {
 		instances: false,
 		declarations: "",
 		positionModifier: "",
+		uv1: false,
 	})({
 		instances: false,
 		declarations: "",

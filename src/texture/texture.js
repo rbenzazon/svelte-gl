@@ -7,18 +7,21 @@ const types = {
 	diffuse: "diffuseMap",
 	normal: "normalMap",
 	roughness: "roughnessMap",
+	light: "lightMap",
 };
 
 const id = {
 	diffuse: 0,
 	normal: 1,
 	roughness: 2,
+	light: 3,
 };
 
 /**
  * @typedef TexturePropsBase
  * @property {"diffuse" | "normal" | "roughness" } type
  * @property {number[]} [normalScale=[1, 1]]
+ * @property {number} [lightMapIntensity=1]
  * @property {"square" | "circular"} [coordinateSpace="square"]
  */
 /**
@@ -59,10 +62,16 @@ const id = {
 export const createTexture = async (props) => {
 	let image;
 	let externalBuffer;
+	let width = 0;
+	let height = 0;
 	if (props.url) {
 		image = await loadTexture(props.url);
 	} else if (typeof props.textureBuffer === "function") {
 		externalBuffer = props.textureBuffer;
+	} else if (props.image) {
+		image = props.image;
+		width = props.width;
+		height = props.height;
 	}
 	let buffer;
 	function setBuffer(value) {
@@ -77,13 +86,25 @@ export const createTexture = async (props) => {
 		shader: templateLiteralRenderer(textureShader, {
 			declaration: false,
 			declarationNormal: false,
+			declarationLight: false,
 			diffuseMapSample: false,
 			normalMapSample: false,
 			roughnessMapSample: false,
+			lightMapSample: false,
 			mapType: undefined,
 			coordinateSpace: undefined,
 		}),
-		setupTexture: setupTexture(image, types[props.type], id[props.type], props.normalScale, setBuffer, externalBuffer),
+		setupTexture: setupTexture(
+			image,
+			types[props.type],
+			id[props.type],
+			props.normalScale,
+			props.lightMapIntensity,
+			setBuffer,
+			externalBuffer,
+			width,
+			height,
+		),
 		bindTexture: bindTexture(id[props.type], getBuffer, types[props.type]),
 		...(props.url ? { url: props.url } : {}),
 	};
@@ -115,7 +136,17 @@ function bindTexture(id, getBuffer, type) {
 	};
 }
 
-function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer, externalBuffer = null) {
+function setupTexture(
+	texture,
+	type,
+	id,
+	normalScale = [1, 1],
+	lightMapIntensity = 1,
+	setBuffer,
+	externalBuffer = null,
+	width = 0,
+	height = 0,
+) {
 	return function setupTexture() {
 		const { gl, program } = appContext;
 		let textureBuffer;
@@ -130,7 +161,11 @@ function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer, extern
 		gl.bindTexture(gl.TEXTURE_2D, textureBuffer);
 		gl.uniform1i(textureLocation, id);
 		if (externalBuffer === null) {
-			gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture);
+			if (texture instanceof HTMLImageElement) {
+				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture);
+			} else {
+				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture);
+			}
 		}
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -139,6 +174,10 @@ function setupTexture(texture, type, id, normalScale = [1, 1], setBuffer, extern
 		if (normalScale != null) {
 			const normalScaleLocation = gl.getUniformLocation(program, "normalScale");
 			gl.uniform2fv(normalScaleLocation, normalScale);
+		}
+		if (lightMapIntensity != null) {
+			const lightMapIntensityLocation = gl.getUniformLocation(program, "lightMapIntensity");
+			gl.uniform1f(lightMapIntensityLocation, lightMapIntensity);
 		}
 	};
 }

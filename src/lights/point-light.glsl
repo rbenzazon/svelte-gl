@@ -51,12 +51,14 @@ float calculatePointLightBrightness(float lightDistance, float cutoffDistance, f
 }
 ${irradiance?
 `
-    vec3 irradiance = vec3(0.0f);
-    vec3 direction = vec3(0.0f);
+    // TODO, check if deleting the next two lines is ok
+    //vec3 irradiance = vec3(0.0f);
+    //vec3 direction = vec3(0.0f);
     for(int i = 0; i < NUM_POINT_LIGHTS; i++) {
         PointLight pointLight = pointLights[i];
         LightParams lightParams = getDirectDiffuse(pointLight, geometryPosition, normal, material, reflectedLight);
-        totalIrradiance += reflectedLight.directDiffuse;
+        // TODO, check if deleting the next line is ok
+        // totalIrradiance += reflectedLight.directDiffuse;
         ${specularIrradiance}
     }
 ` : ''

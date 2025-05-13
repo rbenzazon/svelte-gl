@@ -507,7 +507,15 @@ extensions":{
 				const indicesData = decodedGeometry.geometry.index;
 				const indicesAccessor = accessors[indices];
 
+				const optionalAttributes = {};
+				if (UV1) {
+					optionalAttributes.uv1 = {
+						...uv1Accessor,
+						data: UV1.array,
+					};
+				}
 				return {
+					...optionalAttributes,
 					position: {
 						...positionAccessor,
 						data: position.array,
@@ -519,10 +527,6 @@ extensions":{
 					uv: {
 						...uv0Accessor,
 						data: UV0.array,
-					},
-					uv1: {
-						...uv1Accessor,
-						data: UV1.array,
 					},
 					indices: {
 						...indicesAccessor,
@@ -679,6 +683,7 @@ export function createMeshFromGLTF(gltfFile, gltfMeshObject) {
 				: mesh.normal.data,
 			elements: mesh.indices.data,
 			...(mesh.uv?.data ? { uvs: mesh.uv.data } : {}),
+			...(mesh.uv1?.data ? { uvs1: mesh.uv1.data } : {}),
 		},
 		drawMode: mesh.drawMode ?? "TRIANGLES",
 		material,
