@@ -23,6 +23,7 @@ const links = [
 	{ name: "Draco Compressed GLTF", href: "./draco-gltf" },
 	{ name: "Skybox JPG HDR", href: "./skybox-jpghdr" },
 	{ name: "3D Text", href: "./text" },
+	{ name: "Lightmap Chair", href: "./chair" },
 ];
 </script>
 <button on:click={toggleMenu}>examples</button>

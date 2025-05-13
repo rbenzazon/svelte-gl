@@ -476,13 +476,13 @@ extensions":{
 						"KHR_draco_mesh_compression":{
 		*/
 		const { attributes, indices } = primitive;
-		const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
+		const { POSITION, NORMAL, TEXCOORD_0, TEXCOORD_1 } = attributes;
 		if (primitive?.extensions?.KHR_draco_mesh_compression) {
 			const {
 				extensions: { KHR_draco_mesh_compression },
 			} = primitive;
 			const { bufferView, attributes } = KHR_draco_mesh_compression;
-			const { POSITION, NORMAL, TEXCOORD_0 } = attributes;
+			const { POSITION, NORMAL, TEXCOORD_0, TEXCOORD_1 } = attributes;
 			if (!dracoDecode) {
 				throw new Error("Draco decoder not provided");
 			}
@@ -500,6 +500,10 @@ extensions":{
 				const positionAccessor = accessors[POSITION];
 				const normal = decodedAttributes[NORMAL];
 				const normalAccessor = accessors[POSITION];
+				const UV0 = decodedAttributes[TEXCOORD_0];
+				const uv0Accessor = accessors[TEXCOORD_0];
+				const UV1 = decodedAttributes[TEXCOORD_1];
+				const uv1Accessor = accessors[TEXCOORD_1];
 				const indicesData = decodedGeometry.geometry.index;
 				const indicesAccessor = accessors[indices];
 
@@ -512,6 +516,14 @@ extensions":{
 						...normalAccessor,
 						data: normal.array,
 					},
+					uv: {
+						...uv0Accessor,
+						data: UV0.array,
+					},
+					uv1: {
+						...uv1Accessor,
+						data: UV1.array,
+					},
 					indices: {
 						...indicesAccessor,
 						data: indicesData.array,
@@ -521,13 +533,15 @@ extensions":{
 				};
 			}
 		}
-
+		const data = {};
 		const positionAccessor = accessorsData[POSITION];
 		const normalAccessor = accessorsData[NORMAL];
 		const uvAccessor = accessorsData[TEXCOORD_0];
+		if (accessorsData[TEXCOORD_1] != null) data.uv1 = accessorsData[TEXCOORD_1];
 		const indexAccessor = accessorsData[indices];
 
 		return {
+			...data,
 			position: positionAccessor,
 			normal: normalAccessor,
 			indices: indexAccessor,
