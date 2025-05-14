@@ -164,7 +164,22 @@ function setupTexture(
 			if (texture instanceof HTMLImageElement) {
 				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture);
 			} else {
-				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture);
+				const ext = gl.getExtension("EXT_color_buffer_half_float") || gl.getExtension("OES_texture_half_float");
+				if (!ext) {
+					throw new Error("Required WebGL extension for half-float textures is not supported.");
+				}
+				gl.texImage2D(
+					gl.TEXTURE_2D,
+					0,
+					gl.RGBA16F, // Internal format for HDR
+					width,
+					height,
+					0,
+					gl.RGBA,
+					gl.HALF_FLOAT,
+					texture,
+				);
+				//gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture);
 			}
 		}
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);

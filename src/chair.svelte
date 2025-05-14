@@ -88,21 +88,23 @@ onMount(async () => {
 		url: "textures/arm-chair-normal.jpg",
 		type: "normal",
 	});
-	/*
+
 	const chairLightMapImage = await loadRGBE("textures/arm-chair-lightmap.hdr");
 	const chairLightMap = await createTexture({
 		image: chairLightMapImage.data,
 		width: chairLightMapImage.width,
 		height: chairLightMapImage.height,
+		lightMapIntensity: 1.8,
 		type: "light",
 	});
-	*/
+
+	/*
 	const chairLightMap = await createTexture({
 		url: "textures/arm-chair-lightmap.jpg",
 		lightMapIntensity: 2.2,
 		type: "light",
 	});
-
+	*/
 	const chairMaterial = createMaterialStore({
 		diffuse: [1, 1, 1],
 		diffuseMap: chairDiffuseMap,
@@ -116,13 +118,23 @@ onMount(async () => {
 			color: [1, 1, 1],
 		}),
 	});
+	const floorLightMapImage = await loadRGBE("textures/arm-chair-floor-lightmap.hdr");
 	const floorLightMap = await createTexture({
-		url: "textures/arm-chair-floor-lightmap.jpg",
-		lightMapIntensity: 2.2,
+		image: floorLightMapImage.data,
+		width: floorLightMapImage.width,
+		height: floorLightMapImage.height,
+		lightMapIntensity: 1.8,
 		type: "light",
 	});
+	/*
+	const floorLightMap = await createTexture({
+		url: "textures/arm-chair-floor-lightmap.jpg",
+		lightMapIntensity: 2.8,
+		type: "light",
+	});
+	*/
 	const floorMaterial = createMaterialStore({
-		diffuse: [1, 0.8, 0.8],
+		diffuse: [1, 1, 1],
 		metalness: 0,
 		lightMap: floorLightMap,
 		specular: createSpecular({
