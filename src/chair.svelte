@@ -29,6 +29,8 @@ import { cloneMatrix, createZeroMatrix } from "./geometries/common.js";
 import { createSpecular } from "./material/specular/specular.js";
 import { renderState } from "./store/engine";
 
+import { decodeJPEGHDRLoader } from "./programs/jpg-hdr/jpeg-hdr-loader.js";
+
 let canvas;
 onMount(async () => {
 	$renderer = {
@@ -89,6 +91,15 @@ onMount(async () => {
 		type: "normal",
 	});
 
+	const chairLightMapImage = await decodeJPEGHDRLoader("textures/arm-chair-lightmap-hdr.jpg");
+	const chairLightMap = await createTexture({
+		textureBuffer: () => chairLightMapImage.texture,
+		width: chairLightMapImage.width,
+		height: chairLightMapImage.height,
+		lightMapIntensity: 1.8,
+		type: "light",
+	});
+	/*
 	const chairLightMapImage = await loadRGBE("textures/arm-chair-lightmap.hdr");
 	const chairLightMap = await createTexture({
 		image: chairLightMapImage.data,
@@ -97,7 +108,7 @@ onMount(async () => {
 		lightMapIntensity: 1.8,
 		type: "light",
 	});
-
+	*/
 	/*
 	const chairLightMap = await createTexture({
 		url: "textures/arm-chair-lightmap.jpg",
@@ -118,6 +129,15 @@ onMount(async () => {
 			color: [1, 1, 1],
 		}),
 	});
+	const floorLightMapImage = await decodeJPEGHDRLoader("textures/arm-chair-floor-lightmap-hdr.jpg");
+	const floorLightMap = await createTexture({
+		textureBuffer: () => floorLightMapImage.texture,
+		width: floorLightMapImage.width,
+		height: floorLightMapImage.height,
+		lightMapIntensity: 1.8,
+		type: "light",
+	});
+	/*
 	const floorLightMapImage = await loadRGBE("textures/arm-chair-floor-lightmap.hdr");
 	const floorLightMap = await createTexture({
 		image: floorLightMapImage.data,
@@ -126,6 +146,7 @@ onMount(async () => {
 		lightMapIntensity: 1.8,
 		type: "light",
 	});
+	*/
 	/*
 	const floorLightMap = await createTexture({
 		url: "textures/arm-chair-floor-lightmap.jpg",
