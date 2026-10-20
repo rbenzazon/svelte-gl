@@ -110,6 +110,7 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 	 * 4 : loop currently running, renderer updates ignored momentarily	<---|
 	 */
 	const running = writable(0);
+	let frame = 0;
 
 	const renderPipeline = derived(
 		[renderer, programs, camera, running],
@@ -276,7 +277,7 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 			return 1;
 		} else if (get(running) === 2) {
 			running.set(3);
-			requestAnimationFrame(loop);
+			frame = requestAnimationFrame(loop);
 			return 2;
 		}
 
@@ -296,7 +297,7 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 			});
 			//lock pipeline updates to batch changes that come from other sources than loop
 			running.set(4);
-			requestAnimationFrame(loop);
+			frame = requestAnimationFrame(loop);
 		}
 	});
 
@@ -309,7 +310,12 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 	const unsubPipeline = renderPipeline.subscribe((value) => {
 		//console.log("render loop store subscribed", value);
 	});
-	return { renderState, invalidate };
+	function destroy() {
+		cancelAnimationFrame(frame);
+		unsub();
+		unsubPipeline();
+	}
+	return { renderState, invalidate, destroy };
 }
 
 export const { renderState, invalidate } = attachLoop({
@@ -363,6 +369,12 @@ export function createEngine() {
 		programs: enginePrograms,
 		renderState: loop.renderState,
 		invalidate: loop.invalidate,
+		destroy() {
+			loop.destroy();
+			engineRenderer.destroy();
+			// Frees every GPU resource of this context. The canvas cannot get a new WebGL context afterwards.
+			ctx.gl?.getExtension("WEBGL_lose_context")?.loseContext();
+		},
 		createMaterial(props) {
 			return createMaterialStore(props, { materials: engineMaterials, scene: engineScene });
 		},

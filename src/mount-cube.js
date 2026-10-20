@@ -10,6 +10,7 @@ import { createEngine } from "./store/engine.js";
  * The page owns the canvas. This only receives the element and builds an engine for it.
  * @param {HTMLCanvasElement} canvas
  * @param {{ color: number[], background: number }} options
+ * @returns {() => void} destroy
  */
 export function mountCube(canvas, { color, background }) {
 	const engine = createEngine();
@@ -54,6 +55,9 @@ export function mountCube(canvas, { color, background }) {
 		loop() {},
 		enabled: true,
 	});
-	createOrbitControls(canvas, engine.camera);
-	return engine;
+	const controls = createOrbitControls(canvas, engine.camera);
+	return function destroy() {
+		controls.destroy();
+		engine.destroy();
+	};
 }

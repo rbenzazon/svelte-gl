@@ -236,5 +236,6 @@
  * @property {SvelteGLRendererStore['update']} update
  * @property {SvelteGLProcessedRenderer} processed
  * @property {number} revision
+ * @property {() => void} destroy stops watching the canvas size and device pixel ratio
  */
 

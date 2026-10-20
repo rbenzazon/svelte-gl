@@ -215,6 +215,10 @@ export function createRenderer(ctx) {
 		get revision() {
 			return get(revisionStore);
 		},
+		destroy() {
+			resizeObserver?.disconnect();
+			dprMedia?.removeEventListener("change", onDevicePixelRatio);
+		},
 	};
 }
 export const renderer = createRenderer(appContext);
