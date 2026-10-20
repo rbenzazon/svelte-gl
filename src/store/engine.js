@@ -269,6 +269,8 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 			running.set(4);
 			const rendererValue = get(renderer);
 			rendererValue.loop && rendererValue.loop();
+			// Resize the buffer and the projection, then draw below in this same turn.
+			ctx.applyPendingCanvasSize?.();
 			//unlock pipeline updates and trigger next update
 			running.set(3);
 			//run pipeline updates

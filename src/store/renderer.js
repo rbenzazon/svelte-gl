@@ -40,14 +40,98 @@ export function createRenderer(ctx) {
 	 * Update functions are called when a different value is set.
 	 * processed values are updated here
 	 */
-	function updateCanvas(canvas) {
-		const canvasRect = canvas.getBoundingClientRect();
-		canvas.width = canvasRect.width;
-		canvas.height = canvasRect.height;
-		ctx.canvas = {
-			width: canvasRect.width,
-			height: canvasRect.height,
+	let resizeObserver = null;
+	let dprMedia = null;
+
+	function canvasSize(canvas) {
+		const rect = canvas.getBoundingClientRect();
+		const dpr = window.devicePixelRatio || 1;
+		return {
+			width: Math.max(1, Math.round(rect.width * dpr)),
+			height: Math.max(1, Math.round(rect.height * dpr)),
 		};
+	}
+
+	function applyCanvasSize(canvas) {
+		const { width, height } = canvasSize(canvas);
+		if (canvas.width === width && canvas.height === height) {
+			return false;
+		}
+		canvas.width = width;
+		canvas.height = height;
+		// Before the first frame, ctx.canvas is the size record the camera reads.
+		// After that, the pipeline stores the element itself.
+		if (ctx.canvas && ctx.canvas !== canvas) {
+			ctx.canvas.width = width;
+			ctx.canvas.height = height;
+		} else if (!ctx.canvas) {
+			ctx.canvas = { width, height };
+		}
+		return true;
+	}
+
+	function refreshProjection() {
+		if (!ctx.camera) {
+			return;
+		}
+		// Camera-only revision: the pipeline cache keeps the existing program steps.
+		ctx.camera.update(() => ({}));
+	}
+
+	function onCanvasResize() {
+		const canvas = get(store).canvas;
+		if (!canvas) {
+			return;
+		}
+		const { width, height } = canvasSize(canvas);
+		if (canvas.width === width && canvas.height === height) {
+			return;
+		}
+		// Changing the buffer here clears it before the browser paints.
+		// The render loop applies the size and redraws in the same turn.
+		ctx.pendingCanvasResize = true;
+	}
+
+	ctx.applyPendingCanvasSize = function applyPendingCanvasSize() {
+		if (!ctx.pendingCanvasResize) {
+			return;
+		}
+		const canvas = get(store).canvas;
+		ctx.pendingCanvasResize = false;
+		if (!canvas) {
+			return;
+		}
+		if (applyCanvasSize(canvas)) {
+			refreshProjection();
+		}
+	};
+
+	function watchDevicePixelRatio() {
+		dprMedia?.removeEventListener("change", onDevicePixelRatio);
+		dprMedia = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+		dprMedia.addEventListener("change", onDevicePixelRatio);
+	}
+
+	function onDevicePixelRatio() {
+		onCanvasResize();
+		watchDevicePixelRatio();
+	}
+
+	function watchCanvas(canvas) {
+		resizeObserver?.disconnect();
+		dprMedia?.removeEventListener("change", onDevicePixelRatio);
+		resizeObserver = new ResizeObserver(onCanvasResize);
+		resizeObserver.observe(canvas);
+		watchDevicePixelRatio();
+	}
+
+	function updateCanvas(canvas) {
+		applyCanvasSize(canvas);
+		if (!ctx.canvas) {
+			const { width, height } = canvasSize(canvas);
+			ctx.canvas = { width, height };
+		}
+		watchCanvas(canvas);
 	}
 	function updateLoop(loop) {}
 	function updateBackgroundColor(color) {
