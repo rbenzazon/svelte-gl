@@ -135,7 +135,8 @@ export function createRenderer(ctx) {
 	}
 	function updateLoop(loop) {}
 	function updateBackgroundColor(color) {
-		processed.set("backgroundColor", [...convertToVector3(color), 1]);
+		const rgb = convertToVector3(color);
+		processed.set("backgroundColor", rgb.length === 4 ? rgb : [...rgb, 1]);
 	}
 	function updateAmbientLightColor([color, intensity]) {
 		processed.set(
@@ -215,6 +216,7 @@ export function createRenderer(ctx) {
 		get revision() {
 			return get(revisionStore);
 		},
+		resize: onCanvasResize,
 		destroy() {
 			resizeObserver?.disconnect();
 			dprMedia?.removeEventListener("change", onDevicePixelRatio);

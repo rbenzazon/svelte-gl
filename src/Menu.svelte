@@ -28,6 +28,7 @@ const links = [
 	{ name: "Two cubes (HTML)", href: "./two-cubes-html" },
 	{ name: "Data texture", href: "./data-texture" },
 	{ name: "Camera projection", href: "./camera-projection" },
+	{ name: "Scan viewer", href: "./scan-viewer" },
 ];
 </script>
 

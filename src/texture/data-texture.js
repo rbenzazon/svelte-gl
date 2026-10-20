@@ -4,7 +4,7 @@ const formats = {
 };
 
 /**
- * Float data texture. setupTexture and bindTexture are pipeline steps.
+ * Float data texture. setupTexture and bindTexture are pipeline steps; setupTexture only runs once.
  * update() re-uploads pixels and does not redraw; call engine.invalidate() after it.
  * @param {{ data: Float32Array, width: number, height: number, format?: "R32F" | "RGBA32F", uniform?: string }} props
  */
@@ -14,6 +14,9 @@ export function createDataTexture({ data, width, height, format = "R32F", unifor
 	let texture = null;
 
 	function setupTexture(ctx) {
+		if (texture) {
+			return;
+		}
 		gl = ctx.gl;
 		gl.getExtension("EXT_color_buffer_float");
 		texture = gl.createTexture();
@@ -42,7 +45,8 @@ export function createDataTexture({ data, width, height, format = "R32F", unifor
 	}
 
 	function update(pixels) {
-		if (!gl || !texture) {
+		data = pixels;
+		if (!texture) {
 			return;
 		}
 		gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -50,5 +54,10 @@ export function createDataTexture({ data, width, height, format = "R32F", unifor
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 
-	return { setupTexture, bindTexture, update };
+	function destroy() {
+		gl?.deleteTexture(texture);
+		texture = null;
+	}
+
+	return { setupTexture, bindTexture, update, destroy };
 }

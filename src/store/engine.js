@@ -4,6 +4,7 @@ import { appContext, createAppContext } from "./app-context.js";
 import { camera, createCameraStore } from "./camera";
 import { create3DObject } from "./create-object";
 import {
+	bindDefaultFramebuffer,
 	bindVAO,
 	disableBlend,
 	enableBlend,
@@ -117,7 +118,7 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 		([$renderer, $programs, $camera, $running]) => {
 			// if renderer.enabled is false, the scene is being setup, we should not render
 			// if running is 4, we delay the pipeline updates as a way to batch scene updates
-			if (!$renderer.enabled || $running === 4 || $running === 1 || $programs.length === 0) {
+			if (!$renderer.enabled || $running === 4 || $running === 1) {
 				return emptyRenderPipeline;
 			}
 			/**
@@ -184,6 +185,9 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 			let transparent = false;
 
 			pipeline.push(disableBlend);
+			if ($programs.length === 0) {
+				pipeline.push(bindDefaultFramebuffer);
+			}
 
 			let programCreation = false;
 

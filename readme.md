@@ -112,3 +112,4 @@ https://developer.mozilla.org/en-US/docs/Web/API/KHR_parallel_shader_compile
 ### Two cubes (HTML) | [Code](./src/two-cubes-html.html)
 ### Data texture | [Code](./src/data-texture.svelte)
 ### Camera projection | [Code](./src/camera-projection.svelte)
+### Scan viewer | [Code](./src/scan-viewer.svelte) | [App Code](./src/apps/scan-viewer/index.js)

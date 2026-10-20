@@ -113,6 +113,7 @@
  * @property {boolean} requireTime
  * @property {import("src/shaders/template").TemplateRenderer} shader
  * @property {() => void} setupAnimation
+ * @property {Function[]} [updateProgram] steps added to the program, run on every draw
  */
 
 /**
@@ -135,6 +136,7 @@
  * @typedef {Object} SvelteGLBaseMeshData
  * @property {SvelteGLAttributes} attributes
  * @property {import("./webgl").DrawMode} drawMode
+ * @property {number} [vertexCount] draw count for meshes without positions
  * @property {SvelteGLMeshAnimation[]} [animations]
  */
 /**
@@ -178,6 +180,7 @@
  * @property {SvelteGLAttributes} attributes
  * @property {import("./webgl").DrawMode} drawMode
  * @property {import("./materials.js").MaterialCustomStore} material
+ * @property {number} [vertexCount] draw count for meshes without positions
  * @property {SvelteGLMeshAnimation[]} [animations]
  * @property {MatrixStore} [matrix]
  * @property {number} [instances]
@@ -236,6 +239,7 @@
  * @property {SvelteGLRendererStore['update']} update
  * @property {SvelteGLProcessedRenderer} processed
  * @property {number} revision
+ * @property {() => void} resize resizes the backing store on the next frame if the canvas size changed
  * @property {() => void} destroy stops watching the canvas size and device pixel ratio
  */
 

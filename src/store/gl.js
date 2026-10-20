@@ -12,6 +12,7 @@ import { isSvelteGLSingleMesh } from "./mesh-types";
 // Uniform Buffer Objects, must have unique binding points
 export const UBO_BINDING_POINT_POINTLIGHT = 0;
 export const UBO_BINDING_POINT_SPOTLIGHT = 1;
+export const UBO_BINDING_POINT_SCENE = 2;
 
 export function initRenderer(ctx) {
 	/** @type {WebGL2RenderingContext} */
@@ -62,9 +63,9 @@ export function render(mesh, instances, drawMode) {
 
 		const positionSize = mesh.attributes.positionsSize ?? 3;
 
-		const attributeLength = mesh.attributes.elements
-			? mesh.attributes.elements.length
-			: mesh.attributes.positions.length / positionSize;
+		const attributeLength =
+			mesh.vertexCount ??
+			(mesh.attributes.elements ? mesh.attributes.elements.length : mesh.attributes.positions.length / positionSize);
 		const elementsType = mesh.attributes.elements instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
 		if (instances) {
 			if (mesh.attributes.elements) {
@@ -587,6 +588,10 @@ export function setupAttributes(programStore, mesh) {
 			vaoMap.get(programStore).set(mesh, vao);
 		}
 		ctx.vao = vao;
+		// Zero-attribute mesh: the vertex shader builds it from gl_VertexID and mesh.vertexCount.
+		if (!positions) {
+			return;
+		}
 		let buffers;
 		if (!bufferMap.has(mesh)) {
 			buffers = [];

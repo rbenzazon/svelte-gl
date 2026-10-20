@@ -7,7 +7,26 @@ import del from 'rollup-plugin-delete';
 
 const dev = process.env.DEV;
 
-export default {
+const plugins = (minify = !dev) => [
+    glsl({
+        // By default, everything gets included
+        include: 'src/**/*.glsl',
+        /*sourceMap: false*/
+        compress: false,
+    }),
+    svelte({
+        emitCss: false,
+    }),
+    resolve({
+        browser: true,
+        exportConditions: ['svelte'],
+        extensions: ['.svelte']
+      }),
+    commonjs(),
+    ...(dev ? []:[terser()]),
+];
+
+export default [{
     input: {
         rock:'src/rock.svelte',
         cube:'src/cube.svelte',
@@ -31,6 +50,7 @@ export default {
         'two-cubes-html':'src/mount-cube.js',
         'data-texture':'src/data-texture.svelte',
         'camera-projection':'src/camera-projection.svelte',
+        'scan-viewer':'src/scan-viewer.svelte',
     },
     output: {
         dir: 'build/js',
@@ -38,23 +58,12 @@ export default {
         format: 'esm',
         chunkFileNames: '[name].js',
     },
-    plugins: [
-        del({ targets: 'build/js/*' }),
-        glsl({
-            // By default, everything gets included
-            include: 'src/**/*.glsl',
-            /*sourceMap: false*/
-            compress: false,
-        }),
-        svelte({
-            emitCss: false,
-        }),
-        resolve({
-            browser: true,
-            exportConditions: ['svelte'],
-            extensions: ['.svelte']
-          }),
-        commonjs(),
-        ...(dev ? []:[terser()]),
-    ]
-};
+    plugins: [del({ targets: 'build/js/*' }), ...plugins()],
+}, {
+    input: 'src/apps/scan-viewer/index.js',
+    output: {
+        file: 'build/lib/scan-viewer.js',
+        format: 'esm',
+    },
+    plugins: plugins(),
+}];

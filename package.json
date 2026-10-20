@@ -1,12 +1,17 @@
 {
-  "name": "test-svelte-compiler",
+  "name": "svelte-gl",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "type": "module",
+  "exports": {
+    "./scan-viewer": {
+      "types": "./src/apps/scan-viewer/scan-viewer.d.ts",
+      "import": "./build/lib/scan-viewer.js"
+    }
+  },
   "scripts": {
     "dev:vite": "vite",
-    "build:vite": "vite build",
+    "build:vite": "vite build && vite build -c vite.lib.config.js",
     "preview:vite": "vite preview",
     "dev": "concurrently \"npm run watch\" \"npm run serve\"",
     "prepare": "npm run stop-watch && npm run format && npm run build",

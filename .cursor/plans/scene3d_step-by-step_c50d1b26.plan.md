@@ -167,10 +167,12 @@ Today the engine lives in module singletons: [src/store/app-context.js](src/stor
 - **4.1 Surface geometry.** This is the program with no vertex attributes, so the zero-attribute draw lands here. There is no separate `vertex-id` example.
   - The surface mesh is `{ vertexCount, drawMode }` and has no `positions`. `vertexCount` is 6 vertices per grid cell.
   - [`setupAttributes`](src/store/gl.js) creates an empty VAO when the mesh has no positions. [`render()`](src/store/gl.js) uses `vertexCount` for `drawArrays`. Meshes that already have positions stay on the current path.
-  - The lit shading stays the default PBR program, the same mechanism as [src/animation/wobbly/wobbly.js](src/animation/wobbly/wobbly.js). [src/shaders/default-vertex.glsl](src/shaders/default-vertex.glsl) declares `in vec3 position`, so this variant omits that input. The vertex stage gets its cell from `gl_VertexID`, samples the `R32F` heights, and computes the normal from neighboring heights.
-  - A triangle that touches a NaN sample collapses outside the clip volume, which leaves a hole.
+  - The lit shading stays the default PBR program, the same mechanism as [src/animation/wobbly/wobbly.js](src/animation/wobbly/wobbly.js). The template keeps `in vec3 position`: an attribute with no buffer reads a constant, and the surface modifier overwrites the position and normal. The vertex stage gets its cell from `gl_VertexID`, samples the `R32F` heights, and computes the normal from neighboring heights.
+  - A vertex animation can add `updateProgram` steps to its program (texture bind, uniform buffer upload).
+  - A triangle that touches a NaN sample collapses to a single point, which leaves a hole.
   - Data Z maps to world Y through one axis-swap model matrix.
-  - A small scene uniform buffer holds `zScale`, origin and extent.
+  - A small scene uniform buffer holds the origin and `zScale`. Other fields are added when a program needs them.
+  - Until 4.2 and 6.1, the viewer uses one key light and the existing orbit controls.
   - API: `setLayers` (surface), `updateLayerData`, `setZScale`.
   - Example: a synthetic sine grid with a NaN hole.
 - **4.2 Material and lights.**

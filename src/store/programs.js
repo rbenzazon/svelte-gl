@@ -228,6 +228,9 @@ export function createProgramsStore({ scene, lights, materials, renderPasses, ct
 				if (p.requireTime) {
 					program.updateProgram.push(setupTime);
 				}
+				for (const animation of p.meshes.flatMap((mesh) => mesh.animations ?? [])) {
+					program.updateProgram.push(...(animation.updateProgram ?? []));
+				}
 				program.updateProgram.push(
 					...Array.from(
 						get(lights).reduce((acc, light) => {
