@@ -174,12 +174,17 @@ export function createProgramsStore({ scene, lights, materials, renderPasses, ct
 			...prePasses,
 			...concurrentPasses,
 			...sortedPrograms.map((p, index) => {
-				if (p.material.program) {
-					p.material.program.meshes = p.meshes;
-					reconciliateCacheMap(p, p.material.program, ctx);
-					return p.material.program;
-				}
 				const firstCall = index === 0;
+				if (p.material.program) {
+					const program = p.material.program;
+					program.meshes = p.meshes;
+					// A custom program drawing to the canvas clears it when first, like the default program below.
+					if (program.setFrameBuffer == null || program.setFrameBuffer === bindDefaultFramebuffer) {
+						program.setFrameBuffer = firstCall && concurrentPasses.length === 0 ? bindDefaultFramebuffer : null;
+					}
+					reconciliateCacheMap(p, program, ctx);
+					return program;
+				}
 				const program = {
 					...p,
 					useProgram,

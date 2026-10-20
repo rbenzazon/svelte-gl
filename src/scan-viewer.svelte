@@ -66,8 +66,20 @@ function onSkyboxBlur(event) {
 	applyEnvironment();
 }
 
+const displays = ["surface", "points", "both"];
+let display = "surface";
+
+// "both" passes the same distanceData to the two layers, so the heights are uploaded once.
 function leftLayers() {
-	return [{ ...layers[0], data: { ...grid, distanceData: leftHeights }, material: metallic ? metal : undefined }];
+	const data = { ...grid, distanceData: leftHeights };
+	const surface = { id: "sine", kind: "surface", data, material: metallic ? metal : undefined };
+	const points = { id: "sine-points", kind: "points", data, color: "#f59e0b", pointSize: 2 };
+	return display === "surface" ? [surface] : display === "points" ? [points] : [surface, points];
+}
+
+function toggleDisplay() {
+	display = displays[(displays.indexOf(display) + 1) % displays.length];
+	viewerLeft.setLayers(leftLayers());
 }
 
 function toggleMaterial() {
@@ -114,7 +126,7 @@ function onZScale(event) {
 function newData() {
 	frequency += 0.25;
 	leftHeights = createHeights(frequency);
-	viewerLeft.updateLayerData("sine", leftHeights);
+	viewerLeft.updateLayerData(leftLayers()[0].id, leftHeights);
 }
 
 onMount(() => {
@@ -141,6 +153,7 @@ onMount(() => {
 		<input type="range" min="0" max="4" step="0.05" value={zScale} on:input={onZScale} />
 	</div>
 	<button on:click={newData}>new data (left)</button>
+	<button on:click={toggleDisplay}>left display: {display}</button>
 	<button on:click={toggleMaterial}>left material: {metallic ? "metal" : "matte"}</button>
 	<button on:click={toggleLights}>left lights: {attached}</button>
 	<button on:click={nextBackground}>left background</button>

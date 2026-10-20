@@ -45,7 +45,21 @@ export interface ScanViewerSurfaceLayer {
 	material?: ScanViewerMaterial;
 }
 
-export type ScanViewerLayer = ScanViewerSurfaceLayer;
+/**
+ * Organized point cloud: one unlit round point per grid sample, NaN samples skipped.
+ * Give a surface layer and a points layer the same distanceData array to upload it once.
+ */
+export interface ScanViewerPointsLayer {
+	id: string;
+	kind: "points";
+	data: ScanData;
+	/** Solid color, defaults to a mid blue. */
+	color?: Color;
+	/** Diameter in CSS px, default 2. */
+	pointSize?: number;
+}
+
+export type ScanViewerLayer = ScanViewerSurfaceLayer | ScanViewerPointsLayer;
 
 /** Equirectangular HDR image as RGBA half floats, what loadEnvironment returns for a .hdr (RGBE) file. */
 export interface ScanViewerEnvironment {
@@ -76,7 +90,7 @@ export interface ScanViewerApi {
 	setBackground(rgba: RGBA): void;
 	/** Replaces all layers. The first call with data frames the camera on their bounding box; later calls do not move it. */
 	setLayers(layers: ScanViewerLayer[]): void;
-	/** Re-uploads one layer's heights; the grid size must not change. */
+	/** Re-uploads one layer's heights, and those of layers sharing its distanceData; the grid size must not change. */
 	updateLayerData(id: string, data: Float32Array): void;
 	/** Height exaggeration, default 1. */
 	setZScale(scale: number): void;

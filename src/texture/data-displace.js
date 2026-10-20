@@ -1,13 +1,6 @@
 import vertexShader from "./data-displace-vertex.glsl";
 import fragmentShader from "./data-displace-fragment.glsl";
-import {
-	bindDefaultFramebuffer,
-	compileShaders,
-	createProgram,
-	linkProgram,
-	useProgram,
-	validateProgram,
-} from "../store/gl";
+import { compileShaders, createProgram, linkProgram, useProgram, validateProgram } from "../store/gl";
 import { selectProgram } from "../store/programs-cache";
 
 export function createDataDisplaceProgram(dataTexture) {
@@ -35,6 +28,5 @@ export function createDataDisplaceProgram(dataTexture) {
 		updateProgram: [setupAmplitude],
 		useProgram,
 		selectProgram,
-		setFrameBuffer: bindDefaultFramebuffer,
 	};
 }
