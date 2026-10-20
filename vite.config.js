@@ -30,6 +30,7 @@ const htmlEntryPoints = {
   'chair': resolve(__dirname, 'src/chair.html'),
   'two-cubes': resolve(__dirname, 'src/two-cubes.html'),
   'two-cubes-html': resolve(__dirname, 'src/two-cubes-html.html'),
+  'data-texture': resolve(__dirname, 'src/data-texture.html'),
 };
 
 // Common plugins for both modes

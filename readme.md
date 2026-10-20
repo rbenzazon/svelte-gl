@@ -110,3 +110,4 @@ https://developer.mozilla.org/en-US/docs/Web/API/KHR_parallel_shader_compile
 ### Draco Compressed GLTF | [Demo](https://rbenzazon.github.io/svelte-gl/build/draco-gltf) | [Code](./src/draco-gltf.svelte)
 ### Two cubes | [Code](./src/two-cubes.svelte)
 ### Two cubes (HTML) | [Code](./src/two-cubes-html.html)
+### Data texture | [Code](./src/data-texture.svelte)

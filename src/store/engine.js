@@ -39,12 +39,19 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 	});
 
 	const emptyRenderPipeline = [];
+	const invalidateToken = {};
+	let invalidateRevision = 0;
 	const revisionMap = new Map();
 	revisionMap.set(renderer, 0);
 	revisionMap.set(scene, 0);
 	revisionMap.set(camera, 0);
 	revisionMap.set(materials, 0);
 	revisionMap.set(lights, 0);
+	revisionMap.set(invalidateToken, 0);
+
+	function invalidate() {
+		invalidateRevision += 1;
+	}
 
 	function updated() {
 		const updateMap = new Map();
@@ -63,21 +70,30 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 		if (revisionMap.get(lights) !== lights.revision) {
 			updateMap.set(lights, "lights");
 		}
+		if (revisionMap.get(invalidateToken) !== invalidateRevision) {
+			updateMap.set(invalidateToken, "invalidate");
+		}
 		revisionMap.set(renderer, renderer.revision);
 		revisionMap.set(scene, scene.revision);
 		revisionMap.set(camera, camera.revision);
 		revisionMap.set(materials, materials.revision);
 		revisionMap.set(lights, lights.revision);
+		revisionMap.set(invalidateToken, invalidateRevision);
 		return updateMap;
 	}
 
 	const pipelineCache = new Map();
 
 	function isEligibleForCache(updateMap) {
-		return (
-			(updateMap.size === 1 && (updateMap.has(camera) || updateMap.has(lights))) ||
-			(updateMap.size === 2 && updateMap.has(camera) && updateMap.has(lights))
-		);
+		if (updateMap.size === 0) {
+			return false;
+		}
+		for (const key of updateMap.keys()) {
+			if (key !== camera && key !== lights && key !== invalidateToken) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	function getPipelineSignature(updateMap) {
@@ -293,10 +309,10 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 	const unsubPipeline = renderPipeline.subscribe((value) => {
 		//console.log("render loop store subscribed", value);
 	});
-	return { renderState };
+	return { renderState, invalidate };
 }
 
-export const renderState = attachLoop({
+export const { renderState, invalidate } = attachLoop({
 	ctx: appContext,
 	camera,
 	renderer,
@@ -304,7 +320,7 @@ export const renderState = attachLoop({
 	lights,
 	materials,
 	programs,
-}).renderState;
+});
 
 export function createEngine() {
 	const ctx = createAppContext();
@@ -346,6 +362,7 @@ export function createEngine() {
 		renderPasses,
 		programs: enginePrograms,
 		renderState: loop.renderState,
+		invalidate: loop.invalidate,
 		createMaterial(props) {
 			return createMaterialStore(props, { materials: engineMaterials, scene: engineScene });
 		},

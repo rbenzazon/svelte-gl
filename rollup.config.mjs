@@ -29,6 +29,7 @@ export default {
         'skybox-jpghdr':'src/skybox-jpghdr.svelte',
         'two-cubes':'src/two-cubes.svelte',
         'two-cubes-html':'src/mount-cube.js',
+        'data-texture':'src/data-texture.svelte',
     },
     output: {
         dir: 'build/js',
