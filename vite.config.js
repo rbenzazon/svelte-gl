@@ -31,6 +31,7 @@ const htmlEntryPoints = {
   'two-cubes': resolve(__dirname, 'src/two-cubes.html'),
   'two-cubes-html': resolve(__dirname, 'src/two-cubes-html.html'),
   'data-texture': resolve(__dirname, 'src/data-texture.html'),
+  'camera-projection': resolve(__dirname, 'src/camera-projection.html'),
 };
 
 // Common plugins for both modes

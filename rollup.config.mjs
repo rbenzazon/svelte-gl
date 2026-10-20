@@ -30,6 +30,7 @@ export default {
         'two-cubes':'src/two-cubes.svelte',
         'two-cubes-html':'src/mount-cube.js',
         'data-texture':'src/data-texture.svelte',
+        'camera-projection':'src/camera-projection.svelte',
     },
     output: {
         dir: 'build/js',

@@ -1,4 +1,4 @@
-import { lookAt, perspective } from "gl-matrix/esm/mat4.js";
+import { lookAt, orthoNO, perspective } from "gl-matrix/esm/mat4.js";
 import { get, writable } from "svelte/store";
 import { createZeroMatrix } from "../geometries/common";
 import { appContext } from "./app-context";
@@ -24,6 +24,7 @@ export function createCameraStore(ctx) {
 		near: 0.1,
 		far: 1000,
 		up: [0, 1, 0],
+		projection: "perspective",
 	});
 	const { subscribe, update } = store;
 	const revisionStore = writable(0);
@@ -45,8 +46,15 @@ export function createCameraStore(ctx) {
 	let view, projection;
 	function updateComputed(next) {
 		const { canvas } = ctx;
+		const aspect = canvas.width / canvas.height;
 		view = lookAt(createZeroMatrix(), next.position, next.target, next.up);
-		projection = perspective(createZeroMatrix(), toRadian(next.fov), canvas.width / canvas.height, next.near, next.far);
+		if (next.projection === "orthographic") {
+			const height = 2 * distance(next.position, next.target) * Math.tan(toRadian(next.fov) / 2);
+			const width = height * aspect;
+			projection = orthoNO(createZeroMatrix(), -width / 2, width / 2, -height / 2, height / 2, next.near, next.far);
+		} else {
+			projection = perspective(createZeroMatrix(), toRadian(next.fov), aspect, next.near, next.far);
+		}
 	}
 	return {
 		subscribe,
@@ -62,6 +70,13 @@ export function createCameraStore(ctx) {
 			return projection;
 		},
 	};
+}
+
+function distance(position, target) {
+	const x = position[0] - target[0];
+	const y = position[1] - target[1];
+	const z = position[2] - target[2];
+	return Math.hypot(x, y, z);
 }
 
 const degree = Math.PI / 180;
