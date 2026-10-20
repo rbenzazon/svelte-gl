@@ -47,6 +47,22 @@ export interface ScanViewerSurfaceLayer {
 
 export type ScanViewerLayer = ScanViewerSurfaceLayer;
 
+/** Equirectangular HDR image as RGBA half floats, what loadEnvironment returns for a .hdr (RGBE) file. */
+export interface ScanViewerEnvironment {
+	width: number;
+	height: number;
+	data: Uint16Array;
+}
+
+export interface ScanViewerEnvironmentOptions {
+	/** Draw the environment as the background instead of the background color. Default false. */
+	skybox?: boolean;
+	/** 0 (sharp) .. 1 (fully blurred) skybox. Default 0. */
+	skyboxBlur?: number;
+	/** Image-based lighting on the surfaces, on top of the point lights, also when the skybox is hidden. Default false. */
+	envLighting?: boolean;
+}
+
 export interface ScanViewerOptions {
 	/** Defaults to opaque white. */
 	background?: RGBA;
@@ -65,14 +81,24 @@ export interface ScanViewerApi {
 	/** Height exaggeration, default 1. */
 	setZScale(scale: number): void;
 	/**
-	 * Up to 4 point lights, plus a fixed weak ambient term. The default rig is a key, a fill and a rim light.
+	 * Up to 4 point lights, none removes them. The default rig is a key, a fill and a rim light.
 	 * "camera" (default): the rig is placed for the home view and orbits with the camera.
 	 * "scene": the lights stay fixed in the scene.
 	 */
 	setLights(lights: ScanViewerLight[], attached?: "camera" | "scene"): void;
+	/** Uniform ambient term. Intensity defaults to 0.6 (the initial value), 0 turns it off; color defaults to white. */
+	setAmbient(intensity?: number, color?: Color): void;
+	/**
+	 * Sets the environment and how it is used; null removes it. Calling again with the same image only
+	 * applies the options. Resolves once applied; a newer call supersedes a pending one.
+	 */
+	setEnvironment(environment: ScanViewerEnvironment | null, options?: ScanViewerEnvironmentOptions): Promise<void>;
 }
 
 /** The default rig: key (front left), fill (front right) and rim (behind), as seen from the home view. */
 export const defaultLights: ScanViewerLight[];
+
+/** Fetches and decodes a .hdr (RGBE) file. */
+export function loadEnvironment(url: string): Promise<ScanViewerEnvironment>;
 
 export function createScanViewer(target: HTMLElement, options?: ScanViewerOptions): ScanViewerApi;

@@ -48,6 +48,7 @@ import { drawModes } from "./webgl";
  * @property {number} height
  * @property {number} cubeSize
  * @property {SvelteGLToneMapping} toneMapping
+ * @property {SvelteGLRendererStore} [renderer] redrawn once the cube map is ready, defaults to the singleton
  */
 /**
  * @typedef {SvelteGLCubeMapSkyboxProps | SvelteGLHDRSkyboxProps} SvelteGLSkyboxProps
@@ -83,6 +84,11 @@ export async function createSkyBox(props) {
 	function getBuffer() {
 		return buffer;
 	}
+	let lod = 0;
+	function setSkyboxLod(ctx) {
+		const { gl, program } = ctx;
+		gl.uniform1f(gl.getUniformLocation(program, "skyboxLod"), lod);
+	}
 	const skyboxProgram = {
 		createProgram,
 		setupProgram: [linkProgram, validateProgram],
@@ -91,7 +97,7 @@ export async function createSkyBox(props) {
 		setupCamera: setupSkyBoxCamera,
 		useProgram,
 		selectProgram,
-		updateProgram: [setDepthFunc("LEQUAL")],
+		updateProgram: [setDepthFunc("LEQUAL"), setSkyboxLod],
 		meshes: [createSkyBoxMesh()],
 		setFrameBuffer: bindDefaultFramebuffer,
 		postDraw: restoreDepthFunc,
@@ -107,7 +113,16 @@ export async function createSkyBox(props) {
 	} else if (isHDRSkyboxProps(props)) {
 		const image = props.typedArray ?? props.texture;
 		skyboxProgram.createProgram = createSkyBoxProgram(
-			setupHDRTexture(image, setBuffer, getBuffer, props.convertToCube, props.width, props.height, props.cubeSize),
+			setupHDRTexture(
+				image,
+				setBuffer,
+				getBuffer,
+				props.convertToCube,
+				props.width,
+				props.height,
+				props.cubeSize,
+				props.renderer ?? renderer,
+			),
 		);
 		toneMapping = props.toneMapping;
 		skyboxProgram.setupProgram = [createShaders(toneMapping, true), ...skyboxProgram.setupProgram];
@@ -120,6 +135,10 @@ export async function createSkyBox(props) {
 		order: 0,
 		programs: [skyboxProgram],
 		getTexture: getBuffer,
+		/** @param {number} value mip level the skybox is sampled at, 0 is the sharpest */
+		setLod(value) {
+			lod = value;
+		},
 	};
 }
 
@@ -149,16 +168,17 @@ function createSkyBoxProgram(setupHDRTexture) {
  * @param width:number,
  * @param height:number,
  * @param cubeSize:number
+ * @param {SvelteGLRendererStore} rendererStore
  * @returns {()=>void}
  */
-function setupHDRTexture(image, setBuffer, getBuffer, convertToCube, width, height, cubeSize) {
+function setupHDRTexture(image, setBuffer, getBuffer, convertToCube, width, height, cubeSize, rendererStore) {
 	return function setupHDRTexture(ctx) {
 		const { gl } = ctx;
 		if (getBuffer() == null) {
 			const cubemapTexture = convertToCube(image, gl, width, height, cubeSize);
 			setBuffer(cubemapTexture);
 			resetViewportToCanvas(ctx);
-			renderer.update((renderer) => renderer);
+			rendererStore.update((renderer) => renderer);
 		}
 	};
 }

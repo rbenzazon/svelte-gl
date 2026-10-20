@@ -1,5 +1,6 @@
 import ScanViewer from "./ScanViewer.svelte";
 
+export { loadRGBE as loadEnvironment } from "../../loaders/rgbe-loader.js";
 export { defaultLights } from "./light-rig.js";
 
 /**
@@ -16,6 +17,8 @@ export function createScanViewer(target, { background } = {}) {
 		updateLayerData: viewer.updateLayerData,
 		setZScale: viewer.setZScale,
 		setLights: viewer.setLights,
+		setAmbient: viewer.setAmbient,
+		setEnvironment: viewer.setEnvironment,
 		destroy() {
 			viewer.$destroy();
 		},

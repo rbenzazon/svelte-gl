@@ -41,17 +41,22 @@ const axisDirections = [
  * @property {SvelteGLBaseMeshData[]} lodPlanes
  * @property {number[]} sizeLods
  * @property {number[]} sigmas
+ * @property {import("svelte/store").Writable<import("../store/programs").RenderPass[]>} passes
  */
 
 /**
  *
  * @param {import("src/loaders/rgbe-loader").RGBE} image
+ * @param {number} [width]
+ * @param {number} [height]
+ * @param {import("svelte/store").Writable<import("../store/programs").RenderPass[]>} [passes] store the pass removes itself from once done
  * @return {import("../store/programs").RenderPass}
  */
-export function createEnvironmentMap(image, width, height) {
+export function createEnvironmentMap(image, width, height, passes = renderPasses) {
 	/** @type {EnvMapContext} */
 	const context = {};
 	context.image = image;
+	context.passes = passes;
 	const imageWidth = image.width ?? width;
 	context.cubeImageSize = imageWidth / 4;
 	context.lodMax = Math.floor(Math.log2(context.cubeImageSize));
@@ -298,12 +303,12 @@ function restoreState(
 			gl.deleteFramebuffer(pongFBO);
 			setPongFBO(null);
 		}
-		removePassFromStore();
+		removePassFromStore(context.passes);
 	};
 }
 
-function removePassFromStore() {
-	renderPasses.set(get(renderPasses).filter((pass) => pass.type !== "environmentMap"));
+function removePassFromStore(passes) {
+	passes.set(get(passes).filter((pass) => pass.type !== "environmentMap"));
 }
 
 /**

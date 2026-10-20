@@ -185,8 +185,9 @@ export function createProgramsStore({ scene, lights, materials, renderPasses, ct
 					useProgram,
 					setupProgram: null,
 					setFrameBuffer: null,
-					setupMaterial: [setupAmbientLight],
-					updateProgram: [],
+					setupMaterial: [],
+					// Per draw, so a renderer ambient change reaches cached programs.
+					updateProgram: [setupAmbientLight],
 					bindTextures: [],
 					createProgram,
 					selectProgram: (programStore) => selectProgram(programStore, ctx),

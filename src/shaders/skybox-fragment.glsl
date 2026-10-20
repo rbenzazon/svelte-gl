@@ -5,6 +5,7 @@ precision highp float;
 
 uniform samplerCube skybox;
 uniform mat4 viewDirectionProjectionInverse;
+uniform float skyboxLod;
 
 ${declarations}
   
@@ -17,7 +18,8 @@ vec4 sRGBTransferOETF( in vec4 value ) {
 }
 void main() {
   vec4 t = viewDirectionProjectionInverse * v_position;
-  fragColor = texture(skybox, normalize(t.xyz / t.w));
+  vec3 direction = normalize(t.xyz / t.w);
+  fragColor = skyboxLod > 0.0 ? textureLod(skybox, direction, skyboxLod) : texture(skybox, direction);
   ${toneMappings}
   ${hdrEncoding ? `
   fragColor = sRGBTransferOETF(fragColor);

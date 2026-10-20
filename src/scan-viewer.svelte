@@ -1,7 +1,7 @@
 <script type="module">
 import { onMount } from "svelte";
 import Menu from "./Menu.svelte";
-import { createScanViewer, defaultLights } from "./apps/scan-viewer/index.js";
+import { createScanViewer, defaultLights, loadEnvironment } from "./apps/scan-viewer/index.js";
 
 const backgrounds = [
 	[0.11, 0.14, 0.19, 1],
@@ -42,6 +42,29 @@ let zScale = 1;
 let leftHeights = layers[0].data.distanceData;
 let metallic = false;
 let attached = "camera";
+let environment = null;
+let skybox = false;
+let skyboxBlur = 0;
+let envLighting = false;
+
+function applyEnvironment() {
+	viewerLeft.setEnvironment(environment, { skybox, skyboxBlur, envLighting });
+}
+
+function toggleSkybox() {
+	skybox = !skybox;
+	applyEnvironment();
+}
+
+function toggleEnvLighting() {
+	envLighting = !envLighting;
+	applyEnvironment();
+}
+
+function onSkyboxBlur(event) {
+	skyboxBlur = Number(event.target.value);
+	applyEnvironment();
+}
 
 function leftLayers() {
 	return [{ ...layers[0], data: { ...grid, distanceData: leftHeights }, material: metallic ? metal : undefined }];
@@ -52,9 +75,17 @@ function toggleMaterial() {
 	viewerLeft.setLayers(leftLayers());
 }
 
+const lightModes = ["camera", "scene", "none"];
+
 function toggleLights() {
-	attached = attached === "camera" ? "scene" : "camera";
-	viewerLeft.setLights(defaultLights, attached);
+	attached = lightModes[(lightModes.indexOf(attached) + 1) % lightModes.length];
+	if (attached === "none") {
+		viewerLeft.setLights([]);
+		viewerLeft.setAmbient(0);
+	} else {
+		viewerLeft.setLights(defaultLights, attached);
+		viewerLeft.setAmbient();
+	}
 }
 
 function nextBackground() {
@@ -90,6 +121,9 @@ onMount(() => {
 	viewerLeft = createScanViewer(left, { background: backgrounds[backgroundIndex] });
 	viewerLeft.setLayers(layers);
 	mountRight();
+	loadEnvironment("skyboxes/christmas-photo-studio-01-4k.hdr").then((image) => {
+		environment = image;
+	});
 	return () => {
 		viewerLeft.destroy();
 		viewerRight.destroy();
@@ -110,6 +144,20 @@ onMount(() => {
 	<button on:click={toggleMaterial}>left material: {metallic ? "metal" : "matte"}</button>
 	<button on:click={toggleLights}>left lights: {attached}</button>
 	<button on:click={nextBackground}>left background</button>
+	<button on:click={toggleSkybox} disabled={!environment}>left skybox: {skybox ? "on" : "off"}</button>
+	<div class="field">
+		<span>skyboxBlur {skyboxBlur.toFixed(2)}</span>
+		<input
+			type="range"
+			min="0"
+			max="1"
+			step="0.01"
+			value={skyboxBlur}
+			disabled={!environment}
+			on:input={onSkyboxBlur}
+		/>
+	</div>
+	<button on:click={toggleEnvLighting} disabled={!environment}>left env lighting: {envLighting ? "on" : "off"}</button>
 	<button on:click={remountRight}>remount right ({remounts})</button>
 </div>
 <Menu />

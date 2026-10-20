@@ -183,6 +183,8 @@ Today the engine lives in module singletons: [src/store/app-context.js](src/stor
 - **4.3 Environment.**
   - `setEnvironment(env, { skybox, skyboxBlur, envLighting })` on top of the existing skybox and environment map.
   - `skyboxBlur` is done with `textureLod` on the cube map mip chain: one uniform, no extra pass.
+  - `env` is an equirectangular HDR image (`{ width, height, data }` half floats); `loadEnvironment(url)` decodes a `.hdr`. `null` removes it. No built-in "studio" preset yet.
+  - The PMREM pass only runs once env lighting is first enabled, and removes itself from the engine's own passes.
 
 ## Step 5: Points (4 parts)
 
