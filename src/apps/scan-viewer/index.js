@@ -1,5 +1,7 @@
 import ScanViewer from "./ScanViewer.svelte";
 
+export { defaultLights } from "./light-rig.js";
+
 /**
  * @param {HTMLElement} target
  * @param {import("./scan-viewer").ScanViewerOptions} [options]
@@ -13,6 +15,7 @@ export function createScanViewer(target, { background } = {}) {
 		setLayers: viewer.setLayers,
 		updateLayerData: viewer.updateLayerData,
 		setZScale: viewer.setZScale,
+		setLights: viewer.setLights,
 		destroy() {
 			viewer.$destroy();
 		},

@@ -178,7 +178,8 @@ Today the engine lives in module singletons: [src/store/app-context.js](src/stor
 - **4.2 Material and lights.**
   - API: per-layer `material`, and `setLights(lights, attached)` with the default key, fill and rim lights plus ambient.
   - Light positions are relative to the data bounding box.
-  - `attached: "camera"` means the lights are given in view space: a small option in [src/lights/point-light.js](src/lights/point-light.js) skips the view transform.
+  - `attached: "camera"` means the lights are given in view space: a small option in [src/lights/point-light.js](src/lights/point-light.js) skips the view transform. Camera lights are placed for the home view, then stay fixed in view space.
+  - Only the first `setLayers` with data frames the camera; later layer changes do not move it.
 - **4.3 Environment.**
   - `setEnvironment(env, { skybox, skyboxBlur, envLighting })` on top of the existing skybox and environment map.
   - `skyboxBlur` is done with `textureLod` on the cube map mip chain: one uniform, no extra pass.

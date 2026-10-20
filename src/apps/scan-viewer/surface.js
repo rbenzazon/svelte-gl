@@ -1,6 +1,20 @@
+import { convertToVector3 } from "../../color/color-space.js";
+import { createSpecular } from "../../material/specular/specular.js";
 import { templateLiteralRenderer } from "../../shaders/template.js";
 import { createDataTexture } from "../../texture/data-texture.js";
 import surfaceShader from "./surface.glsl";
+
+/**
+ * Metallic/roughness material props for the default PBR program. Defaults to a neutral light grey, non-metallic.
+ * @param {import("./scan-viewer").ScanViewerMaterial} [material]
+ */
+export function createSurfaceMaterial({ baseColor = [0.8, 0.8, 0.8], metallic = 0, roughness = 0.5 } = {}) {
+	return {
+		diffuse: convertToVector3(baseColor),
+		metalness: metallic,
+		specular: createSpecular({ roughness }),
+	};
+}
 
 /**
  * Height surface drawn from gl_VertexID with no vertex attributes: two triangles per grid cell.

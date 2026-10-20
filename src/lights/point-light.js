@@ -19,6 +19,7 @@ import pointLightShader from "./point-light.glsl";
  * @property {number} [cutoffDistance]
  * @property {number} [decayExponent]
  * @property {SvelteGLLightType} [type]
+ * @property {boolean} [viewSpace] position is given in view space, so the light moves with the camera
  */
 
 /**
@@ -97,7 +98,7 @@ export function createPointLightBuffer(ctx, pointLigths) {
 function writeLightBuffer(buffer, light, offset, cameraStore) {
 	light.preMultipliedColor = [...light.color];
 
-	const lightPosition = transformMat4(createVec3(), light.position, cameraStore.view);
+	const lightPosition = light.viewSpace ? light.position : transformMat4(createVec3(), light.position, cameraStore.view);
 	multiplyScalarVec3(light.preMultipliedColor, light.intensity);
 	// Set the position data
 	buffer[offset] = lightPosition[0];

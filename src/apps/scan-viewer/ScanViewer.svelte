@@ -2,10 +2,10 @@
 import { onDestroy, onMount, setContext } from "svelte";
 import { get } from "svelte/store";
 import { createOrbitControls } from "../../interactivity/orbit-controls.js";
-import { createPointLight } from "../../lights/point-light.js";
 import { createEngine } from "../../store/engine.js";
+import { createRigLights, defaultLights } from "./light-rig.js";
 import { createSceneUniforms } from "./scene-uniforms.js";
-import { createSurface } from "./surface.js";
+import { createSurface, createSurfaceMaterial } from "./surface.js";
 
 export let background = [1, 1, 1, 1];
 
@@ -17,6 +17,10 @@ let canvas;
 let controls;
 let layers = new Map();
 let zScale = 1;
+let halfSize = [1, 1];
+let homeView = null;
+let framed = false;
+let lightRig = { lights: defaultLights, attached: "camera" };
 const engine = createEngine();
 const sceneUniforms = createSceneUniforms();
 setContext("svelte-gl", engine);
@@ -38,13 +42,18 @@ export function setLayers(inputs) {
 	const { min, max } = getBounds(surfaces);
 	const center = min.map((value, i) => (value + max[i]) / 2);
 	sceneUniforms.setOrigin(center);
-	const radius = Math.hypot(max[0] - min[0], max[1] - min[1], (max[2] - min[2]) * zScale) / 2 || 1;
-	frame(radius);
+	halfSize = [(max[0] - min[0]) / 2 || 1, (max[1] - min[1]) / 2 || 1];
+	// Layer changes do not move the camera; only the first data frames it.
+	if (!framed) {
+		frame(Math.hypot(max[0] - min[0], max[1] - min[1], (max[2] - min[2]) * zScale) / 2 || 1);
+		framed = surfaces.length > 0;
+	}
 
 	const materials = [];
 	const meshes = [];
-	for (const surface of layers.values()) {
-		const material = engine.createMaterial({ diffuse: [0.8, 0.8, 0.8], metalness: 0 });
+	for (const input of surfaces) {
+		const surface = layers.get(input.id);
+		const material = engine.createMaterial(createSurfaceMaterial(input.material));
 		materials.push(material);
 		meshes.push(
 			engine.createObject({
@@ -57,20 +66,28 @@ export function setLayers(inputs) {
 			}),
 		);
 	}
-	// Single key light until the light rig of step 4.2.
-	engine.lights.set([
-		engine.createLight(
-			createPointLight({
-				position: [-radius, 2 * radius, radius],
-				color: [1, 1, 1],
-				intensity: 3,
-				cutoffDistance: 0,
-				decayExponent: 0,
-			}),
-		),
-	]);
+	applyLights();
 	engine.materials.set(materials);
 	engine.scene.set(meshes);
+}
+
+export function setLights(lights, attached = "camera") {
+	lightRig = { lights, attached };
+	applyLights();
+}
+
+function applyLights() {
+	if (!homeView) {
+		return;
+	}
+	const values = createRigLights(lightRig.lights, lightRig.attached, halfSize, homeView);
+	const current = get(engine.lights);
+	// Programs keep the light stores they were built with, so an update with the same count reuses them.
+	if (current.length === values.length) {
+		current.forEach((light, i) => light.set(values[i]));
+	} else {
+		engine.lights.set(values.map((value) => engine.createLight(value)));
+	}
 }
 
 export function updateLayerData(id, data) {
@@ -117,6 +134,7 @@ function frame(radius) {
 		near: distance / 100,
 		far: distance * 10,
 	});
+	homeView = engine.camera.view;
 }
 
 onMount(() => {
@@ -124,7 +142,7 @@ onMount(() => {
 		...renderer,
 		canvas,
 		backgroundColor: background,
-		ambientLightColor: [0xffffff, 1],
+		ambientLightColor: [0xffffff, 0.6],
 		enabled: true,
 	}));
 	// Temporary camera interaction until the turntable controls of step 6.1.

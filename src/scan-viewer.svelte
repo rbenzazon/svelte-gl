@@ -1,7 +1,7 @@
 <script type="module">
 import { onMount } from "svelte";
 import Menu from "./Menu.svelte";
-import { createScanViewer } from "./apps/scan-viewer/index.js";
+import { createScanViewer, defaultLights } from "./apps/scan-viewer/index.js";
 
 const backgrounds = [
 	[0.11, 0.14, 0.19, 1],
@@ -30,6 +30,7 @@ function createHeights(freq) {
 }
 
 const layers = [{ id: "sine", kind: "surface", data: { ...grid, distanceData: createHeights(frequency) } }];
+const metal = { baseColor: [0.85, 0.75, 0.55], metallic: 1, roughness: 0.3 };
 
 let left;
 let right;
@@ -38,6 +39,23 @@ let viewerRight;
 let backgroundIndex = 0;
 let remounts = 0;
 let zScale = 1;
+let leftHeights = layers[0].data.distanceData;
+let metallic = false;
+let attached = "camera";
+
+function leftLayers() {
+	return [{ ...layers[0], data: { ...grid, distanceData: leftHeights }, material: metallic ? metal : undefined }];
+}
+
+function toggleMaterial() {
+	metallic = !metallic;
+	viewerLeft.setLayers(leftLayers());
+}
+
+function toggleLights() {
+	attached = attached === "camera" ? "scene" : "camera";
+	viewerLeft.setLights(defaultLights, attached);
+}
 
 function nextBackground() {
 	backgroundIndex = (backgroundIndex + 1) % backgrounds.length;
@@ -64,7 +82,8 @@ function onZScale(event) {
 
 function newData() {
 	frequency += 0.25;
-	viewerLeft.updateLayerData("sine", createHeights(frequency));
+	leftHeights = createHeights(frequency);
+	viewerLeft.updateLayerData("sine", leftHeights);
 }
 
 onMount(() => {
@@ -88,6 +107,8 @@ onMount(() => {
 		<input type="range" min="0" max="4" step="0.05" value={zScale} on:input={onZScale} />
 	</div>
 	<button on:click={newData}>new data (left)</button>
+	<button on:click={toggleMaterial}>left material: {metallic ? "metal" : "matte"}</button>
+	<button on:click={toggleLights}>left lights: {attached}</button>
 	<button on:click={nextBackground}>left background</button>
 	<button on:click={remountRight}>remount right ({remounts})</button>
 </div>
