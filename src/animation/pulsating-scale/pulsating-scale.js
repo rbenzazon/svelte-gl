@@ -1,6 +1,5 @@
-import pulsatingScaleShader from "./pulsating-scale.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
-import { appContext } from "../../store/app-context";
+import pulsatingScaleShader from "./pulsating-scale.glsl";
 
 /**
  * @typedef PulsatingScaleProps
@@ -30,8 +29,8 @@ export const createPulsatingScaleAnimation = ({ frequency = 0.04, minScale = 0.8
 };
 
 function setupPulsatingScale({ frequency, minScale, maxScale }) {
-	return function () {
-		const { gl, program } = appContext;
+	return function setupPulsatingScale(ctx) {
+		const { gl, program } = ctx;
 
 		const frequencyLocation = gl.getUniformLocation(program, "pScaleFrequency");
 		const minScaleLocation = gl.getUniformLocation(program, "pScaleMinScale");

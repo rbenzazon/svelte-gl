@@ -1,6 +1,6 @@
 import { lookAt, perspective } from "gl-matrix/esm/mat4.js";
+import { get, writable } from "svelte/store";
 import { createZeroMatrix } from "../geometries/common";
-import { writable, get } from "svelte/store";
 import { appContext } from "./app-context";
 
 /**
@@ -15,7 +15,7 @@ import { appContext } from "./app-context";
 /**
  * @return {SvelteGLCameraCustomStore}
  */
-export function createCameraStore() {
+export function createCameraStore(ctx) {
 	/** @type {SvelteGLCameraStore} */
 	const store = writable({
 		position: [0, 0, -1],
@@ -44,7 +44,7 @@ export function createCameraStore() {
 	}
 	let view, projection;
 	function updateComputed(next) {
-		const { canvas } = appContext;
+		const { canvas } = ctx;
 		view = lookAt(createZeroMatrix(), next.position, next.target, next.up);
 		projection = perspective(createZeroMatrix(), toRadian(next.fov), canvas.width / canvas.height, next.near, next.far);
 	}
@@ -75,4 +75,4 @@ function toRadian(a) {
 	return a * degree;
 }
 
-export const camera = createCameraStore();
+export const camera = createCameraStore(appContext);

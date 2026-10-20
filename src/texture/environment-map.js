@@ -1,14 +1,13 @@
+import { get } from "svelte/store";
 import { createVec3 } from "../geometries/common";
+import { templateLiteralRenderer } from "../shaders/template";
+import { compileShaders, createProgram, linkProgram, unbindTexture, useProgram, validateProgram } from "../store/gl";
+import { renderPasses } from "../store/programs";
+import { selectProgram } from "../store/programs-cache";
+import { drawModes } from "../store/webgl";
+import EquiRectangularToCubeUV from "./equi-rectangular-to-cube-uv-fragment.glsl";
 import PMREMVertex from "./pmrem-vertex.glsl";
 import SphericalGaussianBlurFragment from "./spherical-gaussian-blur-fragment.glsl";
-import EquiRectangularToCubeUV from "./equi-rectangular-to-cube-uv-fragment.glsl";
-import { createProgram, compileShaders, linkProgram, validateProgram, useProgram, unbindTexture } from "../store/gl";
-import { selectProgram } from "../store/programs-cache";
-import { appContext } from "../store/app-context";
-import { renderPasses } from "../store/programs";
-import { drawModes } from "../store/webgl";
-import { templateLiteralRenderer } from "../shaders/template";
-import { get } from "svelte/store";
 
 const LOD_MIN = 4;
 const EXTRA_LOD_SIGMA = [0.125, 0.215, 0.35, 0.446, 0.526, 0.582];
@@ -51,7 +50,7 @@ const axisDirections = [
  */
 export function createEnvironmentMap(image, width, height) {
 	/** @type {EnvMapContext} */
-	let context = {};
+	const context = {};
 	context.image = image;
 	const imageWidth = image.width ?? width;
 	context.cubeImageSize = imageWidth / 4;
@@ -222,31 +221,31 @@ export function createEnvironmentMap(image, width, height) {
 	};
 }
 
-function disableDepthTest() {
-	const { gl } = appContext;
+function disableDepthTest(ctx) {
+	const { gl } = ctx;
 	gl.disable(gl.DEPTH_TEST);
 	gl.depthMask(false);
 }
 
-function restoreDepthTest() {
-	const { gl } = appContext;
+function restoreDepthTest(ctx) {
+	const { gl } = ctx;
 	gl.enable(gl.DEPTH_TEST);
 	gl.depthMask(true);
 }
 
-function enableScissorTest() {
-	const { gl } = appContext;
+function enableScissorTest(ctx) {
+	const { gl } = ctx;
 	gl.enable(gl.SCISSOR_TEST);
 }
 
-function restoreScissorTest() {
-	const { gl } = appContext;
+function restoreScissorTest(ctx) {
+	const { gl } = ctx;
 	gl.disable(gl.SCISSOR_TEST);
 	gl.scissor(0, 0, gl.canvas.width, gl.canvas.height);
 }
 
-function restoreFlipY() {
-	const { gl } = appContext;
+function restoreFlipY(ctx) {
+	const { gl } = ctx;
 	gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
 }
 
@@ -264,12 +263,12 @@ function restoreState(
 	finalFBOTexture,
 	context,
 ) {
-	return function restoreState() {
-		restoreDepthTest();
-		restoreScissorTest();
-		restoreFlipY();
-		unbindTexture();
-		const { gl } = appContext;
+	return function restoreState(ctx) {
+		restoreDepthTest(ctx);
+		restoreScissorTest(ctx);
+		restoreFlipY(ctx);
+		unbindTexture(ctx);
+		const { gl } = ctx;
 		const hdrTexture = getHDRTexture();
 		if (!(context.image instanceof WebGLTexture) && hdrTexture) {
 			gl.deleteTexture(hdrTexture);
@@ -319,8 +318,8 @@ function removePassFromStore() {
  * @returns
  */
 function setupBlurUniforms(samples, weights, latitudinal, poleAxis, dTheta, mipInt) {
-	return function setupBlurUniforms() {
-		const { gl, program } = appContext;
+	return function setupBlurUniforms(ctx) {
+		const { gl, program } = ctx;
 		const samplesLocation = gl.getUniformLocation(program, "samples");
 		gl.uniform1i(samplesLocation, samples);
 		const weightsLocation = gl.getUniformLocation(program, "weights");
@@ -368,16 +367,16 @@ function getBlurViewportSize(x, y, width, height) {
  */
 function createEquiRectangularToCubeUVProgram(context, image, setHDRTexture) {
 	return function createEquiRectangularToCubeUVProgram(programStore) {
-		return function createEquiRectangularToCubeUVProgram() {
-			const { gl } = appContext;
+		return function createEquiRectangularToCubeUVProgram(ctx) {
+			const { gl } = ctx;
 			const ext = gl.getExtension("EXT_color_buffer_float");
 			if (!ext) {
 				throw new Error("EXT_color_buffer_float extension not supported");
 			}
-			setupHDRTexture(image, setHDRTexture);
-			createProgram(programStore)();
-			disableDepthTest();
-			enableScissorTest();
+			setupHDRTexture(ctx, image, setHDRTexture);
+			createProgram(programStore)(ctx);
+			disableDepthTest(ctx);
+			enableScissorTest(ctx);
 		};
 	};
 }
@@ -387,8 +386,8 @@ function createEquiRectangularToCubeUVProgram(context, image, setHDRTexture) {
  * @param {import("src/loaders/rgbe-loader").RGBE} image
  * @param {(value:WebGLTexture)=>void} setHDRTexture
  */
-function setupHDRTexture(image, setHDRTexture) {
-	const { gl } = appContext;
+function setupHDRTexture(ctx, image, setHDRTexture) {
+	const { gl } = ctx;
 	if (image instanceof WebGLTexture) {
 		setHDRTexture(image);
 		return;
@@ -414,8 +413,8 @@ function setupHDRTexture(image, setHDRTexture) {
 	gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
-function createEquiRectangularToCubeUVShaders() {
-	const { gl, program } = appContext;
+function createEquiRectangularToCubeUVShaders(ctx) {
+	const { gl, program } = ctx;
 	compileShaders(gl, program, PMREMVertex, EquiRectangularToCubeUV);
 }
 
@@ -427,8 +426,8 @@ function createEquiRectangularToCubeUVShaders() {
  * @returns 
  */
 function createBlurShader(shaderDefines) {
-	return function createBlurShader() {
-		const { gl, program } = appContext;
+	return function createBlurShader(ctx) {
+		const { gl, program } = ctx;
 		const fragmentShaderSource = templateLiteralRenderer(SphericalGaussianBlurFragment, shaderDefines)(shaderDefines);
 		compileShaders(gl, program, PMREMVertex, fragmentShaderSource);
 	};
@@ -442,8 +441,8 @@ function createBlurShader(shaderDefines) {
  * @returns
  */
 function createFBO(context, setFBO, setTexture) {
-	return function createFBO() {
-		const { gl } = appContext;
+	return function createFBO(ctx) {
+		const { gl } = ctx;
 		const { renderTargetWidth, renderTargetHeight } = context;
 		// The geometry texture will be sampled during the HORIZONTAL pass
 		const texture = gl.createTexture();
@@ -476,16 +475,16 @@ function createFBO(context, setFBO, setTexture) {
 }
 
 function setupEquiRectangularToCubeUVUniforms(flipEnvMap) {
-	return function setupEquiRectangularToCubeUVUniforms() {
-		const { gl, program } = appContext;
+	return function setupEquiRectangularToCubeUVUniforms(ctx) {
+		const { gl, program } = ctx;
 		const location = gl.getUniformLocation(program, "flipEnvMap");
 		gl.uniform1f(location, flipEnvMap ? 1 : -1);
 	};
 }
 
 function bindEnvMapTexture(getBuffer) {
-	return function bindEnvMapTexture() {
-		const { gl, program } = appContext;
+	return function bindEnvMapTexture(ctx) {
+		const { gl, program } = ctx;
 		const textureLocation = gl.getUniformLocation(program, "envMap");
 		gl.uniform1i(textureLocation, 0);
 		gl.activeTexture(gl.TEXTURE0);
@@ -494,23 +493,23 @@ function bindEnvMapTexture(getBuffer) {
 }
 
 function setFrameBuffer(getFBO = null, context, getViewportSize, clear = false) {
-	return function setFrameBuffer() {
-		const { gl } = appContext;
+	return function setFrameBuffer(ctx) {
+		const { gl } = ctx;
 		const fbo = getFBO ? getFBO() : null;
 		const { renderTargetWidth, renderTargetHeight } = context;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-		if (appContext.fbo !== fbo && fbo != null) {
+		if (ctx.fbo !== fbo && fbo != null) {
 			const { x, y, width, height } = getViewportSize(context);
 			gl.viewport(x, y, width, height);
 			gl.scissor(x, y, width, height);
-			appContext.frameBufferWidth = renderTargetWidth;
-			appContext.frameBufferHeight = renderTargetHeight;
+			ctx.frameBufferWidth = renderTargetWidth;
+			ctx.frameBufferHeight = renderTargetHeight;
 			if (clear) {
 				gl.clearColor(...[0, 0, 0, 0]);
 				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
 			}
 		}
-		appContext.fbo = fbo;
+		ctx.fbo = fbo;
 	};
 }
 
@@ -523,19 +522,19 @@ function setFrameBuffer(getFBO = null, context, getViewportSize, clear = false) 
  */
 export function createBlurProgram(mapCurrent = false) {
 	return function createBlurProgram(programStore) {
-		return function createBlurProgram() {
-			const { gl, programMap, vaoMap } = appContext;
+		return function createBlurProgram(ctx) {
+			const { gl, programMap, vaoMap } = ctx;
 			if (!programMap.has(programStore) && !mapCurrent) {
 				const program = gl.createProgram();
 				programMap.set(programStore, program);
 				vaoMap.set(programStore, new Map());
-				appContext.program = program;
+				ctx.program = program;
 			} else if (mapCurrent) {
-				programMap.set(programStore, appContext.program);
+				programMap.set(programStore, ctx.program);
 				vaoMap.set(programStore, new Map());
 			} else {
 				//todo check if necessary, this check is done in engine already, if it exists, createProgram is not called
-				appContext.program = appContext.programMap.get(programStore);
+				ctx.program = ctx.programMap.get(programStore);
 			}
 		};
 	};

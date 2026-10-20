@@ -1,21 +1,21 @@
-import { writable, get, derived } from "svelte/store";
-import { reconciliateCacheMap, clearUnusedCache, selectProgram } from "./programs-cache";
-import { isSvelteGLInstancedMesh } from "./mesh-types.js";
-import { scene } from "./scene";
+import { derived, get, writable } from "svelte/store";
+import { appContext } from "./app-context";
 import {
-	setupAmbientLight,
+	bindDefaultFramebuffer,
+	createProgram,
 	createShaders,
 	linkProgram,
-	validateProgram,
-	bindDefaultFramebuffer,
+	setupAmbientLight,
 	setupTime,
 	useProgram,
-	createProgram,
+	validateProgram,
 } from "./gl";
-import { numLigths, lights } from "./lights";
+import { lights } from "./lights";
 import { materials } from "./materials";
+import { isSvelteGLInstancedMesh } from "./mesh-types.js";
+import { clearUnusedCache, reconciliateCacheMap, selectProgram } from "./programs-cache";
 import { sortMeshesByZ } from "./programs-utils";
-import { renderer } from "./renderer";
+import { scene } from "./scene";
 function isTransparent(material) {
 	return material?.opacity < 1 || material?.transparent;
 }
@@ -71,10 +71,12 @@ function sortOrder(a, b) {
  * @type {SvelteGLProgramStore}
  */
 
-export const programs = derived(
-	[scene, numLigths, materials, renderPasses],
-	([$scene, $numLigths, $materials, $renderPasses]) => {
-		let prePasses = $renderPasses
+export function createProgramsStore({ scene, lights, materials, renderPasses, ctx }) {
+	const numLigths = derived([lights], ([$lights]) => {
+		return $lights.length;
+	});
+	return derived([scene, numLigths, materials, renderPasses], ([$scene, $numLigths, $materials, $renderPasses]) => {
+		const prePasses = $renderPasses
 			.filter((pass) => pass.order < 0)
 			.reduce(
 				(acc, pass) => {
@@ -88,7 +90,7 @@ export const programs = derived(
 				...(program.allMeshes ? { meshes: $scene } : {}),
 			}));
 
-		let concurrentPasses = $renderPasses
+		const concurrentPasses = $renderPasses
 			.filter((pass) => pass.order === 0)
 			.reduce(
 				(acc, pass) => {
@@ -102,7 +104,7 @@ export const programs = derived(
 				...(program.allMeshes ? { meshes: $scene } : {}),
 			}));
 
-		let postPasses = $renderPasses
+		const postPasses = $renderPasses
 			.filter((pass) => pass.order > 0)
 			.reduce((acc, pass) => {
 				return acc.concat(...pass.programs);
@@ -156,7 +158,7 @@ export const programs = derived(
 			return acc;
 		}, []);
 
-		const sortedPrograms = sortMeshesByZ(programs.sort(sortTransparency));
+		const sortedPrograms = sortMeshesByZ(programs.sort(sortTransparency), ctx.camera);
 
 		// TODO make two different numligth store, one for each light type, when spotlight is supported
 		//const pointLights = $lights.filter((l) => get(l).type === "point");
@@ -174,7 +176,7 @@ export const programs = derived(
 			...sortedPrograms.map((p, index) => {
 				if (p.material.program) {
 					p.material.program.meshes = p.meshes;
-					reconciliateCacheMap(p, p.material.program);
+					reconciliateCacheMap(p, p.material.program, ctx);
 					return p.material.program;
 				}
 				const firstCall = index === 0;
@@ -187,10 +189,10 @@ export const programs = derived(
 					updateProgram: [],
 					bindTextures: [],
 					createProgram,
-					selectProgram,
+					selectProgram: (programStore) => selectProgram(programStore, ctx),
 					setupCamera: undefined,
 				};
-				reconciliateCacheMap(p, program);
+				reconciliateCacheMap(p, program, ctx);
 
 				program.setupProgram = [
 					createShaders(p.material, p.meshes, numPointLights, pointLightShader),
@@ -243,7 +245,9 @@ export const programs = derived(
 			}),
 			...postPasses,
 		];
-		clearUnusedCache(next);
+		clearUnusedCache(next, ctx, scene);
 		return next;
-	},
-);
+	});
+}
+
+export const programs = createProgramsStore({ scene, lights, materials, renderPasses, ctx: appContext });

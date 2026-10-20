@@ -1,8 +1,24 @@
-export function setAppContext(context) {
-	appContext = {
-		...appContext,
-		...context,
+export function createAppContext() {
+	return {
+		programMap: new Map(),
+		vaoMap: new Map(),
+		bufferMap: new Map(),
+		gl: null,
+		program: null,
+		vao: null,
+		canvas: null,
+		backgroundColor: null,
+		ambientLightColor: null,
+		toneMappings: null,
+		existingProgram: false,
+		camera: null,
+		pointLightsUBO: null,
+		defaultDepthFuncState: null,
 	};
+}
+
+export function setAppContext(context) {
+	Object.assign(appContext, context);
 }
 
 /**
@@ -22,16 +38,4 @@ export function setAppContext(context) {
 /**
  * @type {AppContext}
  */
-export let appContext = {
-	programMap: new Map(),
-	vaoMap: new Map(),
-	bufferMap: new Map(),
-	gl: null,
-	program: null,
-	vao: null,
-	canvas: null,
-	backgroundColor: null,
-	ambientLightColor: null,
-	toneMappings: null,
-	existingProgram: false,
-};
+export const appContext = createAppContext();

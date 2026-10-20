@@ -1,7 +1,5 @@
-import wobblyShader from "./wobbly.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
-import { get } from "svelte/store";
-import { appContext } from "../../store/app-context";
+import wobblyShader from "./wobbly.glsl";
 
 /**
  * @typedef WobblyProps
@@ -29,8 +27,8 @@ export const createWobblyAnimation = ({ frequency = 0.04, amplitude = 1 }) => {
 };
 
 function setupWobbly({ frequency, amplitude }) {
-	return function () {
-		const { gl, program } = appContext;
+	return function setupWobbly(ctx) {
+		const { gl, program } = ctx;
 
 		const frequencyLocation = gl.getUniformLocation(program, "wobblyFrequency");
 		const amplitudeLocation = gl.getUniformLocation(program, "wobblyAmplitude");

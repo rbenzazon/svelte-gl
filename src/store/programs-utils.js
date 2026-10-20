@@ -18,13 +18,13 @@ export function isTransparent(material) {
  * @param {T} programs - Array of programs to sort
  * @returns {T} - Sorted array with the same type as input
  */
-export function sortMeshesByZ(programs) {
+export function sortMeshesByZ(programs, cameraStore = camera) {
 	if (programs.length === 0) {
 		/* || get(renderer).canvas == null*/
 		return programs;
 	}
 	let transparent = false;
-	const { projection, view } = camera;
+	const { projection, view } = cameraStore;
 	const projScreen = multiply(createZeroMatrix(), projection, view);
 
 	programs.forEach((program) => {

@@ -1,6 +1,6 @@
-import { writable, get } from "svelte/store";
+import { get, writable } from "svelte/store";
 
-function createSceneStore() {
+export function createSceneStore() {
 	/** @type {SvelteGLSceneStore} */
 	const store = writable([]);
 

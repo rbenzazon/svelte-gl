@@ -1,7 +1,5 @@
-import noiseShader from "./noise-distortion.glsl";
 import { templateLiteralRenderer } from "../../shaders/template.js";
-import { get } from "svelte/store";
-import { appContext } from "../../store/app-context";
+import noiseShader from "./noise-distortion.glsl";
 
 /**
  * @typedef NoiseProps
@@ -42,8 +40,8 @@ export const createNoiseDistortionAnimation = ({
 };
 
 function setupNoise({ frequency, speed, amplitude, normalTangentLength }) {
-	return function () {
-		const { gl, program } = appContext;
+	return function setupNoise(ctx) {
+		const { gl, program } = ctx;
 
 		const frequencyLocation = gl.getUniformLocation(program, "noiseDistortionFrequency");
 		const speedLocation = gl.getUniformLocation(program, "noiseDistortionSpeed");

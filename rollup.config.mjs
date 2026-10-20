@@ -27,6 +27,8 @@ export default {
         'skybox-cube':'src/skybox-cube.svelte',
         'draco':'src/draco-gltf.svelte',
         'skybox-jpghdr':'src/skybox-jpghdr.svelte',
+        'two-cubes':'src/two-cubes.svelte',
+        'two-cubes-html':'src/mount-cube.js',
     },
     output: {
         dir: 'build/js',

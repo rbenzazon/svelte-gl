@@ -1,9 +1,8 @@
-import { appContext } from "./app-context";
-import { selectProgram } from "./programs-cache";
-import { compileShaders, createProgram, linkProgram, useProgram, validateProgram } from "./gl";
-import defaultVertex from "../shaders/default-vertex.glsl";
 import basicFragment from "../shaders/basic-fragment.glsl";
+import defaultVertex from "../shaders/default-vertex.glsl";
 import { templateLiteralRenderer } from "../shaders/template";
+import { compileShaders, createProgram, linkProgram, useProgram, validateProgram } from "./gl";
+import { selectProgram } from "./programs-cache";
 
 /**
  *
@@ -21,8 +20,8 @@ export function createDebugNormalsProgram() {
 	return debugProgram;
 }
 
-function createShaders() {
-	const { gl, program } = appContext;
+function createShaders(ctx) {
+	const { gl, program } = ctx;
 	const vertexShaderSource = templateLiteralRenderer(defaultVertex, {
 		instances: false,
 		declarations: "",

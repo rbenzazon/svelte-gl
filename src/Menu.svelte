@@ -24,6 +24,8 @@ const links = [
 	{ name: "Skybox JPG HDR", href: "./skybox-jpghdr" },
 	{ name: "3D Text", href: "./text" },
 	{ name: "Lightmap Chair", href: "./chair" },
+	{ name: "Two cubes", href: "./two-cubes" },
+	{ name: "Two cubes (HTML)", href: "./two-cubes-html" },
 ];
 </script>
 <button on:click={toggleMenu}>examples</button>

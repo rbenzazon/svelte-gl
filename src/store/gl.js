@@ -1,24 +1,23 @@
+import { create as createM3, fromMat4, invert as invertM3, transpose as transposeM3 } from "gl-matrix/esm/mat3.js";
 import { invert, multiply } from "gl-matrix/esm/mat4.js";
-import { create as createM3, invert as invertM3, transpose as transposeM3, fromMat4 } from "gl-matrix/esm/mat3.js";
 import { get } from "svelte/store";
-import defaultVertex from "../shaders/default-vertex.glsl";
-import defaultFragment from "../shaders/default-fragment.glsl";
-import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";
 import { SRGBToLinear } from "../color/color-space.js";
-import { appContext, setAppContext } from "./app-context";
-import { camera } from "./camera.js";
 import { createZeroMatrix } from "../geometries/common";
+import defaultFragment from "../shaders/default-fragment.glsl";
+import defaultVertex from "../shaders/default-vertex.glsl";
+import { objectToDefines, templateLiteralRenderer } from "../shaders/template.js";
+import { appContext } from "./app-context";
 import { isSvelteGLSingleMesh } from "./mesh-types";
 
 // Uniform Buffer Objects, must have unique binding points
 export const UBO_BINDING_POINT_POINTLIGHT = 0;
 export const UBO_BINDING_POINT_SPOTLIGHT = 1;
 
-export function initRenderer() {
+export function initRenderer(ctx) {
 	/** @type {WebGL2RenderingContext} */
-	const gl = appContext.canvas.getContext("webgl2");
-	defaultDepthFuncState = gl.getParameter(gl.DEPTH_FUNC);
-	appContext.gl = gl;
+	const gl = ctx.canvas.getContext("webgl2");
+	ctx.defaultDepthFuncState = gl.getParameter(gl.DEPTH_FUNC);
+	ctx.gl = gl;
 
 	gl.enable(gl.DEPTH_TEST);
 	gl.enable(gl.CULL_FACE);
@@ -27,39 +26,39 @@ export function initRenderer() {
 }
 
 export function setFaceWinding(ccw = true) {
-	return function setFaceWinding() {
-		const { gl } = appContext;
+	return function setFaceWinding(ctx) {
+		const { gl } = ctx;
 		gl.frontFace(ccw ? gl.CCW : gl.CW);
 	};
 }
 
-export function enableBlend() {
-	const { gl } = appContext;
+export function enableBlend(ctx) {
+	const { gl } = ctx;
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 }
 
-export function disableBlend() {
-	const { gl } = appContext;
+export function disableBlend(ctx) {
+	const { gl } = ctx;
 	gl.disable(gl.BLEND);
 }
 
-export function setupTime() {
-	const { gl, program } = appContext;
+export function setupTime(ctx) {
+	const { gl, program } = ctx;
 	const timeLocation = gl.getUniformLocation(program, "time");
 	gl.uniform1f(timeLocation, performance.now());
 }
 
-export function clearFrame() {
-	const { gl, backgroundColor } = appContext;
+export function clearFrame(ctx) {
+	const { gl, backgroundColor } = ctx;
 
 	gl.clearColor(...backgroundColor);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
 
 export function render(mesh, instances, drawMode) {
-	return function render() {
-		const { gl } = appContext;
+	return function render(ctx) {
+		const { gl } = ctx;
 
 		const positionSize = mesh.attributes.positionsSize ?? 3;
 
@@ -84,61 +83,61 @@ export function render(mesh, instances, drawMode) {
 	};
 }
 
-export function bindVAO() {
-	const { gl, vao } = appContext;
+export function bindVAO(ctx) {
+	const { gl, vao } = ctx;
 	gl.bindVertexArray(vao);
 }
 
 export function createProgram(programStore) {
-	return function createProgram() {
-		const { gl } = appContext;
+	return function createProgram(ctx) {
+		const { gl } = ctx;
 		const program = gl.createProgram();
-		appContext.programMap.set(programStore, program);
-		appContext.vaoMap.set(programStore, new Map());
-		appContext.program = program;
+		ctx.programMap.set(programStore, program);
+		ctx.vaoMap.set(programStore, new Map());
+		ctx.program = program;
 	};
 }
 
-export function linkProgram() {
-	const { gl, program } = appContext;
+export function linkProgram(ctx) {
+	const { gl, program } = ctx;
 	gl.linkProgram(program);
 	if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
 		console.error("ERROR linking program!", gl.getProgramInfoLog(program));
 	}
 }
 
-export function validateProgram() {
-	const { gl, program } = appContext;
+export function validateProgram(ctx) {
+	const { gl, program } = ctx;
 	gl.validateProgram(program);
 	if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
 		console.error("ERROR validating program!", gl.getProgramInfoLog(program));
 	}
 }
 
-export function useProgram() {
-	const { gl, program } = appContext;
+export function useProgram(ctx) {
+	const { gl, program } = ctx;
 	gl.useProgram(program);
 }
 
-export function resetViewportToCanvas() {
-	const { gl } = appContext;
+export function resetViewportToCanvas(ctx) {
+	const { gl } = ctx;
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 }
 
-export function bindDefaultFramebuffer() {
-	const { gl, backgroundColor } = appContext;
+export function bindDefaultFramebuffer(ctx) {
+	const { gl, backgroundColor } = ctx;
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 	gl.scissor(0, 0, gl.canvas.width, gl.canvas.height);
-	appContext.frameBufferWidth = gl.canvas.width;
-	appContext.frameBufferHeight = gl.canvas.height;
+	ctx.frameBufferWidth = gl.canvas.width;
+	ctx.frameBufferHeight = gl.canvas.height;
 	gl.clearColor(...backgroundColor);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
 
 export function createShaders(material, meshes, numPointLights, pointLightShader) {
-	return function createShaders() {
-		const { gl, program } = appContext;
+	return function createShaders(ctx) {
+		const { gl, program } = ctx;
 
 		let vertexDeclarations = "";
 		let vertexPositionModifiers = "";
@@ -269,8 +268,8 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			}),
 			declarations: [
 				...(numPointLights ? [pointLightShader({ declaration: true, irradiance: false })] : []),
-				...(appContext.toneMappings?.length > 0
-					? [...appContext.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
+				...(ctx.toneMappings?.length > 0
+					? [...ctx.toneMappings.map((tm) => tm.shader({ declaration: true, exposure: tm.exposure }))]
 					: []),
 				...(material.specular ? [specularDeclaration] : []),
 				...(material.diffuseMap ? [diffuseMapDeclaration] : []),
@@ -290,9 +289,7 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 				...(material.lightMap ? [lightMapSample] : []),
 			].join("\n"),
 			toneMapping: [
-				...(appContext.toneMappings?.length > 0
-					? [...appContext.toneMappings.map((tm) => tm.shader({ color: true }))]
-					: []),
+				...(ctx.toneMappings?.length > 0 ? [...ctx.toneMappings.map((tm) => tm.shader({ color: true }))] : []),
 			].join("\n"),
 			//todo, remove this after decoupling the point light shader
 			numPointLights,
@@ -322,8 +319,8 @@ export function compileShaders(gl, program, vertexShaderSource, fragmentShaderSo
 }
 
 export function createFBO(width, height, setFBO, setTexture) {
-	return function createFBO() {
-		const { gl } = appContext;
+	return function createFBO(ctx) {
+		const { gl } = ctx;
 		// The geometry texture will be sampled during the HORIZONTAL pass
 		const texture = gl.createTexture();
 		setTexture(texture);
@@ -341,8 +338,8 @@ export function createFBO(width, height, setFBO, setTexture) {
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	};
 }
-export function unbindTexture() {
-	const { gl } = appContext;
+export function unbindTexture(ctx) {
+	const { gl } = ctx;
 	gl.bindTexture(gl.TEXTURE_2D, null);
 }
 /**
@@ -351,8 +348,8 @@ export function unbindTexture() {
  * @returns {()=>void}
  */
 export function setupMeshColor({ diffuse, metalness, opacity }) {
-	return function setupMeshColor() {
-		const { gl, program } = appContext;
+	return function setupMeshColor(ctx) {
+		const { gl, program } = ctx;
 		const colorLocation = gl.getUniformLocation(program, "diffuse");
 		if (colorLocation == null) {
 			return;
@@ -368,8 +365,8 @@ export function setupMeshColor({ diffuse, metalness, opacity }) {
 	};
 }
 
-export function setupAmbientLight(programOverride, ambientLightColorOverride) {
-	const { gl, program, ambientLightColor } = appContext;
+export function setupAmbientLight(ctx, programOverride, ambientLightColorOverride) {
+	const { gl, program, ambientLightColor } = ctx;
 	const currentProgram = programOverride ?? program;
 	const currentAmbientLightColor = ambientLightColorOverride ?? ambientLightColor;
 	const ambientLightColorLocation = gl.getUniformLocation(currentProgram, "ambientLightColor");
@@ -377,8 +374,8 @@ export function setupAmbientLight(programOverride, ambientLightColorOverride) {
 }
 
 export function setupCamera(camera) {
-	return function createCamera() {
-		const { gl, program } = appContext;
+	return function createCamera(ctx) {
+		const { gl, program } = ctx;
 		const { projection, view } = camera;
 
 		const projectionLocation = gl.getUniformLocation(program, "projectionMatrix");
@@ -414,13 +411,13 @@ function setObjectMatrixUniforms(gl, program, objectMatrix) {
  */
 export function setupObjectMatrix(programStore, mesh) {
 	if (isSvelteGLSingleMesh(mesh)) {
-		return function setupObjectMatrix() {
-			const { gl, program } = appContext;
+		return function setupObjectMatrix(ctx) {
+			const { gl, program } = ctx;
 			setObjectMatrixUniforms(gl, program, mesh.matrix);
 		};
 	} else {
-		return function setupObjectMatrix() {
-			const { gl, program, vaoMap } = appContext;
+		return function setupObjectMatrix(ctx) {
+			const { gl, program, vaoMap } = ctx;
 			const vao = vaoMap.get(programStore).get(mesh);
 
 			mesh.matrices.modelViewBuffer = createMatInstanceBuffer(
@@ -471,14 +468,21 @@ function createMatInstanceBuffer(gl, program, vao, attributeName, matData, size,
 	gl.bindVertexArray(null);
 	return matBuffer;
 }
-export function updateObjectMatrix(programStore, objectMatrix) {
-	const { gl, programMap } = appContext;
+export function updateObjectMatrix(programStore, objectMatrix, ctx = appContext) {
+	const { gl, programMap } = ctx;
 	const program = programMap.get(programStore);
 	gl.useProgram(program);
 	setObjectMatrixUniforms(gl, program, objectMatrix);
 }
-export function updateInstanceObjectMatrix(programStore, mesh, newMatrix, instanceIndex, modelViewBuffer) {
-	const { gl, vaoMap } = appContext;
+export function updateInstanceObjectMatrix(
+	programStore,
+	mesh,
+	newMatrix,
+	instanceIndex,
+	modelViewBuffer,
+	ctx = appContext,
+) {
+	const { gl, vaoMap } = ctx;
 	const vaoProgram = vaoMap.get(programStore);
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, modelViewBuffer);
@@ -492,9 +496,9 @@ export function updateInstanceObjectMatrix(programStore, mesh, newMatrix, instan
  */
 export function setupNormalMatrix(programStore, mesh) {
 	if (isSvelteGLSingleMesh(mesh)) {
-		return function setupNormalMatrix() {
+		return function setupNormalMatrix(ctx) {
 			/** @type {{gl:WebGL2RenderingContext,program: WebGLProgram}} **/
-			const { gl, program } = appContext;
+			const { gl, program } = ctx;
 			const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
 			if (normalMatrixLocation == null) {
 				return;
@@ -502,8 +506,8 @@ export function setupNormalMatrix(programStore, mesh) {
 			gl.uniformMatrix3fv(normalMatrixLocation, false, mesh.matrix.normalMatrix);
 		};
 	} else {
-		return function setupNormalMatrix() {
-			const { gl, program, vaoMap } = appContext;
+		return function setupNormalMatrix(ctx) {
+			const { gl, program, vaoMap } = ctx;
 			const normalMatricesLocation = gl.getAttribLocation(program, "normalMatrix");
 			if (normalMatricesLocation == null) {
 				return;
@@ -521,15 +525,22 @@ export function setupNormalMatrix(programStore, mesh) {
 		};
 	}
 }
-export function updateNormalMatrix(programStore, objectMatrix) {
-	const { gl, programMap } = appContext;
+export function updateNormalMatrix(programStore, objectMatrix, ctx = appContext) {
+	const { gl, programMap } = ctx;
 	const program = programMap.get(programStore);
 	const normalMatrixLocation = gl.getUniformLocation(program, "normalMatrix");
 	gl.uniformMatrix3fv(normalMatrixLocation, false, objectMatrix.normalMatrix);
 }
 
-export function updateInstanceNormalMatrix(programStore, mesh, normalMatrix, instanceIndex, normalMatrixBuffer) {
-	const { gl, vaoMap } = appContext;
+export function updateInstanceNormalMatrix(
+	programStore,
+	mesh,
+	normalMatrix,
+	instanceIndex,
+	normalMatrixBuffer,
+	ctx = appContext,
+) {
+	const { gl, vaoMap } = ctx;
 	gl.bindVertexArray(vaoMap.get(programStore).get(mesh));
 	gl.bindBuffer(gl.ARRAY_BUFFER, normalMatrixBuffer);
 	const bytesPerMatrix = 4 * 9;
@@ -557,8 +568,8 @@ function getBuffer(variable) {
 }
 
 export function setupAttributes(programStore, mesh) {
-	return function setupAttributes() {
-		const { gl, program, vaoMap, bufferMap } = appContext;
+	return function setupAttributes(ctx) {
+		const { gl, program, vaoMap, bufferMap } = ctx;
 		const { positions, normals, elements, uvs, uvs1, positionsSize } = mesh.attributes;
 		let vao;
 		if (vaoMap.has(programStore) && vaoMap.get(programStore).has(mesh)) {
@@ -569,13 +580,13 @@ export function setupAttributes(programStore, mesh) {
 			//delete as it is "consumed"
 			programStore.existingVAO.delete(mesh);
 			vaoMap.get(programStore).set(mesh, vao);
-			appContext.vao = vao;
+			ctx.vao = vao;
 			return;
 		} else {
 			vao = gl.createVertexArray();
 			vaoMap.get(programStore).set(mesh, vao);
 		}
-		appContext.vao = vao;
+		ctx.vao = vao;
 		let buffers;
 		if (!bufferMap.has(mesh)) {
 			buffers = [];
@@ -622,7 +633,7 @@ export function setupAttributes(programStore, mesh) {
 			}
 		}
 		if (elements) {
-			let elementsData = Array.isArray(elements) ? new Uint16Array(elements) : elements;
+			const elementsData = Array.isArray(elements) ? new Uint16Array(elements) : elements;
 			const elementBuffer = gl.createBuffer();
 			buffers.push(elementBuffer);
 			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementBuffer);
@@ -679,14 +690,13 @@ export function setupAttributes(programStore, mesh) {
 		gl.bindVertexArray(null);
 	};
 }
-let defaultDepthFuncState;
 export function setDepthFunc(func) {
-	return function setDepthFunc() {
-		const { gl } = appContext;
+	return function setDepthFunc(ctx) {
+		const { gl } = ctx;
 		gl.depthFunc(gl[func]);
 	};
 }
-export function restoreDepthFunc() {
-	const { gl } = appContext;
-	gl.depthFunc(defaultDepthFuncState);
+export function restoreDepthFunc(ctx) {
+	const { gl } = ctx;
+	gl.depthFunc(ctx.defaultDepthFuncState);
 }

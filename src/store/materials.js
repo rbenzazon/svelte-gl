@@ -1,4 +1,4 @@
-import { writable, get } from "svelte/store";
+import { get, writable } from "svelte/store";
 import { scene } from "./scene";
 
 /**
@@ -12,7 +12,9 @@ import { scene } from "./scene";
  * @return {MaterialCustomStore}
  */
 
-export function createMaterialStore(initialProps) {
+export function createMaterialStore(initialProps, bindings) {
+	const materialsStore = bindings?.materials ?? materials;
+	const sceneStore = bindings?.scene ?? scene;
 	/** @type {MaterialStore} */
 	const store = writable(initialProps);
 	const { subscribe, set, update } = store;
@@ -20,8 +22,8 @@ export function createMaterialStore(initialProps) {
 		subscribe,
 		set: (props) => {
 			set(props);
-			materials.set(get(materials));
-			scene.set(get(scene));
+			materialsStore.set(get(materialsStore));
+			sceneStore.set(get(sceneStore));
 			// TODO was necessary but now it works without
 			//renderer.set(get(renderer));
 		},
@@ -32,7 +34,7 @@ export function createMaterialStore(initialProps) {
 /**
  * @returns {MaterialsCustomStore}
  */
-function createMaterials() {
+export function createMaterials() {
 	/** @type {MaterialsStore} */
 	const store = writable([]);
 	const { subscribe, set, update } = store;

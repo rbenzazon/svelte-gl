@@ -1,8 +1,6 @@
-import textureShader from "./texture.glsl";
-import { templateLiteralRenderer } from "../shaders/template.js";
 import { get } from "svelte/store";
-import { appContext } from "../store/app-context";
-
+import { templateLiteralRenderer } from "../shaders/template.js";
+import textureShader from "./texture.glsl";
 const types = {
 	diffuse: "diffuseMap",
 	normal: "normalMap",
@@ -127,8 +125,8 @@ function loadTexture(url) {
 }
 
 function bindTexture(id, getBuffer, type) {
-	return function bindTexture() {
-		const { gl, program } = appContext;
+	return function bindTexture(ctx) {
+		const { gl, program } = ctx;
 		const textureLocation = gl.getUniformLocation(program, type);
 		gl.activeTexture(gl["TEXTURE" + id]);
 		gl.bindTexture(gl.TEXTURE_2D, getBuffer());
@@ -147,8 +145,8 @@ function setupTexture(
 	width = 0,
 	height = 0,
 ) {
-	return function setupTexture() {
-		const { gl, program } = appContext;
+	return function setupTexture(ctx) {
+		const { gl, program } = ctx;
 		let textureBuffer;
 		if (externalBuffer !== null) {
 			textureBuffer = externalBuffer();

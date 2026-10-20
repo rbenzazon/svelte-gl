@@ -1,8 +1,7 @@
-import vertexShaderSource from "../shaders/blur-vertex.glsl";
 import fragmentShaderSource from "../shaders/blur-fragment.glsl";
-import { drawModes } from "./webgl";
-import { appContext } from "./app-context";
+import vertexShaderSource from "../shaders/blur-vertex.glsl";
 import { compileShaders } from "./gl";
+import { drawModes } from "./webgl";
 
 export const BLUR_DIRECTION_HORIZONTAL = 0;
 export const BLUR_DIRECTION_VERTICAL = 1;
@@ -89,26 +88,26 @@ const convertKernelToOffsetsAndScales = (kernel) => {
  */
 export function createBlurProgram(mapCurrent = false) {
 	return function createBlurProgram(programStore) {
-		return function createBlurProgram() {
-			const { gl, programMap, vaoMap } = appContext;
+		return function createBlurProgram(ctx) {
+			const { gl, programMap, vaoMap } = ctx;
 			if (!programMap.has(programStore) && !mapCurrent) {
 				const program = gl.createProgram();
 				programMap.set(programStore, program);
 				vaoMap.set(programStore, new Map());
-				appContext.program = program;
+				ctx.program = program;
 			} else if (mapCurrent) {
-				programMap.set(programStore, appContext.program);
+				programMap.set(programStore, ctx.program);
 				vaoMap.set(programStore, new Map());
 			} else {
 				//todo check if necessary, this check is done in engine already, if it exists, createProgram is not called
-				appContext.program = appContext.programMap.get(programStore);
+				ctx.program = ctx.programMap.get(programStore);
 			}
 		};
 	};
 }
 
-export function createBlurShaders() {
-	const { gl, program } = appContext;
+export function createBlurShaders(ctx) {
+	const { gl, program } = ctx;
 	compileShaders(gl, program, vertexShaderSource, fragmentShaderSource);
 }
 
@@ -131,13 +130,11 @@ export function createBlurMesh() {
 }
 
 // Set the blur stride uniform, which define the direction of the blur
-export function setDirectionUniform(direction) {
-	const { gl, program } = appContext;
+export function setDirectionUniform(ctx, direction) {
+	const { gl, program } = ctx;
 
 	const unidirectionalUVStride =
-		direction === BLUR_DIRECTION_HORIZONTAL
-			? [1 / appContext.frameBufferWidth, 0]
-			: [0, 1 / appContext.frameBufferHeight];
+		direction === BLUR_DIRECTION_HORIZONTAL ? [1 / ctx.frameBufferWidth, 0] : [0, 1 / ctx.frameBufferHeight];
 	const uvStrideUniformLocation = gl.getUniformLocation(program, "uvStride");
 	gl.uniform2fv(uvStrideUniformLocation, unidirectionalUVStride);
 }
@@ -150,8 +147,8 @@ export function getKernel(size) {
 }
 
 // Set the kernel uniforms
-export function setKernelUniforms(kernel) {
-	const { gl, program } = appContext;
+export function setKernelUniforms(ctx, kernel) {
+	const { gl, program } = ctx;
 
 	const offsetScaleLocation = gl.getUniformLocation(program, "offsetAndScale");
 	gl.uniform2fv(offsetScaleLocation, kernel);

@@ -644,7 +644,7 @@ function isVec3(list) {
  */
 export function createMeshFromGLTF(gltfFile, gltfMeshObject) {
 	const mesh = gltfMeshObject;
-	const gltfMaterial = gltfFile.materials ? gltfFile.materials[mesh?.material] ?? {} : {};
+	const gltfMaterial = gltfFile.materials ? (gltfFile.materials[mesh?.material] ?? {}) : {};
 	/** @type {SvelteGLMaterial} */
 	const material = {
 		diffuse: [1, 1, 1],

@@ -1,22 +1,22 @@
+import { get, writable } from "svelte/store";
 import { convertToVector3 } from "../color/color-space";
 import { hasSameShallow as arrayHasSameShallow } from "../utils/array";
-import { writable, get } from "svelte/store";
 /*import { setupAmbientLight } from "./gl";
 import { findMaterialProgram } from "./programs-utils";*/
-import { appContext, setAppContext } from "./app-context";
+import { appContext } from "./app-context";
 
 /**
  *
  * @returns {SvelteGLRendererCustomStore}
  */
-function createRenderer() {
+export function createRenderer(ctx) {
 	const initialValue = {
 		//ref
 		canvas: null,
 		//ref
 		loop: null,
 		//value
-		backgroundColor: NaN,
+		backgroundColor: Number.NaN,
 		//value
 		ambientLightColor: /** @type {vec2} */ ([0xffffff, 0]),
 		//values
@@ -27,7 +27,7 @@ function createRenderer() {
 	// the cache is made to compare the previous value with the new one
 	let cache = initialValue;
 	// some values have a different internal format
-	let processed = new Map();
+	const processed = new Map();
 
 	/** @type {SvelteGLRendererStore} */
 	const store = writable(initialValue);
@@ -42,18 +42,12 @@ function createRenderer() {
 	 */
 	function updateCanvas(canvas) {
 		const canvasRect = canvas.getBoundingClientRect();
-		const appContextValues = {
-			canvas: {
-				width: canvasRect.width,
-				height: canvasRect.height,
-			},
-		};
 		canvas.width = canvasRect.width;
 		canvas.height = canvasRect.height;
-		setAppContext({
-			...appContext,
-			...appContextValues,
-		});
+		ctx.canvas = {
+			width: canvasRect.width,
+			height: canvasRect.height,
+		};
 	}
 	function updateLoop(loop) {}
 	function updateBackgroundColor(color) {
@@ -139,7 +133,7 @@ function createRenderer() {
 		},
 	};
 }
-export const renderer = createRenderer();
+export const renderer = createRenderer(appContext);
 
 //this is necessary because the store needs to be subscribed to to be activated
 const unsubPipeline = renderer.subscribe((value) => {

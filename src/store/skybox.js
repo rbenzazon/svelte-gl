@@ -1,7 +1,10 @@
-import { appContext } from "./app-context";
-import { selectProgram } from "./programs-cache";
-import skyBoxVertex from "../shaders/skybox-vertex.glsl";
+import { invert, multiply } from "gl-matrix/esm/mat4.js";
+import { cross, normalize, subtract } from "gl-matrix/esm/vec3.js";
+import { get } from "svelte/store";
+import { createVec3, createZeroMatrix } from "../geometries/common";
 import skyBoxFragment from "../shaders/skybox-fragment.glsl";
+import skyBoxVertex from "../shaders/skybox-vertex.glsl";
+import { templateLiteralRenderer } from "../shaders/template";
 import {
 	bindDefaultFramebuffer,
 	compileShaders,
@@ -13,13 +16,9 @@ import {
 	useProgram,
 	validateProgram,
 } from "./gl";
-import { drawModes } from "./webgl";
-import { multiply, invert } from "gl-matrix/esm/mat4.js";
-import { createVec3, createZeroMatrix } from "../geometries/common";
-import { cross, normalize, subtract } from "gl-matrix/esm/vec3.js";
+import { selectProgram } from "./programs-cache";
 import { renderer } from "./renderer";
-import { templateLiteralRenderer } from "../shaders/template";
-import { get } from "svelte/store";
+import { drawModes } from "./webgl";
 /**
  * @callback ConvertHDRToCube
  * @param {Uint16Array} typedArray
@@ -133,11 +132,11 @@ export async function createSkyBox(props) {
  */
 function createSkyBoxProgram(setupHDRTexture) {
 	return function createSkyBoxProgram(programStore) {
-		return function createSkyBoxProgram() {
+		return function createSkyBoxProgram(ctx) {
 			if (setupHDRTexture != null) {
-				setupHDRTexture();
+				setupHDRTexture(ctx);
 			}
-			createProgram(programStore)();
+			createProgram(programStore)(ctx);
 		};
 	};
 }
@@ -153,12 +152,12 @@ function createSkyBoxProgram(setupHDRTexture) {
  * @returns {()=>void}
  */
 function setupHDRTexture(image, setBuffer, getBuffer, convertToCube, width, height, cubeSize) {
-	return function setupHDRTexture() {
-		const { gl } = appContext;
+	return function setupHDRTexture(ctx) {
+		const { gl } = ctx;
 		if (getBuffer() == null) {
 			const cubemapTexture = convertToCube(image, gl, width, height, cubeSize);
 			setBuffer(cubemapTexture);
-			resetViewportToCanvas();
+			resetViewportToCanvas(ctx);
 			renderer.update((renderer) => renderer);
 		}
 	};
@@ -170,8 +169,8 @@ function setupHDRTexture(image, setBuffer, getBuffer, convertToCube, width, heig
  * @returns {()=>void}
  */
 function createShaders(toneMapping, hdrEncoding) {
-	return function createShaders() {
-		const { gl, program } = appContext;
+	return function createShaders(ctx) {
+		const { gl, program } = ctx;
 		let declarations = "";
 		let toneMappings = "";
 		if (toneMapping != null) {
@@ -206,8 +205,8 @@ export function createSkyBoxMesh() {
 }
 
 function setupSkyBoxCamera(camera) {
-	return function setupSkyBoxCamera() {
-		const { gl, program } = appContext;
+	return function setupSkyBoxCamera(ctx) {
+		const { gl, program } = ctx;
 		const cameraValues = get(camera);
 		const { projection } = camera;
 
@@ -230,14 +229,14 @@ export async function setupSkyBoxTexture(url, setBuffer) {
 	const image = new Image();
 	await new Promise((resolve, reject) => {
 		image.src = url;
-		image.onload = function () {
+		image.onload = () => {
 			resolve(image);
 		};
 		image.onerror = reject;
 	});
 
-	return function setupSkyBoxTexture() {
-		const { gl } = appContext;
+	return function setupSkyBoxTexture(ctx) {
+		const { gl } = ctx;
 		const texture = gl.createTexture();
 		setBuffer(texture);
 		gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
@@ -295,8 +294,8 @@ function sliceImageAndUpload(image, gl) {
 }
 
 function bindSkyBoxTexture(getBuffer) {
-	return function bindSkyBoxTexture() {
-		const { gl, program } = appContext;
+	return function bindSkyBoxTexture(ctx) {
+		const { gl, program } = ctx;
 		const textureLocation = gl.getUniformLocation(program, "envMap");
 		gl.uniform1i(textureLocation, 0);
 		gl.activeTexture(gl.TEXTURE0);

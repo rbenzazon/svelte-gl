@@ -1,5 +1,6 @@
+import { derived, get, writable } from "svelte/store";
 import { updateOneLight } from "../lights/point-light";
-import { writable, get, derived } from "svelte/store";
+import { appContext } from "./app-context";
 
 /**
  *
@@ -7,7 +8,9 @@ import { writable, get, derived } from "svelte/store";
  * @returns {SvelteGLLightCustomStore}
  */
 
-export const createLightStore = (initialProps) => {
+export const createLightStore = (initialProps, bindings) => {
+	const lightsStore = bindings?.lights ?? lights;
+	const ctx = bindings?.ctx ?? appContext;
 	/** @type {SvelteGLLightStore} */
 	const store = writable(initialProps);
 	const { subscribe, set } = store;
@@ -15,8 +18,8 @@ export const createLightStore = (initialProps) => {
 		subscribe,
 		set: (props) => {
 			set(props);
-			updateOneLight(get(lights), light);
-			lights.set(get(lights));
+			updateOneLight(get(lightsStore), light, ctx);
+			lightsStore.set(get(lightsStore));
 			//renderer.set(get(renderer));
 		},
 	};
@@ -25,7 +28,7 @@ export const createLightStore = (initialProps) => {
 /**
  * @returns {SvelteGLLightsCustomStore}
  */
-function createLightsStore() {
+export function createLightsStore() {
 	/** @type {import("svelte/store").Writable<Array<SvelteGLLightCustomStore>>} */
 	const store = writable([]);
 	const { subscribe, set } = store;

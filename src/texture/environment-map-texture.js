@@ -1,9 +1,8 @@
-import envMapShader from "./environment-map-fragment.glsl";
-import { templateLiteralRenderer } from "../shaders/template.js";
-import { get } from "svelte/store";
-import { appContext } from "../store/app-context";
-import { createZeroMatrix } from "../geometries/common";
 import { identity } from "gl-matrix/cjs/mat3.js";
+import { get } from "svelte/store";
+import { createZeroMatrix } from "../geometries/common";
+import { templateLiteralRenderer } from "../shaders/template.js";
+import envMapShader from "./environment-map-fragment.glsl";
 
 const envMapID = 3;
 
@@ -74,8 +73,8 @@ export const createEnvMapTexture = ({
 };
 
 function bindTexture(getBuffer) {
-	return function bindTexture() {
-		const { gl, program } = appContext;
+	return function bindTexture(ctx) {
+		const { gl, program } = ctx;
 		const textureLocation = gl.getUniformLocation(program, envMapType);
 		gl.activeTexture(gl["TEXTURE" + envMapID]);
 		gl.bindTexture(gl.TEXTURE_2D, getBuffer());
@@ -84,8 +83,8 @@ function bindTexture(getBuffer) {
 }
 
 function setupTexture(textureBuffer, setBuffer, envMapIntensity, envMapRotation) {
-	return function setupTexture() {
-		const { gl, program } = appContext;
+	return function setupTexture(ctx) {
+		const { gl, program } = ctx;
 		setBuffer(textureBuffer());
 		const textureLocation = gl.getUniformLocation(program, envMapType);
 		gl.activeTexture(gl["TEXTURE" + envMapID]);

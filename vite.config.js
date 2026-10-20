@@ -28,6 +28,8 @@ const htmlEntryPoints = {
   'skybox-jpghdr': resolve(__dirname, 'src/skybox-jpghdr.html'),
   'text': resolve(__dirname, 'src/text.html'),
   'chair': resolve(__dirname, 'src/chair.html'),
+  'two-cubes': resolve(__dirname, 'src/two-cubes.html'),
+  'two-cubes-html': resolve(__dirname, 'src/two-cubes-html.html'),
 };
 
 // Common plugins for both modes

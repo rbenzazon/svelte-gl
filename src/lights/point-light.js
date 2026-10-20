@@ -1,11 +1,11 @@
-import pointLightShader from "./point-light.glsl";
-import { templateLiteralRenderer } from "../shaders/template.js";
+import { transformMat4 } from "gl-matrix/esm/vec3.js";
 import { get } from "svelte/store";
 import { createVec3, multiplyScalarVec3 } from "../geometries/common.js";
-import { UBO_BINDING_POINT_POINTLIGHT } from "../store/gl.js";
+import { templateLiteralRenderer } from "../shaders/template.js";
 import { appContext } from "../store/app-context";
 import { camera } from "../store/camera";
-import { transformMat4 } from "gl-matrix/esm/vec3.js";
+import { UBO_BINDING_POINT_POINTLIGHT } from "../store/gl.js";
+import pointLightShader from "./point-light.glsl";
 
 /**
  * @typedef {"point" | "spot"} SvelteGLLightType
@@ -53,13 +53,12 @@ export const createPointLight = (props) => {
 		updateOneLight,
 	};
 };
-let pointLightsUBO = null;
 export const setPointLightsUBO = (newPointLightsUBO) => {
-	pointLightsUBO = newPointLightsUBO;
+	appContext.pointLightsUBO = newPointLightsUBO;
 };
 
 export const getPointLightsUBO = () => {
-	return pointLightsUBO;
+	return appContext.pointLightsUBO;
 };
 /** @typedef {Object} WithGL
  * @property {WebGL2RenderingContext} gl
@@ -70,8 +69,8 @@ export const getPointLightsUBO = () => {
  * @param {WithGL} param0
  * @param {*} lights
  */
-export function createPointLightBuffer(pointLigths) {
-	const { gl } = appContext;
+export function createPointLightBuffer(ctx, pointLigths) {
+	const { gl } = ctx;
 	// Create a single Float32Array to hold all the point light data
 	const numPointLights = pointLigths.length;
 	const pointLightsData = new Float32Array(numPointLights * 12); // Each point light has 12 values (position(3=>4), color(3=>4), intensity(1=>4))
@@ -79,26 +78,26 @@ export function createPointLightBuffer(pointLigths) {
 	for (let lightIndex = 0; lightIndex < numPointLights; lightIndex++) {
 		const light = get(pointLigths[lightIndex]);
 		const offset = lightIndex * 12; // Each point light takes up 8 positions in the array
-		writeLightBuffer(pointLightsData, light, offset);
+		writeLightBuffer(pointLightsData, light, offset, ctx.camera ?? camera);
 	}
-	let pointLightsUBO = getPointLightsUBO();
+	let pointLightsUBO = ctx.pointLightsUBO;
 	if (pointLightsUBO) {
 		gl.bindBuffer(gl.UNIFORM_BUFFER, pointLightsUBO);
 	} else {
 		// Create UBO for point lights
-		const pointLightsUBO = gl.createBuffer();
+		pointLightsUBO = gl.createBuffer();
 		gl.bindBufferBase(gl.UNIFORM_BUFFER, UBO_BINDING_POINT_POINTLIGHT, pointLightsUBO);
-		setPointLightsUBO(pointLightsUBO);
+		ctx.pointLightsUBO = pointLightsUBO;
 	}
 
 	// Set the data in the UBO using bufferData
 	gl.bufferData(gl.UNIFORM_BUFFER, pointLightsData, gl.DYNAMIC_DRAW);
 }
 
-function writeLightBuffer(buffer, light, offset) {
+function writeLightBuffer(buffer, light, offset, cameraStore) {
 	light.preMultipliedColor = [...light.color];
 
-	const lightPosition = transformMat4(createVec3(), light.position, camera.view);
+	const lightPosition = transformMat4(createVec3(), light.position, cameraStore.view);
 	multiplyScalarVec3(light.preMultipliedColor, light.intensity);
 	// Set the position data
 	buffer[offset] = lightPosition[0];
@@ -116,16 +115,16 @@ function writeLightBuffer(buffer, light, offset) {
 }
 
 export function setupLights(lights) {
-	return function setupLights() {
-		const { gl, program } = appContext;
+	return function setupLights(ctx) {
+		const { gl, program } = ctx;
 		//only create the UBO once per app, not per program, todo move the only once logic to webglapp store
-		if (!getPointLightsUBO()) {
+		if (!ctx.pointLightsUBO) {
 			//program specific
 			const pointLightsBlockIndex = gl.getUniformBlockIndex(program, "PointLights");
 			// Bind the UBO to the binding point
 			gl.uniformBlockBinding(program, pointLightsBlockIndex, UBO_BINDING_POINT_POINTLIGHT);
 		}
-		createPointLightBuffer(lights);
+		createPointLightBuffer(ctx, lights);
 	};
 }
 /**
@@ -135,16 +134,16 @@ export function setupLights(lights) {
  * @returns {void}
  */
 /** @type {UpdateOneLight} */
-export function updateOneLight(lights, light) {
-	const { gl } = appContext;
+export function updateOneLight(lights, light, ctx = appContext) {
+	const { gl } = ctx;
 	const pointLigths = lights.filter((l) => get(l).type === "point");
 	const lightIndex = pointLigths.findIndex((l) => l === light);
-	const pointLightsUBO = getPointLightsUBO();
-	if (lightIndex !== -1) {
+	const pointLightsUBO = ctx.pointLightsUBO;
+	if (lightIndex !== -1 && pointLightsUBO) {
 		const lightData = new Float32Array(12);
 		const offset = lightIndex * 12;
 		const lightValue = get(light);
-		writeLightBuffer(lightData, lightValue, 0);
+		writeLightBuffer(lightData, lightValue, 0, ctx.camera ?? camera);
 		gl.bindBuffer(gl.UNIFORM_BUFFER, pointLightsUBO);
 		gl.bufferSubData(gl.UNIFORM_BUFFER, offset * Float32Array.BYTES_PER_ELEMENT, lightData);
 	}

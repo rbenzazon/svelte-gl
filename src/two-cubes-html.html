@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Svelte GL Two Cubes (HTML)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        .views { display: flex; width: 100%; height: 100%; }
+        canvas { display: block; width: 50%; height: 100%; }
+    </style>
+</head>
+<body>
+    <div class="views">
+        <canvas id="cube-a"></canvas>
+        <canvas id="cube-b"></canvas>
+    </div>
+    <!--
+      Same app twice. Each script tag is its own module, so both may
+      import { mountCube }. createEngine() inside mountCube runs once per canvas.
+      Two different apps in a single script alias the shared export name:
+        import { mountCube as mountRed } from "./mount-cube.js";
+        import { mountCube as mountBlue } from "./other-app.js";
+    -->
+    <script type="module">
+        import { mountCube } from "./mount-cube.js";
+        mountCube(document.querySelector("#cube-a"), {
+            color: [1, 0.35, 0.3],
+            background: 0x1c2430,
+        });
+    </script>
+    <script type="module">
+        import { mountCube } from "./mount-cube.js";
+        mountCube(document.querySelector("#cube-b"), {
+            color: [0.3, 0.55, 1],
+            background: 0x2a2118,
+        });
+    </script>
+</body>
+</html>

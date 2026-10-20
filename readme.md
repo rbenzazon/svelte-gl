@@ -108,3 +108,5 @@ https://developer.mozilla.org/en-US/docs/Web/API/KHR_parallel_shader_compile
 ### Skybox HDR | [Demo](https://rbenzazon.github.io/svelte-gl/build/skybox) | [Code](./src/skybox.svelte)
 ### Skybox SDR | [Demo](https://rbenzazon.github.io/svelte-gl/build/skybox-cube) | [Code](./src/skybox-cube.svelte)
 ### Draco Compressed GLTF | [Demo](https://rbenzazon.github.io/svelte-gl/build/draco-gltf) | [Code](./src/draco-gltf.svelte)
+### Two cubes | [Code](./src/two-cubes.svelte)
+### Two cubes (HTML) | [Code](./src/two-cubes-html.html)

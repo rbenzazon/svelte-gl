@@ -1,7 +1,7 @@
-import { getTranslation, orthoNO, lookAt } from "gl-matrix/mat4";
-import depthVertexShader from "../shaders/depth-vertex.glsl";
+import { getTranslation, lookAt, orthoNO } from "gl-matrix/mat4";
+import { createVec3, createZeroMatrix } from "../geometries/common";
 import depthFragmentShader from "../shaders/depth-fragment.glsl";
-import { compileShaders, createFBO, linkProgram, unbindTexture, useProgram, validateProgram } from "./gl";
+import depthVertexShader from "../shaders/depth-vertex.glsl";
 import {
 	BLUR_DIRECTION_HORIZONTAL,
 	BLUR_DIRECTION_VERTICAL,
@@ -12,9 +12,8 @@ import {
 	setDirectionUniform,
 	setKernelUniforms,
 } from "./blur";
+import { compileShaders, createFBO, linkProgram, unbindTexture, useProgram, validateProgram } from "./gl";
 import { selectProgram } from "./programs-cache";
-import { appContext } from "./app-context";
-import { createVec3, createZeroMatrix } from "../geometries/common";
 /**
  * @typedef {Object} ContactShadowPass
  * @property {import("./programs").SvelteGLProgram[]} programs array of programs used in the pass
@@ -149,8 +148,8 @@ export function createContactShadowPass(
 				],
 				setupMaterial: [
 					setupBlurKernel(blurSize),
-					() => setDirectionUniform(BLUR_DIRECTION_HORIZONTAL),
-					() => setSourceTexture(getGeometryTexture),
+					(ctx) => setDirectionUniform(ctx, BLUR_DIRECTION_HORIZONTAL),
+					(ctx) => setSourceTexture(ctx, getGeometryTexture),
 				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_HORIZONTAL, getGeometryTexture),
@@ -163,8 +162,8 @@ export function createContactShadowPass(
 				createProgram: createBlurProgram(true),
 				setupProgram: [createFBO(textureWidth, textureHeight, setVerticalBlurFBO, setVerticalBlurTexture)],
 				setupMaterial: [
-					() => setDirectionUniform(BLUR_DIRECTION_VERTICAL),
-					() => setSourceTexture(getHorizontalBlurTexture),
+					(ctx) => setDirectionUniform(ctx, BLUR_DIRECTION_VERTICAL),
+					(ctx) => setSourceTexture(ctx, getHorizontalBlurTexture),
 				],
 				useProgram,
 				selectProgram: selectBlurProgram(BLUR_DIRECTION_VERTICAL, getHorizontalBlurTexture),
@@ -180,21 +179,21 @@ export function createContactShadowPass(
 }
 
 function setupDarknessUniform(darkness) {
-	return function setupDarknessUniform() {
-		const { gl, program } = appContext;
+	return function setupDarknessUniform(ctx) {
+		const { gl, program } = ctx;
 		const darknessLocation = gl.getUniformLocation(program, "darkness");
 		gl.uniform1f(darknessLocation, darkness);
 	};
 }
 
 function setupBlurKernel(size) {
-	return function setupBlurKernel() {
+	return function setupBlurKernel(ctx) {
 		//rollup will remove the "size" argument form getKernel call
 		const rollupWorkAround = {
 			size,
 		};
 		const kernel = getKernel(rollupWorkAround.size - 1);
-		setKernelUniforms(kernel);
+		setKernelUniforms(ctx, kernel);
 		//workaround to prevent rollup from removing the getKernel argument
 		return rollupWorkAround;
 	};
@@ -202,42 +201,42 @@ function setupBlurKernel(size) {
 
 function selectBlurProgram(blurDirection, getTexture) {
 	return function selectBlurProgram(programStore) {
-		return function selectBlurProgram() {
-			selectProgram(programStore)();
-			useProgram();
-			setSourceTexture(getTexture);
-			setDirectionUniform(blurDirection);
+		return function selectBlurProgram(ctx) {
+			selectProgram(programStore)(ctx);
+			useProgram(ctx);
+			setSourceTexture(ctx, getTexture);
+			setDirectionUniform(ctx, blurDirection);
 		};
 	};
 }
 
-function setSourceTexture(getTexture) {
-	const { gl } = appContext;
+function setSourceTexture(ctx, getTexture) {
+	const { gl } = ctx;
 	const texture = getTexture();
 	gl.bindTexture(gl.TEXTURE_2D, texture);
 }
 
 function setFrameBuffer(getFBO = null, width, height) {
-	return function setFrameBuffer() {
-		const { gl } = appContext;
+	return function setFrameBuffer(ctx) {
+		const { gl } = ctx;
 		const fbo = getFBO ? getFBO() : null;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-		if (appContext.fbo !== fbo && fbo != null) {
-			//log("framebuffer change clearing from", appContext.fbo, "to", fbo, [0, 0, 0, 1], width, height);
+		if (ctx.fbo !== fbo && fbo != null) {
+			//log("framebuffer change clearing from", ctx.fbo, "to", fbo, [0, 0, 0, 1], width, height);
 			gl.viewport(0, 0, width, height);
-			appContext.frameBufferWidth = width;
-			appContext.frameBufferHeight = height;
+			ctx.frameBufferWidth = width;
+			ctx.frameBufferHeight = height;
 			gl.clearColor(...[0, 0, 0, 0]);
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 		}
-		appContext.fbo = fbo;
+		ctx.fbo = fbo;
 	};
 }
 
 function setupShadowCamera(projection, view) {
 	return function setupShadowCamera() {
-		return function setupShadowCamera() {
-			const { gl, program } = appContext;
+		return function setupShadowCamera(ctx) {
+			const { gl, program } = ctx;
 
 			const projectionLocation = gl.getUniformLocation(program, "projectionMatrix");
 
@@ -249,22 +248,22 @@ function setupShadowCamera(projection, view) {
 	};
 }
 
-function createShaders() {
-	const { gl, program } = appContext;
+function createShaders(ctx) {
+	const { gl, program } = ctx;
 	compileShaders(gl, program, depthVertexShader, depthFragmentShader);
 }
 
 function createShadowProgram() {
 	return function createShadowProgram(programStore) {
-		return function createShadowProgram() {
-			const { gl, programMap, vaoMap } = appContext;
+		return function createShadowProgram(ctx) {
+			const { gl, programMap, vaoMap } = ctx;
 
 			// Create shader program
 			const program = gl.createProgram();
 			programMap.set(programStore, program);
 			vaoMap.set(programStore, new Map());
 
-			appContext.program = program;
+			ctx.program = program;
 		};
 	};
 }

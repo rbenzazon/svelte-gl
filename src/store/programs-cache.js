@@ -1,7 +1,7 @@
-import { appContext } from "./app-context.js";
-import { hasSameShallow as arrayHasSameShallow } from "../utils/array.js";
-import { scene } from "./scene.js";
 import { get } from "svelte/store";
+import { hasSameShallow as arrayHasSameShallow } from "../utils/array.js";
+import { appContext } from "./app-context.js";
+import { scene } from "./scene.js";
 
 function isSameProgram(a, b) {
 	return "material" in a
@@ -14,8 +14,8 @@ function isSameProgram(a, b) {
  * @param {import("./programs.js").SvelteGLProgram[]} next - The next programs
  * @returns {void}
  */
-export function clearUnusedCache(next) {
-	const { programMap, vaoMap, gl } = appContext;
+export function clearUnusedCache(next, ctx = appContext, sceneStore = scene) {
+	const { programMap, vaoMap, gl } = ctx;
 	// delete programs that are cached but not in the next programs
 	programMap.forEach((glProgram, programStore) => {
 		if (!next.some((program) => isSameProgram(program, programStore))) {
@@ -27,15 +27,15 @@ export function clearUnusedCache(next) {
 				}
 				vaoMap.delete(programStore);
 			}
-			const sceneValue = get(scene);
+			const sceneValue = get(sceneStore);
 			programStore.meshes.forEach((mesh) => {
 				if (!sceneValue.includes(mesh)) {
-					const buffers = appContext.bufferMap.get(mesh);
+					const buffers = ctx.bufferMap.get(mesh);
 					if (buffers) {
 						buffers.forEach((buffer) => {
 							gl.deleteBuffer(buffer);
 						});
-						appContext.bufferMap.delete(mesh);
+						ctx.bufferMap.delete(mesh);
 					}
 				}
 			});
@@ -91,8 +91,8 @@ function findVaoWithMesh(mesh, vaoMap) {
  * @param {import("./programs.js").SvelteGLProgram} program - The program store
  * @returns {void}
  */
-export function reconciliateCacheMap(p, program) {
-	const { programMap, vaoMap } = appContext;
+export function reconciliateCacheMap(p, program, ctx = appContext) {
+	const { programMap, vaoMap } = ctx;
 	let cachedProgram, cachedGLProgram;
 	console.log("reconciliateCacheMap");
 	//make for loop instead of forEach
@@ -116,11 +116,11 @@ export function reconciliateCacheMap(p, program) {
 	}
 }
 
-export function selectProgram(programStore) {
-	appContext.existingProgram = true;
-	return function selectProgram() {
-		const { programMap } = appContext;
-		const cachedProgram = programMap.get(programStore);
-		appContext.program = cachedProgram;
+export function selectProgram(programStore, ctx = appContext) {
+	ctx.existingProgram = true;
+	return function selectProgram(runtimeCtx) {
+		const current = runtimeCtx ?? ctx;
+		const cachedProgram = current.programMap.get(programStore);
+		current.program = cachedProgram;
 	};
 }
