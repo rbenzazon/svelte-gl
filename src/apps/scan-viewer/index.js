@@ -19,6 +19,14 @@ export function createScanViewer(target, { background } = {}) {
 		setLights: viewer.setLights,
 		setAmbient: viewer.setAmbient,
 		setEnvironment: viewer.setEnvironment,
+		setPalette: viewer.setPalette,
+		setColorRange: viewer.setColorRange,
+		setOutOfRange: viewer.setOutOfRange,
+		getAutoRange: viewer.getAutoRange,
+		on: viewer.on,
+		setRulers: viewer.setRulers,
+		setTheme: viewer.setTheme,
+		setLabelStyle: viewer.setLabelStyle,
 		destroy() {
 			viewer.$destroy();
 		},

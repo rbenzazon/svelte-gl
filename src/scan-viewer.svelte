@@ -29,6 +29,24 @@ function createHeights(freq) {
 	return heights;
 }
 
+// The same heights as an unorganized cloud: grid positions with a little noise, like an inaccurate scanner.
+// The xyz are relative to a large machine origin, to exercise the float32 precision path.
+const cloudOrigin = [1000, 1000, 0];
+
+function createCloud(heights) {
+	const xyz = new Float32Array(heights.length * 3);
+	const jitter = 0.3 * (grid.x1 / (imageW - 1));
+	for (let row = 0; row < imageH; row++) {
+		for (let col = 0; col < imageW; col++) {
+			const i = row * imageW + col;
+			xyz[i * 3] = (col / (imageW - 1)) * grid.x1 + (Math.random() - 0.5) * jitter;
+			xyz[i * 3 + 1] = (row / (imageH - 1)) * grid.y1 + (Math.random() - 0.5) * jitter;
+			xyz[i * 3 + 2] = heights[i];
+		}
+	}
+	return xyz;
+}
+
 const layers = [{ id: "sine", kind: "surface", data: { ...grid, distanceData: createHeights(frequency) } }];
 const metal = { baseColor: [0.85, 0.75, 0.55], metallic: 1, roughness: 0.3 };
 
@@ -40,6 +58,7 @@ let backgroundIndex = 0;
 let remounts = 0;
 let zScale = 1;
 let leftHeights = layers[0].data.distanceData;
+let leftCloud = createCloud(leftHeights);
 let metallic = false;
 let attached = "camera";
 let environment = null;
@@ -66,20 +85,56 @@ function onSkyboxBlur(event) {
 	applyEnvironment();
 }
 
-const displays = ["surface", "points", "both"];
+const displays = ["surface", "points", "both", "cloud"];
 let display = "surface";
 
 // "both" passes the same distanceData to the two layers, so the heights are uploaded once.
 function leftLayers() {
 	const data = { ...grid, distanceData: leftHeights };
+	const pointStyle = { colorMode: pointsColorMode, color: "#f59e0b", pointSize: 2 };
 	const surface = { id: "sine", kind: "surface", data, material: metallic ? metal : undefined };
-	const points = { id: "sine-points", kind: "points", data, color: "#f59e0b", pointSize: 2 };
-	return display === "surface" ? [surface] : display === "points" ? [points] : [surface, points];
+	const points = { id: "sine-points", kind: "points", data, ...pointStyle };
+	const cloud = { id: "sine-cloud", kind: "points", data: { xyz: leftCloud, origin: cloudOrigin }, ...pointStyle };
+	return { surface: [surface], points: [points], both: [surface, points], cloud: [cloud] }[display];
 }
 
 function toggleDisplay() {
 	display = displays[(displays.indexOf(display) + 1) % displays.length];
 	viewerLeft.setLayers(leftLayers());
+}
+
+// The palette stays the default one; setPalette(colors) changes it.
+let pointsColorMode = "palette";
+let fixedRange = false;
+let outOfRange = "clamp";
+let autoRange = [0, 1];
+
+function toggleColorMode() {
+	pointsColorMode = pointsColorMode === "palette" ? "solid" : "palette";
+	viewerLeft.setLayers(leftLayers());
+}
+
+function toggleRange() {
+	fixedRange = !fixedRange;
+	viewerLeft.setColorRange(...(fixedRange ? [-0.5, 0.5] : []));
+}
+
+let boundingBox = false;
+let rulers = true;
+
+function toggleBoundingBox() {
+	boundingBox = !boundingBox;
+	viewerLeft.setRulers({ boundingBox });
+}
+
+function toggleRulers() {
+	rulers = !rulers;
+	viewerLeft.setRulers({ visible: rulers });
+}
+
+function toggleOutOfRange() {
+	outOfRange = outOfRange === "clamp" ? "hide" : "clamp";
+	viewerLeft.setOutOfRange(outOfRange);
 }
 
 function toggleMaterial() {
@@ -126,17 +181,22 @@ function onZScale(event) {
 function newData() {
 	frequency += 0.25;
 	leftHeights = createHeights(frequency);
-	viewerLeft.updateLayerData(leftLayers()[0].id, leftHeights);
+	leftCloud = createCloud(leftHeights);
+	viewerLeft.updateLayerData(leftLayers()[0].id, display === "cloud" ? leftCloud : leftHeights);
 }
 
 onMount(() => {
 	viewerLeft = createScanViewer(left, { background: backgrounds[backgroundIndex] });
+	const offAutoRange = viewerLeft.on("auto-range", (min, max) => {
+		autoRange = [min, max];
+	});
 	viewerLeft.setLayers(layers);
 	mountRight();
 	loadEnvironment("skyboxes/christmas-photo-studio-01-4k.hdr").then((image) => {
 		environment = image;
 	});
 	return () => {
+		offAutoRange();
 		viewerLeft.destroy();
 		viewerRight.destroy();
 	};
@@ -154,6 +214,13 @@ onMount(() => {
 	</div>
 	<button on:click={newData}>new data (left)</button>
 	<button on:click={toggleDisplay}>left display: {display}</button>
+	<button on:click={toggleColorMode}>left points: {pointsColorMode}</button>
+	<button on:click={toggleRange}>
+		left range: {fixedRange ? "-0.5..0.5" : `auto ${autoRange[0].toFixed(2)}..${autoRange[1].toFixed(2)}`}
+	</button>
+	<button on:click={toggleOutOfRange}>left out of range: {outOfRange}</button>
+	<button on:click={toggleBoundingBox}>left box: {boundingBox ? "on" : "off"}</button>
+	<button on:click={toggleRulers}>left rulers: {rulers ? "on" : "off"}</button>
 	<button on:click={toggleMaterial}>left material: {metallic ? "metal" : "matte"}</button>
 	<button on:click={toggleLights}>left lights: {attached}</button>
 	<button on:click={nextBackground}>left background</button>

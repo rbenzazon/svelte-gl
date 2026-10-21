@@ -45,16 +45,30 @@ export interface ScanViewerSurfaceLayer {
 	material?: ScanViewerMaterial;
 }
 
+/** Unorganized point cloud, in the same units as ScanData. */
+export interface PointCloudData {
+	/** Interleaved x, y, z, as loaders produce them. A point with a NaN coordinate is skipped. */
+	xyz: Float32Array;
+	/** Added to every point, so the float32 coordinates stay small (machine coordinates). Default [0, 0, 0]. */
+	origin?: [number, number, number];
+}
+
 /**
- * Organized point cloud: one unlit round point per grid sample, NaN samples skipped.
- * Give a surface layer and a points layer the same distanceData array to upload it once.
+ * Point cloud, one unlit round point per sample, NaN skipped.
+ * Organized (ScanData): one point per grid sample; give a surface layer and a points layer the same
+ * distanceData array to upload it once. Unorganized (PointCloudData): one point per xyz triplet.
  */
 export interface ScanViewerPointsLayer {
 	id: string;
 	kind: "points";
-	data: ScanData;
-	/** Solid color, defaults to a mid blue. */
+	data: ScanData | PointCloudData;
+	/** "palette" (default): height through the color range; "solid": one color for the layer. */
+	colorMode?: "palette" | "solid";
+	/** Used by "solid", defaults to a mid blue. */
 	color?: Color;
+	/** Overrides the viewer color range for this layer. */
+	colorMin?: number;
+	colorMax?: number;
 	/** Diameter in CSS px, default 2. */
 	pointSize?: number;
 }
@@ -90,7 +104,10 @@ export interface ScanViewerApi {
 	setBackground(rgba: RGBA): void;
 	/** Replaces all layers. The first call with data frames the camera on their bounding box; later calls do not move it. */
 	setLayers(layers: ScanViewerLayer[]): void;
-	/** Re-uploads one layer's heights, and those of layers sharing its distanceData; the grid size must not change. */
+	/**
+	 * Grid layer: new heights, also shown by the layers sharing its distanceData; the grid size must not change.
+	 * Cloud layer: new interleaved xyz with the same origin, any point count.
+	 */
 	updateLayerData(id: string, data: Float32Array): void;
 	/** Height exaggeration, default 1. */
 	setZScale(scale: number): void;
@@ -107,6 +124,54 @@ export interface ScanViewerApi {
 	 * applies the options. Resolves once applied; a newer call supersedes a pending one.
 	 */
 	setEnvironment(environment: ScanViewerEnvironment | null, options?: ScanViewerEnvironmentOptions): Promise<void>;
+	/**
+	 * Palette stops from the colorMin color to the colorMax color, interpolated linearly. Default: Kalea's Viridis.
+	 * A viridis Gradient's colors go the other way, so pass them reversed like ScanView does.
+	 */
+	setPalette(colors: Color[]): void;
+	/** Heights mapped to the first and last palette colors, in real units (zScale has no effect). An undefined bound uses the auto range. */
+	setColorRange(min?: number, max?: number): void;
+	/** "clamp" (default): edge colors outside the range; "hide": points outside the range are not drawn. */
+	setOutOfRange(mode: "clamp" | "hide"): void;
+	/** Min and max height over the palette point layers, NaN ignored; [0, 1] without any. */
+	getAutoRange(): [number, number];
+	/** Emitted when the auto range changes. Returns the unsubscribe function. */
+	on(event: "auto-range", callback: (min: number, max: number) => void): () => void;
+	/**
+	 * Graduation rulers on the bounding box edges closest to the viewer, switching edges as the camera orbits.
+	 * Labels show real values (zScale has no effect) and overlapping ones are hidden.
+	 */
+	setRulers(options: ScanViewerRulersOptions): void;
+	/** Resolved theme token values. */
+	setTheme(colors: ScanViewerThemeColors): void;
+	/**
+	 * Resolved CSS values of the label text, for example read with getComputedStyle from a probe element
+	 * styled with utility classes. Default: 11px "IBM Plex Sans", #b9c1cf. Re-apply after a theme change.
+	 */
+	setLabelStyle(style: ScanViewerLabelStyle): void;
+}
+
+export interface ScanViewerLabelStyle {
+	/** CSS font shorthand in CSS px, for example '11px "IBM Plex Sans", sans-serif'. */
+	font?: string;
+	/** Any CSS color. */
+	color?: string;
+}
+
+export interface ScanViewerRulersOptions {
+	/** Default true. */
+	visible?: boolean;
+	/** Major steps along a 700 CSS px ruler, fewer on shorter rulers, as GraphView's graduationDensity. Default 7. */
+	density?: number;
+	/** Thin outline of the combined data box. Default false. */
+	boundingBox?: boolean;
+}
+
+export interface ScanViewerThemeColors {
+	/** graph-border: rulers. Default Kalea's light theme value #748a99. */
+	border?: Color;
+	/** graph-border-subdued: bounding box. Default Kalea's light theme value #b9c1cf. */
+	borderSubdued?: Color;
 }
 
 /** The default rig: key (front left), fill (front right) and rim (behind), as seen from the home view. */

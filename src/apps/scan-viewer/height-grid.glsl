@@ -1,10 +1,6 @@
 uniform highp sampler2D heightTexture;
 // x0, y0, dx, dy of the height grid
 uniform vec4 heightGrid;
-layout(std140) uniform Scene {
-    // xyz: origin subtracted from data coordinates, w: zScale
-    vec4 sceneOriginZScale;
-};
 
 float heightAt(ivec2 texel) {
     return texelFetch(heightTexture, clamp(texel, ivec2(0), textureSize(heightTexture, 0) - 1), 0).r;

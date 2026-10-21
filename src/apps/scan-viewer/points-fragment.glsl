@@ -4,7 +4,7 @@ precision mediump float;
 #define SHADER_NAME scanPointsFragment
 
 // unlit, written to the canvas as is
-uniform vec3 pointColor;
+in vec3 vColor;
 
 out vec4 fragColor;
 
@@ -13,5 +13,5 @@ void main() {
     if (dot(offset, offset) > 1.0) {
         discard;
     }
-    fragColor = vec4(pointColor, 1.0);
+    fragColor = vec4(vColor, 1.0);
 }

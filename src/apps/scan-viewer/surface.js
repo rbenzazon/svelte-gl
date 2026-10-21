@@ -2,6 +2,7 @@ import { convertToVector3 } from "../../color/color-space.js";
 import { createSpecular } from "../../material/specular/specular.js";
 import { templateLiteralRenderer } from "../../shaders/template.js";
 import heightGridShader from "./height-grid.glsl";
+import sceneShader from "./scene.glsl";
 import surfaceShader from "./surface.glsl";
 
 const renderSurfaceShader = templateLiteralRenderer(surfaceShader, { declaration: false, position: false });
@@ -29,8 +30,8 @@ export function createSurface(grid) {
 		vertexCount: (grid.imageW - 1) * (grid.imageH - 1) * 6,
 		animation: {
 			type: "vertex",
-			shader: (props) => (props.declaration ? heightGridShader : "") + renderSurfaceShader(props),
-			setupAnimation: grid.setupGrid,
+			shader: (props) => (props.declaration ? sceneShader + heightGridShader : "") + renderSurfaceShader(props),
+			setupAnimation: grid.setup,
 			updateProgram: grid.updateProgram,
 		},
 	};

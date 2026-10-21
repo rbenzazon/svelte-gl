@@ -44,9 +44,6 @@ todos:
   - id: s5-3
     content: "Step 5.3: unorganized xyz + origin + rgb mode (ask buffer vs texture first)"
     status: pending
-  - id: s5-4
-    content: "Step 5.4: multi-layer visibility, opacity, solid color list, combined bbox"
-    status: pending
   - id: s6-1
     content: "Step 6.1: turntable controller (pointer capture, orbit/pan/zoom-to-cursor, limits, clamp target)"
     status: pending
@@ -55,6 +52,12 @@ todos:
     status: pending
   - id: s7-1
     content: "Step 7.1: unlit line program + bounding box"
+    status: pending
+  - id: s7-1-1
+    content: "Step 7.1.1: text labels as canvas-rasterized textured quads (atlas, constant pixel size)"
+    status: pending
+  - id: s7-1-2
+    content: "Step 7.1.2: label placement (auto outward anchors per axis, flip/clamp into view, hide when the point leaves)"
     status: pending
   - id: s7-2
     content: "Step 7.2: procedural grid pass with fades"
@@ -82,6 +85,9 @@ todos:
     status: pending
   - id: s11
     content: "Step 11: context loss/restore, no-data extent, error events"
+    status: pending
+  - id: s12
+    content: "Step 12 (was 5.4): multi-layer visibility, opacity, solid color list, combined bbox"
     status: pending
 isProject: false
 ---
@@ -186,18 +192,33 @@ Today the engine lives in module singletons: [src/store/app-context.js](src/stor
   - `env` is an equirectangular HDR image (`{ width, height, data }` half floats); `loadEnvironment(url)` decodes a `.hdr`. `null` removes it. No built-in "studio" preset yet.
   - The PMREM pass only runs once env lighting is first enabled, and removes itself from the engine's own passes.
 
-## Step 5: Points (4 parts)
+## Step 5: Points (3 parts)
 
 At the start of 5.1 I'll ask you about the section 13 question on the drawing primitive (`gl.POINTS` or quads built from `gl_VertexID`). At the start of 5.3 I'll ask about storage for unorganized clouds (vertex buffer or `RGBA32F` texture).
 
 - **5.1 Organized points.** An unlit custom program that reads the shared height texture, with solid color, size in px × DPR, and NaN skipped. Example: the same dataset shown as a surface, as points, and as both.
+  - Decided: `gl.POINTS`, one vertex per sample from `gl_VertexID`, round via `gl_PointCoord`. NaN points are moved outside the clip volume.
+  - The program is a material program (`engine.createMaterial({ program })`), drawn with `drawMode: "POINTS"`.
+  - `height-grid.js` / `height-grid.glsl` hold the height texture, grid uniform and scene block shared by the surface and points programs. Layers given the same `distanceData` array share one texture.
+  - A small clip-space depth bias keeps points visible on a surface of the same data.
+  - Engine: a material program drawing to the canvas now clears it when it is the first program, like the default program.
 - **5.2 Palette and color range.**
   - A 256×1 `RGBA8` palette texture.
   - API: `setPalette`, `setColorRange` (undefined means auto), `setOutOfRange`, and the `auto-range` event.
   - `on(event, cb)` lands here with `auto-range`, its first event. It returns an unsubscribe function, and later events (`camera`, `hover`, context loss) reuse it.
   - All of these go through `invalidate` and never re-upload data.
-- **5.3 Unorganized points.** Interleaved `xyz` positions plus an `origin` offset, and the `rgb` color mode.
-- **5.4 Several layers together.** `visible`, `opacity` with blending, solid colors assigned in order, and a combined bounding box over visible layers.
+  - Decided, following ScanView:
+    - The palette is an n×1 `RGBA8` texture of the stop colors with linear filtering and a texel-center `paletteRemap`, instead of a 256×1 one. `setPalette(stops)` goes from the min color to the max color, default Kalea's Viridis.
+    - The shader gets `colorMin` / `colorMax` and computes `clamp((h - min) / (max - min), 0, 1)`; an empty range is widened on the CPU.
+    - Each bound falls back to the auto range on its own (layer `colorMin` / `colorMax`, then `setColorRange`, then auto).
+    - The auto range ignores NaN only, over the palette point layers. `getAutoRange()` returns it.
+- **5.3 Unorganized points.** Interleaved `xyz` positions plus an `origin` offset.
+  - No per-point color (no `rgb` mode, a change from the spec): solid or palette on the height, like organized points.
+  - Decided: vertex buffer. `xyz` goes to the existing `positions` attribute, with no copy. Same points program with a `cloud` template flag; `origin - sceneOrigin` is computed on the CPU in double precision.
+  - `updateLayerData` on a cloud rebuilds only that layer's mesh (any point count); no engine change.
+  - `scene.glsl` holds the scene block alone, since clouds need it without the height grid.
+  - Example: the same sine grid as interleaved `xyz`, with a little noise added to x and y to simulate inaccurate scan positions that still follow a grid.
+- 5.4 moved to Step 12.
 
 ## Step 6: Turntable controls (2 parts)
 
@@ -213,11 +234,43 @@ At the start of 5.1 I'll ask you about the section 13 question on the drawing pr
 ## Step 7: Grid, lines and rulers (4 parts)
 
 - **7.1** An unlit line program and the bounding box (`showBoundingBox`).
+  - `lines.js`: `gl.LINES` (one device pixel), a positions buffer in data units relative to the scene origin, z scaled in the shader. Each vertex is `lineOffset + position * lineScale`, read at every draw.
+  - The box is a static unit cube scaled to the bounds through those uniforms: bounds and `zScale` changes never re-upload.
+  - API from the spec: `setRulers({ boundingBox })` (ruler options in 7.3) and `setTheme({ borderSubdued })`, default Kalea light `#b9c1cf`.
+- **7.1.1 Text labels.** A simpler alternative to the SDF atlas and HTML options of spec section 13.
+  - Decided: a 2D canvas laid over the WebGL canvas (`pointer-events: none`), drawn with `fillText`. Labels are always on top of the data.
+  - `labels.js` `drawLabels`: each label has a text, a 3D data `position` (projected with the same matrices, scene origin and `zScale` as the programs) or a fixed 2D `screen` position, the canvas `textAlign` / `textBaseline` anchor, a CSS px `offset` and an optional style.
+  - Redrawn only when something changed (camera, bounds, `zScale`, style), from the renderer `loop` callback. The engine now calls it after the canvas resize, so labels stay in the same frame as the WebGL draw.
+  - `setLabelStyle({ font, color })` takes resolved CSS values: Kalea reads them with `getComputedStyle` from a probe element styled with Tailwind classes, so Tailwind scans the classes in Kalea. Default `11px "IBM Plex Sans"` in the bounding box color.
+  - Temporary examples, removed in 7.3: the box corner coordinates and a fixed `zScale` label.
+- **7.1.2 Label placement.**
+  - The label is attached by one of the 9 points of its text box, chosen per axis: `align: "left" | "center" | "right" | "auto"` and `baseline: "top" | "middle" | "bottom" | "auto"`. A fixed value on one axis combines with auto on the other (for example `baseline: "bottom"`, `align: "auto"`).
+  - `distance` (CSS px, default 0) separates that text point from the projected point, toward the text: `"left"` → +x, `"right"` → −x, `"top"` → +y (down), `"bottom"` → −y, center/middle → 0, normalized so a corner is also `distance` away diagonally. No free x/y shift.
+  - Auto points away from `outwardFrom`: a data point (projected), or `"center"` for the center of the screen (default; the label module does not know the bounds, a ruler passes the bounds center explicitly).
+    - With `d` the screen vector from the reference to the point: `d.x > 0` → `"left"` (the text extends away to the right), `d.x < 0` → `"right"`, `d.y > 0` (down) → `"top"`, `d.y < 0` → `"bottom"`.
+    - Middle zone: when `|d.x|` is under 10% of the screen width (a zone 20% of the screen wide around the reference) → `"center"`; when `|d.y|` is under 10% of the screen height → `"middle"`.
+    - Small hysteresis at the zone edges, so labels do not flicker while orbiting.
+  - `keepInView` (default true) works like an `outwardFrom` for the screen edges, axis by axis, after the auto anchors. The text never overlaps the screen edge nor its point:
+    1. hide the label when its point is outside the viewport;
+    2. measure the text (`measureText` width, ascent and descent, cached per text and font) to get its rectangle at the current anchor;
+    3. on an axis where the rectangle overflows an edge, the anchor of that axis switches to the side away from that edge: overflow at the bottom → `"bottom"` (the text goes above the point), at the top → `"top"`, at the right → `"right"`, at the left → `"left"`. A centered axis (`"center"` / `"middle"`) switches the same way. The other axis keeps its anchor: a text squeezed at the bottom goes above the point with its x alignment unchanged;
+    4. near a corner both axes overflow, so both switch: the text moves away from the corner in both directions;
+    5. the text is never slid over the point. If it fits on neither side of an axis (a viewport smaller than the text), it keeps the side with more room.
+  - The same hysteresis applies, so a label next to an edge does not flip back and forth.
+  - Split into `layoutLabels` (final rectangles and anchors) and a draw function, so the overlap hiding of 7.3 goes between them on the final rectangles.
+  - The current `offset` and the canvas-specific baselines (`alphabetic`, `hanging`, ...) go away; `top` / `middle` / `bottom` use the measured text box.
+  - Example: the corner labels switch to `"auto"` anchors pointing out of the box, with a small `distance`.
+  - Done: `prepareLabelCanvas`, `layoutLabels` (placement state kept per label `id` in a memory map for the hysteresis) and `drawPlacedLabels`. Text sizes come from the font box metrics, cached and cleared when the font loads. Example: corners with `outwardFrom: "center"`, `align` and `baseline` `"auto"`, `distance: 6`.
 - **7.2** The grid pass: a procedural plane shader with major and minor lines, distance and grazing-angle fades, and transparency from below.
 - **7.3** Rulers:
   - ticks computed on the CPU from nice-number steps;
   - the nearest box edges are chosen when the camera changes;
   - the line buffer is re-uploaded only when the chosen edges change.
+  - Done, with one change: no line buffer at all. `ruler-vertex.glsl` builds the axis line and the ticks from `gl_VertexID` and a few uniforms (start, step, tick vector, major every n), and the CPU only sets those uniforms and the mesh `vertexCount`, so nothing is ever re-uploaded (also while zooming, when the steps change).
+  - `rulers.js`: `niceSteps` (GraphView's 1/2/5 rule, density scaled by the ruler length on screen over 700 px, minor steps /5 or /4), `formatTick` (GraphView's decimals), `layoutRulers` (pure: bounds, camera position, projector, density → uniforms and labels of the three rulers).
+  - Edges: X and Y on the bottom edges of the near sides, Z on the side vertical edge farthest from the box center on screen. Ticks point out of the box; major tick labels use `align` / `baseline` `"auto"` away from the bounds center, and `hideOverlaps` drops the labels overlapping earlier ones.
+  - The layout runs in the renderer `loop` callback, before the WebGL draw of the same frame. API: `setRulers({ visible, density, boundingBox })`, `setTheme({ border })` for the rulers (default Kalea light `graph-border` `#748a99`). The temporary label examples are gone.
+  - Still to do: axis titles (step 10) and a number formatter option for Kalea's `useNumberFormatStore`.
 - **7.4** The surface `wireframe` overlay, drawn with the line program from `gl_VertexID`.
 
 ## Step 8: Picking (3 parts)
@@ -234,10 +287,17 @@ At the start of 5.1 I'll ask you about the section 13 question on the drawing pr
 
 ## Step 10: Labels
 
-- This depends on the section 13 decision (SDF atlas in WebGL or an HTML fallback), which I'll ask you about at that point.
-- Until then the API emits label positions.
+- The label rendering itself comes from 7.1.1 (canvas-rasterized quads), which replaces the section 13 choice between an SDF atlas and an HTML fallback.
+- What is left here: axis titles and any remaining label uses beyond the rulers.
 
 ## Step 11: Robustness
 
 - Context loss and restore: setup re-runs from the stores and the data kept on the CPU is re-uploaded.
 - The "no data" state uses a default extent, and the app sends WebGL2-unavailable and context-loss events.
+
+## Step 12: Several layers together (was 5.4, moved last)
+
+- `visible` per layer: hidden layers are skipped in the scene, the auto color range and the bounds, without moving the camera.
+- `opacity` with blending. Surfaces can use the engine's transparent material path. Material programs (points, lines) have no material, so the engine's transparency sort and blend switch need a small hook for them.
+- Solid colors assigned in order from Kalea's signal color list when `color` is omitted.
+- The combined bounding box (framing, grid, rulers) only counts visible layers.

@@ -5,35 +5,69 @@ import { selectProgram } from "../../store/programs-cache.js";
 import heightGridShader from "./height-grid.glsl";
 import pointsFragment from "./points-fragment.glsl";
 import pointsVertex from "./points-vertex.glsl";
+import sceneShader from "./scene.glsl";
 
-const vertexSource = templateLiteralRenderer(pointsVertex, { heightGrid: "" })({ heightGrid: heightGridShader });
+const renderVertex = templateLiteralRenderer(pointsVertex, { palette: false, cloud: false, declarations: "" });
 
 /**
- * Unlit round points, one per height grid sample, drawn with gl.POINTS from gl_VertexID with no vertex attributes.
- * NaN samples are dropped. Used as a material program: engine.createMaterial({ program }).
- * @param {ReturnType<typeof import("./height-grid.js").createHeightGrid>} grid
- * @param {{ color?: import("./scan-viewer").Color, pointSize?: number }} style
+ * @typedef {Object} PointsColoring shared by the palette point layers, read at every draw
+ * @property {ReturnType<typeof import("./palette.js").createPalette>} palette
+ * @property {() => [number, number]} getRange colorMin and colorMax of this layer
+ * @property {() => boolean} hideOutOfRange
+ */
+
+/**
+ * @typedef {ReturnType<typeof import("./height-grid.js").createHeightGrid> | ReturnType<typeof import("./point-cloud.js").createPointCloud>} PointsSource
+ */
+
+/**
+ * Unlit round points drawn with gl.POINTS. A height grid gives one point per sample from gl_VertexID with no
+ * vertex attributes; a cloud reads the mesh positions. NaN points are dropped.
+ * Used as a material program: engine.createMaterial({ program }).
+ * @param {PointsSource} source
+ * @param {{ colorMode?: "palette" | "solid", color?: import("./scan-viewer").Color, pointSize?: number }} style
+ * @param {PointsColoring} coloring
  * @param {import("../../store/app-context").AppContext} ctx engine context, for the program cache
  */
-export function createPointsProgram(grid, { color = [0.2, 0.45, 0.9], pointSize = 2 }, ctx) {
+export function createPointsProgram(
+	source,
+	{ colorMode = "palette", color = [0.2, 0.45, 0.9], pointSize = 2 },
+	coloring,
+	ctx,
+) {
+	const usePalette = colorMode === "palette";
 	const rgb = new Float32Array(convertToVector3(color));
 
 	function createShaders(context) {
+		const vertexSource = renderVertex({
+			palette: usePalette,
+			cloud: source.cloud,
+			declarations: source.cloud ? sceneShader : sceneShader + heightGridShader,
+		});
 		compileShaders(context.gl, context.program, vertexSource, pointsFragment);
 	}
 
 	function setupStyle(context) {
 		const { gl, program } = context;
-		gl.uniform3fv(gl.getUniformLocation(program, "pointColor"), rgb);
 		gl.uniform1f(gl.getUniformLocation(program, "pointSize"), pointSize * devicePixelRatio);
+		if (!usePalette) {
+			gl.uniform3fv(gl.getUniformLocation(program, "pointColor"), rgb);
+			return;
+		}
+		coloring.palette.bindTexture(context);
+		const [min, max] = coloring.getRange();
+		gl.uniform1f(gl.getUniformLocation(program, "colorMin"), min);
+		// An empty range would divide by zero: every point takes the first color.
+		gl.uniform1f(gl.getUniformLocation(program, "colorMax"), max === min ? min + 1 : max);
+		gl.uniform1i(gl.getUniformLocation(program, "hideOutOfRange"), coloring.hideOutOfRange() ? 1 : 0);
 	}
 
 	return {
 		createProgram,
 		setupProgram: [createShaders, linkProgram, validateProgram],
-		setupMaterial: [grid.setupGrid],
+		setupMaterial: [source.setup],
 		useProgram,
 		selectProgram: (programStore) => selectProgram(programStore, ctx),
-		updateProgram: [...grid.updateProgram, setupStyle],
+		updateProgram: [...source.updateProgram, setupStyle],
 	};
 }

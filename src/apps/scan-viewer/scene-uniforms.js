@@ -29,10 +29,17 @@ export function createSceneUniforms() {
 		gl.uniformBlockBinding(program, gl.getUniformBlockIndex(program, "Scene"), UBO_BINDING_POINT_SCENE);
 	}
 
+	// Double precision copy, for offsets computed on the CPU.
+	let origin = [0, 0, 0];
+
 	return {
-		setOrigin(origin) {
-			data.set(origin);
+		setOrigin(value) {
+			origin = [...value];
+			data.set(value);
 			dirty = true;
+		},
+		getOrigin() {
+			return origin;
 		},
 		setZScale(zScale) {
 			data[3] = zScale;
