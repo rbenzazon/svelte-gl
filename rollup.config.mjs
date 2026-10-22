@@ -51,6 +51,7 @@ export default [{
         'data-texture':'src/data-texture.svelte',
         'camera-projection':'src/camera-projection.svelte',
         'scan-viewer':'src/scan-viewer.svelte',
+        cone:'src/cone.svelte',
     },
     output: {
         dir: 'build/js',

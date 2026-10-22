@@ -33,6 +33,7 @@ const htmlEntryPoints = {
   'data-texture': resolve(__dirname, 'src/data-texture.html'),
   'camera-projection': resolve(__dirname, 'src/camera-projection.html'),
   'scan-viewer': resolve(__dirname, 'src/scan-viewer.html'),
+  cone: resolve(__dirname, 'src/cone.html'),
 };
 
 // Common plugins for both modes

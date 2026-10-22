@@ -46,7 +46,8 @@ export function createCameraStore(ctx) {
 	let view, projection;
 	function updateComputed(next) {
 		const { canvas } = ctx;
-		const aspect = canvas.width / canvas.height;
+		// A camera drawing in a viewport (see the material viewport) sets the aspect of that viewport.
+		const aspect = next.aspect ?? canvas.width / canvas.height;
 		view = lookAt(createZeroMatrix(), next.position, next.target, next.up);
 		if (next.projection === "orthographic") {
 			const height = 2 * distance(next.position, next.target) * Math.tan(toRadian(next.fov) / 2);

@@ -29,6 +29,7 @@ const links = [
 	{ name: "Data texture", href: "./data-texture" },
 	{ name: "Camera projection", href: "./camera-projection" },
 	{ name: "Scan viewer", href: "./scan-viewer" },
+	{ name: "Cone", href: "./cone" },
 ];
 </script>
 

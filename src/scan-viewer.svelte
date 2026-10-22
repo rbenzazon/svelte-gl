@@ -66,6 +66,7 @@ let lightMode = "camera";
 let backgroundIndex = 0;
 let rulers = true;
 let boundingBox = false;
+let gizmo = true;
 let environment = null;
 let skybox = false;
 let skyboxBlur = 0;
@@ -142,6 +143,11 @@ function toggleRulers() {
 function toggleBoundingBox() {
 	boundingBox = !boundingBox;
 	viewer.setRulers({ boundingBox });
+}
+
+function toggleGizmo() {
+	gizmo = !gizmo;
+	viewer.setGizmo(gizmo);
 }
 
 function applyEnvironment() {
@@ -313,6 +319,10 @@ onMount(() => {
 					aria-checked={boundingBox}
 					on:click={toggleBoundingBox}
 				></button>
+			</div>
+			<div class="row">
+				<span class="label">Gizmo</span>
+				<button class="switch" class:on={gizmo} role="switch" aria-checked={gizmo} on:click={toggleGizmo}></button>
 			</div>
 		</section>
 

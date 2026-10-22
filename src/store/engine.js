@@ -392,8 +392,13 @@ export function createEngine() {
 		createLight(value) {
 			return createLightStore(value, { lights: engineLights, ctx });
 		},
-		createObject(data) {
-			return create3DObject(data, false, [0, 0, 0], bindings);
+		/** A camera for a material viewport; it sets its own `aspect`. */
+		createCamera() {
+			return createCameraStore(ctx);
+		},
+		/** `camera`: the camera of the material viewport the object is drawn in, default the engine camera. */
+		createObject(data, { camera } = {}) {
+			return create3DObject(data, false, [0, 0, 0], camera ? { ...bindings, camera } : bindings);
 		},
 	};
 }

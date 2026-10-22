@@ -5,8 +5,11 @@ import {
 	createProgram,
 	createShaders,
 	linkProgram,
+	restoreViewport,
 	setupAmbientLight,
+	setupCamera,
 	setupTime,
+	setViewport,
 	useProgram,
 	validateProgram,
 } from "./gl";
@@ -158,7 +161,9 @@ export function createProgramsStore({ scene, lights, materials, renderPasses, ct
 			return acc;
 		}, []);
 
-		const sortedPrograms = sortMeshesByZ(programs.sort(sortTransparency), ctx.camera);
+		// Materials drawn in a viewport go last, over the rest: the canvas clear never erases them.
+		const sorted = sortMeshesByZ(programs.sort(sortTransparency), ctx.camera);
+		const sortedPrograms = [...sorted.filter((p) => !p.material.viewport), ...sorted.filter((p) => p.material.viewport)];
 
 		// TODO make two different numligth store, one for each light type, when spotlight is supported
 		//const pointLights = $lights.filter((l) => get(l).type === "point");
@@ -169,6 +174,8 @@ export function createProgramsStore({ scene, lights, materials, renderPasses, ct
 			pointLightShader = get(get(lights)[0]).shader;
 		}
 
+		// The first program of each viewport clears its depth, the next ones of that viewport keep it.
+		const seenViewports = new Set();
 		/** @type {SvelteGLProgram[]} */
 		const next = [
 			...prePasses,
@@ -205,7 +212,21 @@ export function createProgramsStore({ scene, lights, materials, renderPasses, ct
 					linkProgram,
 					validateProgram,
 				];
-				if (firstCall && concurrentPasses.length === 0) {
+				const clears = firstCall && concurrentPasses.length === 0;
+				const { viewport } = p.material;
+				if (viewport) {
+					// Its own camera and rectangle, set back to the full canvas after its meshes.
+					const toViewport = setViewport(viewport.rect, !seenViewports.has(viewport));
+					seenViewports.add(viewport);
+					program.setFrameBuffer = clears
+						? (context) => {
+								bindDefaultFramebuffer(context);
+								toViewport(context);
+							}
+						: toViewport;
+					program.postDraw = restoreViewport;
+					program.setupCamera = () => setupCamera(viewport.camera);
+				} else if (clears) {
 					program.setFrameBuffer = bindDefaultFramebuffer;
 				}
 				if (p.material?.specular) {

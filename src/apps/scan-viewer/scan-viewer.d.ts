@@ -157,6 +157,8 @@ export interface ScanViewerApi {
 	 * Synchronous; the first pick of a cloud builds its picking tree.
 	 */
 	pick(screenX: number, screenY: number): ScanViewerHit | null;
+	/** View orientation gizmo: shaded X, Y and Z arrows in the bottom left corner, turning with the camera. Default true. */
+	setGizmo(visible: boolean): void;
 }
 
 export interface ScanViewerHit {
@@ -195,6 +197,10 @@ export interface ScanViewerThemeColors {
 	border?: Color;
 	/** graph-border-subdued: bounding box. Default Kalea's light theme value #b9c1cf. */
 	borderSubdued?: Color;
+	/** axis-x, axis-y, axis-z: gizmo arrows and labels. Defaults red, green, blue. */
+	axisX?: Color;
+	axisY?: Color;
+	axisZ?: Color;
 }
 
 /** The default rig: key (front left), fill (front right) and rim (behind), as seen from the home view. */

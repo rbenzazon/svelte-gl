@@ -7,7 +7,10 @@ import { createEngine } from "../../store/engine.js";
 import { createSkyBox } from "../../store/skybox.js";
 import { createEnvironmentMap } from "../../texture/environment-map.js";
 import { createEnvMapTexture } from "../../texture/environment-map-texture.js";
+import { scale } from "gl-matrix/esm/mat4.js";
 import { convertToVector3 } from "../../color/color-space.js";
+import { createSpecular } from "../../material/specular/specular.js";
+import { createGizmoArrows } from "./gizmo.js";
 import { createHeightGrid } from "./height-grid.js";
 import {
 	clearLabelMetrics,
@@ -56,6 +59,12 @@ let showRulers = true;
 let rulerDensity = 7;
 // Material, mesh and current layout of the x, y and z rulers.
 let rulers = null;
+let showGizmo = true;
+// Camera and the material and mesh of each axis arrow, created when first shown.
+let gizmo = null;
+let axisColors = ["#e5484d", "#46a758", "#3e63dd"];
+// Half the data diagonal (heights times zScale), as framed.
+let sceneRadius = 1;
 let labelCanvas;
 let labelStyle = { font: '11px "IBM Plex Sans", sans-serif', color: "#b9c1cf" };
 let labelsDirty = true;
@@ -79,7 +88,10 @@ const engine = createEngine();
 const sceneUniforms = createSceneUniforms();
 const palette = createPalette();
 setContext("svelte-gl", engine);
-const unsubscribeCamera = engine.camera.subscribe(invalidateLabels);
+const unsubscribeCamera = engine.camera.subscribe(() => {
+	syncGizmoCamera();
+	invalidateLabels();
+});
 loadLabelFont();
 
 function invalidateLabels() {
@@ -110,7 +122,7 @@ function renderOverlay() {
 	}
 	labelsDirty = false;
 	const { context, viewport } = prepareLabelCanvas(labelCanvas, canvas);
-	if (!showRulers || layerInputs.length === 0) {
+	if (layerInputs.length === 0) {
 		labelMemory.clear();
 		return;
 	}
@@ -122,20 +134,116 @@ function renderOverlay() {
 		origin,
 		zScale,
 	};
-	const layouts = layoutRulers(
-		sceneBounds,
-		origin,
-		cameraDataPosition(),
-		createProjector(labelView, viewport),
-		rulerDensity,
-	);
-	getRulers().forEach((ruler, axis) => {
-		ruler.layout = layouts[axis];
-		ruler.mesh.vertexCount = layouts[axis].vertexCount;
-	});
-	const labels = layouts.flatMap(({ labels }) => labels);
+	// Gizmo labels first: they win the overlap hiding.
+	const labels = showGizmo ? gizmoLabels(viewport) : [];
+	if (showRulers) {
+		const layouts = layoutRulers(
+			sceneBounds,
+			origin,
+			cameraDataPosition(),
+			createProjector(labelView, viewport),
+			rulerDensity,
+		);
+		getRulers().forEach((ruler, axis) => {
+			ruler.layout = layouts[axis];
+			ruler.mesh.vertexCount = layouts[axis].vertexCount;
+		});
+		labels.push(...layouts.flatMap((layout) => layout.labels));
+	}
 	const placed = layoutLabels(context, labels, labelView, viewport, labelStyle, labelMemory);
 	drawPlacedLabels(context, hideOverlaps(placed));
+}
+
+// Bottom left corner of the viewer, CSS px from the bottom left: [x, y, width, height].
+function gizmoRect() {
+	return [12, 12, 80, 80];
+}
+
+// Arrows sized to the data, so the gizmo sits where the data does in the home view and gets the same lighting.
+function gizmoMatrix() {
+	const size = 0.95 * sceneRadius;
+	return scale(new Float32Array(16), axisSwap, [size, size, size]);
+}
+
+// Looks at the arrows from the main camera direction, at the home view distance (see frame).
+function syncGizmoCamera() {
+	if (!gizmo) {
+		return;
+	}
+	const { position, target, up } = get(engine.camera);
+	const direction = position.map((value, i) => value - target[i]);
+	const length = Math.hypot(...direction) || 1;
+	const distance = sceneRadius / Math.sin((fov * Math.PI) / 360);
+	gizmo.camera.set({
+		position: direction.map((value) => (value / length) * distance),
+		target: [0, 0, 0],
+		up,
+		fov,
+		near: distance / 100,
+		far: distance * 10,
+		aspect: 1,
+		projection: "perspective",
+	});
+}
+
+function getGizmo() {
+	if (!gizmo) {
+		gizmo = { camera: engine.createCamera(), layers: [] };
+		syncGizmoCamera();
+		const viewport = { camera: gizmo.camera, rect: gizmoRect };
+		gizmo.layers = createGizmoArrows().map((arrow, axis) => {
+			const material = engine.createMaterial({
+				diffuse: convertToVector3(axisColors[axis]),
+				metalness: 0,
+				specular: createSpecular({ roughness: 0.4 }),
+				viewport,
+			});
+			const mesh = engine.createObject({ ...arrow, matrix: gizmoMatrix(), material }, { camera: gizmo.camera });
+			return { material, mesh };
+		});
+	}
+	return gizmo.layers;
+}
+
+// X, Y and Z beyond the arrow tips, in the axis colors.
+function gizmoLabels([, height]) {
+	if (!gizmo) {
+		return [];
+	}
+	const [x, y, width, rectHeight] = gizmoRect();
+	const project = createProjector(
+		{ projection: gizmo.camera.projection, view: gizmo.camera.view, model: gizmoMatrix(), origin: [0, 0, 0], zScale: 1 },
+		[width, rectHeight],
+	);
+	return ["X", "Y", "Z"].flatMap((text, axis) => {
+		const tip = [0, 0, 0];
+		tip[axis] = 1.15;
+		const point = project(tip);
+		return point
+			? [
+					{
+						id: `gizmo-${text}`,
+						text,
+						screen: [x + point[0], height - y - rectHeight + point[1]],
+						align: "center",
+						baseline: "middle",
+						style: { color: cssColor(axisColors[axis]) },
+					},
+				]
+			: [];
+	});
+}
+
+// A theme Color ([r, g, b] in 0..1 or a CSS string) as a CSS color.
+function cssColor(color) {
+	return Array.isArray(color) ? `rgb(${color.map((c) => Math.round(c * 255)).join(",")})` : color;
+}
+
+/** Shows the view orientation gizmo in the bottom left corner, default true. */
+export function setGizmo(visible) {
+	showGizmo = visible;
+	invalidateLabels();
+	commitScene();
 }
 
 /**
@@ -313,10 +421,17 @@ export function setLayers(inputs) {
 	const center = min.map((value, i) => (value + max[i]) / 2);
 	sceneUniforms.setOrigin(center);
 	halfSize = [(max[0] - min[0]) / 2 || 1, (max[1] - min[1]) / 2 || 1];
+	sceneRadius = Math.hypot(max[0] - min[0], max[1] - min[1], (max[2] - min[2]) * zScale) / 2 || 1;
 	// Layer changes do not move the camera; only the first data frames it.
 	if (!framed) {
-		frame(Math.hypot(max[0] - min[0], max[1] - min[1], (max[2] - min[2]) * zScale) / 2 || 1);
+		frame(sceneRadius);
 		framed = layerInputs.length > 0;
+	}
+	if (gizmo) {
+		syncGizmoCamera();
+		for (const { mesh } of gizmo.layers) {
+			mesh.matrix.set(gizmoMatrix());
+		}
 	}
 	applyLights();
 	buildScene();
@@ -333,6 +448,7 @@ function commitScene() {
 		...built.values(),
 		...(showBoundingBox && hasData ? [getBoundingBox()] : []),
 		...(showRulers && hasData ? getRulers() : []),
+		...(showGizmo && hasData ? getGizmo() : []),
 	];
 	engine.materials.set(layers.map(({ material }) => material));
 	engine.scene.set(layers.map(({ mesh }) => mesh));
@@ -347,13 +463,20 @@ export function setRulers({ visible, density, boundingBox }) {
 	commitScene();
 }
 
-/** Resolved theme colors: border (rulers) and borderSubdued (bounding box). */
-export function setTheme({ border: borderColor, borderSubdued: borderSubduedColor }) {
+/** Resolved theme colors: border (rulers), borderSubdued (bounding box), axisX, axisY and axisZ (gizmo). */
+export function setTheme({ border: borderColor, borderSubdued: borderSubduedColor, axisX, axisY, axisZ }) {
 	if (borderColor !== undefined) {
 		border = convertToVector3(borderColor);
 	}
 	if (borderSubduedColor !== undefined) {
 		borderSubdued = convertToVector3(borderSubduedColor);
+	}
+	if (axisX !== undefined || axisY !== undefined || axisZ !== undefined) {
+		axisColors = [axisX ?? axisColors[0], axisY ?? axisColors[1], axisZ ?? axisColors[2]];
+		// The mesh colors are set when the programs are built: new arrows with the new colors.
+		gizmo = null;
+		commitScene();
+		invalidateLabels();
 	}
 	engine.invalidate();
 }

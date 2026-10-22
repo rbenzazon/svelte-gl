@@ -106,6 +106,12 @@
  * @property {boolean} [transparent]
  * @property {number} [opacity]
  * @property {import("./programs.js").SvelteGLProgram} [program]
+ * @property {SvelteGLViewport} [viewport] default program only: draws its meshes in a rectangle of the canvas
+ */
+/**
+ * @typedef {Object} SvelteGLViewport
+ * @property {import("./camera").SvelteGLCameraCustomStore} camera from engine.createCamera(); its objects are created with it
+ * @property {() => number[]} rect [x, y, width, height] in CSS px from the bottom left of the canvas, read at every draw
  */
 /**
  * @typedef {Object} SvelteGLMeshAnimation

@@ -136,6 +136,32 @@ export function bindDefaultFramebuffer(ctx) {
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
 
+/**
+ * Draws the next meshes in a rectangle of the canvas, over what is already drawn.
+ * @param {() => number[]} getRect [x, y, width, height] in CSS px from the bottom left of the canvas
+ * @param {boolean} clearDepth clears the depth in the rectangle: once per viewport, so its programs occlude each other
+ */
+export function setViewport(getRect, clearDepth) {
+	return function setViewport(ctx) {
+		const { gl } = ctx;
+		const pixelRatio = gl.canvas.width / (gl.canvas.clientWidth || gl.canvas.width);
+		const [x, y, width, height] = getRect().map((value) => Math.round(value * pixelRatio));
+		gl.viewport(x, y, width, height);
+		gl.enable(gl.SCISSOR_TEST);
+		gl.scissor(x, y, width, height);
+		if (clearDepth) {
+			gl.clear(gl.DEPTH_BUFFER_BIT);
+		}
+	};
+}
+
+export function restoreViewport(ctx) {
+	const { gl } = ctx;
+	gl.disable(gl.SCISSOR_TEST);
+	gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+	gl.scissor(0, 0, gl.canvas.width, gl.canvas.height);
+}
+
 export function createShaders(material, meshes, numPointLights, pointLightShader) {
 	return function createShaders(ctx) {
 		const { gl, program } = ctx;
