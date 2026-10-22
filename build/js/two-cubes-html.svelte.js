@@ -1,1 +1,1 @@
-import"./engine.js";import{m as o}from"./mount-cube.js";import"./cube.js";import"./webgl.js";o(document.querySelector("#cube-a"),{color:[1,.35,.3],background:1844272}),o(document.querySelector("#cube-b"),{color:[.3,.55,1],background:2760984});
+import"./engine.js";import{m as o}from"./mount-cube.js";import"./cube.js";o(document.querySelector("#cube-a"),{color:[1,.35,.3],background:1844272}),o(document.querySelector("#cube-b"),{color:[.3,.55,1],background:2760984});

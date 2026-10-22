@@ -19,6 +19,7 @@ import { transformMat4 } from "gl-matrix/esm/vec4.js";
  * @property {number} [distance] CSS px between that text point and the anchor, toward the text, default 0
  * @property {boolean} [keepInView] switch sides away from the screen edges, hide when the anchor leaves the view, default true
  * @property {LabelStyle} [style] overrides the default style
+ * @property {string} [badge] CSS color of a filled circle drawn behind the text
  */
 
 /**
@@ -40,6 +41,7 @@ import { transformMat4 } from "gl-matrix/esm/vec4.js";
  * @property {number} width
  * @property {number} height
  * @property {number} ascent
+ * @property {string} [badge]
  */
 
 /**
@@ -138,6 +140,7 @@ export function layoutLabels(context, labels, labelView, viewport, defaultStyle,
 			width: textWidth,
 			height: textHeight,
 			ascent,
+			...(label.badge && { badge: label.badge }),
 		});
 	}
 	for (const id of memory.keys()) {
@@ -155,7 +158,13 @@ export function layoutLabels(context, labels, labelView, viewport, defaultStyle,
 export function drawPlacedLabels(context, placed) {
 	context.textAlign = "left";
 	context.textBaseline = "alphabetic";
-	for (const { text, font, color, x, y, ascent } of placed) {
+	for (const { text, font, color, x, y, width, height, ascent, badge } of placed) {
+		if (badge) {
+			context.fillStyle = badge;
+			context.beginPath();
+			context.arc(x + width / 2, y + height / 2, Math.max(width, height) / 2 + 3, 0, 2 * Math.PI);
+			context.fill();
+		}
 		context.font = font;
 		context.fillStyle = color;
 		// Whole CSS px keep the glyphs on the pixel grid.

@@ -96,6 +96,8 @@ export interface ScanViewerOptions {
 	background?: RGBA;
 }
 
+export type ScanViewerView = "top" | "front" | "side" | "iso" | "+x" | "-x" | "+y" | "-y" | "+z" | "-z";
+
 export interface ScanViewerApi {
 	/** Also driven internally by a ResizeObserver. */
 	resize(): void;
@@ -156,9 +158,22 @@ export interface ScanViewerApi {
 	 * the edge of the cloud and over holes. The hit nearest to the camera wins across layers.
 	 * Synchronous; the first pick of a cloud builds its picking tree.
 	 */
-	pick(screenX: number, screenY: number): ScanViewerHit | null;
+	pick(screenX: number, screenY: number): ScanViewerHit | null; // null over a gizmo arrow
 	/** View orientation gizmo: shaded X, Y and Z arrows in the bottom left corner, turning with the camera. Default true. */
 	setGizmo(visible: boolean): void;
+	/** Animates the camera back to the default view framing the data (about 300 ms). */
+	resetView(): void;
+	/**
+	 * Animated view changes (snapTo, resetView, gizmo clicks), default true; false makes them instant,
+	 * for example when matchMedia("(prefers-reduced-motion: reduce)") matches.
+	 */
+	setCameraAnimation(enabled: boolean): void;
+	/**
+	 * Animates the camera to look along a data axis from its side ("+x" sees the data from +X), or along the
+	 * default direction for "iso", keeping the target and the distance. "side" is "+x", "front" "-y", "top" "+z".
+	 * Clicking a gizmo arrow does the same, or the opposite side when the view is already along it.
+	 */
+	snapTo(view: ScanViewerView): void;
 }
 
 export interface ScanViewerHit {

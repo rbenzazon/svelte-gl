@@ -10,7 +10,8 @@ import { createEnvMapTexture } from "../../texture/environment-map-texture.js";
 import { scale } from "gl-matrix/esm/mat4.js";
 import { convertToVector3 } from "../../color/color-space.js";
 import { createSpecular } from "../../material/specular/specular.js";
-import { createGizmoArrows } from "./gizmo.js";
+import { animateCamera } from "./camera-animation.js";
+import { createGizmoArrows, hitGizmo } from "./gizmo.js";
 import { createHeightGrid } from "./height-grid.js";
 import {
 	clearLabelMetrics,
@@ -62,6 +63,9 @@ let rulers = null;
 let showGizmo = true;
 // Camera and the material and mesh of each axis arrow, created when first shown.
 let gizmo = null;
+// Axis (0, 1, 2) of the arrow under the pointer, and the arrow pressed with its viewer point, or null.
+let gizmoHover = null;
+let gizmoPress = null;
 let axisColors = ["#e5484d", "#46a758", "#3e63dd"];
 // Half the data diagonal (heights times zScale), as framed.
 let sceneRadius = 1;
@@ -74,6 +78,8 @@ let zScale = 1;
 let halfSize = [1, 1];
 let homeView = null;
 let framed = false;
+let cancelCameraAnimation = () => {};
+let cameraAnimation = true;
 let lightRig = { lights: defaultLights, attached: "camera" };
 let environment = null;
 let environmentRequest = 0;
@@ -205,33 +211,115 @@ function getGizmo() {
 	return gizmo.layers;
 }
 
-// X, Y and Z beyond the arrow tips, in the axis colors.
+// Unit direction from the target toward the camera, in data axes (the axis swap undone).
+function cameraDataDirection() {
+	const { position, target } = get(engine.camera);
+	const [x, y, z] = position.map((value, i) => value - target[i]);
+	const length = Math.hypot(x, y, z) || 1;
+	return [x / length, -z / length, y / length];
+}
+
+// The gizmo rect as [left, top, width, height], viewer CSS px from the top left.
+function gizmoScreenRect(viewerHeight) {
+	const [x, y, width, height] = gizmoRect();
+	return [x, viewerHeight - y - height, width, height];
+}
+
+// The arrow origin, tips and label points projected with the gizmo camera (see GizmoScreenPoints):
+// one source for the labels and the hit test, so they always agree.
+function gizmoScreenPoints(viewerHeight) {
+	const [left, top, width, height] = gizmoScreenRect(viewerHeight);
+	const project = createProjector(
+		{ projection: gizmo.camera.projection, view: gizmo.camera.view, model: gizmoMatrix(), origin: [0, 0, 0], zScale: 1 },
+		[width, height],
+	);
+	const at = (axis, length) => {
+		const position = [0, 0, 0];
+		position[axis] = length;
+		const [x, y] = project(position) ?? [width / 2, height / 2];
+		return [left + x, top + y];
+	};
+	const facing = cameraDataDirection();
+	return {
+		origin: at(0, 0),
+		axes: [0, 1, 2].map((axis) => ({ tip: at(axis, 1), label: at(axis, 1.15), facing: facing[axis] })),
+	};
+}
+
+// The axis arrow under a viewer point (CSS px from the top left), or null.
+function gizmoAxisAt(point) {
+	if (!showGizmo || !gizmo || layerInputs.length === 0 || !canvas) {
+		return null;
+	}
+	const height = canvas.clientHeight;
+	return hitGizmo(gizmoScreenPoints(height), gizmoScreenRect(height), point);
+}
+
+// X, Y and Z beyond the arrow tips, in the axis colors; the hovered one on a badge of its color.
 function gizmoLabels([, height]) {
 	if (!gizmo) {
 		return [];
 	}
-	const [x, y, width, rectHeight] = gizmoRect();
-	const project = createProjector(
-		{ projection: gizmo.camera.projection, view: gizmo.camera.view, model: gizmoMatrix(), origin: [0, 0, 0], zScale: 1 },
-		[width, rectHeight],
-	);
-	return ["X", "Y", "Z"].flatMap((text, axis) => {
-		const tip = [0, 0, 0];
-		tip[axis] = 1.15;
-		const point = project(tip);
-		return point
-			? [
-					{
-						id: `gizmo-${text}`,
-						text,
-						screen: [x + point[0], height - y - rectHeight + point[1]],
-						align: "center",
-						baseline: "middle",
-						style: { color: cssColor(axisColors[axis]) },
-					},
-				]
-			: [];
+	return gizmoScreenPoints(height).axes.map(({ label }, axis) => {
+		const color = cssColor(axisColors[axis]);
+		const hovered = axis === gizmoHover;
+		return {
+			id: `gizmo-${axis}`,
+			text: "XYZ"[axis],
+			screen: label,
+			align: "center",
+			baseline: "middle",
+			style: { color: hovered ? cssColor(background.slice(0, 3)) : color },
+			...(hovered && { badge: color }),
+		};
 	});
+}
+
+function viewerPoint(event) {
+	const rect = canvas.getBoundingClientRect();
+	return [event.clientX - rect.left, event.clientY - rect.top];
+}
+
+function setGizmoHover(axis) {
+	if (axis === gizmoHover) {
+		return;
+	}
+	gizmoHover = axis;
+	canvas.style.cursor = axis == null ? "" : "pointer";
+	invalidateLabels();
+}
+
+function onPointerMove(event) {
+	setGizmoHover(gizmoAxisAt(viewerPoint(event)));
+}
+
+function onPointerDown(event) {
+	// The user taking over the camera stops an animated view change.
+	cancelCameraAnimation();
+	const point = viewerPoint(event);
+	const axis = gizmoAxisAt(point);
+	gizmoPress = axis == null ? null : { axis, point };
+	if (axis != null) {
+		// No compatibility mousedown: the orbit controls do not start a drag from the gizmo.
+		event.preventDefault();
+	}
+}
+
+function onPointerUp(event) {
+	const press = gizmoPress;
+	gizmoPress = null;
+	const point = viewerPoint(event);
+	const moved = press && Math.hypot(point[0] - press.point[0], point[1] - press.point[1]);
+	if (press && moved < 4 && gizmoAxisAt(point) === press.axis) {
+		// Its arrow toward the viewer; already seen along it, from the opposite side.
+		const sign = cameraDataDirection()[press.axis] > 0.999 ? "-" : "+";
+		snapTo(`${sign}${"xyz"[press.axis]}`);
+	}
+}
+
+function onPointerLeave() {
+	gizmoPress = null;
+	setGizmoHover(null);
 }
 
 // A theme Color ([r, g, b] in 0..1 or a CSS string) as a CSS color.
@@ -242,6 +330,7 @@ function cssColor(color) {
 /** Shows the view orientation gizmo in the bottom left corner, default true. */
 export function setGizmo(visible) {
 	showGizmo = visible;
+	setGizmoHover(null);
 	invalidateLabels();
 	commitScene();
 }
@@ -253,7 +342,8 @@ export function setGizmo(visible) {
  */
 export function pick(screenX, screenY) {
 	const viewport = [canvas?.clientWidth ?? 0, canvas?.clientHeight ?? 0];
-	if (!homeView || viewport[0] === 0 || viewport[1] === 0) {
+	// The gizmo arrows cover the data behind them.
+	if (!homeView || viewport[0] === 0 || viewport[1] === 0 || gizmoAxisAt([screenX, screenY]) != null) {
 		return null;
 	}
 	const matrices = { projection: engine.camera.projection, view: engine.camera.view, model: axisSwap };
@@ -386,6 +476,8 @@ function updateAutoRange() {
 }
 
 export function setBackground(rgba) {
+	background = rgba;
+	invalidateLabels();
 	engine.renderer.update((renderer) => ({ ...renderer, backgroundColor: rgba }));
 }
 
@@ -663,20 +755,64 @@ function getBounds() {
 	return { min, max };
 }
 
-function frame(radius) {
+// The default view of data of that radius: seen from the -Y side of the data, above it and a little to the left.
+function homeCamera(radius) {
 	const distance = radius / Math.sin((fov * Math.PI) / 360);
-	// Seen from the -Y side of the data, above it and a little to the left.
 	const direction = [-0.5, 0.9, 1];
 	const length = Math.hypot(...direction);
-	engine.camera.set({
-		...get(engine.camera),
+	return {
 		position: direction.map((value) => (value / length) * distance),
 		target: [0, 0, 0],
-		fov,
 		near: distance / 100,
 		far: distance * 10,
-	});
+	};
+}
+
+function frame(radius) {
+	engine.camera.set({ ...get(engine.camera), ...homeCamera(radius), fov });
 	homeView = engine.camera.view;
+}
+
+function animateTo(next) {
+	cancelCameraAnimation();
+	cancelCameraAnimation = animateCamera(engine.camera, next, cameraAnimation ? 300 : 0);
+}
+
+/** Animated view changes (snapTo, resetView, gizmo clicks), default true; false makes them instant. */
+export function setCameraAnimation(enabled) {
+	cameraAnimation = enabled;
+}
+
+/** Animates the camera back to the default view, framing the data (about 300 ms). */
+export function resetView() {
+	animateTo(homeCamera(sceneRadius));
+}
+
+// Data direction from the target toward the camera; top and bottom end 0.01 rad off the pole, seen from -Y.
+const viewDirections = {
+	"+x": [1, 0, 0],
+	"-x": [-1, 0, 0],
+	"+y": [0, 1, 0],
+	"-y": [0, -1, 0],
+	"+z": [0, 0, 1],
+	"-z": [0, 0, -1],
+	side: [1, 0, 0],
+	front: [0, -1, 0],
+	top: [0, 0, 1],
+};
+
+/**
+ * Animates the camera to look along a data axis, or along the home direction for "iso" (about 300 ms).
+ * The target and the distance are kept: the camera turns around what it looks at.
+ */
+export function snapTo(view) {
+	const { position, target } = get(engine.camera);
+	const distance = Math.hypot(...position.map((value, i) => value - target[i]));
+	const home = homeCamera(1).position;
+	// Data direction to world: the axis swap (x, y, z) -> (x, z, -y).
+	const [x, y, z] = viewDirections[view] ?? [home[0], -home[2], home[1]];
+	const length = Math.hypot(x, y, z);
+	animateTo({ position: [x, z, -y].map((value, i) => target[i] + (value / length) * distance), target });
 }
 
 onMount(() => {
@@ -693,6 +829,7 @@ onMount(() => {
 });
 
 onDestroy(() => {
+	cancelCameraAnimation();
 	unsubscribeCamera();
 	controls?.destroy();
 	engine.destroy();
@@ -700,7 +837,14 @@ onDestroy(() => {
 </script>
 
 <div class="scan-viewer">
-	<canvas bind:this={canvas}></canvas>
+	<canvas
+		bind:this={canvas}
+		on:pointermove={onPointerMove}
+		on:pointerdown={onPointerDown}
+		on:pointerup={onPointerUp}
+		on:pointerleave={onPointerLeave}
+		on:wheel={() => cancelCameraAnimation()}
+	></canvas>
 	<canvas class="labels" bind:this={labelCanvas}></canvas>
 </div>
 

@@ -324,6 +324,18 @@ onMount(() => {
 				<span class="label">Gizmo</span>
 				<button class="switch" class:on={gizmo} role="switch" aria-checked={gizmo} on:click={toggleGizmo}></button>
 			</div>
+			<div class="row">
+				<span class="label">View</span>
+				<div class="segmented">
+					{#each ["top", "front", "side", "iso"] as view}
+						<button on:click={() => viewer.snapTo(view)}>{view}</button>
+					{/each}
+				</div>
+			</div>
+			<div class="row">
+				<span class="label">Camera</span>
+				<button class="action" on:click={() => viewer.resetView()}>reset view</button>
+			</div>
 		</section>
 
 		<section>

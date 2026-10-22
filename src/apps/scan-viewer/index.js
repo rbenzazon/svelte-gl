@@ -28,6 +28,9 @@ export function createScanViewer(target, { background } = {}) {
 		setTheme: viewer.setTheme,
 		setLabelStyle: viewer.setLabelStyle,
 		setGizmo: viewer.setGizmo,
+		resetView: viewer.resetView,
+		snapTo: viewer.snapTo,
+		setCameraAnimation: viewer.setCameraAnimation,
 		pick: viewer.pick,
 		destroy() {
 			viewer.$destroy();
