@@ -48,7 +48,8 @@ void main() {
     vertex = vec3(modelMatrix * vec4(animatedPosition, 1.0));
 
     transformedNormal = normalMatrix * transformedNormal;
-    vNormal = normalize( transformedNormal );
+    // Not normalized: a zero normal (cone apex) must stay zero so it does not weigh in the interpolation.
+    vNormal = transformedNormal;
     //vNormal = normal;
     vec3 transformed = vec3( animatedPosition );
     vec4 mvPosition = vec4( transformed, 1.0 );

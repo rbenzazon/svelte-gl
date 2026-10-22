@@ -47,8 +47,8 @@ export function createCylinder(radius = 1, height = 1, radialSegment = 1, height
 		normals.push(topNormal, topNormal, topNormal);
 		uvs.push(
 			topUVCenter,
-			[loopUVs[ir][0] + topUVCenter[0], loopUVs[ir][1] + topUVCenter[1]],
 			[loopUVs[nextIndex][0] + topUVCenter[0], loopUVs[nextIndex][1] + topUVCenter[1]],
+			[loopUVs[ir][0] + topUVCenter[0], loopUVs[ir][1] + topUVCenter[1]],
 		);
 
 		// Bottom cap
@@ -58,10 +58,11 @@ export function createCylinder(radius = 1, height = 1, radialSegment = 1, height
 			[loopPositions[nextIndex][0], yBottom, loopPositions[nextIndex][1]],
 		);
 		normals.push(downNormal, downNormal, downNormal);
+		// v is flipped so the texture is not mirrored when the cap is seen from below.
 		uvs.push(
 			bottomUVCenter,
-			[loopUVs[ir][0] + bottomUVCenter[0], loopUVs[ir][1] + bottomUVCenter[1]],
-			[loopUVs[nextIndex][0] + bottomUVCenter[0], loopUVs[nextIndex][1] + bottomUVCenter[1]],
+			[loopUVs[ir][0] + bottomUVCenter[0], bottomUVCenter[1] - loopUVs[ir][1]],
+			[loopUVs[nextIndex][0] + bottomUVCenter[0], bottomUVCenter[1] - loopUVs[nextIndex][1]],
 		);
 	}
 
@@ -93,7 +94,8 @@ export function createCylinder(radius = 1, height = 1, radialSegment = 1, height
 			}
 			const uvX = 0.5 - ir / radialSegment / 2;
 			const uvY = 0.5 + iy / heightSegment / 2;
-			const uvXNext = 0.5 - nextIndex / radialSegment / 2;
+			// Not nextIndex: the last facet ends at u = 0, at the seam, instead of wrapping back to its start.
+			const uvXNext = 0.5 - (ir + 1) / radialSegment / 2;
 			const uvYNext = 0.5 + (iy + 1) / heightSegment / 2;
 			uvs.push([uvX, uvY], [uvXNext, uvY], [uvXNext, uvYNext], [uvX, uvY], [uvXNext, uvYNext], [uvX, uvYNext]);
 		}

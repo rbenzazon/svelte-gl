@@ -1,5 +1,5 @@
-import { normalize, add, lerp } from "gl-matrix/esm/vec3.js";
-import { getPositionFromPolar } from "./common";
+import { normalize } from "gl-matrix/esm/vec3.js";
+import { createVec3 } from "./common";
 import { drawModes } from "../store/webgl";
 
 export function createCone(radius = 1, height = 1, radialSegment = 3, heightSegment = 1) {
@@ -13,23 +13,24 @@ export function createCone(radius = 1, height = 1, radialSegment = 3, heightSegm
 	let iy = 1;
 	const loopPositions = [];
 	const apexLoopNormals = [];
-	const slopeAngle = Math.atan(height / radius) * -1;
+	// Outward normal of the side at an angle around the axis: tilted up by atan(radius / height).
+	const sideNormal = (radialAngle) =>
+		normalize(createVec3(), [Math.cos(radialAngle) * height, radius, Math.sin(radialAngle) * height]);
 
 	const angle = (Math.PI * 2) / radialSegment;
 	for (let ir = 0; ir < radialSegment; ir++) {
 		const radialAngle = angle * ir;
-		const normal = getPositionFromPolar(radius, slopeAngle, radialAngle);
 		loopPositions.push([Math.cos(radialAngle) * radius, height - heightIncrement * iy, Math.sin(radialAngle) * radius]);
-		apexLoopNormals.push(normalize(normal, normal));
+		apexLoopNormals.push(sideNormal(radialAngle));
 	}
 
+	// A zero apex normal gets no weight in the interpolation: each side triangle is shaded by its base normals only.
+	const apexNormal = [0, 0, 0];
 	const downNormal = [0, -1, 0];
 	for (let ir = 0; ir < radialSegment; ir++) {
 		const nextIndex = ir === radialSegment - 1 ? 0 : ir + 1;
 		positions.push([0, height, 0], loopPositions[nextIndex], loopPositions[ir]);
-		// 0,0,0 at the apex is a "hack" to have a smooth shading
-
-		normals.push([0, 0, 0], apexLoopNormals[nextIndex], apexLoopNormals[ir]);
+		normals.push(apexNormal, apexLoopNormals[nextIndex], apexLoopNormals[ir]);
 		const unsafeNextIndex = ir + 1;
 		const uvX = 1 - ir / radialSegment;
 		const uvXNext = 1 - unsafeNextIndex / radialSegment;

@@ -1,6 +1,6 @@
 <script type="module">
 import { fromTranslation } from "gl-matrix/esm/mat4.js";
-import { onMount } from "svelte";
+import { onDestroy, onMount } from "svelte";
 import { get } from "svelte/store";
 import Menu from "./Menu.svelte";
 import { createZeroMatrix } from "./geometries/common.js";
@@ -12,10 +12,13 @@ import { createPointLight } from "./lights/point-light.js";
 import { createSpecular } from "./material/specular/specular.js";
 import { createDebugNormalsProgram } from "./store/debug-program.js";
 import { createEngine } from "./store/engine.js";
+import { createTexture } from "./texture/texture.js";
 
 // The cone next to a cylinder of the same size, material and light, with their normals drawn as lines.
+// Both use a checker texture, to check their UVs.
 let canvas;
 let engine;
+let controls;
 let showNormals = true;
 let shapes = [];
 let normals = [];
@@ -31,7 +34,7 @@ function toggleNormals() {
 	commit();
 }
 
-onMount(() => {
+onMount(async () => {
 	engine = createEngine();
 	engine.renderer.set({
 		...get(engine.renderer),
@@ -46,11 +49,19 @@ onMount(() => {
 		),
 	]);
 
-	const material = engine.createMaterial({
-		diffuse: [0.85, 0.35, 0.3],
-		metalness: 0,
-		specular: createSpecular({ roughness: 0.4 }),
-	});
+	const url = "textures/checker-map_tho.png";
+	// The cone samples its texture in circular coordinates (u divided by v), so the checker does not spiral.
+	const [coneMap, cylinderMap] = await Promise.all([
+		createTexture({ url, type: "diffuse", coordinateSpace: "circular" }),
+		createTexture({ url, type: "diffuse" }),
+	]);
+	const createShapeMaterial = (diffuseMap) =>
+		engine.createMaterial({
+			diffuse: [1, 1, 1],
+			metalness: 0,
+			specular: createSpecular({ roughness: 0.4 }),
+			diffuseMap,
+		});
 	const normalsMaterial = engine.createMaterial({
 		diffuse: [1, 1, 1],
 		metalness: 0,
@@ -59,10 +70,10 @@ onMount(() => {
 
 	// The cone stands on y = 0; the cylinder is centered, so it is lifted by half its height.
 	const placed = [
-		[createCone(1, 1.5, 24), [-1.4, 0, 0]],
-		[createCylinder(1, 1.5, 24), [1.4, 0.75, 0]],
+		[createCone(1, 1.5, 24), [-1.4, 0, 0], createShapeMaterial(coneMap)],
+		[createCylinder(1, 1.5, 24), [1.4, 0.75, 0], createShapeMaterial(cylinderMap)],
 	];
-	shapes = placed.map(([geometry, offset]) => ({
+	shapes = placed.map(([geometry, offset, material]) => ({
 		material,
 		mesh: engine.createObject({ ...geometry, matrix: fromTranslation(createZeroMatrix(), offset), material }),
 	}));
@@ -73,11 +84,12 @@ onMount(() => {
 	commit();
 
 	engine.renderer.set({ ...get(engine.renderer), enabled: true });
-	const controls = createOrbitControls(canvas, engine.camera);
-	return () => {
-		controls.destroy();
-		engine.destroy();
-	};
+	controls = createOrbitControls(canvas, engine.camera);
+});
+
+onDestroy(() => {
+	controls?.destroy();
+	engine?.destroy();
 });
 </script>
 

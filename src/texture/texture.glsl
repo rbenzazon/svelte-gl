@@ -43,7 +43,7 @@ ${diffuseMapSample?
 }
 ${normalMapSample?
 `
-    mat3 tbn =  getTangentFrame( -vViewPosition, vNormal, vUv );
+    mat3 tbn =  getTangentFrame( -vViewPosition, normal, vUv );
     vec2 rotatedUv = vec2(vUv.x, vUv.y);
     normal = texture( ${mapType}, rotatedUv ).xyz * 2.0 - 1.0;
     normal.xy *= normalScale;
