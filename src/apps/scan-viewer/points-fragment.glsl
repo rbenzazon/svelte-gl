@@ -9,9 +9,8 @@ in vec3 vColor;
 out vec4 fragColor;
 
 void main() {
-    vec2 offset = gl_PointCoord * 2.0 - 1.0;
-    if (dot(offset, offset) > 1.0) {
-        discard;
-    }
-    fragColor = vec4(vColor, 1.0);
+    // Round point with a one pixel soft edge; the alpha becomes MSAA coverage (alpha-to-coverage).
+    float r = length(gl_PointCoord * 2.0 - 1.0);
+    float edge = fwidth(r);
+    fragColor = vec4(vColor, 1.0 - smoothstep(1.0 - edge, 1.0 + edge, r));
 }

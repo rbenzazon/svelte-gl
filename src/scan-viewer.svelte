@@ -74,7 +74,7 @@ let envLighting = false;
 // "both" passes the same distanceData to the two layers, so the heights are uploaded once.
 function layers() {
 	const data = { ...grid, distanceData: heights };
-	const pointStyle = { colorMode: pointsColorMode, color: "#f59e0b", pointSize: 2 };
+	const pointStyle = { colorMode: pointsColorMode, color: "#f59e0b", pointSize: 3 };
 	const surface = { id: "sine", kind: "surface", data, material: metallic ? metal : undefined };
 	const points = { id: "sine-points", kind: "points", data, ...pointStyle };
 	const scan = { id: "sine-cloud", kind: "points", data: { xyz: cloud, origin: cloudOrigin }, ...pointStyle };

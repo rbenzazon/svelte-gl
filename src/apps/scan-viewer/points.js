@@ -68,6 +68,21 @@ export function createPointsProgram(
 		setupMaterial: [source.setup],
 		useProgram,
 		selectProgram: (programStore) => selectProgram(programStore, ctx),
-		updateProgram: [...source.updateProgram, setupStyle],
+		updateProgram: [...source.updateProgram, setupStyle, enableCoverage],
+		postDraw: restoreCoverage,
 	};
+}
+
+// Smooth point edges through the canvas multisampling, without blending or sorting.
+function enableCoverage({ gl }) {
+	gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+}
+
+// Alpha-to-coverage also writes the edge alpha into the canvas, where the page would show through: back to opaque.
+function restoreCoverage({ gl }) {
+	gl.disable(gl.SAMPLE_ALPHA_TO_COVERAGE);
+	gl.colorMask(false, false, false, true);
+	gl.clearColor(0, 0, 0, 1);
+	gl.clear(gl.COLOR_BUFFER_BIT);
+	gl.colorMask(true, true, true, true);
 }
