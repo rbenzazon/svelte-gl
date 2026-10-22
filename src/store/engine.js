@@ -53,6 +53,8 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 	function invalidate() {
 		invalidateRevision += 1;
 	}
+	// Objects request redraws for changes outside the stores, such as instance matrices.
+	ctx.invalidate = invalidate;
 
 	function updated() {
 		const updateMap = new Map();
@@ -147,7 +149,7 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 			//we must filter in the stores first because not all the nodes are stores for now
 			//then we filter the lights
 			//console.log("updateMap.size",updateMap);
-			if (updateMap.size === 0 && $running !== 2 && !$programs.some((p) => "requireTime" in p)) {
+			if (updateMap.size === 0 && $running !== 2 && !$programs.some((p) => p.requireTime)) {
 				return emptyRenderPipeline;
 			}
 
@@ -280,7 +282,11 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 			running.set(2);
 			return 1;
 		} else if (get(running) === 2) {
-			running.set(3);
+			// Batch the changes until the first frame, as between frames: a pipeline built before it would mark
+			// the changes as drawn and the first frame would draw nothing. The change that started the loop is
+			// redrawn there.
+			invalidate();
+			running.set(4);
 			frame = requestAnimationFrame(loop);
 			return 2;
 		}

@@ -20,7 +20,9 @@ import {
 import { createRigLights, defaultLights } from "./light-rig.js";
 import { boxEdges, createLinesProgram } from "./lines.js";
 import { createPalette } from "./palette.js";
+import { createPickRay } from "./pick-ray.js";
 import { createPointCloud } from "./point-cloud.js";
+import { pickPointTree } from "./point-tree.js";
 import { createPointsProgram } from "./points.js";
 import { createRulerProgram, layoutRulers } from "./rulers.js";
 import { createSceneUniforms } from "./scene-uniforms.js";
@@ -134,6 +136,55 @@ function renderOverlay() {
 	const labels = layouts.flatMap(({ labels }) => labels);
 	const placed = layoutLabels(context, labels, labelView, viewport, labelStyle, labelMemory);
 	drawPlacedLabels(context, hideOverlaps(placed));
+}
+
+/**
+ * Screen point (CSS px from the top left of the viewer) to the data under it, or null.
+ * For now unorganized point clouds only: the ray against a local mesh of the points around it, interpolated
+ * in the triangle under the cursor; the hit nearest to the camera wins across layers.
+ */
+export function pick(screenX, screenY) {
+	const viewport = [canvas?.clientWidth ?? 0, canvas?.clientHeight ?? 0];
+	if (!homeView || viewport[0] === 0 || viewport[1] === 0) {
+		return null;
+	}
+	const matrices = { projection: engine.camera.projection, view: engine.camera.view, model: axisSwap };
+	const ray = createPickRay(matrices, viewport, [screenX, screenY]);
+	const sceneOrigin = sceneUniforms.getOrigin();
+	let best = null;
+	for (const input of layerInputs) {
+		const source = sources.get(input.id);
+		if (input.kind !== "points" || !source.cloud) {
+			continue;
+		}
+		// The tree works in the cloud's own coordinates, heights times zScale.
+		const offset = source.origin.map((value, i) => (value - sceneOrigin[i]) * (i === 2 ? zScale : 1));
+		const cloudRay = { origin: ray.origin.map((value, i) => value - offset[i]), direction: ray.direction, zScale };
+		const hit = pickPointTree(source.getTree(), source.xyz, cloudRay);
+		if (hit && (!best || hit.t < best.hit.t)) {
+			best = { hit, input, source };
+		}
+	}
+	if (!best) {
+		return null;
+	}
+	const { hit, input, source } = best;
+	// Real data coordinates interpolated in the triangle around the cursor.
+	const world = [0, 1, 2].map(
+		(i) => hit.indices.reduce((sum, index, k) => sum + hit.weights[k] * source.xyz[index * 3 + i], 0) + source.origin[i],
+	);
+	// The corner with the largest weight is the one nearest to the hit.
+	const nearest = hit.indices[hit.weights.indexOf(Math.max(...hit.weights))];
+	const [x, y] = createProjector({ ...matrices, origin: sceneOrigin, zScale }, viewport)(world) ?? [screenX, screenY];
+	return {
+		layerId: input.id,
+		kind: "points",
+		screen: { x, y },
+		world: { x: world[0], y: world[1], z: world[2] },
+		value: world[2],
+		index: nearest,
+		sampleValue: source.xyz[nearest * 3 + 2] + source.origin[2],
+	};
 }
 
 // World is the scene axes swapped (see axisSwap) with z scaled, relative to the scene origin.

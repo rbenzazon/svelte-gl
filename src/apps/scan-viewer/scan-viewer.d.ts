@@ -149,6 +149,29 @@ export interface ScanViewerApi {
 	 * styled with utility classes. Default: 11px "IBM Plex Sans", #b9c1cf. Re-apply after a theme change.
 	 */
 	setLabelStyle(style: ScanViewerLabelStyle): void;
+	/**
+	 * Screen point (CSS px from the top left of the viewer) to the data under it, or null.
+	 * For now unorganized point clouds only: the ray against a local Delaunay mesh of the visible points within
+	 * 2.5 point spacings of it (independent of the zoom), interpolated in the triangle under the cursor; null past
+	 * the edge of the cloud and over holes. The hit nearest to the camera wins across layers.
+	 * Synchronous; the first pick of a cloud builds its picking tree.
+	 */
+	pick(screenX: number, screenY: number): ScanViewerHit | null;
+}
+
+export interface ScanViewerHit {
+	layerId: string;
+	kind: "points";
+	/** Where the hit is drawn, CSS px. */
+	screen: { x: number; y: number };
+	/** Data coordinates under the cursor, real units (the origin added, zScale has no effect), interpolated. */
+	world: { x: number; y: number; z: number };
+	/** The interpolated height. */
+	value: number;
+	/** Index in the layer xyz of the triangle corner nearest to the hit. */
+	index: number;
+	/** Measured height of that point. */
+	sampleValue: number;
 }
 
 export interface ScanViewerLabelStyle {

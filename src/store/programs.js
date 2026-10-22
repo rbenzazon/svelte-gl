@@ -150,7 +150,7 @@ export function createProgramsStore({ scene, lights, materials, renderPasses, ct
 			currentSpecialMeshes.forEach((mesh) => {
 				const requireTime = mesh.animations?.some((animation) => animation.requireTime);
 				acc.push({
-					requireTime,
+					...(requireTime && { requireTime }),
 					material: get(current),
 					meshes: [mesh],
 				});

@@ -34,6 +34,7 @@ export function setAppContext(context) {
  * @property {vec3} ambientLightColor
  * @property {SvelteGLToneMapping[]} toneMappings
  * @property {boolean} existingProgram during a pipeline creation, informs the procedure that the program already exists
+ * @property {() => void} [invalidate] requests a redraw of the engine this context belongs to
  */
 /**
  * @type {AppContext}

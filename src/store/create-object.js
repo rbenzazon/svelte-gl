@@ -208,7 +208,7 @@ const createMeshMatricesStore = (
 			const program = findProgram(mesh, deps);
 			updateInstanceObjectMatrix(program, mesh, modelViewWindows[index], index, modelViewBuffer, deps.ctx);
 			updateInstanceNormalMatrix(program, mesh, normalMatricesWindows[index], index, normalMatrixBuffer, deps.ctx);
-			//rendererUpdate(get(renderer));
+			deps.ctx.invalidate?.();
 		},
 		getInstance(index) {
 			return windows[index];
