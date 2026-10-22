@@ -19,6 +19,7 @@
     "serve": "watch-http-server build -p 8080 -a 127.0.0.1 -c-1",
     "stop-watch": "node scripts/stop-watch.js",
     "format": "pnpm biome format --write ./src",
+    "lint": "pnpm biome lint ./src",
     "build": "rollup -c rollup.config.mjs"
   },
   "keywords": [],

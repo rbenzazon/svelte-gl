@@ -169,7 +169,7 @@ function toggleEnvLighting() {
 	applyEnvironment();
 }
 
-// Picking test: one label next to the mouse with the data under it (unorganized clouds only for now).
+// Picking test: one label next to the mouse with the data under it.
 let pointer = null;
 let hover = null;
 let hoverFrame = 0;
@@ -380,7 +380,7 @@ onMount(() => {
 </div>
 {#if hover}
 	<div class="hover" style="left: {hover.clientX + 12}px; top: {hover.clientY + 12}px">
-		x {hover.world.x.toFixed(3)} · y {hover.world.y.toFixed(3)} · z {hover.value.toFixed(3)} · nearest #{hover.index}
+		{hover.kind} · x {hover.world.x.toFixed(3)} · y {hover.world.y.toFixed(3)} · z {hover.value.toFixed(3)} · nearest #{hover.index}
 		z {hover.sampleValue.toFixed(3)}
 	</div>
 {/if}

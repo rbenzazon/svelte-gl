@@ -27,16 +27,25 @@ export function createHeightGrid({ imageW, imageH, x0, y0, x1, y1, distanceData 
 		return { min: [Math.min(x0, x1), Math.min(y0, y1), zMin], max: [Math.max(x0, x1), Math.max(y0, y1), zMax] };
 	}
 
+	/** @type {import("./grid-pick.js").PickGrid & Record<string, any>} */
 	const heightGrid = {
 		cloud: false,
 		imageW,
 		imageH,
+		x0,
+		y0,
+		// In double precision, unlike the uniform.
+		dx: (x1 - x0) / (imageW - 1),
+		dy: (y1 - y0) / (imageH - 1),
+		// The heights on the CPU, for picking.
+		pixels: distanceData,
 		pointCount: imageW * imageH,
 		bounds: computeBounds(distanceData),
 		setup,
 		updateProgram: [heights.setupTexture, heights.bindTexture, sceneUniforms.upload],
 		/** Re-uploads the heights, same grid size; call engine.invalidate() after it. */
 		update(pixels) {
+			heightGrid.pixels = pixels;
 			heightGrid.bounds = computeBounds(pixels);
 			heights.update(pixels);
 		},

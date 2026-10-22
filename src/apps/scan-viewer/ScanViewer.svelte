@@ -12,6 +12,7 @@ import { convertToVector3 } from "../../color/color-space.js";
 import { createSpecular } from "../../material/specular/specular.js";
 import { animateCamera } from "./camera-animation.js";
 import { createGizmoArrows, hitGizmo } from "./gizmo.js";
+import { pickHeightGrid } from "./grid-pick.js";
 import { createHeightGrid } from "./height-grid.js";
 import {
 	clearLabelMetrics,
@@ -337,8 +338,9 @@ export function setGizmo(visible) {
 
 /**
  * Screen point (CSS px from the top left of the viewer) to the data under it, or null.
- * For now unorganized point clouds only: the ray against a local mesh of the points around it, interpolated
- * in the triangle under the cursor; the hit nearest to the camera wins across layers.
+ * Height grids (surfaces and organized points): the ray against the two triangles of each grid cell.
+ * Unorganized clouds: the ray against a local mesh of the points around it. Both interpolate in the
+ * triangle under the cursor; the hit nearest to the camera wins across layers.
  */
 export function pick(screenX, screenY) {
 	const viewport = [canvas?.clientWidth ?? 0, canvas?.clientHeight ?? 0];
@@ -349,40 +351,79 @@ export function pick(screenX, screenY) {
 	const matrices = { projection: engine.camera.projection, view: engine.camera.view, model: axisSwap };
 	const ray = createPickRay(matrices, viewport, [screenX, screenY]);
 	const sceneOrigin = sceneUniforms.getOrigin();
+	// A surface and a points layer of the same data share one grid: it is tested once.
+	const gridHits = new Map();
 	let best = null;
 	for (const input of layerInputs) {
 		const source = sources.get(input.id);
-		if (input.kind !== "points" || !source.cloud) {
-			continue;
+		if (!source.cloud && !gridHits.has(source)) {
+			gridHits.set(source, pickGrid(source, ray, sceneOrigin));
 		}
-		// The tree works in the cloud's own coordinates, heights times zScale.
-		const offset = source.origin.map((value, i) => (value - sceneOrigin[i]) * (i === 2 ? zScale : 1));
-		const cloudRay = { origin: ray.origin.map((value, i) => value - offset[i]), direction: ray.direction, zScale };
-		const hit = pickPointTree(source.getTree(), source.xyz, cloudRay);
+		const hit = source.cloud ? pickCloud(source, ray, sceneOrigin) : gridHits.get(source);
 		if (hit && (!best || hit.t < best.hit.t)) {
-			best = { hit, input, source };
+			best = { hit, input };
 		}
 	}
 	if (!best) {
 		return null;
 	}
-	const { hit, input, source } = best;
-	// Real data coordinates interpolated in the triangle around the cursor.
-	const world = [0, 1, 2].map(
-		(i) => hit.indices.reduce((sum, index, k) => sum + hit.weights[k] * source.xyz[index * 3 + i], 0) + source.origin[i],
-	);
-	// The corner with the largest weight is the one nearest to the hit.
-	const nearest = hit.indices[hit.weights.indexOf(Math.max(...hit.weights))];
-	const [x, y] = createProjector({ ...matrices, origin: sceneOrigin, zScale }, viewport)(world) ?? [screenX, screenY];
+	const { hit, input } = best;
+	const [x, y] = createProjector({ ...matrices, origin: sceneOrigin, zScale }, viewport)(hit.world) ?? [
+		screenX,
+		screenY,
+	];
 	return {
 		layerId: input.id,
-		kind: "points",
+		kind: input.kind,
 		screen: { x, y },
-		world: { x: world[0], y: world[1], z: world[2] },
-		value: world[2],
-		index: nearest,
-		sampleValue: source.xyz[nearest * 3 + 2] + source.origin[2],
+		world: { x: hit.world[0], y: hit.world[1], z: hit.world[2] },
+		value: hit.world[2],
+		index: hit.index,
+		sampleValue: hit.sampleValue,
 	};
+}
+
+// A layer hit: t along the ray, real data coordinates interpolated in the triangle around the cursor,
+// and the triangle corner nearest to the hit (largest weight) with its measured height.
+function layerHit(t, corners, weights, cornerPosition, cornerHeight) {
+	const world = [0, 1, 2].map((i) =>
+		corners.reduce((sum, corner, k) => sum + weights[k] * cornerPosition(corner)[i], 0),
+	);
+	const index = corners[weights.indexOf(Math.max(...weights))];
+	return { t, world, index, sampleValue: cornerHeight(index) };
+}
+
+function pickCloud(source, ray, sceneOrigin) {
+	// The tree works in the cloud's own coordinates, heights times zScale.
+	const offset = source.origin.map((value, i) => (value - sceneOrigin[i]) * (i === 2 ? zScale : 1));
+	const cloudRay = { origin: ray.origin.map((value, i) => value - offset[i]), direction: ray.direction, zScale };
+	const hit = pickPointTree(source.getTree(), source.xyz, cloudRay);
+	const { xyz, origin } = source;
+	return (
+		hit &&
+		layerHit(
+			hit.t,
+			hit.indices,
+			hit.weights,
+			(index) => [0, 1, 2].map((i) => xyz[index * 3 + i] + origin[i]),
+			(index) => xyz[index * 3 + 2] + origin[2],
+		)
+	);
+}
+
+function pickGrid(source, ray, sceneOrigin) {
+	const hit = pickHeightGrid(source, ray, sceneOrigin, zScale);
+	const { imageW, x0, y0, dx, dy, pixels } = source;
+	return (
+		hit &&
+		layerHit(
+			hit.t,
+			hit.samples,
+			hit.weights,
+			(sample) => [x0 + (sample % imageW) * dx, y0 + Math.floor(sample / imageW) * dy, pixels[sample]],
+			(sample) => pixels[sample],
+		)
+	);
 }
 
 // World is the scene axes swapped (see axisSwap) with z scaled, relative to the scene origin.
