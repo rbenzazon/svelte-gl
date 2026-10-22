@@ -20,6 +20,10 @@ export function createOrbitControls(canvas, camera) {
 		startX = positionObject.clientX;
 		startY = positionObject.clientY;
 		canvas.addEventListener(upEventType, onMouseUp, { passive: false });
+		// A release outside the canvas is never received, so leaving it ends the drag.
+		if (moveEventType === "mousemove") {
+			canvas.addEventListener("mouseleave", onMouseUp);
+		}
 		//prevent default to avoid the canvas to be selected
 		event.preventDefault();
 		event.stopPropagation();
@@ -97,6 +101,7 @@ export function createOrbitControls(canvas, camera) {
 		}
 		canvas.removeEventListener(moveEventType, onMouseMove, { passive: false });
 		canvas.removeEventListener(upEventType, onMouseUp, { passive: false });
+		canvas.removeEventListener("mouseleave", onMouseUp);
 	}
 	return {
 		delta(radiusDelta, polarDelta, azimuthDelta) {
