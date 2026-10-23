@@ -42,7 +42,19 @@ export interface ScanViewerSurfaceLayer {
 	id: string;
 	kind: "surface";
 	data: ScanData;
+	/**
+	 * Base color, metallic and roughness. With the palette, baseColor tints the palette colors (default white).
+	 * The surface is double-sided: seen from below, it is lit from that side.
+	 */
 	material?: ScanViewerMaterial;
+	/**
+	 * "solid" (default): the material base color; "palette": the height of each pixel through the color range,
+	 * like the points, still lit. With setOutOfRange("hide"), the surface is cut along the range limits.
+	 */
+	colorMode?: "palette" | "solid";
+	/** Overrides the viewer color range for this layer. */
+	colorMin?: number;
+	colorMax?: number;
 }
 
 /** Unorganized point cloud, in the same units as ScanData. */
@@ -122,6 +134,12 @@ export interface ScanViewerApi {
 	/** Uniform ambient term. Intensity defaults to 0.6 (the initial value), 0 turns it off; color defaults to white. */
 	setAmbient(intensity?: number, color?: Color): void;
 	/**
+	 * "none" (default) or "neutral": Khronos PBR Neutral tone mapping on the lit surfaces, which keeps the base
+	 * colors and compresses the highlights instead of clipping them. Exposure defaults to 1. Points and lines are
+	 * unlit and keep their exact colors.
+	 */
+	setToneMapping(mode: "none" | "neutral", exposure?: number): void;
+	/**
 	 * Sets the environment and how it is used; null removes it. Calling again with the same image only
 	 * applies the options. Resolves once applied; a newer call supersedes a pending one.
 	 */
@@ -133,9 +151,9 @@ export interface ScanViewerApi {
 	setPalette(colors: Color[]): void;
 	/** Heights mapped to the first and last palette colors, in real units (zScale has no effect). An undefined bound uses the auto range. */
 	setColorRange(min?: number, max?: number): void;
-	/** "clamp" (default): edge colors outside the range; "hide": points outside the range are not drawn. */
+	/** "clamp" (default): edge colors outside the range; "hide": palette points and surface parts outside the range are not drawn. */
 	setOutOfRange(mode: "clamp" | "hide"): void;
-	/** Min and max height over the palette point layers, NaN ignored; [0, 1] without any. */
+	/** Min and max height over the palette layers (points and surfaces), NaN ignored; [0, 1] without any. */
 	getAutoRange(): [number, number];
 	/** Emitted when the auto range changes. Returns the unsubscribe function. */
 	on(event: "auto-range", callback: (min: number, max: number) => void): () => void;

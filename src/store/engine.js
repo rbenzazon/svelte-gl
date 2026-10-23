@@ -41,6 +41,9 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 
 	const emptyRenderPipeline = [];
 	const invalidateToken = {};
+	// A new program list (render passes, light count...) makes every cached pipeline stale.
+	const programsToken = {};
+	let lastPrograms = null;
 	let invalidateRevision = 0;
 	const revisionMap = new Map();
 	revisionMap.set(renderer, 0);
@@ -129,6 +132,10 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 			 */
 
 			const updateMap = updated();
+			if ($programs !== lastPrograms) {
+				lastPrograms = $programs;
+				updateMap.set(programsToken, "programs");
+			}
 			/*
 		if(updateMap.has(renderer)){
 			console.log("update renderer");
@@ -158,11 +165,8 @@ function attachLoop({ ctx, camera, renderer, scene, lights, materials, programs 
 				canvas: $renderer.canvas,
 				backgroundColor: rendererValues.backgroundColor,
 				ambientLightColor: rendererValues.ambientLightColor,
-				...($renderer.toneMappings.length > 0
-					? {
-							toneMappings: $renderer.toneMappings,
-						}
-					: undefined),
+				// Always assigned, so removing the last tone mapping reaches the shaders built after it.
+				toneMappings: $renderer.toneMappings,
 			};
 			const pipeline = [];
 

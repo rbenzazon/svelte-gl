@@ -1,4 +1,5 @@
 import { createDataTexture } from "../../texture/data-texture.js";
+import { textureUnits } from "../../texture/texture-units.js";
 
 /**
  * Height grid uploaded once to an R32F texture and shared by the surface and points programs of the same data.
@@ -7,7 +8,13 @@ import { createDataTexture } from "../../texture/data-texture.js";
  * @param {ReturnType<typeof import("./scene-uniforms.js").createSceneUniforms>} sceneUniforms
  */
 export function createHeightGrid({ imageW, imageH, x0, y0, x1, y1, distanceData }, sceneUniforms) {
-	const heights = createDataTexture({ data: distanceData, width: imageW, height: imageH, uniform: "heightTexture" });
+	const heights = createDataTexture({
+		data: distanceData,
+		width: imageW,
+		height: imageH,
+		uniform: "heightTexture",
+		unit: textureUnits.heightGrid,
+	});
 	const grid = new Float32Array([x0, y0, (x1 - x0) / (imageW - 1), (y1 - y0) / (imageH - 1)]);
 
 	function setup(ctx) {

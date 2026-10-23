@@ -8,14 +8,18 @@ import surfaceShader from "./surface.glsl";
 const renderSurfaceShader = templateLiteralRenderer(surfaceShader, { declaration: false, position: false });
 
 /**
- * Metallic/roughness material props for the default PBR program. Defaults to a neutral light grey, non-metallic.
+ * Metallic/roughness material props for the default PBR program. Defaults to a neutral light grey, non-metallic;
+ * with the palette, the base color tints it and defaults to white. Double-sided, so the surface is also seen from below.
  * @param {import("./scan-viewer").ScanViewerMaterial} [material]
+ * @param {SvelteGLDiffuseModifier} [palette] from createSurfacePalette
  */
-export function createSurfaceMaterial({ baseColor = [0.8, 0.8, 0.8], metallic = 0, roughness = 0.5 } = {}) {
+export function createSurfaceMaterial({ baseColor, metallic = 0, roughness = 0.5 } = {}, palette) {
 	return {
-		diffuse: convertToVector3(baseColor),
+		diffuse: convertToVector3(baseColor ?? (palette ? [1, 1, 1] : [1, 0.1, 0.1])),
+		...(palette && { diffuseModifier: palette }),
 		metalness: metallic,
 		specular: createSpecular({ roughness }),
+		doubleSided: true,
 	};
 }
 

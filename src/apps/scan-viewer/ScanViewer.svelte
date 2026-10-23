@@ -10,6 +10,7 @@ import { createEnvMapTexture } from "../../texture/environment-map-texture.js";
 import { scale } from "gl-matrix/esm/mat4.js";
 import { convertToVector3 } from "../../color/color-space.js";
 import { createSpecular } from "../../material/specular/specular.js";
+import { createNeutralToneMapping } from "../../tone-mapping/neutral-tone-mapping.js";
 import { animateCamera } from "./camera-animation.js";
 import { createGizmoArrows, hitGizmo } from "./gizmo.js";
 import { pickHeightGrid } from "./grid-pick.js";
@@ -32,6 +33,7 @@ import { createPointsProgram } from "./points.js";
 import { createRulerProgram, layoutRulers } from "./rulers.js";
 import { createSceneUniforms } from "./scene-uniforms.js";
 import { createSurface, createSurfaceMaterial } from "./surface.js";
+import { createSurfacePalette } from "./surface-palette.js";
 
 export let background = [1, 1, 1, 1];
 
@@ -495,12 +497,26 @@ function layerColorRange(input) {
 	return [input.colorMin ?? colorRange.min ?? autoRange[0], input.colorMax ?? colorRange.max ?? autoRange[1]];
 }
 
-// Min and max height over the palette point layers, NaN ignored; 0..1 without any.
+// Points default to the palette, surfaces to their solid base color.
+function usesPalette(input) {
+	return (input.colorMode ?? (input.kind === "points" ? "palette" : "solid")) === "palette";
+}
+
+// Palette, color range and out-of-range mode of a palette layer, read at every draw.
+function layerColoring(input) {
+	return {
+		palette,
+		getRange: () => layerColorRange(input),
+		hideOutOfRange: () => outOfRange === "hide",
+	};
+}
+
+// Min and max height over the palette layers, NaN ignored; 0..1 without any.
 function updateAutoRange() {
 	let min = Number.POSITIVE_INFINITY;
 	let max = Number.NEGATIVE_INFINITY;
 	for (const input of layerInputs) {
-		if (input.kind === "points" && (input.colorMode ?? "palette") === "palette") {
+		if (usesPalette(input)) {
 			const { bounds } = sources.get(input.id);
 			min = Math.min(min, bounds.min[2]);
 			max = Math.max(max, bounds.max[2]);
@@ -520,6 +536,21 @@ export function setBackground(rgba) {
 	background = rgba;
 	invalidateLabels();
 	engine.renderer.update((renderer) => ({ ...renderer, backgroundColor: rgba }));
+}
+
+/**
+ * "none" (default) or "neutral": Khronos PBR Neutral tone mapping on the lit surfaces (and the gizmo), which keeps
+ * the base colors and only compresses the highlights instead of clipping them. Points and lines are unlit and keep
+ * their exact colors.
+ */
+export function setToneMapping(mode, exposure = 1) {
+	engine.renderer.update((renderer) => ({
+		...renderer,
+		toneMappings: mode === "neutral" ? [createNeutralToneMapping({ exposure })] : [],
+	}));
+	// The tone mapping is compiled into the shaders: new materials.
+	gizmo = null;
+	buildScene();
 }
 
 export function setAmbient(intensity = defaultAmbient, color = [1, 1, 1]) {
@@ -644,7 +675,11 @@ function buildLayer(input) {
 	const source = sources.get(input.id);
 	if (input.kind === "surface") {
 		const surface = createSurface(source);
-		const material = engine.createMaterial({ ...createSurfaceMaterial(input.material), ...(envMap && { envMap }) });
+		const surfacePalette = usesPalette(input) ? createSurfacePalette(layerColoring(input)) : undefined;
+		const material = engine.createMaterial({
+			...createSurfaceMaterial(input.material, surfacePalette),
+			...(envMap && { envMap }),
+		});
 		const mesh = engine.createObject({
 			attributes: {},
 			vertexCount: surface.vertexCount,
@@ -656,12 +691,9 @@ function buildLayer(input) {
 		return { material, mesh };
 	}
 	const style = { colorMode: input.colorMode, color: input.color, pointSize: input.pointSize };
-	const coloring = {
-		palette,
-		getRange: () => layerColorRange(input),
-		hideOutOfRange: () => outOfRange === "hide",
-	};
-	const material = engine.createMaterial({ program: createPointsProgram(source, style, coloring, engine.ctx) });
+	const material = engine.createMaterial({
+		program: createPointsProgram(source, style, layerColoring(input), engine.ctx),
+	});
 	const mesh = engine.createObject({
 		// A cloud's xyz go to the positions buffer as is; a grid needs no attribute.
 		attributes: source.cloud ? { positions: source.xyz } : {},

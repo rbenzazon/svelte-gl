@@ -1,4 +1,7 @@
 ${declaration ? `
+// real height (no zScale), for the fragment add-ons such as the surface palette
+out float vScanHeight;
+
 // two counter-clockwise triangles per grid cell
 const ivec2 surfaceCorners[6] = ivec2[6](ivec2(0, 0), ivec2(1, 0), ivec2(0, 1), ivec2(1, 0), ivec2(1, 1), ivec2(0, 1));
 
@@ -20,6 +23,7 @@ ${position ? `
             || isnan(heightAt(cellTexel + surfaceCorners[first + 1]))
             || isnan(heightAt(cellTexel + surfaceCorners[first + 2]));
         float h = heightAt(texel);
+        vScanHeight = h;
         float zScale = sceneOriginZScale.w;
         animatedPosition = hole ? vec3(0.0) : gridPosition(texel, h);
         float dzdx = (surfaceNeighbor(texel + ivec2(1, 0), h) - surfaceNeighbor(texel - ivec2(1, 0), h)) * zScale / (2.0 * heightGrid.z);

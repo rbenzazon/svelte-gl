@@ -4,6 +4,8 @@ import {
 	bindDefaultFramebuffer,
 	createProgram,
 	createShaders,
+	disableCulling,
+	enableCulling,
 	linkProgram,
 	restoreViewport,
 	setupAmbientLight,
@@ -229,6 +231,16 @@ export function createProgramsStore({ scene, lights, materials, renderPasses, ct
 				} else if (clears) {
 					program.setFrameBuffer = bindDefaultFramebuffer;
 				}
+				if (p.material.doubleSided) {
+					program.updateProgram.push(disableCulling);
+					const { postDraw } = program;
+					program.postDraw = postDraw
+						? (context) => {
+								postDraw(context);
+								enableCulling(context);
+							}
+						: enableCulling;
+				}
 				if (p.material?.specular) {
 					program.setupMaterial.push(p.material.specular.setupSpecular);
 				}
@@ -251,6 +263,10 @@ export function createProgramsStore({ scene, lights, materials, renderPasses, ct
 				if (p.material?.lightMap) {
 					program.setupMaterial.push(p.material.lightMap.setupTexture);
 					program.bindTextures.push(p.material.lightMap.bindTexture);
+				}
+				if (p.material?.diffuseModifier) {
+					program.setupMaterial.push(...(p.material.diffuseModifier.setup ?? []));
+					program.updateProgram.push(...(p.material.diffuseModifier.updateProgram ?? []));
 				}
 				if (p.requireTime) {
 					program.updateProgram.push(setupTime);

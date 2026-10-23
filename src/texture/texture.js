@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { templateLiteralRenderer } from "../shaders/template.js";
 import textureShader from "./texture.glsl";
+import { textureUnits } from "./texture-units.js";
 const types = {
 	diffuse: "diffuseMap",
 	normal: "normalMap",
@@ -9,10 +10,10 @@ const types = {
 };
 
 const id = {
-	diffuse: 0,
-	normal: 1,
-	roughness: 2,
-	light: 3,
+	diffuse: textureUnits.diffuse,
+	normal: textureUnits.normal,
+	roughness: textureUnits.roughness,
+	light: textureUnits.light,
 };
 
 /**

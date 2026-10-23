@@ -62,7 +62,9 @@ let fixedRange = false;
 let outOfRange = "clamp";
 let autoRange = [0, 1];
 let metallic = false;
+let surfaceColorMode = "solid";
 let lightMode = "camera";
+let toneMapping = "none";
 let backgroundIndex = 0;
 let rulers = true;
 let boundingBox = false;
@@ -76,7 +78,13 @@ let envLighting = false;
 function layers() {
 	const data = { ...grid, distanceData: heights };
 	const pointStyle = { colorMode: pointsColorMode, color: "#f59e0b", pointSize: 3 };
-	const surface = { id: "sine", kind: "surface", data, material: metallic ? metal : undefined };
+	const surface = {
+		id: "sine",
+		kind: "surface",
+		data,
+		material: metallic ? metal : undefined,
+		colorMode: surfaceColorMode,
+	};
 	const points = { id: "sine-points", kind: "points", data, ...pointStyle };
 	const scan = { id: "sine-cloud", kind: "points", data: { xyz: cloud, origin: cloudOrigin }, ...pointStyle };
 	return { surface: [surface], points: [points], both: [surface, points], cloud: [scan] }[display];
@@ -119,6 +127,11 @@ function setMetallic(value) {
 	viewer.setLayers(layers());
 }
 
+function setSurfaceColorMode(value) {
+	surfaceColorMode = value;
+	viewer.setLayers(layers());
+}
+
 function setLightMode(value) {
 	lightMode = value;
 	if (lightMode === "none") {
@@ -128,6 +141,11 @@ function setLightMode(value) {
 		viewer.setLights(defaultLights, lightMode);
 		viewer.setAmbient();
 	}
+}
+
+function setToneMapping(value) {
+	toneMapping = value;
+	viewer.setToneMapping(toneMapping);
 }
 
 function setBackground(index) {
@@ -281,10 +299,26 @@ onMount(() => {
 				</div>
 			</div>
 			<div class="row">
+				<span class="label">Color</span>
+				<div class="segmented">
+					{#each ["solid", "palette"] as option}
+						<button class:active={surfaceColorMode === option} on:click={() => setSurfaceColorMode(option)}>{option}</button>
+					{/each}
+				</div>
+			</div>
+			<div class="row">
 				<span class="label">Lights</span>
 				<div class="segmented">
 					{#each lightModes as option}
 						<button class:active={lightMode === option} on:click={() => setLightMode(option)}>{option}</button>
+					{/each}
+				</div>
+			</div>
+			<div class="row">
+				<span class="label">Tone mapping</span>
+				<div class="segmented">
+					{#each ["none", "neutral"] as option}
+						<button class:active={toneMapping === option} on:click={() => setToneMapping(option)}>{option}</button>
 					{/each}
 				</div>
 			</div>

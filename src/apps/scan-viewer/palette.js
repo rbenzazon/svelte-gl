@@ -1,6 +1,7 @@
 import { convertToVector3 } from "../../color/color-space.js";
+import { textureUnits } from "../../texture/texture-units.js";
 
-const paletteUnit = 1;
+const paletteUnit = textureUnits.palette;
 
 /** Kalea's default "Viridis", from the colorMin color to the colorMax color. */
 const viridis = ["#440154", "#414487", "#2a788e", "#22a884", "#7ad151", "#fde725"];
@@ -45,4 +46,27 @@ export function createPalette(stops = viridis) {
 	}
 
 	return { set, bindTexture };
+}
+
+/**
+ * @typedef {Object} PaletteColoring shared by the palette layers, read at every draw
+ * @property {ReturnType<typeof createPalette>} palette
+ * @property {() => [number, number]} getRange colorMin and colorMax of this layer
+ * @property {() => boolean} hideOutOfRange
+ */
+
+/**
+ * Pipeline step body binding the palette and setting colorMin, colorMax and hideOutOfRange,
+ * for any program declaring them (points, surface palette).
+ * @param {import("../../store/app-context").AppContext} context
+ * @param {PaletteColoring} coloring
+ */
+export function setupPaletteColoring(context, coloring) {
+	const { gl, program } = context;
+	coloring.palette.bindTexture(context);
+	const [min, max] = coloring.getRange();
+	gl.uniform1f(gl.getUniformLocation(program, "colorMin"), min);
+	// An empty range would divide by zero: everything takes the first color.
+	gl.uniform1f(gl.getUniformLocation(program, "colorMax"), max === min ? min + 1 : max);
+	gl.uniform1i(gl.getUniformLocation(program, "hideOutOfRange"), coloring.hideOutOfRange() ? 1 : 0);
 }

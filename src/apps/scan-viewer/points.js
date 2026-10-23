@@ -3,18 +3,12 @@ import { templateLiteralRenderer } from "../../shaders/template.js";
 import { compileShaders, createProgram, linkProgram, useProgram, validateProgram } from "../../store/gl.js";
 import { selectProgram } from "../../store/programs-cache.js";
 import heightGridShader from "./height-grid.glsl";
+import { setupPaletteColoring } from "./palette.js";
 import pointsFragment from "./points-fragment.glsl";
 import pointsVertex from "./points-vertex.glsl";
 import sceneShader from "./scene.glsl";
 
 const renderVertex = templateLiteralRenderer(pointsVertex, { palette: false, cloud: false, declarations: "" });
-
-/**
- * @typedef {Object} PointsColoring shared by the palette point layers, read at every draw
- * @property {ReturnType<typeof import("./palette.js").createPalette>} palette
- * @property {() => [number, number]} getRange colorMin and colorMax of this layer
- * @property {() => boolean} hideOutOfRange
- */
 
 /**
  * @typedef {ReturnType<typeof import("./height-grid.js").createHeightGrid> | ReturnType<typeof import("./point-cloud.js").createPointCloud>} PointsSource
@@ -26,7 +20,7 @@ const renderVertex = templateLiteralRenderer(pointsVertex, { palette: false, clo
  * Used as a material program: engine.createMaterial({ program }).
  * @param {PointsSource} source
  * @param {{ colorMode?: "palette" | "solid", color?: import("./scan-viewer").Color, pointSize?: number }} style
- * @param {PointsColoring} coloring
+ * @param {import("./palette.js").PaletteColoring} coloring
  * @param {import("../../store/app-context").AppContext} ctx engine context, for the program cache
  */
 export function createPointsProgram(
@@ -50,16 +44,11 @@ export function createPointsProgram(
 	function setupStyle(context) {
 		const { gl, program } = context;
 		gl.uniform1f(gl.getUniformLocation(program, "pointSize"), pointSize * devicePixelRatio);
-		if (!usePalette) {
+		if (usePalette) {
+			setupPaletteColoring(context, coloring);
+		} else {
 			gl.uniform3fv(gl.getUniformLocation(program, "pointColor"), rgb);
-			return;
 		}
-		coloring.palette.bindTexture(context);
-		const [min, max] = coloring.getRange();
-		gl.uniform1f(gl.getUniformLocation(program, "colorMin"), min);
-		// An empty range would divide by zero: every point takes the first color.
-		gl.uniform1f(gl.getUniformLocation(program, "colorMax"), max === min ? min + 1 : max);
-		gl.uniform1i(gl.getUniformLocation(program, "hideOutOfRange"), coloring.hideOutOfRange() ? 1 : 0);
 	}
 
 	return {

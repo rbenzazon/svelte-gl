@@ -1,6 +1,6 @@
 # Scan viewer
 
-WebGL2 viewer for height scans and point clouds: surfaces, points, rulers, a view gizmo and picking.
+WebGL2 viewer for height scans and point clouds: lit surfaces (solid or palette colored), points, rulers, a view gizmo and picking.
 
 ## What is shipped
 

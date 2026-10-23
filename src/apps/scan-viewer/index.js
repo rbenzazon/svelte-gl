@@ -18,6 +18,7 @@ export function createScanViewer(target, { background } = {}) {
 		setZScale: viewer.setZScale,
 		setLights: viewer.setLights,
 		setAmbient: viewer.setAmbient,
+		setToneMapping: viewer.setToneMapping,
 		setEnvironment: viewer.setEnvironment,
 		setPalette: viewer.setPalette,
 		setColorRange: viewer.setColorRange,

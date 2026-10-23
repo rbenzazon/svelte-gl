@@ -26,6 +26,15 @@ export function initRenderer(ctx) {
 	gl.cullFace(gl.BACK);
 }
 
+// Double-sided materials draw both faces; culling is restored after their meshes for the other programs.
+export function disableCulling({ gl }) {
+	gl.disable(gl.CULL_FACE);
+}
+
+export function enableCulling({ gl }) {
+	gl.enable(gl.CULL_FACE);
+}
+
 export function setFaceWinding(ccw = true) {
 	return function setFaceWinding(ctx) {
 		const { gl } = ctx;
@@ -278,6 +287,8 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 			declarations: "",
 			uv1: false,
 			diffuseMapSample: "",
+			diffuseModifier: "",
+			doubleSided: false,
 			normalMapSample: "",
 			roughnessMapSample: "",
 			lightMapSample: "",
@@ -304,9 +315,12 @@ export function createShaders(material, meshes, numPointLights, pointLightShader
 				...(material.roughnessMap ? [roughnessMapDeclaration] : []),
 				...(material.envMap ? [envMapDeclaration] : []),
 				...(material.lightMap ? [lightMapDeclaration] : []),
+				...(material.diffuseModifier ? [material.diffuseModifier.shader({ declaration: true })] : []),
 			].join("\n"),
 			uv1: hasUV1,
 			diffuseMapSample,
+			diffuseModifier: material.diffuseModifier?.shader({ diffuse: true }) ?? "",
+			doubleSided: material.doubleSided === true,
 			normalMapSample,
 			roughnessMapSample,
 			material: [...(material.specular ? [specularMaterial] : [])].join("\n"),

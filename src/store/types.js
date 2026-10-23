@@ -107,6 +107,16 @@
  * @property {number} [opacity]
  * @property {import("./programs.js").SvelteGLProgram} [program]
  * @property {SvelteGLViewport} [viewport] default program only: draws its meshes in a rectangle of the canvas
+ * @property {SvelteGLDiffuseModifier} [diffuseModifier] default program only: changes the diffuse color per fragment
+ * @property {boolean} [doubleSided] default program only: back faces are drawn too, lit from their own side
+ */
+/**
+ * Fragment add-on of the default program, run after the diffuse map and before the lighting.
+ * @typedef {Object} SvelteGLDiffuseModifier
+ * @property {(props: { declaration?: boolean, diffuse?: boolean }) => string} shader declaration: uniforms, inputs and
+ * functions; diffuse: code changing material.diffuseColor (linear) or calling discard
+ * @property {Function[]} [setup] pipeline steps run when the program is created
+ * @property {Function[]} [updateProgram] pipeline steps run on every draw, for the uniforms that change
  */
 /**
  * @typedef {Object} SvelteGLViewport

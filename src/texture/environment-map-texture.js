@@ -3,8 +3,9 @@ import { get } from "svelte/store";
 import { createZeroMatrix } from "../geometries/common";
 import { templateLiteralRenderer } from "../shaders/template.js";
 import envMapShader from "./environment-map-fragment.glsl";
+import { textureUnits } from "./texture-units.js";
 
-const envMapID = 3;
+const envMapID = textureUnits.env;
 
 const envMapType = "envMap";
 

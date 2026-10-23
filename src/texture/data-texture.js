@@ -6,9 +6,10 @@ const formats = {
 /**
  * Float data texture. setupTexture and bindTexture are pipeline steps; setupTexture only runs once.
  * update() re-uploads pixels and does not redraw; call engine.invalidate() after it.
- * @param {{ data: Float32Array, width: number, height: number, format?: "R32F" | "RGBA32F", uniform?: string }} props
+ * @param {{ data: Float32Array, width: number, height: number, format?: "R32F" | "RGBA32F", uniform?: string, unit?: number }} props
+ * unit: the texture unit it is bound to (see texture-units.js), default 0
  */
-export function createDataTexture({ data, width, height, format = "R32F", uniform = "dataTexture" }) {
+export function createDataTexture({ data, width, height, format = "R32F", uniform = "dataTexture", unit = 0 }) {
 	const spec = formats[format];
 	let gl = null;
 	let texture = null;
@@ -20,6 +21,7 @@ export function createDataTexture({ data, width, height, format = "R32F", unifor
 		gl = ctx.gl;
 		gl.getExtension("EXT_color_buffer_float");
 		texture = gl.createTexture();
+		gl.activeTexture(gl.TEXTURE0 + unit);
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.texStorage2D(gl.TEXTURE_2D, 1, gl[spec.internal], width, height);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -37,10 +39,10 @@ export function createDataTexture({ data, width, height, format = "R32F", unifor
 	function bindTexture(ctx) {
 		const { gl: context, program } = ctx;
 		const location = context.getUniformLocation(program, uniform);
-		context.activeTexture(context.TEXTURE0);
+		context.activeTexture(context.TEXTURE0 + unit);
 		context.bindTexture(context.TEXTURE_2D, texture);
 		if (location) {
-			context.uniform1i(location, 0);
+			context.uniform1i(location, unit);
 		}
 	}
 
@@ -49,6 +51,7 @@ export function createDataTexture({ data, width, height, format = "R32F", unifor
 		if (!texture) {
 			return;
 		}
+		gl.activeTexture(gl.TEXTURE0 + unit);
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 		upload(pixels);
 		gl.bindTexture(gl.TEXTURE_2D, null);

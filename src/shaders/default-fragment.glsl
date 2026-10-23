@@ -76,9 +76,12 @@ void main() {
 	${roughnessMapSample}
 	${material}
 	${diffuseMapSample}
+	${diffuseModifier}
 	
 
 	vec3 normal = normalize( vNormal );
+	${doubleSided ? `// a back face is lit from its own side
+	normal = gl_FrontFacing ? normal : -normal;` : ''}
 	vec3 geometryPosition = - vViewPosition;
     vec3 geometryNormal = normal;
     vec3 geometryViewDir = normalize( vViewPosition );

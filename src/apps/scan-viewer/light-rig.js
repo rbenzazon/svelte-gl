@@ -4,9 +4,9 @@ import { createPointLight } from "../../lights/point-light.js";
 
 /** Key (front left), fill (front right) and rim (behind), as seen from the home view. */
 export const defaultLights = [
-	{ position: [-1.5, -2, 2.5], intensity: 2.5 },
-	{ position: [2, -1, 1], intensity: 0.8 },
-	{ position: [0.5, 2.5, 1.5], intensity: 1.2 },
+	{ position: [-1.5, -1, 2.5], intensity: 1.5 },
+	/*{ position: [2, -1, 1], intensity: 0.5 },
+	{ position: [0.5, 2.5, 1.5], intensity: 1.0 },*/
 ];
 
 /**

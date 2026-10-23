@@ -303,7 +303,9 @@ function restoreState(
 			gl.deleteFramebuffer(pongFBO);
 			setPongFBO(null);
 		}
-		removePassFromStore(context.passes);
+		// Not now: this step runs inside the frame's pipeline, and changing the passes rebuilds the program list,
+		// which moves the cached GL programs away from the program objects the rest of this pipeline selects.
+		queueMicrotask(() => removePassFromStore(context.passes));
 	};
 }
 
