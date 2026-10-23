@@ -83,8 +83,9 @@ let metallic = false;
 let surfaceColorMode = "solid";
 let lightMode = "camera";
 let toneMapping = "none";
-// Space + drag pans in either mode.
+// The mode set, and what a drag does now from the "control-mode" event ("pan" while Space is held).
 let controlMode = "orbit";
+let dragMode = "orbit";
 let backgroundIndex = 0;
 let rulers = true;
 let boundingBox = false;
@@ -270,6 +271,9 @@ onMount(() => {
 	const offAutoRange = viewer.on("auto-range", (min, max) => {
 		autoRange = [min, max];
 	});
+	const offControlMode = viewer.on("control-mode", (mode) => {
+		dragMode = mode;
+	});
 	viewer.setLayers(layers());
 	loadEnvironment("skyboxes/christmas-photo-studio-01-4k.hdr").then((image) => {
 		environment = image;
@@ -277,6 +281,7 @@ onMount(() => {
 	return () => {
 		cancelAnimationFrame(hoverFrame);
 		offAutoRange();
+		offControlMode();
 		viewer.destroy();
 	};
 });
@@ -443,7 +448,7 @@ onMount(() => {
 				<span class="label">Drag</span>
 				<div class="segmented">
 					{#each ["orbit", "pan"] as option}
-						<button class:active={controlMode === option} on:click={() => setControlMode(option)}>{option}</button>
+						<button class:active={dragMode === option} on:click={() => setControlMode(option)}>{option}</button>
 					{/each}
 				</div>
 			</div>

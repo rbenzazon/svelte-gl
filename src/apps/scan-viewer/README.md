@@ -193,7 +193,7 @@ Points layer (`kind: "points"`, `data: ScanData | PointCloudData`): one unlit ro
 - `setColorRange(min?: number, max?: number)`: heights mapped to the first and last palette colors, in real units. Each bound left `undefined` uses the auto range. A layer's `colorMin` and `colorMax` take precedence.
 - `setOutOfRange(mode: "clamp" | "hide")`: `"clamp"` (default) gives the edge colors outside the range; `"hide"` does not draw palette points and surface parts outside the range (surfaces are cut exactly along the limits).
 - `getAutoRange(): [number, number]`: min and max height over the palette layers (points and surfaces), `NaN` ignored; `[0, 1]` without any.
-- `on("auto-range", callback: (min: number, max: number) => void): () => void`: called when the auto range changes. Returns the unsubscribe function. `"auto-range"` is the only event for now.
+- `on("auto-range", callback: (min: number, max: number) => void): () => void`: called when the auto range changes. Returns the unsubscribe function. The other event is `"control-mode"` (see Camera).
 
 **Lighting and environment**
 
@@ -225,6 +225,7 @@ Points layer (`kind: "points"`, `data: ScanData | PointCloudData`): one unlit ro
 - `resetView()`: animates back to the default view framing the data (about 300 ms).
 - `snapTo(view: ScanViewerView)`: animates to look along a data axis from its side, keeping the target and the distance. Views: `"+x"`, `"-x"`, `"+y"`, `"-y"`, `"+z"`, `"-z"`, with the aliases `"side"` (`"+x"`), `"front"` (`"-y"`) and `"top"` (`"+z"`), and `"iso"` for the default direction.
 - `setControlMode(mode: "orbit" | "pan")`, `getControlMode()`: what a mouse drag does. `"orbit"` (default) turns the camera around its target; `"pan"` moves the target, and the camera with it, in the view plane, so the point under the cursor follows it. Holding Space over the viewer pans in either mode.
+- `on("control-mode", callback: (mode: "orbit" | "pan", spaceHeld: boolean) => void): () => void`: called when what a drag does changes, after `setControlMode` and when Space starts or stops a temporary pan. `mode` is the effective drag mode (`"pan"` while Space is held), `spaceHeld` is true during that temporary pan; `getControlMode()` keeps returning the mode that was set. Use it to keep an orbit / pan toggle in sync. Returns the unsubscribe function.
 - `setCameraAnimation(enabled: boolean)`: animated view changes (`snapTo`, `resetView`, gizmo clicks), default true. `false` makes them instant, for example when `matchMedia("(prefers-reduced-motion: reduce)")` matches.
 
 **Picking**

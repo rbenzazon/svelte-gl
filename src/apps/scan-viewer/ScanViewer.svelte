@@ -857,6 +857,7 @@ function animateTo(next) {
 /** What a mouse drag does: "orbit" (default) turns around the target, "pan" moves the target. Space pans in either. */
 export function setControlMode(mode) {
 	controlMode = mode;
+	// Emits "control-mode" through the controls when the effective mode changes.
 	controls?.setMode(mode);
 }
 
@@ -912,7 +913,11 @@ onMount(() => {
 	}));
 	// Temporary camera interaction until the turntable controls of step 6.1.
 	// Twice the default rotation: the narrow field of view makes the default feel slow.
-	controls = createOrbitControls(canvas, engine.camera, { speed: 2, mode: controlMode });
+	controls = createOrbitControls(canvas, engine.camera, {
+		speed: 2,
+		mode: controlMode,
+		onModeChange: (mode, spaceHeld) => emit("control-mode", mode, spaceHeld),
+	});
 });
 
 onDestroy(() => {

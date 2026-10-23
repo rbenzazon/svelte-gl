@@ -5,10 +5,11 @@ import { get } from "svelte/store";
  * The drag mode is "orbit" (default) or "pan" (setMode); holding Space over the canvas pans in either mode.
  * @param {HTMLCanvasElement} canvas
  * @param {import("../store/camera.js").SvelteGLCameraCustomStore} camera
- * @param {{ speed?: number, mode?: "orbit" | "pan" }} [options] speed multiplies the orbit rotation per dragged
- * pixel, default 1
+ * @param {{ speed?: number, mode?: "orbit" | "pan", onModeChange?: (mode: "orbit" | "pan", spaceHeld: boolean) => void }} [options]
+ * speed multiplies the orbit rotation per dragged pixel, default 1. onModeChange gets the effective drag mode
+ * ("pan" while Space is held) each time it or the Space hold changes.
  */
-export function createOrbitControls(canvas, camera, { speed = 1, mode = "orbit" } = {}) {
+export function createOrbitControls(canvas, camera, { speed = 1, mode = "orbit", onModeChange } = {}) {
 	//add support for touch events
 	canvas.addEventListener("touchstart", onMouseDown, { passive: false });
 	canvas.addEventListener("mousedown", onMouseDown, { passive: false });
@@ -30,7 +31,14 @@ export function createOrbitControls(canvas, camera, { speed = 1, mode = "orbit" 
 	function getCursor() {
 		return mode === "pan" || spaceDown ? (dragging ? "grabbing" : "grab") : "";
 	}
+	let reported = `${mode} false`;
 	function updateCursor() {
+		const effective = mode === "pan" || spaceDown ? "pan" : "orbit";
+		const held = spaceDown && mode !== "pan";
+		if (`${effective} ${held}` !== reported) {
+			reported = `${effective} ${held}`;
+			onModeChange?.(effective, held);
+		}
 		const cursor = getCursor();
 		if (cursor) {
 			canvas.style.cursor = cursor;

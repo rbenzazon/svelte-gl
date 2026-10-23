@@ -167,6 +167,12 @@ export interface ScanViewerApi {
 	/** Emitted when the auto range changes. Returns the unsubscribe function. */
 	on(event: "auto-range", callback: (min: number, max: number) => void): () => void;
 	/**
+	 * Emitted when what a drag does changes: after setControlMode, and when Space starts or stops a temporary pan.
+	 * mode is the effective drag mode ("pan" while Space is held); spaceHeld is true during that temporary pan.
+	 * getControlMode() keeps returning the mode that was set. Returns the unsubscribe function.
+	 */
+	on(event: "control-mode", callback: (mode: ScanViewerControlMode, spaceHeld: boolean) => void): () => void;
+	/**
 	 * Graduation rulers on the bounding box edges closest to the viewer, switching edges as the camera orbits.
 	 * Labels show real values (zScale has no effect) and overlapping ones are hidden.
 	 */
