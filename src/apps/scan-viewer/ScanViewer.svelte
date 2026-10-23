@@ -83,6 +83,8 @@ let homeView = null;
 let framed = false;
 let cancelCameraAnimation = () => {};
 let cameraAnimation = true;
+// What a drag does, kept here so it can be set before the controls exist.
+let controlMode = "orbit";
 let lightRig = { lights: defaultLights, attached: "camera" };
 let environment = null;
 let environmentRequest = 0;
@@ -288,7 +290,8 @@ function setGizmoHover(axis) {
 		return;
 	}
 	gizmoHover = axis;
-	canvas.style.cursor = axis == null ? "" : "pointer";
+	// Leaving an arrow gives the cursor back to the controls (the hand in pan mode).
+	canvas.style.cursor = axis == null ? (controls?.getCursor() ?? "") : "pointer";
 	invalidateLabels();
 }
 
@@ -851,6 +854,16 @@ function animateTo(next) {
 	cancelCameraAnimation = animateCamera(engine.camera, next, cameraAnimation ? 300 : 0);
 }
 
+/** What a mouse drag does: "orbit" (default) turns around the target, "pan" moves the target. Space pans in either. */
+export function setControlMode(mode) {
+	controlMode = mode;
+	controls?.setMode(mode);
+}
+
+export function getControlMode() {
+	return controlMode;
+}
+
 /** Animated view changes (snapTo, resetView, gizmo clicks), default true; false makes them instant. */
 export function setCameraAnimation(enabled) {
 	cameraAnimation = enabled;
@@ -899,7 +912,7 @@ onMount(() => {
 	}));
 	// Temporary camera interaction until the turntable controls of step 6.1.
 	// Twice the default rotation: the narrow field of view makes the default feel slow.
-	controls = createOrbitControls(canvas, engine.camera, { speed: 2 });
+	controls = createOrbitControls(canvas, engine.camera, { speed: 2, mode: controlMode });
 });
 
 onDestroy(() => {

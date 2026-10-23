@@ -114,6 +114,8 @@ export interface ScanViewerOptions {
 	background?: RGBA;
 }
 
+export type ScanViewerControlMode = "orbit" | "pan";
+
 export type ScanViewerView = "top" | "front" | "side" | "iso" | "+x" | "-x" | "+y" | "-y" | "+z" | "-z";
 
 export interface ScanViewerApi {
@@ -195,6 +197,12 @@ export interface ScanViewerApi {
 	 * for example when matchMedia("(prefers-reduced-motion: reduce)") matches.
 	 */
 	setCameraAnimation(enabled: boolean): void;
+	/**
+	 * What a mouse drag does: "orbit" (default) turns the camera around its target, "pan" moves the target (and
+	 * the camera with it) in the view plane. Holding Space over the viewer pans in either mode.
+	 */
+	setControlMode(mode: ScanViewerControlMode): void;
+	getControlMode(): ScanViewerControlMode;
 	/**
 	 * Animates the camera to look along a data axis from its side ("+x" sees the data from +X), or along the
 	 * default direction for "iso", keeping the target and the distance. "side" is "+x", "front" "-y", "top" "+z".

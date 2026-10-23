@@ -83,6 +83,8 @@ let metallic = false;
 let surfaceColorMode = "solid";
 let lightMode = "camera";
 let toneMapping = "none";
+// Space + drag pans in either mode.
+let controlMode = "orbit";
 let backgroundIndex = 0;
 let rulers = true;
 let boundingBox = false;
@@ -95,9 +97,7 @@ let envLighting = false;
 // "both" passes the same distanceData to the two layers, so the heights are uploaded once.
 function layers() {
 	const current =
-		source === "sample" && sample
-			? { ...sample, cloudOrigin: sample.origin }
-			: { grid, heights, cloud, cloudOrigin };
+		source === "sample" && sample ? { ...sample, cloudOrigin: sample.origin } : { grid, heights, cloud, cloudOrigin };
 	const data = { ...current.grid, distanceData: current.heights };
 	const pointStyle = { colorMode: pointsColorMode, color: "#f59e0b", pointSize: source === "sample" ? 1 : 3 };
 	const surface = {
@@ -185,6 +185,11 @@ function setLightMode(value) {
 		viewer.setLights(defaultLights, lightMode);
 		viewer.setAmbient();
 	}
+}
+
+function setControlMode(value) {
+	controlMode = value;
+	viewer.setControlMode(controlMode);
 }
 
 function setToneMapping(value) {
@@ -433,6 +438,14 @@ onMount(() => {
 			<div class="row">
 				<span class="label">Camera</span>
 				<button class="action" on:click={() => viewer.resetView()}>reset view</button>
+			</div>
+			<div class="row">
+				<span class="label">Drag</span>
+				<div class="segmented">
+					{#each ["orbit", "pan"] as option}
+						<button class:active={controlMode === option} on:click={() => setControlMode(option)}>{option}</button>
+					{/each}
+				</div>
 			</div>
 		</section>
 

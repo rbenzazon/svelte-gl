@@ -7,3 +7,7 @@ node_modules
 3D-models/arm-chair/leather
 snapshots/current
 snapshots/diff
+.cursor/plans/scene3d_step-by-step_c50d1b26.plan.md
+build/data/sample-cloud.f32
+build/data/sample-height.f32
+build/data/sample.json

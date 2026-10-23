@@ -224,6 +224,7 @@ Points layer (`kind: "points"`, `data: ScanData | PointCloudData`): one unlit ro
 
 - `resetView()`: animates back to the default view framing the data (about 300 ms).
 - `snapTo(view: ScanViewerView)`: animates to look along a data axis from its side, keeping the target and the distance. Views: `"+x"`, `"-x"`, `"+y"`, `"-y"`, `"+z"`, `"-z"`, with the aliases `"side"` (`"+x"`), `"front"` (`"-y"`) and `"top"` (`"+z"`), and `"iso"` for the default direction.
+- `setControlMode(mode: "orbit" | "pan")`, `getControlMode()`: what a mouse drag does. `"orbit"` (default) turns the camera around its target; `"pan"` moves the target, and the camera with it, in the view plane, so the point under the cursor follows it. Holding Space over the viewer pans in either mode.
 - `setCameraAnimation(enabled: boolean)`: animated view changes (`snapTo`, `resetView`, gizmo clicks), default true. `false` makes them instant, for example when `matchMedia("(prefers-reduced-motion: reduce)")` matches.
 
 **Picking**
@@ -247,7 +248,7 @@ Points layer (`kind: "points"`, `data: ScanData | PointCloudData`): one unlit ro
 
 ### Built-in interaction
 
-- Drag to orbit the camera, mouse wheel to zoom.
+- Drag to orbit the camera (or to pan in the `"pan"` control mode), drag while holding Space to pan, mouse wheel to zoom. `resetView` brings a panned target back to the data center; `snapTo` keeps it. The cursor is an open hand when a drag would pan, closed while panning.
 - The gizmo arrows highlight on hover; a click turns the view along that axis (its arrow toward the viewer), and a second click on the same arrow shows the opposite side.
 - All other controls (home button, view buttons, toggles) belong to the app and call the methods above.
 

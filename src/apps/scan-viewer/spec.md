@@ -53,7 +53,8 @@ What the scan viewer does, as implemented. It is the starting point for anyone (
 
 ## Camera and interaction
 
-- Perspective camera orbiting the data center; drag to orbit, mouse wheel to zoom. These are the engine's basic orbit controls, kept until the dedicated turntable controls are built (see the open items).
+- Perspective camera orbiting a target, at first the data center; drag to orbit, mouse wheel to zoom. These are the engine's basic orbit controls, kept until the dedicated turntable controls are built (see the open items).
+- **Pan**: dragging with Space held moves the target, and the camera with it, in the view plane; the point under the cursor follows it. A control mode (`"orbit"` or `"pan"`, set and read through the API) chooses what a plain drag does. `resetView` brings the target back to the data center. The cursor is an open hand when a drag would pan (pan mode, or Space held), closed while panning.
 - **Home view**: seen from the front (−Y side), above and a little to the left, framing the data. `resetView` returns to it.
 - **Views**: `snapTo` looks along an axis from either side (±X, ±Y, ±Z, plus the side, front, top and iso aliases), keeping the target and the distance. The top view shows X to the right and Y up.
 - **Gizmo**: hovering an arrow or its label highlights it (a disc of the axis color behind the label, a pointer cursor). A click turns the view to look along that axis, its arrow toward the viewer; a second click shows the opposite side.
@@ -92,7 +93,7 @@ What the scan viewer does, as implemented. It is the starting point for anyone (
 
 ## Not implemented (open items)
 
-- **Turntable controls**: pan, zoom toward the cursor, distance and angle limits, target clamped to the data, damping and inertia, double-click reset, shift-to-zoom, touch pinch. Touch currently uses the basic orbit controls, and a tap on the gizmo also orbits.
+- **Turntable controls**: right or middle button pan, zoom toward the cursor, distance and angle limits, target clamped to the data, damping and inertia, double-click reset, shift-to-zoom, touch pinch. Touch currently uses the basic orbit controls, and a tap on the gizmo also orbits.
 - **Camera API**: `getCamera`, `setCamera`, the `camera` event, camera limits, and switching to the orthographic projection (the engine supports it, the viewer does not expose it).
 - **Grid plane** under the data, with fades.
 - **Surface wireframe** overlay.
