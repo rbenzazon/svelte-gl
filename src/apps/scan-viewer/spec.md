@@ -71,6 +71,7 @@ What the scan viewer does, as implemented. It is the starting point for anyone (
 ## Theming and styling
 
 - All colors are given by the app as resolved values, for example read from its theme: rulers, bounding box, gizmo axes, label font and color, background.
+- The viewer does not parse CSS: colors are `[r, g, b]` (or `[r, g, b, a]` for the background) in 0..1, or `"#rrggbb"`. The app converts its CSS values (for example `"rgb(...)"` from `getComputedStyle`) before passing them; README, Colors, has a helper. Only the label color takes a CSS string. An unsupported string is not rejected and stops the rendering.
 - Defaults suit a light theme.
 
 ## Integration
@@ -99,6 +100,7 @@ What the scan viewer does, as implemented. It is the starting point for anyone (
 - **Axis titles** on the rulers, and a number formatter option.
 - **Robustness**: WebGL context loss and restore, the "No data" state with a default extent, error events (WebGL2 unavailable, context lost).
 - **Several layers together**: per-layer visibility and opacity, solid colors assigned in order from a color list, a combined bounding box of visible layers only.
+- **Input validation**: color setters do not check their values, and an exception in a render step stops the render loop for good. Both should fail with a clear error instead.
 - **Known limits**: a ruler seen end on (for example X in the ±X views) crowds its labels; samples hidden by "out of range: hide" can still be picked; double-sided transparent surfaces are not sorted; the engine's light map and env map share a texture unit (planned fix).
 
 ## Where to look

@@ -1,6 +1,6 @@
 // Types of the scan viewer API, with short docs for editor hints. The full reference is README.md (API reference).
 
-/** Components in 0..1, written to the canvas as is. */
+/** [r, g, b, a] with components in 0..1, written to the canvas as is. Not a CSS string. */
 export type RGBA = [number, number, number, number];
 
 /** A row-major height grid over the physical extent x0..x1, y0..y1. */
@@ -15,8 +15,12 @@ export interface ScanData {
 	distanceData: Float32Array;
 }
 
-/** Components in 0..1, or a "#rrggbb" string. */
-export type Color = [number, number, number] | string;
+/**
+ * [r, g, b] with components in 0..1, or a 6-digit hex string "#rrggbb". The viewer does not parse CSS:
+ * "rgb(...)", "oklch(...)", "var(--token)" and named colors break the rendering, and "#fff" or 0..255 components
+ * give wrong colors. Convert getComputedStyle values first (README, Colors).
+ */
+export type Color = [number, number, number] | `#${string}`;
 
 /** Metallic/roughness PBR material of a surface layer. */
 export interface ScanViewerMaterial {
@@ -117,6 +121,7 @@ export interface ScanViewerApi {
 	resize(): void;
 	/** Stops the render loop and frees the WebGL context. The viewer cannot be reused. */
 	destroy(): void;
+	/** [r, g, b, a] in 0..1, not a CSS string (README, Colors). */
 	setBackground(rgba: RGBA): void;
 	/** Replaces all layers. The first call with data frames the camera on their bounding box; later calls do not move it. */
 	setLayers(layers: ScanViewerLayer[]): void;
@@ -164,7 +169,7 @@ export interface ScanViewerApi {
 	 * Labels show real values (zScale has no effect) and overlapping ones are hidden.
 	 */
 	setRulers(options: ScanViewerRulersOptions): void;
-	/** Resolved theme colors. */
+	/** Resolved theme colors as Color values: [r, g, b] in 0..1 or "#rrggbb", not getComputedStyle strings. */
 	setTheme(colors: ScanViewerThemeColors): void;
 	/**
 	 * Resolved CSS values of the label text, for example read with getComputedStyle from a probe element
@@ -219,7 +224,7 @@ export interface ScanViewerHit {
 export interface ScanViewerLabelStyle {
 	/** CSS font shorthand in CSS px, for example '11px "IBM Plex Sans", sans-serif'. */
 	font?: string;
-	/** Any CSS color. */
+	/** Any CSS color, for example a getComputedStyle value: labels are drawn on a 2D canvas (the only color that takes CSS). */
 	color?: string;
 }
 

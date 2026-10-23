@@ -93,7 +93,48 @@ All the types below are exported by `scan-viewer.d.ts`.
 - Data coordinates are real units (for example mm), with Z up: X and Y span the scan plane, Z is the height.
 - `setZScale` only exaggerates the displayed heights. Rulers, the color range, picking results and the auto range always use the real heights.
 - Screen coordinates (`pick`, `ScanViewerHit.screen`) are CSS px from the top left corner of the viewer.
-- `Color` is `[r, g, b]` with components in 0..1, or a `"#rrggbb"` string. `RGBA` is `[r, g, b, a]` in 0..1.
+
+### Colors
+
+The viewer does not parse CSS. Every color goes to WebGL as numbers, so only two forms are accepted:
+
+| Type | Accepted | Used by |
+|---|---|---|
+| `Color` | `[r, g, b]` with components in 0..1, or a 6-digit hex string `"#rrggbb"` | `setTheme`, `setPalette`, a layer's `color` and `material.baseColor`, a light's `color`, `setAmbient` |
+| `RGBA` | `[r, g, b, a]` with components in 0..1 | `setBackground`, `createScanViewer({ background })` |
+
+Anything else is **not** supported, and is not checked when it is set:
+
+- Other strings (`"rgb(116, 138, 153)"`, `"rgba(...)"`, `"oklch(...)"`, `"var(--token)"`, `"red"`) throw. Depending on the setter, the error comes at the call or later inside the render loop, which then stops drawing: the last frame stays on screen and the camera no longer moves.
+- Short hex (`"#fff"`), 8-digit hex (`"#rrggbbaa"`) and 0..255 components do not throw, but give wrong colors.
+
+The one exception is `setLabelStyle({ color })`, which takes any CSS color, since the labels are drawn on a 2D canvas.
+
+Theme tokens resolved with `getComputedStyle` come back as `"rgb(...)"` strings (or `"oklch(...)"` for tokens defined that way): convert them before passing them. A 1 × 1 canvas converts any CSS color the browser understands:
+
+```ts
+const context = document.createElement("canvas").getContext("2d", { willReadFrequently: true })!;
+
+/** Any CSS color, as resolved by getComputedStyle, to the viewer's [r, g, b] in 0..1. */
+function toViewerColor(css: string): [number, number, number] {
+	context.clearRect(0, 0, 1, 1);
+	context.fillStyle = css;
+	context.fillRect(0, 0, 1, 1);
+	const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+	return [r / 255, g / 255, b / 255];
+}
+
+// The same with the alpha, for setBackground.
+function toViewerRGBA(css: string): [number, number, number, number] {
+	context.clearRect(0, 0, 1, 1);
+	context.fillStyle = css;
+	context.fillRect(0, 0, 1, 1);
+	const [r, g, b, a] = context.getImageData(0, 0, 1, 1).data;
+	return [r / 255, g / 255, b / 255, a / 255];
+}
+
+viewer.setTheme({ border: toViewerColor(getComputedStyle(probe).color) });
+```
 
 ### Data
 
@@ -167,16 +208,16 @@ Points layer (`kind: "points"`, `data: ScanData | PointCloudData`): one unlit ro
 
 **Scene and theme**
 
-- `setBackground(rgba: RGBA)`: background color, written to the canvas as is.
+- `setBackground(rgba: RGBA)`: background color as `[r, g, b, a]` in 0..1 (not a CSS string), written to the canvas as is.
 - `setRulers(options)`: graduation rulers on the bounding box edges closest to the viewer, switching edges as the camera orbits. Labels show real values and overlapping ones are hidden. Options:
   - `visible` (default true);
   - `density`: major steps along a 700 CSS px ruler, fewer on shorter rulers (default 7);
   - `boundingBox`: thin outline of the combined data box (default false).
-- `setTheme(colors)`: resolved theme colors, each optional:
+- `setTheme(colors)`: resolved theme colors as `Color` values (see [Colors](#colors): not CSS strings), each optional:
   - `border`: rulers, default `#748a99`;
   - `borderSubdued`: bounding box, default `#b9c1cf`;
   - `axisX`, `axisY`, `axisZ`: gizmo arrows and labels, default red, green, blue.
-- `setLabelStyle(style: { font?: string, color?: string })`: resolved CSS values of the label text, for example read with `getComputedStyle` from a probe element styled with utility classes. `font` is a CSS font shorthand in CSS px. Default `11px "IBM Plex Sans", sans-serif` in `#b9c1cf`. Apply again after a theme change.
+- `setLabelStyle(style: { font?: string, color?: string })`: resolved CSS values of the label text (here any CSS color works, unlike the other color setters), for example read with `getComputedStyle` from a probe element styled with utility classes. `font` is a CSS font shorthand in CSS px. Default `11px "IBM Plex Sans", sans-serif` in `#b9c1cf`. Apply again after a theme change.
 - `setGizmo(visible: boolean)`: the view orientation gizmo, shaded X, Y and Z arrows in the bottom left corner turning with the camera. Default true; hidden without data.
 
 **Camera**

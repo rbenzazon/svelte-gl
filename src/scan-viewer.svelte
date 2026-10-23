@@ -46,7 +46,21 @@ function createCloud(heights) {
 	return xyz;
 }
 
+// A real scan served from build/data: sample.json (grid size, extent, cloud origin, all in mm) and the raw
+// float32 heights (row-major grid) and xyz (organized cloud) next to it.
+async function loadSample() {
+	const fetchFloats = async (url) => new Float32Array(await (await fetch(url)).arrayBuffer());
+	const meta = await (await fetch("data/sample.json")).json();
+	const [sampleHeights, sampleCloud] = await Promise.all([
+		fetchFloats("data/sample-height.f32"),
+		fetchFloats("data/sample-cloud.f32"),
+	]);
+	const { imageW: w, imageH: h, x0, y0, x1, y1, origin } = meta;
+	return { grid: { imageW: w, imageH: h, x0, y0, x1, y1 }, heights: sampleHeights, cloud: sampleCloud, origin };
+}
+
 const metal = { baseColor: [0.85, 0.75, 0.55], metallic: 1, roughness: 0.3 };
+const sources = ["sine", "sample"];
 const displays = ["cloud", "surface", "points", "both"];
 const lightModes = ["camera", "scene", "none"];
 
@@ -55,6 +69,10 @@ let viewer;
 let heights = createHeights(frequency);
 let cloud = createCloud(heights);
 let display = "cloud";
+let source = "sine";
+// The loaded sample, or its loading state ("loading" or an error message) while it is not there.
+let sample = null;
+let sampleState = "";
 let zScale = 1;
 // The palette stays the default one; setPalette(colors) changes it.
 let pointsColorMode = "palette";
@@ -76,23 +94,49 @@ let envLighting = false;
 
 // "both" passes the same distanceData to the two layers, so the heights are uploaded once.
 function layers() {
-	const data = { ...grid, distanceData: heights };
-	const pointStyle = { colorMode: pointsColorMode, color: "#f59e0b", pointSize: 3 };
+	const current =
+		source === "sample" && sample
+			? { ...sample, cloudOrigin: sample.origin }
+			: { grid, heights, cloud, cloudOrigin };
+	const data = { ...current.grid, distanceData: current.heights };
+	const pointStyle = { colorMode: pointsColorMode, color: "#f59e0b", pointSize: source === "sample" ? 1 : 3 };
 	const surface = {
-		id: "sine",
+		id: source,
 		kind: "surface",
 		data,
 		material: metallic ? metal : undefined,
 		colorMode: surfaceColorMode,
 	};
-	const points = { id: "sine-points", kind: "points", data, ...pointStyle };
-	const scan = { id: "sine-cloud", kind: "points", data: { xyz: cloud, origin: cloudOrigin }, ...pointStyle };
+	const points = { id: `${source}-points`, kind: "points", data, ...pointStyle };
+	const scan = {
+		id: `${source}-cloud`,
+		kind: "points",
+		data: { xyz: current.cloud, origin: current.cloudOrigin },
+		...pointStyle,
+	};
 	return { surface: [surface], points: [points], both: [surface, points], cloud: [scan] }[display];
 }
 
 function setDisplay(value) {
 	display = value;
 	viewer.setLayers(layers());
+}
+
+async function setSource(value) {
+	if (value === "sample" && !sample) {
+		sampleState = "loading";
+		try {
+			sample = await loadSample();
+			sampleState = "";
+		} catch (error) {
+			sampleState = `failed: ${error.message}`;
+			return;
+		}
+	}
+	source = value;
+	viewer.setLayers(layers());
+	// Only the first data frames the camera: frame the new source.
+	viewer.resetView();
 }
 
 function newData() {
@@ -240,6 +284,26 @@ onMount(() => {
 		<section>
 			<h2>Data</h2>
 			<div class="row">
+				<span class="label">Source</span>
+				<div class="segmented">
+					{#each sources as option}
+						<button
+							class:active={source === option}
+							disabled={sampleState === "loading"}
+							on:click={() => setSource(option)}
+						>
+							{option}
+						</button>
+					{/each}
+				</div>
+			</div>
+			{#if sampleState}
+				<div class="row">
+					<span class="label">Sample</span>
+					<span class="readout">{sampleState}</span>
+				</div>
+			{/if}
+			<div class="row">
 				<span class="label">Display</span>
 				<div class="segmented">
 					{#each displays as option}
@@ -249,12 +313,12 @@ onMount(() => {
 			</div>
 			<div class="row">
 				<span class="label">Height scale</span>
-				<input type="range" min="0" max="4" step="0.05" value={zScale} on:input={onZScale} />
+				<input type="range" min="0" max={source === "sample" ? 20 : 4} step="0.05" value={zScale} on:input={onZScale} />
 				<span class="value">{zScale.toFixed(2)}</span>
 			</div>
 			<div class="row">
 				<span class="label">Heights</span>
-				<button class="action" on:click={newData}>new data</button>
+				<button class="action" disabled={source !== "sine"} on:click={newData}>new data</button>
 			</div>
 		</section>
 

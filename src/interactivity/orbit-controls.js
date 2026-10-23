@@ -1,6 +1,12 @@
 import { get } from "svelte/store";
 
-export function createOrbitControls(canvas, camera) {
+/**
+ * Drag to orbit around the camera target, wheel to zoom.
+ * @param {HTMLCanvasElement} canvas
+ * @param {import("../store/camera.js").SvelteGLCameraCustomStore} camera
+ * @param {{ speed?: number }} [options] speed multiplies the orbit rotation per dragged pixel, default 1
+ */
+export function createOrbitControls(canvas, camera, { speed = 1 } = {}) {
 	//add support for touch events
 	canvas.addEventListener("touchstart", onMouseDown, { passive: false });
 	canvas.addEventListener("mousedown", onMouseDown, { passive: false });
@@ -52,7 +58,7 @@ export function createOrbitControls(canvas, camera) {
 		const { position, target, fov } = cameraValue;
 		const { radius, polar, azimuth } = getCoordinates(position, target);
 		const fovRatio = Math.pow(fov / 80, 1.5);
-		const movementFactor = 250 / fovRatio;
+		const movementFactor = 250 / fovRatio / speed;
 
 		// Constrain polar angle to avoid the singularity at the poles
 		// Keep at least 0.1 radians (about 5.7 degrees) away from poles

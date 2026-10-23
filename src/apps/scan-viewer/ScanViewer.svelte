@@ -898,7 +898,8 @@ onMount(() => {
 		enabled: true,
 	}));
 	// Temporary camera interaction until the turntable controls of step 6.1.
-	controls = createOrbitControls(canvas, engine.camera);
+	// Twice the default rotation: the narrow field of view makes the default feel slow.
+	controls = createOrbitControls(canvas, engine.camera, { speed: 2 });
 });
 
 onDestroy(() => {
