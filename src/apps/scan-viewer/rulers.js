@@ -7,7 +7,7 @@ import sceneShader from "./scene.glsl";
 
 const vertexSource = templateLiteralRenderer(rulerVertex, { scene: "" })({ scene: sceneShader });
 
-// Ruler length in CSS px at which `density` major steps are used, as GraphView's IDEAL_SIZE.
+// Ruler length in CSS px at which `density` major steps are used.
 const idealSize = 700;
 // Major tick length, as a fraction of the larger horizontal extent.
 const tickLength = 0.03;
@@ -29,7 +29,7 @@ const maxTicks = 1000;
 const hidden = { vertexCount: 0, labels: [] };
 
 /**
- * Major and minor steps from the same nice-number rule as GraphView (1, 2, 5 times a power of ten),
+ * Major and minor steps from the nice-number rule (1, 2, 5 times a power of ten),
  * with fewer steps when the ruler is short on screen.
  */
 export function niceSteps(span, axisPx, density) {
@@ -45,7 +45,7 @@ export function niceSteps(span, axisPx, density) {
 	return { major, minor: major / (nice === 2 ? 4 : 5) };
 }
 
-/** Decimals from the step, as GraphView. */
+/** Decimals from the power of ten of the step (0.5 gives 1 decimal, 20 none); a value near zero prints as 0. */
 export function formatTick(value, step) {
 	const decimals = Math.max(0, -Math.floor(Math.log10(step)));
 	return (Math.abs(value) < step * 1e-6 ? 0 : value).toFixed(decimals);

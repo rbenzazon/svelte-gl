@@ -1,7 +1,9 @@
+// Types of the scan viewer API, with short docs for editor hints. The full reference is README.md (API reference).
+
 /** Components in 0..1, written to the canvas as is. */
 export type RGBA = [number, number, number, number];
 
-/** Same shape as Kalea's ScanData: a row-major height grid over the physical extent x0..x1, y0..y1. */
+/** A row-major height grid over the physical extent x0..x1, y0..y1. */
 export interface ScanData {
 	imageW: number;
 	imageH: number;
@@ -145,8 +147,8 @@ export interface ScanViewerApi {
 	 */
 	setEnvironment(environment: ScanViewerEnvironment | null, options?: ScanViewerEnvironmentOptions): Promise<void>;
 	/**
-	 * Palette stops from the colorMin color to the colorMax color, interpolated linearly. Default: Kalea's Viridis.
-	 * A viridis Gradient's colors go the other way, so pass them reversed like ScanView does.
+	 * Palette stops from the colorMin color to the colorMax color, interpolated linearly. Default: Viridis.
+	 * A gradient defined from the high value down must be passed reversed.
 	 */
 	setPalette(colors: Color[]): void;
 	/** Heights mapped to the first and last palette colors, in real units (zScale has no effect). An undefined bound uses the auto range. */
@@ -162,7 +164,7 @@ export interface ScanViewerApi {
 	 * Labels show real values (zScale has no effect) and overlapping ones are hidden.
 	 */
 	setRulers(options: ScanViewerRulersOptions): void;
-	/** Resolved theme token values. */
+	/** Resolved theme colors. */
 	setTheme(colors: ScanViewerThemeColors): void;
 	/**
 	 * Resolved CSS values of the label text, for example read with getComputedStyle from a probe element
@@ -224,18 +226,18 @@ export interface ScanViewerLabelStyle {
 export interface ScanViewerRulersOptions {
 	/** Default true. */
 	visible?: boolean;
-	/** Major steps along a 700 CSS px ruler, fewer on shorter rulers, as GraphView's graduationDensity. Default 7. */
+	/** Major steps along a 700 CSS px ruler, fewer on shorter rulers. Default 7. */
 	density?: number;
 	/** Thin outline of the combined data box. Default false. */
 	boundingBox?: boolean;
 }
 
 export interface ScanViewerThemeColors {
-	/** graph-border: rulers. Default Kalea's light theme value #748a99. */
+	/** Rulers. Default #748a99. */
 	border?: Color;
-	/** graph-border-subdued: bounding box. Default Kalea's light theme value #b9c1cf. */
+	/** Bounding box. Default #b9c1cf. */
 	borderSubdued?: Color;
-	/** axis-x, axis-y, axis-z: gizmo arrows and labels. Defaults red, green, blue. */
+	/** Gizmo arrows and labels. Defaults red, green, blue. */
 	axisX?: Color;
 	axisY?: Color;
 	axisZ?: Color;

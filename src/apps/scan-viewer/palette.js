@@ -3,11 +3,11 @@ import { textureUnits } from "../../texture/texture-units.js";
 
 const paletteUnit = textureUnits.palette;
 
-/** Kalea's default "Viridis", from the colorMin color to the colorMax color. */
+/** Default "Viridis", from the colorMin color to the colorMax color. */
 const viridis = ["#440154", "#414487", "#2a788e", "#22a884", "#7ad151", "#fde725"];
 
 /**
- * Palette stops in an n x 1 RGBA8 texture with linear filtering, like ScanView: the stops are the exact
+ * Palette stops in an n x 1 RGBA8 texture with linear filtering: the stops are the exact
  * gradient colors and the shader samples between texel centers through paletteRemap.
  * bindTexture is a pipeline step; it uploads only after set().
  * @param {import("./scan-viewer").Color[]} [stops]

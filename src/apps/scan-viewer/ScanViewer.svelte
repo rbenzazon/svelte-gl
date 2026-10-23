@@ -55,11 +55,11 @@ let sceneBounds = { min: [0, 0, 0], max: [0, 0, 0] };
 let showBoundingBox = false;
 // Material and mesh of the bounding box outline, created when first shown.
 let boundingBox = null;
-// Kalea's light theme graph-border-subdued and graph-border.
+// Light theme defaults of the bounding box and the rulers.
 let borderSubdued = convertToVector3("#b9c1cf");
 let border = convertToVector3("#748a99");
 let showRulers = true;
-// Major steps along an ideal 700 CSS px ruler, as GraphView's graduationDensity.
+// Major steps along an ideal 700 CSS px ruler.
 let rulerDensity = 7;
 // Material, mesh and current layout of the x, y and z rulers.
 let rulers = null;

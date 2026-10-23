@@ -23,8 +23,8 @@
     "build": "rollup -c rollup.config.mjs"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Raphaël Benzazon",
+  "license": "MIT-0",
   "devDependencies": {
     "@andrewray/glsl-preprocessor": "^1.0.1",
     "@biomejs/biome": "^1.8.2",
