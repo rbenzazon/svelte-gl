@@ -60,10 +60,16 @@ export function createOrbitControls(canvas, camera, { speed = 1, mode = "orbit",
 			element instanceof HTMLElement && (element.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(element.tagName))
 		);
 	}
+	function pointerOverCanvas() {
+		// mouseenter never fires when the canvas is created under a pointer that is already there,
+		// so a first Space press would be ignored until the pointer left and came back.
+		return hovered || dragging || canvas.matches(":hover");
+	}
 	function onKeyDown(event) {
-		if (event.code !== "Space" || isEditable(event.target) || (!hovered && !dragging)) {
+		if (event.code !== "Space" || isEditable(event.target) || !pointerOverCanvas()) {
 			return;
 		}
+		hovered = true;
 		// Over the canvas, Space is the pan modifier, not a page scroll.
 		event.preventDefault();
 		spaceDown = true;
